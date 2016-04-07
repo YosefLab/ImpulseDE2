@@ -62,7 +62,7 @@ expression_table_raw <- read.table("D50-D51-D54_DEseq_RNAseq_filteredGenes_TPM_p
 
 ## short version
 if(TRUE){
-  expression_table_raw <- expression_table_raw[1:100,]
+  expression_table_raw <- expression_table_raw[1:8,]
   const_row1 <- as.data.frame(t(c("const1",rep(100,dim(expression_table_raw)[2]-1))))
   const_row1[3] <- 102
   const_row1[20] <- 101

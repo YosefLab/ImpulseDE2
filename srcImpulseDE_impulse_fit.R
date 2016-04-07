@@ -107,6 +107,9 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     NPARAM, n_iters = 100, fit_bg = FALSE, ...){
     
     objective_fun <- cost_fun_logl_comp
+    optim_method <- "nlminb"
+    # DEVELOPMENTAL NOTE: cannot use optim if optim is used within optim?
+    # set alpha with DESeq input and get rid of optim in cost function
     
     # If handed a list, i.e. not replicates
     if (is.vector(expression_values)==TRUE){
@@ -217,12 +220,16 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       guess1[guess1 >= upper_b] <- upper_b[guess1 >= upper_b] - 0.0001
       # check validity of bounds
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
-      #fit_peak1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
-      #  y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
-      #  lower=lower_b, upper=upper_b)[c("par","value")])
-      fit_peak2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
-        y_mat=expression_values, weight_vec=weight_vector,
-        lower=lower_b, upper=upper_b)[c("par","objective")])
+      if("optim" %in% optim_method){
+        fit_peak1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
+          y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
+          lower=lower_b, upper=upper_b)[c("par","value")])
+      }
+      if("nlminb" %in% optim_method){
+        fit_peak2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
+          y_mat=expression_values, weight_vec=weight_vector,
+          lower=lower_b, upper=upper_b)[c("par","objective")])
+      }
       # 2. Valley
       #} else if(min_middle_mean < expression_means[1]/2 &&
       #    min_middle_mean < expression_means[num_points]/2 &&
@@ -248,12 +255,16 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       guess1[guess1 >= upper_b] <- upper_b[guess1 >= upper_b] - 0.0001
       # check validity of bounds
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
-      #fit_valley1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
-      #  y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
-      #  lower=lower_b, upper=upper_b)[c("par","value")])
-      fit_valley2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
-        y_mat=expression_values, weight_vec=weight_vector,
-        lower=lower_b, upper=upper_b)[c("par","objective")])
+      if("optim" %in% optim_method){
+        fit_valley1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
+          y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
+          lower=lower_b, upper=upper_b)[c("par","value")])
+      }
+      if("nlminb" %in% optim_method){
+        fit_valley2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
+          y_mat=expression_values, weight_vec=weight_vector,
+          lower=lower_b, upper=upper_b)[c("par","objective")])
+      }
       # 3. Up
       #} else if(expression_means[1] < expression_means[num_points]){
       #guess1 <- c(10,min_mean,max_mean,min_mean,timepoints[2],mx_tm+timepoints[2])
@@ -274,12 +285,16 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       guess1[guess1 >= upper_b] <- upper_b[guess1 >= upper_b] - 0.0001
       # check validity of bounds
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
-      #fit_up1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
-      #  y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
-      #  lower=lower_b, upper=upper_b)[c("par","value")])
-      fit_up2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
-        y_mat=expression_values, weight_vec=weight_vector,
-        lower=lower_b, upper=upper_b)[c("par","objective")])
+      if("optim" %in% optim_method){
+        fit_up1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
+          y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
+          lower=lower_b, upper=upper_b)[c("par","value")])
+      }
+      if("nlminb" %in% optim_method){
+        fit_up2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
+          y_mat=expression_values, weight_vec=weight_vector,
+          lower=lower_b, upper=upper_b)[c("par","objective")])
+      }
       # 4. Down
       #} else if(expression_means[1] >= expression_means[num_points]){
       #guess1 <- c(10,max_mean,min_mean,max_mean,timepoints[2],mx_tm+timepoints[2])
@@ -300,15 +315,26 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       guess1[guess1 >= upper_b] <- upper_b[guess1 >= upper_b] - 0.0001
       # check validity of bounds
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
-      #fit_down1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
-      #  y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
-      #  lower=lower_b, upper=upper_b)[c("par","value")])
-      fit_down2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
-        y_mat=expression_values, weight_vec=weight_vector,
-        lower=lower_b, upper=upper_b)[c("par","objective")])
-      #}
-      #fmin_outs <- cbind(fit_peak1,fit_peak2,fit_valley1,fit_valley2,fit_up1,fit_up2,fit_down1,fit_down2)
-      fmin_outs <- cbind(fit_peak2,fit_valley2,fit_up2,fit_down2)
+      if("optim" %in% optim_method){
+        fit_down1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
+          y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
+          lower=lower_b, upper=upper_b)[c("par","value")])
+      }
+      if("nlminb" %in% optim_method){
+        fit_down2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
+          y_mat=expression_values, weight_vec=weight_vector,
+          lower=lower_b, upper=upper_b)[c("par","objective")])
+      }
+      
+      if(("optim" %in% optim_method) && ("nlminb" %in% optim_method)){
+        fmin_outs <- cbind(fit_peak1,fit_peak2,fit_valley1,fit_valley2,fit_up1,fit_up2,fit_down1,fit_down2)
+      }
+      if(("optim" %in% optim_method) && !("nlminb" %in% optim_method)){
+        fmin_outs <- cbind(fit_peak1,fit_valley1,fit_up1,fit_down1)
+      }
+      if(!("optim" %in% optim_method) && ("nlminb" %in% optim_method)){
+        fmin_outs <- cbind(fit_peak2,fit_valley2,fit_up2,fit_down2)
+      } 
       
       # Name row containing value of objective as value 
       # This name differs between optimisation functions
@@ -318,8 +344,8 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     if(is.null(dim(fmin_outs[ ,fmin_outs["value",] == min(fmin_outs["value",])])) == TRUE){
       pvec_and_SSE = fmin_outs[ ,fmin_outs["value",] == min(fmin_outs["value",])]
     } else {
-      ### if two or more randomization have the same minimum Sum of
-      ### Squared Errors (SSE), choose the first one
+      # If two or more randomization have the same value of the objective,
+      # choose the first one
       pvec_and_SSE = fmin_outs[ ,fmin_outs["value",] ==
           min(fmin_outs["value",])][,1]
     }
