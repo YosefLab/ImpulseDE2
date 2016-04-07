@@ -22,7 +22,7 @@
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-cost_fun_OLS <- function(theta,x_vec,y_mat){
+cost_fun_OLS <- function(theta,x_vec,y_mat,...){
   # Model parameters
   beta1 = theta[1]
   h0 = theta[2]
@@ -56,7 +56,7 @@ cost_fun_OLS <- function(theta,x_vec,y_mat){
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-cost_fun_WLS <- function(theta,x_vec,y_mat,weight_vec){
+cost_fun_WLS <- function(theta,x_vec,y_mat,weight_vec,...){
   
   # Cost function: weighted least squares
   impulse_value = calc_impulse_comp(theta,x_vec)
@@ -71,7 +71,7 @@ cost_fun_WLS <- function(theta,x_vec,y_mat,weight_vec){
 }
 
 # objective is log likelihood
-cost_fun_logl <- function(theta,x_vec,y_mat,weight_vec){
+cost_fun_logl <- function(theta,x_vec,y_mat,disp_est,...){
   # weight_vec not used
   
   # Compute function value - mean
@@ -85,13 +85,20 @@ cost_fun_logl <- function(theta,x_vec,y_mat,weight_vec){
   start$size <- 0.1
   lower <- list()
   lower$size <- 0.0001
-  nb_estimation <- lapply(c(1:length(x_vec)), function(tp){
-    nb_estimate <- try( fitdistr(y_mat[tp,], "Negative Binomial", method="L-BFGS-B", mu=impulse_value[tp], start=start, lower=lower), silent=TRUE );
-    if(is.na(nb_estimate[2])){nb_estimate_fake <- list(); nb_estimate_fake$loglik <- c(-99); return(nb_estimate_fake)}
-    else {return(nb_estimate)} } )
+  
+  # With estimation of dispersion
+  #nb_estimation <- lapply(c(1:length(x_vec)), function(tp){
+  #  nb_estimate <- try( fitdistr(y_mat[tp,], "Negative Binomial", method="L-BFGS-B", mu=impulse_value[tp], start=start, lower=lower), silent=TRUE );
+  #  if(is.na(nb_estimate[2])){nb_estimate_fake <- list(); nb_estimate_fake$loglik <- c(-99); return(nb_estimate_fake)}
+  #  else {return(nb_estimate)} } )
   
   # Get likelihood of model: Add up log likelihoods of timepoints
-  logl_impulse <- sum( unlist(lapply(nb_estimation,function(x){x$loglik})) )
+  #logl_impulse <- sum( unlist(lapply(nb_estimation,function(x){x$loglik})) )
+  
+  # Without dispersion estimation, take given
+  logl_tps <- unlist( lapply(c(1:length(x_vec)), function(tp){
+    prod(dnbinom(y_mat[tp,], mu=impulse_value[tp], size=disp_est))}) )
+  logl_impulse <- log(prod( logl_tps ))
   
   # Maximise log likelihood
   return(-logl_impulse)

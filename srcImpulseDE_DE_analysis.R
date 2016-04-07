@@ -45,75 +45,62 @@ DE_analysis <- function(data_array,data_annotation,weight_mat,
   timep <- as.numeric(as.character(data_annotation[colnames(data_array),
     "Time"]))
   
-  if(fit_scoring=="SS"){
-    ### correct background values
-    ### may occur as model fitting not convex
-    background[background < 0] = 0
-    #background = background[background < 100]
+  ### correct background values
+  ### may occur as model fitting not convex
+  background[background < 0] = 0
+  #background = background[background < 100]
+  
+  if(control_timecourse == TRUE){
+    y_i_null = impulse_fit_results[[2]][rownames(farr_case),as.character(timep)]
     
-    if(control_timecourse == TRUE){
-      y_i_null = impulse_fit_results[[2]][rownames(farr_case),as.character(timep)]
+    RESD_1_s = array(NA,c(dim(farr_case)[1],dim(data_array)[2],dim(data_array)[3]))
+    RESD_0_s = array(NA,c(dim(farr_case)[1],dim(data_array)[2],dim(data_array)[3]))
+    for (z in 1:dim(data_array)[3]){
+      RESD_1_s[,,z] = cbind(
+        (farr_case[,,z] -
+            impulse_fit_results[[4]][rownames(farr_case),as.character(timep_case)]),
+        (farr_ctrl[rownames(farr_case),,z] -
+            impulse_fit_results[[6]][rownames(farr_case),as.character(timep_ctrl)]))
       
-      RESD_1_s = array(NA,c(dim(farr_case)[1],dim(data_array)[2],dim(data_array)[3]))
-      RESD_0_s = array(NA,c(dim(farr_case)[1],dim(data_array)[2],dim(data_array)[3]))
-      for (z in 1:dim(data_array)[3]){
-        RESD_1_s[,,z] = cbind(
-          (farr_case[,,z] -
-              impulse_fit_results[[4]][rownames(farr_case),as.character(timep_case)]),
-          (farr_ctrl[rownames(farr_case),,z] -
-              impulse_fit_results[[6]][rownames(farr_case),as.character(timep_ctrl)]))
-        
-        RESD_0_s[,,z] = data_array[,,z] - y_i_null
-      }
-      RESD_1_s = RESD_1_s[,colnames(data_array)]
-    } else if(control_timecourse == FALSE){
-      y_i_null = rowMeans(data_array)
-      
-      RESD_1_s = array(NA,dim(data_array))
-      RESD_0_s = array(NA,dim(data_array))
-      for (z in 1:dim(data_array)[3]){
-        RESD_1_s[,,z] = data_array[,,z] - impulse_fit_results[[2]][rownames(data_array),
-          as.character(timep)]
-        RESD_0_s[,,z] = data_array[,,z] - y_i_null
-      }
+      RESD_0_s[,,z] = data_array[,,z] - y_i_null
     }
+    RESD_1_s = RESD_1_s[,colnames(data_array)]
+  } else if(control_timecourse == FALSE){
+    y_i_null = rowMeans(data_array)
     
-    # Compute F-like-scores. The F-like score is a weighted
-    # sum of squares not corrected for by degrees of freedom:
-    # It does not assume a parameteric form of the residual
-    # distribution (c.f. F-score assumes normal errors).
-    #F_stats_rep = array(0,c(dim(RESD_1_s)[1],dim(RESD_1_s)[3]))
-    #for (z in 1:dim(F_stats_rep)[2]){
-    #  F_stats_rep[,z] = rowSums( ((RESD_0_s[,,z])^2 - (RESD_1_s[,,z])^2) *
-    #      1/(weight_mat^2) )
-    #}
-    WSS0_s_rep <- array(0,c(dim(RESD_1_s)[1],dim(RESD_1_s)[3]))
-    WSS1_s_rep <- array(0,c(dim(RESD_1_s)[1],dim(RESD_1_s)[3]))
-    for (z in 1:dim(RESD_1_s)[3]){
-      WSS0_s_rep[,z] <- rowSums( (RESD_0_s[,,z])^2 * 1/(weight_mat^2) )
-      WSS1_s_rep[,z] <- rowSums( (RESD_1_s[,,z])^2 * 1/(weight_mat^2) )
+    RESD_1_s = array(NA,dim(data_array))
+    RESD_0_s = array(NA,dim(data_array))
+    for (z in 1:dim(data_array)[3]){
+      RESD_1_s[,,z] = data_array[,,z] - impulse_fit_results[[2]][rownames(data_array),
+        as.character(timep)]
+      RESD_0_s[,,z] = data_array[,,z] - y_i_null
     }
-    WSS0_s <- rowSums(WSS0_s_rep)
-    WSS1_s <- rowSums(WSS1_s_rep)
-    #F_background = rowSums(F_background_rep)
-    F_stats <- (WSS0_s - WSS1_s)/WSS1_s
-    #F_stats = rowSums(F_stats_rep)
-    
-    # Bootstrap the p-values
-    p  <-  unlist(lapply(F_stats,function(x){length(which(background >=
-        x))/length(background)}))
-  } else if(fit_scoring=="loglik"){
-    if(control_timecourse == FALSE){
-      loglik_fullmodel <- impulse_fit_results$impulse_parameters_case[,"objective"]
-      loglik_redmodel <- have to compute here
-      df_fullmodel <- 6
-      df_redmodel <- 1
-    }
-    df <- df_fullmodel - df_redmodel
-    deviance <- 2*(loglik_fullmodel - loglik_redmodel)
-    p <- pchisq(deviance,df=df,lower.tail=FALSE)
   }
   
+  # Compute F-like-scores. The F-like score is a weighted
+  # sum of squares not corrected for by degrees of freedom:
+  # It does not assume a parameteric form of the residual
+  # distribution (c.f. F-score assumes normal errors).
+  #F_stats_rep = array(0,c(dim(RESD_1_s)[1],dim(RESD_1_s)[3]))
+  #for (z in 1:dim(F_stats_rep)[2]){
+  #  F_stats_rep[,z] = rowSums( ((RESD_0_s[,,z])^2 - (RESD_1_s[,,z])^2) *
+  #      1/(weight_mat^2) )
+  #}
+  WSS0_s_rep <- array(0,c(dim(RESD_1_s)[1],dim(RESD_1_s)[3]))
+  WSS1_s_rep <- array(0,c(dim(RESD_1_s)[1],dim(RESD_1_s)[3]))
+  for (z in 1:dim(RESD_1_s)[3]){
+    WSS0_s_rep[,z] <- rowSums( (RESD_0_s[,,z])^2 * 1/(weight_mat^2) )
+    WSS1_s_rep[,z] <- rowSums( (RESD_1_s[,,z])^2 * 1/(weight_mat^2) )
+  }
+  WSS0_s <- rowSums(WSS0_s_rep)
+  WSS1_s <- rowSums(WSS1_s_rep)
+  #F_background = rowSums(F_background_rep)
+  F_stats <- (WSS0_s - WSS1_s)/WSS1_s
+  #F_stats = rowSums(F_stats_rep)
+  
+  # Bootstrap the p-values
+  p  <-  unlist(lapply(F_stats,function(x){length(which(background >=
+      x))/length(background)}))
   p_scaled = p.adjust(p, method = "BH")
   p_scaled_orig = p_scaled
   

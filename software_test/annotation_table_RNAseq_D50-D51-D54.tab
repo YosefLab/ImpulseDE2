@@ -1,7 +1,19 @@
-Sample	Condition	Time
-D_0h		A			0
-D_2h		A			2
-D_4h		A			4
-D_6h		A			6
-D_12h		A			12
-D_24h		A			24
+Replicate_name	Replicate	Sample		Condition	Time
+D50_0h		D50		D_0h		case		0
+D50_2h		D50		D_2h		case		2
+D50_4h		D50		D_4h		case		4
+D50_6h		D50		D_6h		case		6
+D50_12h		D50		D_12h		case		12
+D50_24h		D50		D_24h		case		24
+D51_0h		D51		D_0h		case		0
+D51_2h		D51		D_2h		case		2
+D51_4h		D51		D_4h		case		4
+D51_6h		D51		D_6h		case		6
+D51_12h		D51		D_12h		case		12
+D51_24h		D51		D_24h		case		24
+D54_0h		D54		D_0h		case		0
+D54_2h		D54		D_2h		case		2
+D54_4h		D54		D_4h		case		4
+D54_6h		D54		D_6h		case		6
+D54_12h		D54		D_12h		case		12
+D54_24h		D54		D_24h		case		24

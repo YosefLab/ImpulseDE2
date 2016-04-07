@@ -56,7 +56,8 @@
 #    control_timecourse = FALSE, control_name = NULL, cluster_results = NULL,
 #    start_values = NULL, fit_backg = FALSE, n_proc = 4){
 impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
-  control_timecourse = FALSE, control_name = NULL, fit_backg = FALSE, n_proc = 4){
+  control_timecourse = FALSE, control_name = NULL, fit_backg = FALSE, n_proc = 4,
+  dispersion_vector=NULL){
   
   ### Check dataset for consistency
   if(ncol(data_annotation) != 2 ||
@@ -95,13 +96,13 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
   #   n_process: (scalar) [Default 4] number of processes, which can be used on 
   #       the machine to run the background calculation in parallel
   # OUTPUT:
-  #   pvec_and_SSE: (vector NPARAM+1) +1 is value of objective of optimisation 
+  #   pvec_and_objective: (vector NPARAM+1) +1 is value of objective of optimisation 
   #       (i.e. sum of squares or weighted SS)
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
   impulse_fit_gene_wise <- function(expression_values, timepoints, weight_vector, 
-    NPARAM, n_iters = 100, fit_bg = FALSE, ...){
+    NPARAM, n_iters = 100, fit_bg = FALSE, dispersion_estimate=NULL,...){
     
     objective_fun <- cost_fun_logl_comp
     optim_method <- "nlminb"
@@ -175,12 +176,12 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
       if("optim" %in% optim_method){
         fit_peak1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
-          y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
-          lower=lower_b, upper=upper_b)[c("par","value")])
+          y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
+          method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
       }
       if("nlminb" %in% optim_method){
         fit_peak2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
-          y_mat=expression_values, weight_vec=weight_vector,
+          y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
       # 2. Valley
@@ -210,12 +211,12 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
       if("optim" %in% optim_method){
         fit_valley1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
-          y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
-          lower=lower_b, upper=upper_b)[c("par","value")])
+          y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
+          method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
       }
       if("nlminb" %in% optim_method){
         fit_valley2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
-          y_mat=expression_values, weight_vec=weight_vector,
+          y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
       # 3. Up
@@ -240,12 +241,12 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
       if("optim" %in% optim_method){
         fit_up1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
-          y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
-          lower=lower_b, upper=upper_b)[c("par","value")])
+          y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
+          method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
       }
       if("nlminb" %in% optim_method){
         fit_up2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
-          y_mat=expression_values, weight_vec=weight_vector,
+          y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
       # 4. Down
@@ -270,12 +271,12 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
       if("optim" %in% optim_method){
         fit_down1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
-          y_mat=expression_values, weight_vec=weight_vector, method="L-BFGS-B",
-          lower=lower_b, upper=upper_b)[c("par","value")])
+          y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
+          method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
       }
       if("nlminb" %in% optim_method){
         fit_down2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
-          y_mat=expression_values, weight_vec=weight_vector,
+          y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
       
@@ -295,15 +296,15 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     })
     
     if(is.null(dim(fmin_outs[ ,fmin_outs["value",] == min(fmin_outs["value",])])) == TRUE){
-      pvec_and_SSE = fmin_outs[ ,fmin_outs["value",] == min(fmin_outs["value",])]
+      pvec_and_objective = fmin_outs[ ,fmin_outs["value",] == min(fmin_outs["value",])]
     } else {
       # If two or more randomization have the same value of the objective,
       # choose the first one
-      pvec_and_SSE = fmin_outs[ ,fmin_outs["value",] ==
+      pvec_and_objective = fmin_outs[ ,fmin_outs["value",] ==
           min(fmin_outs["value",])][,1]
     }
     
-    return(pvec_and_SSE)
+    return(pvec_and_objective)
   }
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -339,7 +340,7 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
   impulse_fit_matrix <- function(data_arr, timepoints, weight_mat, n_it = 100,
-    ctrl_tc = FALSE, ctrl = NULL, fit_bg = FALSE, n_process = 4, ...){
+    ctrl_tc = FALSE, ctrl = NULL, fit_bg = FALSE, n_process = 4, dispersion_vec=NULL, ...){
     
     NPARAM = 6 # Number of model parameters
     
@@ -378,6 +379,7 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       #assign("start_val", start_val, envir = my.env)
       assign("fit_bg", fit_bg, envir = my.env)
       assign("NPARAM", NPARAM, envir = my.env)
+      assign("dispersion_vec", dispersion_vec, envir = my.env)
       
       #clusterExport(cl=cl, varlist=c("data_arr","weight_mat",
       #  "calc_impulse_comp","n_it","cluster_genes_for_impulse","impulse_fit",
@@ -387,7 +389,7 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       clusterExport(cl=cl, varlist=c("data_arr","weight_mat",
         "calc_impulse_comp","n_it","impulse_fit","cost_fun_logl_comp",
         "cost_fun_WLS_comp", "cost_fun_OLS_comp", "impulse_fit_gene_wise",
-        "impulse_fit_matrix", "timepoints", "fit_bg","NPARAM"), envir = my.env)
+        "impulse_fit_matrix", "timepoints", "fit_bg","NPARAM","dispersion_vec"), envir = my.env)
       
       junk <- clusterEvalQ(cl,library(MASS))
       # Fit impulse model to each gene of matrix and get impulse parameters:
@@ -395,7 +397,7 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       # The input data are distributed to nodes by ind_list partitioning
       resi <- clusterApply(cl, 1:length(ind_list), function(z){t(sapply(ind_list[[z]],
         function(x){impulse_fit_gene_wise(data_arr[x,,],timepoints,weight_mat[x,],
-          NPARAM,n_it, fit_bg)}))})
+          NPARAM,n_it, fit_bg, dispersion_vec[x])}))})
       # Give output rownames again, which are lost above
       for(i in 1:length(ind_list)){
         rownames(resi[[i]]) <- rownames(data_arr[ind_list[[i]],,])
@@ -410,9 +412,9 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     } else {
       # Fit impulse model to each gene of matrix and get impulse parameters
       ind_list_all <- 1:nrow(data_arr)
-      resmat <- lapply(ind_list_all,function(z){
-        impulse_fit_gene_wise(data_arr[z,,],timepoints,weight_mat[z,],
-          NPARAM,n_it,fit_bg)})
+      resmat <- lapply(ind_list_all,function(x){
+        impulse_fit_gene_wise(data_arr[x,,],timepoints,weight_mat[x,],
+          NPARAM,n_it,fit_bg, dispersion_vec[x])})
       resmat_temp <- array(0,c(length(resmat),length(resmat[[1]])))
       for (i in 1:length(resmat)){
         resmat_temp[i,] <- resmat[[i]]
@@ -421,7 +423,7 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     }   
     
     # Use obtained impulse parameters to calculate impulse fit values
-    colnames(resmat) <- c("beta","h0","h1","h2","t1","t2","SSE")
+    colnames(resmat) <- c("beta","h0","h1","h2","t1","t2","objective")
     if(nrow(resmat) == 1){      # if matrix contains only one gene
       resmat2 <- as.data.frame(t(calc_impulse_comp(resmat[,1:NPARAM],
         unique(sort(timepoints)))),row.names=rownames(resmat))
@@ -436,7 +438,7 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     res <- list()
     rownames(resmat) <- rownames(data_arr)
     rownames(resmat2) <- rownames(data_arr)
-    res[[1]] <- resmat    # "beta","h0","h1","h2","t1","t2","SSE" [x3 if with control]
+    res[[1]] <- resmat    # "beta","h0","h1","h2","t1","t2","value" [x3 if with control]
     res[[2]] <- resmat2   # values of impulse model on input genes
     names(res) <- c("impulse_parameters","impulse_fits")
     return(res)
@@ -588,7 +590,7 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     imp_res <- impulse_fit_matrix(data_input[[c_runs]],
       as.numeric(as.character(data_annotation[colnames(data_input[[c_runs]]),"Time"])), 
       weight_mat = weight_mat,n_it = n_iter, ctrl_tc = control_timecourse, 
-      ctrl = control_name, fit_bg = fit_backg, n_process = n_proc)
+      ctrl = control_name, fit_bg = fit_backg, n_process = n_proc, dispersion_vec=dispersion_vector)
     
     # Use 'get' to pull set of not clustered genes in current run (from current environment)
     # If there is >0 genes not clustered in current run
@@ -604,13 +606,13 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       
       # Fill parameter fits of non clustered genes with NA and sum of squares
       # position with squared deviation to mean (H0)
-      # DAVID: replace with weighted SS
+      # DAVID: leave as NA for now, do these still exist?
       datn_WSS <- rep(NA,length(rownames(get(dat_ind[c_runs]))))
       names(datn_WSS) <- rownames(get(dat_ind[c_runs]))
-      for(iExclGenes in rownames(get(dat_ind[c_runs]))){
-        datn_WSS[[iExclGenes]] <-  sum( apply(get(dat_ind[c_runs])[iExclGenes,,],2,function(y_vec){
-          t((tmpp1[iExclGenes,] - y_vec)^2) %*% (1/weight_mat[iExclGenes,]^2)}))
-      }
+      #for(iExclGenes in rownames(get(dat_ind[c_runs]))){
+      #  datn_WSS[[iExclGenes]] <-  sum( apply(get(dat_ind[c_runs])[iExclGenes,,],2,function(y_vec){
+      #    t((tmpp1[iExclGenes,] - y_vec)^2) %*% (1/weight_mat[iExclGenes,]^2)}))
+      #}
       tmpp2 <-  cbind( matrix(NA,nrow(get(dat_ind[c_runs])),ncol(tump1)-1), datn_WSS)
       
       rownames(tmpp2) <- rownames(get(dat_ind[c_runs]))
