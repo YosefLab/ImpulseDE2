@@ -100,9 +100,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
-  #impulse_fit_gene_wise <- function(expression_values, timepoints, weight_vector, 
-  #    NPARAM, n_iters = 100, fit_to_clusters = FALSE, start_val = NULL, 
-  #    fit_bg = FALSE, ...){
   impulse_fit_gene_wise <- function(expression_values, timepoints, weight_vector, 
     NPARAM, n_iters = 100, fit_bg = FALSE, ...){
     
@@ -122,26 +119,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       expression_means <- apply(expression_values,1,mean)
     }
     
-    ## -- to be depracted
-    #mat1 = c(0,abs(expression_means[2:length(expression_means)] -
-    #    expression_means[1:(length(expression_means)-1)]) *
-    #    expression_means[2:length(expression_means)])
-    #mn_beta = 0
-    #mx_beta = 10
-    #middle_ind = which(timepoints > min(timepoints) & 
-    #    timepoints < max(timepoints))
-    #min_ind = which(timepoints == min(timepoints))[1]
-    #max_ind = which(timepoints == max(timepoints))[1]
-    #mx_tm = max(timepoints)
-    #mn_tm = min(timepoints)
-    #tmp_ind = which(mat1 == max(mat1))[1]
-    #peaktime = timepoints[tmp_ind]
-    #peak = min(which(timepoints == peaktime))
-    #beta1 = abs(log(abs((expression_means[peak] - 
-    #    expression_means[min_ind])/(peaktime-
-    #    timepoints[min_ind]))));
-    ### ---
-    ### DAVID new param
     num_points <- length(expression_means)
     max_value = max(expression_values)
     min_value = min(expression_values)
@@ -166,30 +143,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     if(max_middle_mean < 1.0001){max_middle_mean <- 1.0001}
     if(min_middle_mean < 1.0001){min_middle_mean <- 1.0001}
     
-    ### David -- cluster deprecation
-    ### set beta to 1 if calculcated value is infinite
-    #if(is.finite(beta1) == FALSE || is.na(beta1)) { beta1 = 1 }
-    
-    ### define start value theta based on the gene's data
-    #orig_theta = c(beta1,
-    #  expression_means[min_ind],                   # h0
-    #  expression_means[peak],                      # h1
-    #  expression_means[max_ind],                   # h2
-    #  (peaktime-timepoints[min_ind])/2,            # t1
-    #  peaktime+(timepoints[max_ind] - peaktime)/2) # t2
-    #names(orig_theta) = c("beta","h0","h1","h2","t1","t2")
-    #theta = orig_theta
-    
-    ### replace theta estimates of 0 by small value, because optimization
-    ### function has problems with 0 as input
-    #rand_num <- runif(length(which(theta == 0)),0,0.0001)
-    #theta[names(which(theta == 0))] <- rand_num
-    #names(theta) = c("beta","h0","h1","h2","t1","t2")
-    
-    #####################
-    # 1.  Fit to clusters -- deprecated in v1.3, refer to earlier versions to retrieve
-    #################
-    # 2. Fit to genes
     tmm2 <- system.time({
       
       # NOT working in log 2 space
@@ -385,9 +338,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
-  #impulse_fit_matrix <- function(data_arr, timepoints, weight_mat, n_it = 100,
-  #  ctrl_tc = FALSE, ctrl = NULL, fit_to_clus = FALSE, start_val = NULL,
-  #  fit_bg = FALSE, n_process = 4, ...){
   impulse_fit_matrix <- function(data_arr, timepoints, weight_mat, n_it = 100,
     ctrl_tc = FALSE, ctrl = NULL, fit_bg = FALSE, n_process = 4, ...){
     
@@ -443,9 +393,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       # Fit impulse model to each gene of matrix and get impulse parameters:
       # clusterApply runs the function impulse_fit_gene_wise
       # The input data are distributed to nodes by ind_list partitioning
-      #resi <- clusterApply(cl, 1:length(ind_list), function(z){t(sapply(ind_list[[z]],
-      #  function(x){impulse_fit_gene_wise(data_arr[x,,],timepoints,weight_mat[x,],
-      #    NPARAM,n_it,fit_to_clus, start_val, fit_bg)}))})
       resi <- clusterApply(cl, 1:length(ind_list), function(z){t(sapply(ind_list[[z]],
         function(x){impulse_fit_gene_wise(data_arr[x,,],timepoints,weight_mat[x,],
           NPARAM,n_it, fit_bg)}))})
@@ -463,9 +410,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     } else {
       # Fit impulse model to each gene of matrix and get impulse parameters
       ind_list_all <- 1:nrow(data_arr)
-      #resmat <- lapply(ind_list_all,function(z){
-      #  impulse_fit_gene_wise(data_arr[z,,],timepoints,weight_mat[z,],
-      #    NPARAM,n_it,fit_to_clus, start_val, fit_bg)})
       resmat <- lapply(ind_list_all,function(z){
         impulse_fit_gene_wise(data_arr[z,,],timepoints,weight_mat[z,],
           NPARAM,n_it,fit_bg)})
@@ -477,8 +421,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     }   
     
     # Use obtained impulse parameters to calculate impulse fit values
-    ############################
-    # 1.  Value for fit to genes
     colnames(resmat) <- c("beta","h0","h1","h2","t1","t2","SSE")
     if(nrow(resmat) == 1){      # if matrix contains only one gene
       resmat2 <- as.data.frame(t(calc_impulse_comp(resmat[,1:NPARAM],
@@ -489,9 +431,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
         unique(sort(timepoints)))}))
       colnames(resmat2) = unique(sort(timepoints))
     } 
-    ##############################
-    # 2. Value for fit to clusters -- deprecated v1.3
-    ##############################
     
     # Report results.
     res <- list()
@@ -520,17 +459,7 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
   # data_input is defined in the following as:
   #   1) A list of three data 3D arrays combined, case and control
   #   2) A list of a single data 3D array if only have case
-  # The following if - else if statement distinguishes whether impulse_fit
-  # is called to fit the model to a) clusters or b) genes The difference
-  # is that fitting to clusters is done as the first fitting stage and
-  # therefore does not require starting values. In contrast to that,
-  # fitting to genes assumes that genes are associated with clusters, 
-  # which have have been fitted before. The cluster parameter sets are 
-  # used to initialise the gene-wise models.
-  
-  #################
-  # 1) Fit to genes
-  
+
   # Perform 3 runs (combined, case and control) if control timecourse is present
   # datX contains expression data of genes associates with cluster
   # datX_n contains expression data of genes NOT in cluster (low variation)
@@ -541,24 +470,17 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     # cluster_results[[1,5,9]] are kmeans_clus for [combined, case, control]
     
     # Combined: Expression values of both case and control (all columns).
-    # Clustering based on combined.
-    ### DAVID: cluster depreceation
-    #dat1 = data_input[names(cluster_results[[1]]),,]
     dat1 = data_input
     dat1_n = data_input[!(rownames(data_input) %in% rownames(dat1)),,] 
     dat1_n = dat1_n[,colnames(dat1),]
     
-    # Case: Expression values of case. Clustering based on case.
+    # Case: Expression values of case.
     dat2 = data_input[,!(data_annotation$Condition %in% control_name),]
-    ### DAVID: cluster depreceation
-    #dat2 = dat2[names(cluster_results[[5]]),,]
     dat2_n = data_input[!(rownames(data_input) %in% rownames(dat2)),,]
     dat2_n = dat2_n[,colnames(dat2),]
     
-    # Control: Expression values of control. Clustering based on control. 
+    # Control: Expression values of control.  
     dat3 = data_input[,(data_annotation$Condition %in% control_name),]
-    ### DAVID: cluster depreceation
-    #dat3 = dat3[names(cluster_results[[9]]),]
     dat3_n = data_input[!(rownames(data_input) %in% rownames(dat3)),,]
     dat3_n = dat3_n[,colnames(dat3),]
     
@@ -631,8 +553,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     data_input <- list(dat1, dat2, dat3)
     
   } else if(control_timecourse == FALSE){
-    # DAVID cluster depreceation
-    #dat1 = data_input[names(cluster_results[[1]]),,]
     dat1 = data_input[,,]
     dat1_n = data_input[!(rownames(data_input) %in% rownames(dat1)),,]
     # Formatting into 3D breaks if only single gene is selected:
@@ -661,34 +581,10 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     data_input <- list(dat1)
   }
   
-  ####################  
-  # 2) Fit to clusters -- deprecated v1.3
-  
   # Fitting for different runs
   for (c_runs in 1:runs){
     imp_res <- NULL
     
-    ####################  
-    # 1) Fit to genes
-    
-    ### DAVID: cluster depreceation: new data splitting here
-    # Split genes into the clusters and fit impulse model to the genes of a cluster:
-    # Split expression array of current run into list of arrays for each cluster:
-    #cluster_res_list <- list()
-    #for (iClusters in unique(cluster_results[[(c_runs-1)*4 +1]])){
-    #  cluster_res_list[[iClusters]] <- data_input[[c_runs]][
-    #    cluster_results[[(c_runs-1)*4 +1]] %in% iClusters,,]  
-    #}
-    # Get list of cluster indices with numeric index as character string as name of
-    # each list element.
-    #ind <- split(1:max(cluster_results[[(c_runs-1)*4 +1]]), 1:max(cluster_results[[(c_runs-1)*4 +1]]))
-    
-    # Fit model to each cluster matrix
-    #imp_res_list <- lapply(ind, function(x){impulse_fit_matrix(cluster_res_list[[x]],
-    #  as.numeric(as.character(data_annotation[colnames(data_input[[c_runs]]),"Time"])), 
-    #  weight_mat = weight_mat,n_it = n_iter, ctrl_tc = control_timecourse, 
-    #  ctrl = control_name, fit_to_clus = FALSE,start_val = start_values[[c_runs]][x,], 
-    #  fit_bg = fit_backg, n_process = n_proc)})
     imp_res <- impulse_fit_matrix(data_input[[c_runs]],
       as.numeric(as.character(data_annotation[colnames(data_input[[c_runs]]),"Time"])), 
       weight_mat = weight_mat,n_it = n_iter, ctrl_tc = control_timecourse, 
@@ -698,9 +594,6 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     # If there is >0 genes not clustered in current run
     if(nrow(get(dat_ind[c_runs])) != 0){
       # Report results obtained so far
-      ### DAVID cluster deprecation
-      #tump1  <- do.call(rbind,lapply(1:(length(imp_res_list)), function(x) imp_res_list[[x]][[1]]))
-      #tump2  <- do.call(rbind,lapply(1:(length(imp_res_list)), function(x) imp_res_list[[x]][[2]]))
       tump1 <- imp_res[[1]]
       tump2 <- imp_res[[2]]
       
@@ -730,18 +623,12 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       # If all genes were clustered and fitted
     } else {
       # Simply report results, all genes are covered.
-      ### DAVID cluster deprecation
-      #tempi1  <- do.call(rbind,lapply(1:(length(imp_res_list)), function (x) imp_res_list[[x]][[1]]))
-      #tempi2  <- do.call(rbind,lapply(1:(length(imp_res_list)), function(x) imp_res_list[[x]][[2]]))
       tempi1 <- imp_res[[1]]
       tempi2 <- imp_res[[2]]
     }
     
     imp_res$impulse_parameters <- tempi1[g_names,]
     imp_res$impulse_fits <- tempi2[g_names,]
-    
-    ####################  
-    # 2) Fit to clusters -- deprecated v1.3
     
     names(imp_res) <- paste(c("impulse_parameters","impulse_fits"),label[c_runs],sep="_")
     results[[names(imp_res)[1]]] <- imp_res[[1]]

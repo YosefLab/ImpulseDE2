@@ -181,7 +181,6 @@ cost_fun_WLS_comp <- cmpfun(cost_fun_WLS)
 source("srcImpulseDE_cluster_genes_for_impulse.R")
 source("srcImpulseDE_impulse_fit.R")
 source("srcImpulseDE_generate_background.R")
-source("srcImpulseDE_DE_analysis.R")
 source("srcImpulseDE_plot_impulse.R")
 
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
