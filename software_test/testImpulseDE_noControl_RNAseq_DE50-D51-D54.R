@@ -43,11 +43,10 @@ source("srcImpulseDE_DE_analysis_loglik.R")
 source("srcImpulseDE_plot_impulse.R")
 source("srcImpulseDE_compute_stdvs.R")
 source("srcImpulseDE_compute_weights.R")
-setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 
 ################################################################################
 ### LOAD DATA
-
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test")
 # DAVID: take out timepoints
 annotation_table <- read.table("annotation_table_RNAseq_D50-D51-D54.tab",header=T)
 rownames(annotation_table) <- annotation_table$Replicate_name
@@ -57,11 +56,11 @@ colname_condition <- "Condition"
 control_name <- NULL
 case_name <- "case"
 # DE Genes (as of DESeq)
-#setwd("/Users/davidsebastianfischer/MasterThesis/data/DESeq_RNAseq/DESeq_output")
-#expression_table_raw <- read.table("D50-D51-D54_DEseq_RNAseq_filteredGenes_TPM_p1e-05.tab",sep="\t",header=T)
+setwd("/Users/davidsebastianfischer/MasterThesis/data/DESeq_RNAseq/DESeq_output")
+expression_table_raw <- read.table("D50-D51-D54_DEseq_RNAseq_filteredGenes_TPM_p1e-05.tab",sep="\t",header=T)
 # All genes
-setwd("/Users/davidsebastianfischer/MasterThesis/data/DESeq_RNAseq/raw_RNAseq")
-expression_table_raw <- read.table("hDC_TPM_D50-D51-D54.tab",sep="\t",header=T)
+#setwd("/Users/davidsebastianfischer/MasterThesis/data/DESeq_RNAseq/raw_RNAseq")
+#expression_table_raw <- read.table("hDC_TPM_D50-D51-D54.tab",sep="\t",header=T)
 
 expression_table <- expression_table_raw[,2:dim(expression_table_raw)[2]]
 expression_table <- t(apply(expression_table,1,as.numeric))
@@ -72,12 +71,12 @@ rownames(expression_table) <- expression_table_raw[,1]
 colnames(expression_table) <- colnames(expression_table_raw)[2:dim(expression_table_raw)[2]]
 
 # Minimal expression required in a row
-min_expr_value <- 10
-expression_table <- expression_table[apply(expression_table[,annotation_table$Replicate_name],1,function(x){any(x>min_expr_value)}),]
+min_expr_value <- 0
+expression_table <- expression_table[apply(expression_table[,colnames(expression_table) %in% annotation_table$Replicate_name],1,function(x){any(x>min_expr_value)}),]
 
 # Shorten:
-ind_toKeep <- c(1:200)
-#ind_toKeep <- c(1:(dim(expression_table)[1]))
+#ind_toKeep <- c(1:200)
+ind_toKeep <- c(1:(dim(expression_table)[1]))
 expression_table_cut <- expression_table[ind_toKeep,]
 
 # Skip 1h only present in 51 and 54 for now - missing data for later
@@ -226,8 +225,9 @@ if(FALSE){
 ### 7. Plot the top DE genes
 genesToPlot <- as.character(impulse_DE_genes[,
   "Gene"])[1:(min(nrow(impulse_DE_genes),36))]
-genesToPlot <- rownames(expression_array[1:min(200,dim(expression_array)[1]),,])
+genesToPlot <- rownames(expression_array[1:min(dim(expression_array)[1]),,])
 
+graphics.off()
 plot_impulse(genesToPlot,
   expression_array, prepared_annotation, impulse_fit_genes,
   control_timecourse, control_name, case_ind, file_name_part = "DE",
@@ -244,7 +244,40 @@ cor.test(dds_resultsTable$padj[DE_results$Gene],DE_results$adj.p)
 dfDESeq_Impulse <- as.data.frame( cbind(
   "Gene"=genesToPlot,
   "DESeq"=dds_resultsTable$padj[rownames(dds_resultsTable) %in% genesToPlot],
-  "Impulse"=DE_results$adj.p[DE_results$Gene %in% genesToPlot] ))
+  "Impulse"=DE_results$adj.p[DE_results$Gene %in% genesToPlot]),
+  stringsAsFactors=FALSE)
+dfDESeq_Impulse$DESeq <- as.numeric(dfDESeq_Impulse$DESeq)
+dfDESeq_Impulse$Impulse <- as.numeric(dfDESeq_Impulse$Impulse)
+
+mat_overlap <- array(NA,c(10,10))
+# DESeq on vertical
+for(i in 1:10){
+  # Impulse on horicontal
+  for(j in 1:10){
+    sig_DESeq <- dfDESeq_Impulse[,"DESeq"] <= 10^(-i)
+    sig_Impulse <- dfDESeq_Impulse[,"Impulse"] <= 10^(-j)
+    mat_overlap[i,j] <- sum(sig_DESeq & sig_Impulse)/sum(sig_DESeq | sig_Impulse)
+  }
+}
+rownames(mat_overlap) <- -1:-10
+colnames(mat_overlap) <- -1:-10
+library(gplots)
+graphics.off()
+heatmap(mat_overlap, keep.dendro = FALSE,Rowv=NA,Colv= "Rowv",symm=FALSE,
+  xlab =  paste0("ImpulseDE scores"), ylab = "DESeq scores")
+breaks <- seq(0,1,by=0.01)
+hm.colors <- colorpanel( length(breaks)-1, "yellow", "red" )
+graphics.off()
+pdf(paste('DESeq-Impulse_OverlapSigGenes_Heatmap.pdf',sep=''),width=7,height=7)
+heatmap.2(mat_overlap, dendrogram="none", Rowv=FALSE,Colv=FALSE, 
+  xlab =  paste0("log(p-value) ImpulseDE"), ylab = "log(p-value) DESeq2",
+  breaks=breaks,col=hm.colors, scale="none",
+	trace="none",density.info="none",
+  key.title = " ", key.xlab = paste0("Overlap"), key.ylab = NULL,
+  symkey=FALSE,
+  cellnote=round(mat_overlap,digits=2),notecol="white",
+  lmat=rbind( c(3,4),c(2,1) ),lhei=c(1,4), lwid=c(1,4), margins=c(5,5))
+dev.off()
 
 padj_thres = 10^(-5)
 dds_resultsTable_fitted <- dds_resultsTable[DE_results$Gene,]
@@ -274,5 +307,5 @@ plot_impulse(DEgenes_Impulse_only,
   control_timecourse, control_name, case_ind, file_name_part = "DE_Impulse",
   title_line = "", sub_line = "")
 
-DE_results[DEgenes_DESeq_only,]
-DE_results[DEgenes_Impulse_only,]
+DE_results[DE_results$Gene %in% DEgenes_DESeq_only,]
+DE_results[DE_results$Gene %in% DEgenes_Impulse_only,]

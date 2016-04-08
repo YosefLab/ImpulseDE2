@@ -59,8 +59,8 @@
 #' @param sub_line character string to be used as subtitle for each plot.
 #' @export
 plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
-                         control_timecourse = FALSE, control_name = NULL, case_name = NULL,
-                         file_name_part = "", title_line = "", sub_line = ""){
+  control_timecourse = FALSE, control_name = NULL, case_name = NULL,
+  file_name_part = "", title_line = "", sub_line = ""){
   
   #print("---Plotting genes")
   
@@ -84,7 +84,7 @@ plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
     timep_case_arr <- t(matrix(rep(timep_case,dim(data_array)[3]),length(timep_case),dim(data_array)[3]))
     timep_ctrl_arr <- t(matrix(rep(timep_ctrl,dim(data_array)[3]),length(timep_ctrl),dim(data_array)[3]))
   }
-
+  
   pdf(paste("impulse_fit_genes_",file_name_part,".pdf",sep=""),height=6.0,width=9.0)
   if (length(gene_IDs) == 1){
     par(mfrow=c(1,1))
@@ -96,94 +96,77 @@ plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
     par(mfrow=c(3,3))
   }
   x_vec <- seq(0,max(timep),0.1)
-  for (i in 1:length(gene_IDs)){
+  for (gene_ID in gene_IDs){
     # If there is no control data plot only case time course data and fit
     if(control_timecourse == FALSE){
       # Chose impulse fit if parameters of fitted model are not NAN,
       # only plot first timepoint otherwise
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_IDs[i],])){
-        calc_case <- imp_fit_genes$impulse_fits_case[gene_IDs[i],1]
+      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_ID,])){
+        calc_case <- imp_fit_genes$impulse_fits_case[gene_ID,1]
       } else {
-        calc_case <- calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_IDs[i],1:6],x_vec)
+        calc_case <- calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:6],x_vec)
       }
       
-      # Plot points
-      if(FALSE){
-      plot(timep_arr,2^(t(data_array[gene_IDs[i],,])),col="blue",pch=3,xlim=c(0,max(timep)),
-           ylim=c(2^(min(c(as.numeric(data_array[gene_IDs[i],,]),as.numeric(calc_case)))-0.5),
-                  2^(max(c(as.numeric(data_array[gene_IDs[i],,]),as.numeric(calc_case)))+0.5)),
-           xlab="Time", ylab="Impulse fit and expression values",
-           main=paste(gene_IDs[i]," ",title_line,sep=""),sub=sub_line)
-      points(timep_arr[1,],2^(apply(data_array[gene_IDs[i],,],1,mean)),col="red",pch=1)
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_IDs[i],])){
-        abline(h = 2^calc_case , col = "blue")
-      } else {
-        points(x_vec, 2^calc_case, col = "blue", type="l")
-      }
-      }
-      if(TRUE){
-      # no log
-      plot(timep_arr,(t(data_array[gene_IDs[i],,])),col="blue",pch=3,xlim=c(0,max(timep)),
-        ylim=c((min(c(as.numeric(data_array[gene_IDs[i],,]),as.numeric(calc_case)))-0.5),
-          (max(c(as.numeric(data_array[gene_IDs[i],,]),as.numeric(calc_case)))+0.5)),
+      plot(timep_arr,(t(data_array[gene_ID,,])),col="blue",pch=3,xlim=c(0,max(timep)),
+        ylim=c((min(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case)))-0.5),
+          (max(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case)))+0.5)),
         xlab="Time", ylab="Impulse fit and expression values",
-        main=paste(gene_IDs[i]," ",title_line,sep=""),sub=sub_line)
-      points(timep_arr[1,],(apply(data_array[gene_IDs[i],,],1,mean)),col="red",pch=1)
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_IDs[i],])){
+        main=paste(gene_ID," ",title_line,sep=""),sub=sub_line)
+      points(timep_arr[1,],(apply(data_array[gene_ID,,],1,mean)),col="red",pch=1)
+      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_ID,])){
         abline(h = calc_case , col = "blue")
       } else {
         points(x_vec, calc_case, col = "blue", type="l")
-      }
-      }
+      } 
       legend(x="bottomright",as.character(data_annotation[1,"Condition"]),fill=c("blue"), cex=0.6)
       
       ### if there is control data
     } else if(control_timecourse == TRUE){
       
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_IDs[i],])){
-        calc_case = imp_fit_genes$impulse_fits_case[gene_IDs[i],1]
+      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_ID,])){
+        calc_case = imp_fit_genes$impulse_fits_case[gene_ID,1]
         status_case = FALSE
       } else {
-        calc_case = calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_IDs[i],1:6],x_vec)
+        calc_case = calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:6],x_vec)
         status_case = TRUE
       }
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_control[gene_IDs[i],])){
-        calc_ctrl = imp_fit_genes$impulse_fits_control[gene_IDs[i],1]
+      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_control[gene_ID,])){
+        calc_ctrl = imp_fit_genes$impulse_fits_control[gene_ID,1]
         status_ctrl = FALSE
       } else {
-        calc_ctrl = calc_impulse_comp(imp_fit_genes$impulse_parameters_control[gene_IDs[i],1:6],x_vec)
+        calc_ctrl = calc_impulse_comp(imp_fit_genes$impulse_parameters_control[gene_ID,1:6],x_vec)
         status_ctrl = TRUE
       }
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_combined[gene_IDs[i],])){
-        calc_comb = imp_fit_genes$impulse_fits_combined[gene_IDs[i],1]
+      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_combined[gene_ID,])){
+        calc_comb = imp_fit_genes$impulse_fits_combined[gene_ID,1]
         status_comb = FALSE
       } else {
-        calc_comb = calc_impulse_comp(imp_fit_genes$impulse_parameters_combined[gene_IDs[i],1:6],x_vec)
+        calc_comb = calc_impulse_comp(imp_fit_genes$impulse_parameters_combined[gene_ID,1:6],x_vec)
         status_comb = TRUE
       }
       
-      plot(timep_case_arr,2^(t(farr_case[gene_IDs[i],,])),col="blue",pch=3,xlim=c(0,max(timep)),
-           ylim=c(2^(min(c(as.numeric(data_array[gene_IDs[i],,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))-0.5),
-                  2^(max(c(as.numeric(data_array[gene_IDs[i],,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))+0.5)),
-           xlab="Time", ylab="Impulse fit or log2 expression value",
-           main=paste(gene_IDs[i]," ",title_line,sep=""),sub=sub_line)
+      plot(timep_case_arr,(t(farr_case[gene_ID,,])),col="blue",pch=3,xlim=c(0,max(timep)),
+        ylim=c((min(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))-0.5),
+          (max(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))+0.5)),
+        xlab="Time", ylab="Impulse fit or log2 expression value",
+        main=paste(gene_ID," ",title_line,sep=""),sub=sub_line)
       
-      points(timep_ctrl,farr_ctrl[gene_IDs[i],],col="red",pch=4)
+      points(timep_ctrl,farr_ctrl[gene_ID,],col="red",pch=4)
       
       if(status_case == FALSE){
-        abline(h = 2^calc_case , col = "blue")
+        abline(h = calc_case , col = "blue")
       } else {
-        points(x_vec,2^calc_case, col = "blue", type="l")
+        points(x_vec,calc_case, col = "blue", type="l")
       }
       if(status_ctrl == FALSE){
-        abline(h = 2^calc_ctrl , col = "red")
+        abline(h = calc_ctrl , col = "red")
       } else {
-        points(x_vec,2^calc_ctrl, col = "red", type="l")
+        points(x_vec,calc_ctrl, col = "red", type="l")
       }
       if(status_comb == FALSE){
-        abline(h = 2^calc_comb , col = "grey")
+        abline(h = calc_comb , col = "grey")
       } else {
-        points(x_vec,2^calc_comb, col = "grey", type="l")
+        points(x_vec,calc_comb, col = "grey", type="l")
       }
       legend(x="bottomright",c(as.character(data_annotation$Condition[data_annotation$Condition != control_name][1]),control_name,"combined"),fill=c("blue","red","grey"), cex=0.6)
     }

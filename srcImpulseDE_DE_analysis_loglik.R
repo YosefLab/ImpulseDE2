@@ -57,15 +57,6 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
   deviance <- 2*(loglik_fullmodel - loglik_redmodel)
   p <- pchisq(deviance,df=df,lower.tail=FALSE)
   
-  # Visualise dieviance distribution relativ to chi-squre distribution
-  graphics.off()
-  plot.new()
-  d<-density(deviance)
-  plot(d$x,d$y,xlim=c(0,50))
-  print(deviance)
-  x <- seq(0,max(deviance)+1,1)
-  lines(x,pchisq(x,5,lower.tail=FALSE),col="green")
-  
   p_BH = p.adjust(p, method = "BH")
     
   # SS1 Flag

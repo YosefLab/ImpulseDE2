@@ -81,10 +81,10 @@ cost_fun_logl <- function(theta,x_vec,y_mat,disp_est,...){
   # at each time point by maximising over the dispersion
   # coefficient. This routine returns the objective:
   # log likelihood of the model (at the MLE).
-  start <- list()
-  start$size <- 0.1
-  lower <- list()
-  lower$size <- 0.0001
+  #start <- list()
+  #start$size <- 0.1
+  #lower <- list()
+  #lower$size <- 0.0001
   
   # With estimation of dispersion
   #nb_estimation <- lapply(c(1:length(x_vec)), function(tp){
@@ -96,10 +96,14 @@ cost_fun_logl <- function(theta,x_vec,y_mat,disp_est,...){
   #logl_impulse <- sum( unlist(lapply(nb_estimation,function(x){x$loglik})) )
   
   # Without dispersion estimation, take given
-  logl_tps <- unlist( lapply(c(1:length(x_vec)), function(tp){
+  lik_tps <- unlist( lapply(c(1:length(x_vec)), function(tp){
     prod(dnbinom(y_mat[tp,], mu=impulse_value[tp], size=disp_est))}) )
-  logl_impulse <- log(prod( logl_tps ))
+  logl_impulse <- log(prod( lik_tps ))
+  if(is.na(logl_impulse) || !is.finite(logl_impulse)){logl_impulse <- -800}
+  # log(10^(-323))=-743.7469 is the smallest number not to give an
+  # error in log. -800 is smaller than that - sets the boundary
+  # for optimisation to move away from.
   
-  # Maximise log likelihood
+  # Maximise log likelihood, optimisation functions minimise
   return(-logl_impulse)
 }

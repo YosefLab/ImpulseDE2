@@ -105,9 +105,9 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     NPARAM, n_iters = 100, fit_bg = FALSE, dispersion_estimate=NULL,...){
     
     objective_fun <- cost_fun_logl_comp
-    optim_method <- "nlminb"
-    # DEVELOPMENTAL NOTE: cannot use optim if optim is used within optim?
-    # set alpha with DESeq input and get rid of optim in cost function
+    #optim_method <- "optim"
+    #optim_method <- "nlminb"
+    optim_method <- c("optim","nlminb")
     
     # If handed a list, i.e. not replicates
     if (is.vector(expression_values)==TRUE){
@@ -137,91 +137,79 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
     # Gradients between neighbouring points
     neighbour_grad <- unlist( lapply(c(1:(num_points-1)),function(x){
       (expression_means[x+1]-expression_means[x])/(timepoints[x+1]-timepoints[x])}) )
-    if(max_mean < 1.0001){max_mean <- 1.0001}
-    if(min_mean < 1.0001){min_mean <- 1.0001}
-    if(max_value < 1.0001){max_value <- 1.0001}
-    if(min_value < 1.0001){min_value <- 1.0001}
-    if(max_middle_mean < 1.0001){max_middle_mean <- 1.0001}
-    if(min_middle_mean < 1.0001){min_middle_mean <- 1.0001}
+    if(max_mean < 1.001){max_mean <- 1.001}
+    if(min_mean < 0.001){min_mean <- 0.0001}
+    if(max_value < 1.001){max_value <- 1.001}
+    if(min_value < 0.001){min_value <- 0.001}
+    if(max_middle_mean < 1.001){max_middle_mean <- 1.001}
+    if(min_middle_mean < 0.001){min_middle_mean <- 0.001}
     
     tmm2 <- system.time({
       
       # NOT working in log 2 space
       # 1. Peak:
-      #if(max_middle_mean > 2*expression_means[1] &&
-      #    max_middle_mean > 2*expression_means[num_points] &&
-      #    ((expression_means[1] > 10 && expression_means[num_points] > 10) || 
-      #    (max_middle_mean > 4*expression_means[1] ||
-      #    max_middle_mean > 4*expression_means[num_points]))){
       # Beta: Has to be negative
       # Theta1: Low
       # Theta2: High
       # Theta3: Low
       # t1: Around first observed inflexion point
       # t2: Around second observed inflexion point
-      #guess1 <- c(1,expression_means[1],max_mean,expression_means[num_points],timepoints[(max_middle_mean_ind-1)],timepoints[max_middle_mean_ind])
       lower_inflexion_point_ind <- match(max(neighbour_grad[1:(max_middle_mean_ind-1)]), neighbour_grad[1:(max_middle_mean_ind-1)])
       upper_inflexion_point_ind <- max_middle_mean_ind - 1 + match(min(neighbour_grad[max_middle_mean_ind:length(neighbour_grad)]), neighbour_grad[max_middle_mean_ind:length(neighbour_grad)])
       upper_h0 <- min( max(expression_values[1:(max_middle_mean_ind-1),]), max_middle_mean )
       upper_h2 <- min( max(expression_values[(max_middle_mean_ind+1):num_points,]), max_middle_mean )
-      guess1 <- c(1,expression_means[1],max_middle_mean,expression_means[num_points],
+      par_guess <- c(1,expression_means[1],max_middle_mean,expression_means[num_points],
         (timepoints[lower_inflexion_point_ind]+timepoints[lower_inflexion_point_ind+1])/2,
         (timepoints[upper_inflexion_point_ind]+timepoints[upper_inflexion_point_ind+1])/2 )
-      lower_b <- c(0.01,1.0001,max(expression_means[1],expression_means[num_points]),1.0001,(timepoints[1]+timepoints[2])/3,timepoints[max_middle_mean_ind])
+      lower_b <- c(0.01,0.001,max(expression_means[1],expression_means[num_points]),0.001,(timepoints[1]+timepoints[2])/3,timepoints[max_middle_mean_ind])
       upper_b <- c(100,upper_h0,max_middle_val,upper_h2,timepoints[max_middle_mean_ind],timepoints[num_points])
       # check that guess fullfills bounds
-      guess1[guess1 <= lower_b] <- lower_b[guess1 <= lower_b] + 0.0001
-      guess1[guess1 >= upper_b] <- upper_b[guess1 >= upper_b] - 0.0001
+      par_guess[par_guess <= lower_b] <- lower_b[par_guess <= lower_b] + 0.01
+      par_guess[par_guess >= upper_b] <- upper_b[par_guess >= upper_b] - 0.01
       # check validity of bounds
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
       if("optim" %in% optim_method){
-        fit_peak1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
+        fit_peak1 <- unlist(optim(par=par_guess, fn=objective_fun, x_vec=timepoints,
           y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
       }
       if("nlminb" %in% optim_method){
-        fit_peak2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
+        fit_peak2 <- unlist(nlminb(start=par_guess, objective=objective_fun, x_vec=timepoints,
           y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
       # 2. Valley
-      #} else if(min_middle_mean < expression_means[1]/2 &&
-      #    min_middle_mean < expression_means[num_points]/2 &&
-      #    expression_means[1] > 10 && expression_means[num_points] > 10){
       # Beta: Has to be negative
       # Theta1: High
       # Theta2: Low
       # Theta3: High
       # t1: Around first observed inflexion point
       # t2: Around second observed inflexion point
-      #guess1 <- c(1,expression_means[1],min_mean,expression_means[num_points],timepoints[min_middle_mean_ind-1],timepoints[min_middle_mean_ind+1])
       lower_inflexion_point_ind <- match(min(neighbour_grad[1:(min_middle_mean_ind-1)]), neighbour_grad[1:(min_middle_mean_ind-1)])
       upper_inflexion_point_ind <- min_middle_mean_ind - 1 + match(max(neighbour_grad[min_middle_mean_ind:(num_points-1)]), neighbour_grad[min_middle_mean_ind:(num_points-1)])
       upper_h0 <- max(expression_values[1:(min_middle_mean_ind-1),])
       upper_h2 <- max(expression_values[(min_middle_mean_ind+1):num_points,])
-      guess1 <- c(-1,expression_means[1],min_middle_mean,expression_means[num_points],
+      par_guess <- c(-1,expression_means[1],min_middle_mean,expression_means[num_points],
         (timepoints[lower_inflexion_point_ind]+timepoints[lower_inflexion_point_ind+1])/2,
         (timepoints[upper_inflexion_point_ind]+timepoints[upper_inflexion_point_ind+1])/2 )
-      lower_b <- c(-0.01,min_middle_mean,0.0001,min_middle_mean,(timepoints[1]+timepoints[2])/3,timepoints[min_middle_mean_ind])
+      lower_b <- c(-0.01,min_middle_mean,0.001,min_middle_mean,(timepoints[1]+timepoints[2])/3,timepoints[min_middle_mean_ind])
       upper_b <- c(-100,upper_h0,min(expression_means[1],expression_means[num_points]),upper_h2,timepoints[min_middle_mean_ind],timepoints[num_points])          
       # check that guess fullfills bounds
-      guess1[guess1 <= lower_b] <- lower_b[guess1 <= lower_b] + 0.0001
-      guess1[guess1 >= upper_b] <- upper_b[guess1 >= upper_b] - 0.0001
+      par_guess[par_guess <= lower_b] <- lower_b[par_guess <= lower_b] + 0.01
+      par_guess[par_guess >= upper_b] <- upper_b[par_guess >= upper_b] - 0.01
       # check validity of bounds
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
       if("optim" %in% optim_method){
-        fit_valley1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
+        fit_valley1 <- unlist(optim(par=par_guess, fn=objective_fun, x_vec=timepoints,
           y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
       }
       if("nlminb" %in% optim_method){
-        fit_valley2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
+        fit_valley2 <- unlist(nlminb(start=par_guess, objective=objective_fun, x_vec=timepoints,
           y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
       # 3. Up
-      #} else if(expression_means[1] < expression_means[num_points]){
-      #guess1 <- c(10,min_mean,max_mean,min_mean,timepoints[2],mx_tm+timepoints[2])
       # Beta: Has to be positive
       # Theta1: Low
       # Theta2: High
@@ -229,29 +217,27 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       # t1: Around observed inflexion point
       # t2: Should be well outside reach so that model doesn't use the 2nd sigmoid.
       inflexion_point_ind <- match(max(neighbour_grad), neighbour_grad)
-      guess1 <- c(1,min_mean,max_mean,min_mean,
+      par_guess <- c(1,min_mean,max_mean,min_mean,
         (timepoints[inflexion_point_ind]+timepoints[inflexion_point_ind+1])/2,
         2.5*timepoints[num_points])
-      lower_b <- c(0.01,0.0001,max_middle_mean,0.0001,(timepoints[1]+timepoints[2])/3,2*timepoints[num_points])
+      lower_b <- c(0.01,0.001,max_middle_mean,0.001,(timepoints[1]+timepoints[2])/3,2*timepoints[num_points])
       upper_b <- c(100,max_middle_mean,max_value,max_middle_mean,timepoints[num_points],3*timepoints[num_points])
       # check that guess fullfills bounds
-      guess1[guess1 <= lower_b] <- lower_b[guess1 <= lower_b] + 0.0001
-      guess1[guess1 >= upper_b] <- upper_b[guess1 >= upper_b] - 0.0001
+      par_guess[par_guess <= lower_b] <- lower_b[par_guess <= lower_b] + 0.01
+      par_guess[par_guess >= upper_b] <- upper_b[par_guess >= upper_b] - 0.01
       # check validity of bounds
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
       if("optim" %in% optim_method){
-        fit_up1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
+        fit_up1 <- unlist(optim(par=par_guess, fn=objective_fun, x_vec=timepoints,
           y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
       }
       if("nlminb" %in% optim_method){
-        fit_up2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
+        fit_up2 <- unlist(nlminb(start=par_guess, objective=objective_fun, x_vec=timepoints,
           y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
       # 4. Down
-      #} else if(expression_means[1] >= expression_means[num_points]){
-      #guess1 <- c(10,max_mean,min_mean,max_mean,timepoints[2],mx_tm+timepoints[2])
       # Beta: Has to be negative
       # Theta1: High
       # Theta2: Low
@@ -259,35 +245,43 @@ impulse_fit <- function(data_input, data_annotation, weight_mat, n_iter = 100,
       # t1: Around observed inflexion point
       # t2: Should be well outside reach so that model doesn't use the 2nd sigmoid.
       inflexion_point_ind <- match(min(neighbour_grad), neighbour_grad)
-      guess1 <- c(-1,max_mean,min_mean,max_mean,
+      par_guess <- c(-1,max_mean,min_mean,max_mean,
         (timepoints[inflexion_point_ind]+timepoints[inflexion_point_ind+1])/2,
         2.5*timepoints[num_points])
-      lower_b <- c(-0.01,min_middle_mean,0.0001,0.0001,(timepoints[1]+timepoints[2])/3,2*timepoints[num_points])
+      lower_b <- c(-0.01,min_middle_mean,0.001,0.001,(timepoints[1]+timepoints[2])/3,2*timepoints[num_points])
       upper_b <- c(-100,max_value,max_middle_mean,max_value,timepoints[num_points],3*timepoints[num_points])
       # check that guess fullfills bounds
-      guess1[guess1 <= lower_b] <- lower_b[guess1 <= lower_b] + 0.0001
-      guess1[guess1 >= upper_b] <- upper_b[guess1 >= upper_b] - 0.0001
+      par_guess[par_guess <= lower_b] <- lower_b[par_guess <= lower_b] + 0.01
+      par_guess[par_guess >= upper_b] <- upper_b[par_guess >= upper_b] - 0.01
       # check validity of bounds
       upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
       if("optim" %in% optim_method){
-        fit_down1 <- unlist(optim(guess1, objective_fun, x_vec=timepoints,
+        fit_down1 <- unlist(optim(par=par_guess, fn=objective_fun, x_vec=timepoints,
           y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
       }
       if("nlminb" %in% optim_method){
-        fit_down2 <- unlist(nlminb(guess1, objective_fun, x_vec=timepoints,
+        fit_down2 <- unlist(nlminb(start=par_guess, objective=objective_fun, x_vec=timepoints,
           y_mat=expression_values, weight_vec=weight_vector, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
+      # 5. Mean
+      # Parameter estimates: Only h1 is in modeled time interval and represents mean
+      theta_mean <- c(beta=100, h0=mean(expression_values), h1=mean(expression_values)+1, 
+        h2=mean(expression_values),t1=3*timepoints[num_points],4*timepoints[num_points])
+      value_mean <- objective_fun(theta=theta_mean,x_vec=timepoints,
+        y_mat=expression_values,disp_est=dispersion_estimate)
+      fit_mean <- c(theta_mean,value=value_mean)
       
       if(("optim" %in% optim_method) && ("nlminb" %in% optim_method)){
-        fmin_outs <- cbind(fit_peak1,fit_peak2,fit_valley1,fit_valley2,fit_up1,fit_up2,fit_down1,fit_down2)
+        fmin_outs <- cbind(fit_peak1,fit_peak2,fit_valley1,fit_valley2,fit_up1,fit_up2,
+          fit_down1,fit_down2,fit_mean)
       }
       if(("optim" %in% optim_method) && !("nlminb" %in% optim_method)){
-        fmin_outs <- cbind(fit_peak1,fit_valley1,fit_up1,fit_down1)
+        fmin_outs <- cbind(fit_peak1,fit_valley1,fit_up1,fit_down1,fit_mean)
       }
       if(!("optim" %in% optim_method) && ("nlminb" %in% optim_method)){
-        fmin_outs <- cbind(fit_peak2,fit_valley2,fit_up2,fit_down2)
+        fmin_outs <- cbind(fit_peak2,fit_valley2,fit_up2,fit_down2,fit_mean)
       } 
       
       # Name row containing value of objective as value 
