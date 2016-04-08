@@ -46,7 +46,7 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
     "Time"]))
   
   if(control_timecourse == FALSE){
-    loglik_fullmodel <- impulse_fit_results$impulse_parameters_case[,"objective"]
+    loglik_fullmodel <- -impulse_fit_results$impulse_parameters_case[,"objective"]
     # Compute likelihood null model
     loglik_redmodel <-  unlist(lapply( c(1:dim(data_array)[1]), function(x){
       log(prod( dnbinom(data_array[x,,], mu=mean(data_array[x,,]), size=dispersion_vector[x]) )) } ))
@@ -57,31 +57,46 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
   deviance <- 2*(loglik_fullmodel - loglik_redmodel)
   p <- pchisq(deviance,df=df,lower.tail=FALSE)
   
-  p_scaled = p.adjust(p, method = "BH")
-  p_scaled_orig = p_scaled
+  # Visualise dieviance distribution relativ to chi-squre distribution
+  graphics.off()
+  plot.new()
+  d<-density(deviance)
+  plot(d$x,d$y,xlim=c(0,50))
+  print(deviance)
+  x <- seq(0,max(deviance)+1,1)
+  lines(x,pchisq(x,5,lower.tail=FALSE),col="green")
+  
+  p_BH = p.adjust(p, method = "BH")
     
   # SS1 Flag
   ### DAVID: SS flag still valid under my model?
   ### Could leave like this or find new threshold for weighted SS
   #SS_1_s = apply(RESD_1_s, 1, function(x){sum(x^2)})
   #SS1_flag = SS_1_s < 20
-  SS1_flag <- array(1,length(p_scaled))
+  SS1_flag <- array(1,length(p_BH))
   error_index = unlist(lapply(SS1_flag,function(x){if(x == FALSE){
     "Fit stability measure not build yet, srcImpulseDE_DE_analysis"} else {""}}))
   
   ### exit the function without error if no DE genes are detected
-  if(!(TRUE %in% (p_scaled <= Q))){
+  if(!(TRUE %in% (p_BH <= Q))){
     warning("No DE genes were detected. Maybe amount of background genes is
               too low.")
-    return(list(NULL,deviance))
+    return(NULL)
     
     ### if DE genes are detected, finish FDR correction by using the cutoff
   } else {
     
     ### if control data is present but not as a timecourse, add t-test
     ### p-values to the results
-    result =   as.data.frame(cbind("Gene" = row.names(data_array),
-      "adj.p"=as.numeric(p_scaled_orig), stringsAsFactors = FALSE))
+    result =   as.data.frame(cbind(
+      "Gene" = row.names(data_array),
+      "adj.p"=as.numeric(p_BH),
+      "loglik_full"=round(loglik_fullmodel),
+      "loglik_red"=round(loglik_redmodel),
+      "deviance"=round(deviance),
+      "mu"=round(apply(data_array,1,mean)),
+      "size"=round(dispersion_vector),
+      stringsAsFactors = FALSE))
     result$adj.p <- as.numeric(as.character(result$adj.p))
     result = result[order(result$adj.p),]
     print(paste("Found ",nrow(result[result$adj.p <= Q,])," DE genes",sep=""))
@@ -89,22 +104,22 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
     
     if(control_timecourse == TRUE){
       write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-        "adj.p"=p_scaled_orig,
+        "adj.p"=p_BH,
         "prediction error" = error_index)),"pvals_and_flags.txt",
         quote = FALSE, sep ="\t", row.names = TRUE, col.names = NA)
     } else {
       if(e_type == "Array"){
         write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-          "adj.p"=p_scaled_orig,"prediction error" = error_index)),
+          "adj.p"=p_BH,"prediction error" = error_index)),
           "pvals_and_flags.txt", quote = FALSE, sep ="\t", row.names = TRUE,
           col.names = NA)
       } else {
         write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-          "adj.p"=p_scaled_orig,"prediction error" = error_index)),
+          "adj.p"=p_BH,"prediction error" = error_index)),
           "pvals_and_flags.txt", quote = FALSE, sep ="\t",
           row.names = TRUE, col.names = NA)
       }
     }
-    return(list(result[as.numeric(result$adj.p) <= Q,],deviance))
+    return(result)
   }
 }

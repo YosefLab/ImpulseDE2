@@ -2,7 +2,7 @@
 ########################     Impulse DE Test     ###############################
 ################################################################################
 
-### Test for Version:  1.2
+### Test for Version:  1.3plot
 ### Date:     2016
 ### Author:  David Fischer
 
@@ -23,6 +23,7 @@ library(longitudinal)
 library(parallel)
 library(graphics)
 library(MASS)
+library(DESeq2)
 
 n_process <- 3
 
@@ -42,10 +43,10 @@ source("srcImpulseDE_DE_analysis_loglik.R")
 source("srcImpulseDE_plot_impulse.R")
 source("srcImpulseDE_compute_stdvs.R")
 source("srcImpulseDE_compute_weights.R")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test")
 
 ################################################################################
 ### LOAD DATA
-setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test")
 
 # DAVID: take out timepoints
 annotation_table <- read.table("annotation_table_RNAseq_D50-D51-D54.tab",header=T)
@@ -71,12 +72,12 @@ rownames(expression_table) <- expression_table_raw[,1]
 colnames(expression_table) <- colnames(expression_table_raw)[2:dim(expression_table_raw)[2]]
 
 # Minimal expression required in a row
-min_expr_value <- 5
-expression_table <- expression_table[apply(expression_table,1,function(x){any(x>min_expr_value)}),]
+min_expr_value <- 10
+expression_table <- expression_table[apply(expression_table[,annotation_table$Replicate_name],1,function(x){any(x>min_expr_value)}),]
 
 # Shorten:
-#ind_toKeep <- c(1:200)
-ind_toKeep <- c(1:(dim(expression_table)[1]))
+ind_toKeep <- c(1:200)
+#ind_toKeep <- c(1:(dim(expression_table)[1]))
 expression_table_cut <- expression_table[ind_toKeep,]
 
 # Skip 1h only present in 51 and 54 for now - missing data for later
@@ -112,13 +113,16 @@ colnames(dfCountData) <- annotation_table$Sample[match(colnames(dfCountData),ann
 dds <- DESeqDataSetFromMatrix(countData = dfCountData,
   colData = annotation_table,
   design = ~ Sample)
-ddsResults <- DESeq(dds, test = "LRT", full = ~ Sample, reduced = ~1)
+ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample, reduced = ~1)
 # Get gene-wise dispersion estimates
 # var = mean + alpha * mean^2, alpha is dispersion
-dds_dispersions <- dispersions(ddsResults)
+dds_dispersions <- dispersions(ddsDESeqObject)
 dds_dispersions <- dds_dispersions[ind_toKeep]
 # DESeq2 dispersion is 1/dispersion used in negative binomial in R
 dds_dispersions <- 1/dds_dispersions
+
+# DESeq results for comparison
+dds_resultsTable <- results(ddsDESeqObject)
 
 ################################################################################
 ### 1. Annotation
@@ -215,8 +219,7 @@ if(FALSE){
     data_annotation=prepared_annotation,impulse_fit_results=impulse_fit_genes,
     control_timecourse=control_timecourse,control_name=control_name, e_type=expr_type, Q=Q_value,
     dispersion_vector=dds_dispersions)
-  impulse_DE_genes <- DE_results[[1]]
-  Deviance_distribution <- DE_results[[2]]
+  impulse_DE_genes <- DE_results[as.numeric(DE_results$adj.p) <= Q_value,]
   save(impulse_DE_genes,file=file.path(getwd(),"impulse_DE_genes_RNAseq_D50-D51-D54.RData"))
 }
 
@@ -233,3 +236,42 @@ plot_impulse(genesToPlot,
 #impulse_fit_genes$impulse_parameters_case[genesToPlot,]
 #impulse_fit_genes$impulse_fits_case[genesToPlot,]
 
+# Compare against DESeq
+# P-values
+plot(-log(dds_resultsTable$padj[DE_results$Gene]),-log(DE_results$adj.p),xlim=c(0,30),ylim=c(0,30))
+cor.test(dds_resultsTable$padj[DE_results$Gene],DE_results$adj.p)
+# Make summary table to compare against plots
+dfDESeq_Impulse <- as.data.frame( cbind(
+  "Gene"=genesToPlot,
+  "DESeq"=dds_resultsTable$padj[rownames(dds_resultsTable) %in% genesToPlot],
+  "Impulse"=DE_results$adj.p[DE_results$Gene %in% genesToPlot] ))
+
+padj_thres = 10^(-3)
+dds_resultsTable_fitted <- dds_resultsTable[DE_results$Gene,]
+print("Significant genes called by both:")
+DEgenes_both <- intersect( rownames(dds_resultsTable_fitted)[dds_resultsTable_fitted$padj<padj_thres], DE_results$Gene[DE_results$adj.p<padj_thres] )
+length(DEgenes_both)
+print("Significant genes called only by DESeq:")
+DEgenes_DESeq <-  rownames(dds_resultsTable_fitted)[dds_resultsTable_fitted$padj<padj_thres]
+DEgenes_DESeq_only <- DEgenes_DESeq[!(DEgenes_DESeq %in% DEgenes_both)]
+length( DEgenes_DESeq_only )
+print("Significant genes called only by ImpulseDE:")
+DEgenes_Impulse <- DE_results$Gene[DE_results$adj.p<padj_thres]
+DEgenes_Impulse_only <- DEgenes_Impulse[!(DEgenes_Impulse %in% DEgenes_both)]
+length( DEgenes_Impulse_only )
+
+plot_impulse(DEgenes_both,
+  expression_array, prepared_annotation, impulse_fit_genes,
+  control_timecourse, control_name, case_ind, file_name_part = "DE_DESeqAndImpulse",
+  title_line = "", sub_line = "")
+plot_impulse(DEgenes_DESeq_only,
+  expression_array, prepared_annotation, impulse_fit_genes,
+  control_timecourse, control_name, case_ind, file_name_part = "DE_DESeq",
+  title_line = "", sub_line = "")
+plot_impulse(DEgenes_Impulse_only,
+  expression_array, prepared_annotation, impulse_fit_genes,
+  control_timecourse, control_name, case_ind, file_name_part = "DE_Impulse",
+  title_line = "", sub_line = "")
+
+DE_results[DEgenes_DESeq_only,]
+DE_results[DEgenes_Impulse_only,]

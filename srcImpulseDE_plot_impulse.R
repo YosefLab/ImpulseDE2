@@ -62,13 +62,13 @@ plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
                          control_timecourse = FALSE, control_name = NULL, case_name = NULL,
                          file_name_part = "", title_line = "", sub_line = ""){
   
-  print("---Plotting genes")
+  #print("---Plotting genes")
   
   if(length(grep("[a-zA-Z]",rownames(data_array))) == 0 ){
     rownames(data_array) <- paste(rownames(data_array),"G", sep = "_")
     gene_IDs <- paste(gene_IDs, "G", sep = "_")
   }
-  print(gene_IDs)
+  #print(gene_IDs)
   
   ### if control timecourse is present split data into case and control data
   if(control_timecourse == TRUE){
