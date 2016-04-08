@@ -43,7 +43,7 @@ source("srcImpulseDE_DE_analysis_loglik.R")
 source("srcImpulseDE_plot_impulse.R")
 source("srcImpulseDE_compute_stdvs.R")
 source("srcImpulseDE_compute_weights.R")
-setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 
 ################################################################################
 ### LOAD DATA
@@ -246,7 +246,7 @@ dfDESeq_Impulse <- as.data.frame( cbind(
   "DESeq"=dds_resultsTable$padj[rownames(dds_resultsTable) %in% genesToPlot],
   "Impulse"=DE_results$adj.p[DE_results$Gene %in% genesToPlot] ))
 
-padj_thres = 10^(-3)
+padj_thres = 10^(-5)
 dds_resultsTable_fitted <- dds_resultsTable[DE_results$Gene,]
 print("Significant genes called by both:")
 DEgenes_both <- intersect( rownames(dds_resultsTable_fitted)[dds_resultsTable_fitted$padj<padj_thres], DE_results$Gene[DE_results$adj.p<padj_thres] )
@@ -260,6 +260,7 @@ DEgenes_Impulse <- DE_results$Gene[DE_results$adj.p<padj_thres]
 DEgenes_Impulse_only <- DEgenes_Impulse[!(DEgenes_Impulse %in% DEgenes_both)]
 length( DEgenes_Impulse_only )
 
+graphics.off()
 plot_impulse(DEgenes_both,
   expression_array, prepared_annotation, impulse_fit_genes,
   control_timecourse, control_name, case_ind, file_name_part = "DE_DESeqAndImpulse",
