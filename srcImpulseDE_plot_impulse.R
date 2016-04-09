@@ -60,15 +60,14 @@
 #' @export
 plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
   control_timecourse = FALSE, control_name = NULL, case_name = NULL,
-  file_name_part = "", title_line = "", sub_line = ""){
-  
-  #print("---Plotting genes")
+  file_name_part = "", title_line = "", sub_line = "",
+  pvals_impulse_deseq=NULL){
+  # DEVELOPMENTAL NOTE : remove pval_deseq later again?
   
   if(length(grep("[a-zA-Z]",rownames(data_array))) == 0 ){
     rownames(data_array) <- paste(rownames(data_array),"G", sep = "_")
     gene_IDs <- paste(gene_IDs, "G", sep = "_")
   }
-  #print(gene_IDs)
   
   ### if control timecourse is present split data into case and control data
   if(control_timecourse == TRUE){
@@ -107,11 +106,14 @@ plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
         calc_case <- calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:6],x_vec)
       }
       
+      pval_DEseq <- round( log(pvals_impulse_deseq[gene_ID,"DESeq"])/log(10), 2 )
+      pval_Impulse <- round( log(pvals_impulse_deseq[gene_ID,"Impulse"])/log(10), 2 )
       plot(timep_arr,(t(data_array[gene_ID,,])),col="blue",pch=3,xlim=c(0,max(timep)),
         ylim=c((min(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case)))-0.5),
           (max(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case)))+0.5)),
         xlab="Time", ylab="Impulse fit and expression values",
-        main=paste(gene_ID," ",title_line,sep=""),sub=sub_line)
+        main=paste0(gene_ID," ",title_line," log(Pval):\n DESeq2 ",pval_DEseq,
+          " ImpulseDE2 ",pval_Impulse),sub=sub_line)
       points(timep_arr[1,],(apply(data_array[gene_ID,,],1,mean)),col="red",pch=1)
       if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_ID,])){
         abline(h = calc_case , col = "blue")

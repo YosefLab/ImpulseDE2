@@ -237,30 +237,36 @@ plot_impulse(genesToPlot,
 #impulse_fit_genes$impulse_fits_case[genesToPlot,]
 
 # Compare against DESeq
-# P-values
-plot(-log(dds_resultsTable$padj[DE_results$Gene]),-log(DE_results$adj.p),xlim=c(0,30),ylim=c(0,30))
-cor.test(dds_resultsTable$padj[DE_results$Gene],DE_results$adj.p)
 # Make summary table to compare against plots
 dfDESeq_Impulse <- as.data.frame( cbind(
   "Gene"=genesToPlot,
-  "DESeq"=dds_resultsTable$padj[rownames(dds_resultsTable) %in% genesToPlot],
-  "Impulse"=DE_results$adj.p[DE_results$Gene %in% genesToPlot]),
+  "DESeq"=(dds_resultsTable[genesToPlot,])$padj,
+  "Impulse"=(DE_results[genesToPlot,])$adj.p),
   stringsAsFactors=FALSE)
+rownames(dfDESeq_Impulse) <- genesToPlot
 dfDESeq_Impulse$DESeq <- as.numeric(dfDESeq_Impulse$DESeq)
 dfDESeq_Impulse$Impulse <- as.numeric(dfDESeq_Impulse$Impulse)
 
 mat_overlap <- array(NA,c(10,10))
+mat_intersect <- array(NA,c(10,10))
+mat_union <- array(NA,c(10,10))
 # DESeq on vertical
 for(i in 1:10){
   # Impulse on horicontal
   for(j in 1:10){
-    sig_DESeq <- dfDESeq_Impulse[,"DESeq"] <= 10^(-i)
-    sig_Impulse <- dfDESeq_Impulse[,"Impulse"] <= 10^(-j)
+    sig_DESeq <- dfDESeq_Impulse$DESeq <= 10^(-i)
+    sig_Impulse <- dfDESeq_Impulse$Impulse <= 10^(-j)
     mat_overlap[i,j] <- sum(sig_DESeq & sig_Impulse)/sum(sig_DESeq | sig_Impulse)
+    mat_intersect[i,j] <- sum(sig_DESeq & sig_Impulse)
+    mat_union[i,j] <- sum(sig_DESeq | sig_Impulse)
   }
 }
 rownames(mat_overlap) <- -1:-10
 colnames(mat_overlap) <- -1:-10
+rownames(mat_intersect) <- -1:-10
+colnames(mat_intersect) <- -1:-10
+rownames(mat_union) <- -1:-10
+colnames(mat_union) <- -1:-10
 library(gplots)
 graphics.off()
 heatmap(mat_overlap, keep.dendro = FALSE,Rowv=NA,Colv= "Rowv",symm=FALSE,
@@ -278,34 +284,24 @@ heatmap.2(mat_overlap, dendrogram="none", Rowv=FALSE,Colv=FALSE,
   cellnote=round(mat_overlap,digits=2),notecol="white",
   lmat=rbind( c(3,4),c(2,1) ),lhei=c(1,4), lwid=c(1,4), margins=c(5,5))
 dev.off()
-
-padj_thres = 10^(-5)
-dds_resultsTable_fitted <- dds_resultsTable[DE_results$Gene,]
-print("Significant genes called by both:")
-DEgenes_both <- intersect( rownames(dds_resultsTable_fitted)[dds_resultsTable_fitted$padj<padj_thres], DE_results$Gene[DE_results$adj.p<padj_thres] )
-length(DEgenes_both)
-print("Significant genes called only by DESeq:")
-DEgenes_DESeq <-  rownames(dds_resultsTable_fitted)[dds_resultsTable_fitted$padj<padj_thres]
-DEgenes_DESeq_only <- DEgenes_DESeq[!(DEgenes_DESeq %in% DEgenes_both)]
-length( DEgenes_DESeq_only )
-print("Significant genes called only by ImpulseDE:")
-DEgenes_Impulse <- DE_results$Gene[DE_results$adj.p<padj_thres]
-DEgenes_Impulse_only <- DEgenes_Impulse[!(DEgenes_Impulse %in% DEgenes_both)]
-length( DEgenes_Impulse_only )
+print("Intersection")
+print(mat_intersect)
+print("Union")
+print(mat_union)
 
 graphics.off()
 plot_impulse(DEgenes_both,
   expression_array, prepared_annotation, impulse_fit_genes,
   control_timecourse, control_name, case_ind, file_name_part = "DE_DESeqAndImpulse",
-  title_line = "", sub_line = "")
+  title_line = "", sub_line = "",pvals_impulse_deseq=dfDESeq_Impulse)
 plot_impulse(DEgenes_DESeq_only,
   expression_array, prepared_annotation, impulse_fit_genes,
   control_timecourse, control_name, case_ind, file_name_part = "DE_DESeq",
-  title_line = "", sub_line = "")
+  title_line = "", sub_line = "",pvals_impulse_deseq=dfDESeq_Impulse)
 plot_impulse(DEgenes_Impulse_only,
   expression_array, prepared_annotation, impulse_fit_genes,
   control_timecourse, control_name, case_ind, file_name_part = "DE_Impulse",
-  title_line = "", sub_line = "")
+  title_line = "", sub_line = "",pvals_impulse_deseq=dfDESeq_Impulse)
 
 DE_results[DE_results$Gene %in% DEgenes_DESeq_only,]
 DE_results[DE_results$Gene %in% DEgenes_Impulse_only,]
