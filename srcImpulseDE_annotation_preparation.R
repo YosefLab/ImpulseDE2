@@ -62,7 +62,6 @@ annotation_preparation <- function(data_annotation, data_tables = NULL,
   # 2. Format data for output
   # Note on double assignment: annot is filled with whatever column name annotation input is present
   annot <- data_annotation[,c(colname_time,colname_condition)]
-  ### DAVID Bug fix data_annotation -> annot in next line
   annot <- annot[colnames(data_tables),]
   colnames(annot) <- c("Time","Condition")
   annot$Condition <- as.character(annot$Condition)

@@ -70,17 +70,8 @@ source("srcImpulseDE_CostFunctionFit.R")
 ################################################################################
 
 ## compile fitting simple functions to make them quicker
-two_impulses_OLS_comp <- cmpfun(two_impulses_OLS)
-two_impulses_WLS_comp <- cmpfun(two_impulses_WLS)
-
-################################################################################
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++     Clustering    +++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
-### Performs 2-step clustering on expression data or background data
-source("srcImpulseDE_cluster_genes_for_impulse.R")
+cost_fun_logl_comp <- cmpfun(cost_fun_logl)
+cost_fun_logl_meanfit_comp <- cmpfun(cost_fun_logl_meanfit)
 
 ################################################################################
 
@@ -91,15 +82,6 @@ source("srcImpulseDE_cluster_genes_for_impulse.R")
 ### Fits impulse model to a timecourse dataset
 source("srcImpulseDE_impulse_fit.R")
 
-#################################################################################
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++     Background generation   +++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
-### generates the background for the DE analysis
-source("srcImpulseDE_generate_background.R")
-
 ################################################################################
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
@@ -107,7 +89,7 @@ source("srcImpulseDE_generate_background.R")
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 # Detect differentially expressed genes over time
-source("srcImpulseDE_DE_analysis.R")
+source("srcImpulseDE_DE_analysis_loglik.R")
 
 ################################################################################
 
@@ -338,10 +320,10 @@ source("srcImpulseDE_plot_impulse.R")
 impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
     colname_time = NULL, colname_condition = NULL, control_timecourse = FALSE,
     control_name = NULL, case_name = NULL, expr_type = "Array",
-    plot_clusters = TRUE, n_iter = 100, n_randoms = 50000, n_process = 4,
+    plot_clusters = TRUE, n_iter = 100, n_process = 4,
     Q_value = 0.01){
   
-  print("Impulse v1.3")
+  print("Impulse v1.3 loglik based")
 
   tm_tot <- system.time({
 

@@ -47,9 +47,7 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
   
   if(control_timecourse == FALSE){
     loglik_fullmodel <- -impulse_fit_results$impulse_parameters_case[,"objective"]
-    # Compute likelihood null model
-    loglik_redmodel <-  unlist(lapply( c(1:dim(data_array)[1]), function(x){
-      log(prod( dnbinom(data_array[x,,], mu=mean(data_array[x,,]), size=dispersion_vector[x]) )) } ))
+    loglik_redmodel <- -impulse_fit_results$impulse_parameters_case[,"nullfit"]
     df_fullmodel <- 6
     df_redmodel <- 1
   }

@@ -32,17 +32,11 @@ source("srcImpulseDE_annotation_preparation.R")
 source("srcImpulseDE_calc_impulse.R")
 source("srcImpulseDE_CostFunctionFit.R")
 calc_impulse_comp <- cmpfun(calc_impulse)
-cost_fun_OLS_comp <- cmpfun(cost_fun_OLS)
-cost_fun_WLS_comp <- cmpfun(cost_fun_WLS)
 cost_fun_logl_comp <- cmpfun(cost_fun_logl)
-source("srcImpulseDE_cluster_genes_for_impulse.R")
+cost_fun_logl_meanfit_comp <- cmpfun(cost_fun_logl_meanfit)
 source("srcImpulseDE_impulse_fit.R")
-source("srcImpulseDE_generate_background.R")
-source("srcImpulseDE_DE_analysis.R")
 source("srcImpulseDE_DE_analysis_loglik.R")
 source("srcImpulseDE_plot_impulse.R")
-source("srcImpulseDE_compute_stdvs.R")
-source("srcImpulseDE_compute_weights.R")
 
 ################################################################################
 ### LOAD DATA
@@ -75,8 +69,8 @@ min_expr_value <- 0
 expression_table <- expression_table[apply(expression_table[,colnames(expression_table) %in% annotation_table$Replicate_name],1,function(x){any(x>min_expr_value)}),]
 
 # Shorten:
-#ind_toKeep <- c(1:200)
-ind_toKeep <- c(1:(dim(expression_table)[1]))
+ind_toKeep <- c(1:200)
+#ind_toKeep <- c(1:(dim(expression_table)[1]))
 expression_table_cut <- expression_table[ind_toKeep,]
 
 # Skip 1h only present in 51 and 54 for now - missing data for later
@@ -146,12 +140,6 @@ expression_array <- expression_array[,rownames(prepared_annotation),]
 indx <- apply(expression_array,1,function(x){TRUE %in% is.na(x)})
 expression_array <- expression_array[!(indx),,]
 
-# Precompute standard deviations over replicates
-### DAVID: smoothen out estimates, get rid of 0s
-sigma_matrix <- compute_stdvs(expression_array)
-weight_matrix <- compute_weights(expression_array)
-mean_matrix <- apply(expression_array,c(1,2),mean)
-
 # if rownames are just 1,2,3 or if there are no rownames
 if(is.null(rownames(expression_array))){
   rownames(expression_array) <- paste("G", 1:nrow(expression_array),
@@ -162,65 +150,45 @@ if(is.null(rownames(expression_array))){
 }
 
 ################################################################################
-### 2. cluster genes to reduce efforts for fitting the impulse model
-
-#plot_clusters = FALSE
-#clustering_results <- cluster_genes_for_impulse(
-#  apply(expression_array,c(1,2),mean),
-#  prepared_annotation, control_timecourse, control_name, plot_clusters)
-#save(clustering_results,file=file.path(getwd(),"clustering_results_RNAseq_D50-D51-D54.RData"))
-
-################################################################################
-### 3. fit Impulse model to the clusters
-
-#n_process <- 3
-#n_iterations <- 100
-#impulse_fit_clusters <- impulse_fit(data_input=clustering_results,
-#  data_annotation=prepared_annotation,weight_mat=weight_matrix,n_iter=n_iterations,
-#  control_timecourse=control_timecourse, control_name=control_name, n_proc=n_process)
-#save(impulse_fit_clusters,file=file.path(getwd(),"impulse_fit_clusters_RNAseq_D50-D51-D54.RData"))
-
-################################################################################
 ###  4. Fit Impule model to each gene by using the cluster fits as start values
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building")
+source("srcImpulseDE_annotation_preparation.R")
+source("srcImpulseDE_calc_impulse.R")
+source("srcImpulseDE_CostFunctionFit.R")
+calc_impulse_comp <- cmpfun(calc_impulse)
+cost_fun_logl_comp <- cmpfun(cost_fun_logl)
+cost_fun_logl_meanfit_comp <- cmpfun(cost_fun_logl_meanfit)
+source("srcImpulseDE_impulse_fit.R")
+source("srcImpulseDE_DE_analysis_loglik.R")
+source("srcImpulseDE_plot_impulse.R")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 n_iterations <- 100
 impulse_fit_genes <- impulse_fit(data_input=expression_array, 
-  data_annotation=prepared_annotation,weight_mat=weight_matrix,n_iter=n_iterations, 
+  data_annotation=prepared_annotation,n_iter=n_iterations, 
   control_timecourse=control_timecourse, control_name=control_name, 
   n_proc = n_process,dispersion_vector=dds_dispersions)
 save(impulse_fit_genes,file=file.path(getwd(),"impulse_fit_genes_RNAseq_D50-D51-D54.RData"))
 
-if(FALSE){
-  ################################################################################
-  ### 5. Generate background for the DE analysis
-  n_randoms <- 60
-  n_iterations <- 100
-  #background_results <-  generate_background(expression_array,
-  #  prepared_annotation, weight_matrix, n_iterations, impulse_fit_genes, 
-  #  control_timecourse, control_name, clustering_results, n_randoms, n_process)
-  background_results <-  generate_background(expression_array,
-    prepared_annotation, weight_matrix, n_iterations, impulse_fit_genes, 
-    control_timecourse, control_name, n_randoms, n_process)
-  save(background_results,file=file.path(getwd(),"background_results_RNAseq_D50-D51-D54.RData"))
-  
-  ### 6. Detect differentially expressed genes
-  Q_value = 0.01
-  expr_type = "Array"
-  DE_results <- DE_analysis(expression_array,prepared_annotation,
-    weight_matrix,impulse_fit_genes, background_results, control_timecourse,
-    control_name, expr_type, Q_value)
-  impulse_DE_genes <- DE_results[[1]]
-  Flike_distribution <- DE_results[[2]]
-  save(impulse_DE_genes,file=file.path(getwd(),"impulse_DE_genes_RNAseq_D50-D51-D54.RData"))
-} else {
-  Q_value = 0.01
-  expr_type = "Array"
-  DE_results <- DE_analysis_loglik(data_array=expression_array,
-    data_annotation=prepared_annotation,impulse_fit_results=impulse_fit_genes,
-    control_timecourse=control_timecourse,control_name=control_name, e_type=expr_type, Q=Q_value,
-    dispersion_vector=dds_dispersions)
-  impulse_DE_genes <- DE_results[as.numeric(DE_results$adj.p) <= Q_value,]
-  save(impulse_DE_genes,file=file.path(getwd(),"impulse_DE_genes_RNAseq_D50-D51-D54.RData"))
-}
+### 6. Detect differentially expressed genes
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building")
+source("srcImpulseDE_annotation_preparation.R")
+source("srcImpulseDE_calc_impulse.R")
+source("srcImpulseDE_CostFunctionFit.R")
+calc_impulse_comp <- cmpfun(calc_impulse)
+cost_fun_logl_comp <- cmpfun(cost_fun_logl)
+cost_fun_logl_meanfit_comp <- cmpfun(cost_fun_logl_meanfit)
+source("srcImpulseDE_impulse_fit.R")
+source("srcImpulseDE_DE_analysis_loglik.R")
+source("srcImpulseDE_plot_impulse.R")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+Q_value = 0.01
+expr_type = "Array"
+DE_results <- DE_analysis_loglik(data_array=expression_array,
+  data_annotation=prepared_annotation,impulse_fit_results=impulse_fit_genes,
+  control_timecourse=control_timecourse,control_name=control_name, e_type=expr_type, Q=Q_value,
+  dispersion_vector=dds_dispersions)
+impulse_DE_genes <- DE_results[as.numeric(DE_results$adj.p) <= Q_value,]
+save(impulse_DE_genes,file=file.path(getwd(),"impulse_DE_genes_RNAseq_D50-D51-D54.RData"))
 
 ### 7. Plot the top DE genes
 genesToPlot <- as.character(impulse_DE_genes[,
@@ -278,7 +246,7 @@ pdf(paste('DESeq-Impulse_OverlapSigGenes_Heatmap.pdf',sep=''),width=7,height=7)
 heatmap.2(mat_overlap, dendrogram="none", Rowv=FALSE,Colv=FALSE, 
   xlab =  paste0("log(p-value) ImpulseDE"), ylab = "log(p-value) DESeq2",
   breaks=breaks,col=hm.colors, scale="none",
-	trace="none",density.info="none",
+  trace="none",density.info="none",
   key.title = " ", key.xlab = paste0("Overlap"), key.ylab = NULL,
   symkey=FALSE,
   cellnote=round(mat_overlap,digits=2),notecol="white",
@@ -302,6 +270,3 @@ plot_impulse(DEgenes_Impulse_only,
   expression_array, prepared_annotation, impulse_fit_genes,
   control_timecourse, control_name, case_ind, file_name_part = "DE_Impulse",
   title_line = "", sub_line = "",pvals_impulse_deseq=dfDESeq_Impulse)
-
-DE_results[DE_results$Gene %in% DEgenes_DESeq_only,]
-DE_results[DE_results$Gene %in% DEgenes_Impulse_only,]
