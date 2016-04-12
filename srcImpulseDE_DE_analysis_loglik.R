@@ -56,7 +56,7 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
   p <- pchisq(deviance,df=df,lower.tail=FALSE)
   
   p_BH = p.adjust(p, method = "BH")
-    
+  
   # SS1 Flag
   ### DAVID: SS flag still valid under my model?
   ### Could leave like this or find new threshold for weighted SS
@@ -66,49 +66,44 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
   error_index = unlist(lapply(SS1_flag,function(x){if(x == FALSE){
     "Fit stability measure not build yet, srcImpulseDE_DE_analysis"} else {""}}))
   
-  ### exit the function without error if no DE genes are detected
+  # Create warning if no non-DE genes were detected
   if(!(TRUE %in% (p_BH <= Q))){
     warning("No DE genes were detected. Maybe amount of background genes is
               too low.")
-    return(NULL)
-    
-    ### if DE genes are detected, finish FDR correction by using the cutoff
+  }  
+  
+  # Summarise results
+  result =   as.data.frame(cbind(
+    "Gene" = row.names(data_array),
+    "adj.p"=as.numeric(p_BH),
+    "loglik_full"=round(loglik_fullmodel),
+    "loglik_red"=round(loglik_redmodel),
+    "deviance"=round(deviance),
+    "mu"=round(apply(data_array,1,mean)),
+    "size"=round(dispersion_vector),
+    stringsAsFactors = FALSE))
+  result$adj.p <- as.numeric(as.character(result$adj.p))
+  result = result[order(result$adj.p),]
+  print(paste("Found ",nrow(result[result$adj.p <= Q,])," DE genes",sep=""))
+  
+  
+  if(control_timecourse == TRUE){
+    write.table(as.data.frame(cbind("Gene" = row.names(data_array),
+      "adj.p"=p_BH,
+      "prediction error" = error_index)),"pvals_and_flags.txt",
+      quote = FALSE, sep ="\t", row.names = TRUE, col.names = NA)
   } else {
-    
-    ### if control data is present but not as a timecourse, add t-test
-    ### p-values to the results
-    result =   as.data.frame(cbind(
-      "Gene" = row.names(data_array),
-      "adj.p"=as.numeric(p_BH),
-      "loglik_full"=round(loglik_fullmodel),
-      "loglik_red"=round(loglik_redmodel),
-      "deviance"=round(deviance),
-      "mu"=round(apply(data_array,1,mean)),
-      "size"=round(dispersion_vector),
-      stringsAsFactors = FALSE))
-    result$adj.p <- as.numeric(as.character(result$adj.p))
-    result = result[order(result$adj.p),]
-    print(paste("Found ",nrow(result[result$adj.p <= Q,])," DE genes",sep=""))
-    
-    
-    if(control_timecourse == TRUE){
+    if(e_type == "Array"){
       write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-        "adj.p"=p_BH,
-        "prediction error" = error_index)),"pvals_and_flags.txt",
-        quote = FALSE, sep ="\t", row.names = TRUE, col.names = NA)
+        "adj.p"=p_BH,"prediction error" = error_index)),
+        "pvals_and_flags.txt", quote = FALSE, sep ="\t", row.names = TRUE,
+        col.names = NA)
     } else {
-      if(e_type == "Array"){
-        write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-          "adj.p"=p_BH,"prediction error" = error_index)),
-          "pvals_and_flags.txt", quote = FALSE, sep ="\t", row.names = TRUE,
-          col.names = NA)
-      } else {
-        write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-          "adj.p"=p_BH,"prediction error" = error_index)),
-          "pvals_and_flags.txt", quote = FALSE, sep ="\t",
-          row.names = TRUE, col.names = NA)
-      }
+      write.table(as.data.frame(cbind("Gene" = row.names(data_array),
+        "adj.p"=p_BH,"prediction error" = error_index)),
+        "pvals_and_flags.txt", quote = FALSE, sep ="\t",
+        row.names = TRUE, col.names = NA)
     }
-    return(result)
   }
+  return(result)
 }

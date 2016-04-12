@@ -69,9 +69,13 @@ min_expr_value <- 0
 expression_table <- expression_table[apply(expression_table[,colnames(expression_table) %in% annotation_table$Replicate_name],1,function(x){any(x>min_expr_value)}),]
 
 # Shorten:
-ind_toKeep <- c(1:200)
-#ind_toKeep <- c(1:(dim(expression_table)[1]))
+#ind_toKeep <- c(1:500)
+ind_toKeep <- c(1:(dim(expression_table)[1]))
 expression_table_cut <- expression_table[ind_toKeep,]
+
+# replace by simulation data
+# expression_table_cut[,] <- rnbinom(dim(expression_table_cut)[1]*dim(expression_table_cut)[2],
+#  size=2,mu=100)
 
 # Skip 1h only present in 51 and 54 for now - missing data for later
 expression_table1 <- expression_table_cut[,c("D50_0h","D50_2h","D50_4h","D50_6h","D50_12h","D50_24h")]
@@ -100,7 +104,7 @@ control_timecourse = FALSE
 
 # DESeq to get dispersion estimates
 print("Making DESeq Dataset...")
-dfCountData <- expression_table[,colnames(expression_table) %in% annotation_table$Replicate_name]
+dfCountData <- expression_table_cut[,colnames(expression_table) %in% annotation_table$Replicate_name]
 colnames(dfCountData) <- annotation_table$Sample[match(colnames(dfCountData),annotation_table$Replicate_name)]
 #dfCountData <- do.call(cbind, expression_tables)
 dds <- DESeqDataSetFromMatrix(countData = dfCountData,
@@ -270,3 +274,61 @@ plot_impulse(DEgenes_Impulse_only,
   expression_array, prepared_annotation, impulse_fit_genes,
   control_timecourse, control_name, case_ind, file_name_part = "DE_Impulse",
   title_line = "", sub_line = "",pvals_impulse_deseq=dfDESeq_Impulse)
+
+### Plot deviance distribution
+# non-DE scores
+graphics.off()
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+pdf("EmpiricalDevianceDistribution.pdf",height=6.0,width=9.0)
+dImp<-density(as.numeric(as.vector(DE_results[(as.numeric(DE_results$adj.p) > Q_value),"deviance"])))
+dDE<-density(as.numeric((dds_resultsTable[(as.numeric(dds_resultsTable$padj) > Q_value),"stat"])))
+
+plot(dImp$x,dImp$y,type='l',col='black',xlim=c(0,20),ylim=c(0,0.2),
+  xlab="Deviance", ylab="Probability density",
+  main="DESeq2 vs ImpulseDEv2 test statistic\nProbability density of non-DE gene scores")
+lines(dDE$x,dDE$y,type='l',col='red')
+curve( dchisq(x, df=5), col='green',add=TRUE)
+legend(x="topright",c("ImpulseDEv2 statistic","DESeq2 statistic","Chi-square (df=5)"),fill=c("black","red","green"), cex=1)
+
+# DE scores
+dImp<-density(as.numeric(as.vector(DE_results[(as.numeric(DE_results$adj.p) < Q_value),"deviance"])))
+dDE<-density(as.numeric((dds_resultsTable[(as.numeric(dds_resultsTable$padj) < Q_value),"stat"])))
+
+plot(dImp$x,dImp$y,type='l',col='black',xlim=c(0,100),ylim=c(0,0.15),
+  xlab="Deviance", ylab="Probability density",
+  main="DESeq2 vs ImpulseDEv2 test statistic\nProbability density of DE gene scores")
+lines(dDE$x,dDE$y,type='l',col='red')
+curve( dchisq(x, df=5), col='green',add=TRUE)
+legend(x="topright",c("ImpulseDEv2 statistic","DESeq2 statistic","Chi-square (df=5)"),fill=c("black","red","green"), cex=1)
+
+# All scores
+dImp<-density(as.numeric(as.vector(DE_results[,"deviance"])))
+dDE<-density(as.numeric((dds_resultsTable[,"stat"])))
+
+plot(dImp$x,dImp$y,type='l',col='black',xlim=c(0,100),ylim=c(0,0.15),
+  xlab="Deviance", ylab="Probability density",
+  main="DESeq2 vs ImpulseDEv2 test statistic\nProbability density of all gene scores")
+lines(dDE$x,dDE$y,type='l',col='red')
+curve( dchisq(x, df=5), col='green',add=TRUE)
+legend(x="topright",c("ImpulseDEv2 statistic","DESeq2 statistic","Chi-square (df=5)"),fill=c("black","red","green"), cex=1)
+dev.off()
+
+# only plot once if simulating under null: no DE genes detected
+# Simulated one single model
+if(FALSE){
+  ### Plot deviance distribution
+  # non-DE scores
+  graphics.off()
+  setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+  pdf("SimulatedNullDevianceDistribution.pdf",height=6.0,width=9.0)
+  dImp<-density(as.numeric(as.vector(DE_results[,"deviance"])),from=0,to=200)
+  dDE<-density(as.numeric((dds_resultsTable[,"stat"])),from=0,to=200)
+  
+  plot(dImp$x,dImp$y,type='l',col='black',xlim=c(0,20),ylim=c(0,0.2),
+    xlab="Deviance", ylab="Probability density",
+    main="DESeq2 vs ImpulseDEv2 test statistic\nProbability density of all gene scores")
+  lines(dDE$x,dDE$y,type='l',col='red')
+  curve( dchisq(x, df=5), col='green',add=TRUE)
+  legend(x="topright",c("ImpulseDEv2 statistic","DESeq2 statistic","Chi-square (df=5)"),fill=c("black","red","green"), cex=1)
+  dev.off()
+}
