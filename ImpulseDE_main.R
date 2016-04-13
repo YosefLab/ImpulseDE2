@@ -9,6 +9,7 @@
 ### Author v1.1:  David Fischer --Divide file into src files, annotation
 ### Author v1.2:  David Fischer --Support replicate samples, WLS fitting and residual scaling
 ### Author v1.3:  David Fischer --WLS fitting with CV weights
+### Author v1.3:  David Fischer --NB fitting
 
 ################################################################################
 # Variance extension: implement this inside functions, v1.2
@@ -18,18 +19,14 @@
 #   function to deal with non set values, something like !is.nan evertime
 #   values are selected v1.4
 ################################################################################
-# DAVID: General remarks not related to variance extension
-################################################################################
-# 1. Bit code compiled function two_impulse_comp is created but not used for squared error
-#	and impulse prediction: ## compile simple functions to make them quicker
-# 2. Impulse_fit_gene_wise what is the theta initialisation after
-#     if(fit_to_clusters == TRUE & is.null(start_val)){
-################################################################################
 
 library(compiler)
 library(amap)
 library(longitudinal)
 library(parallel)
+library(graphics)
+library(MASS)
+library(DESeq2)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -37,65 +34,28 @@ library(parallel)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-
-
-################################################################################
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++     Annotation preparation    +++++++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building")
 
 #Prepares the annotation table for internal use
 source("srcImpulseDE_annotation_preparation.R")
 
-################################################################################
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#+++++++++++++++++++     Impulse model value prediction    ++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
 ### Compute value of impulse function given parameters.
 source("srcImpulseDE_calc_impulse.R")
-
-################################################################################
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++     Calculation of input for Optimization    ++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 ### Cost function for parametric model fit: Ordinary least squares (two_impulses)
 ### or weighted least squares (two_impulses_WLS)
 source("srcImpulseDE_CostFunctionFit.R")
 
-################################################################################
-
-## compile fitting simple functions to make them quicker
+## Compile fitting simple functions to make them quicker
+calc_impulse_comp <- cmpfun(calc_impulse)
 cost_fun_logl_comp <- cmpfun(cost_fun_logl)
 cost_fun_logl_meanfit_comp <- cmpfun(cost_fun_logl_meanfit)
-
-################################################################################
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++     Impulse model fit    ++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 ### Fits impulse model to a timecourse dataset
 source("srcImpulseDE_impulse_fit.R")
 
-################################################################################
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#+++++++++++++++++++++++++++     DE analysis   ++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
 # Detect differentially expressed genes over time
 source("srcImpulseDE_DE_analysis_loglik.R")
-
-################################################################################
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++     Plot impulse fits    ++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 ### plots the impulse fits to timecourse data and also the control data if present
 source("srcImpulseDE_plot_impulse.R")
@@ -176,7 +136,7 @@ source("srcImpulseDE_plot_impulse.R")
 #' on the analyzed time points and the fitted model parameters for the control
 #' dataset. Not existing in the case of a single time course experiment.
 #' }
-#' \item \code{DE_results} Matrix containing the names of genes being called
+#' \item \code{ImpulseDE_results} Matrix containing the names of genes being called
 #' as differentially expressed according to the specified cutoff \code{Q_value}
 #' together with the adjusted p-values.
 #' }
@@ -218,7 +178,7 @@ source("srcImpulseDE_plot_impulse.R")
 #' \item \code{impulse_DE_genes.RData} Object containing names of genes being
 #' called as differentially expressed according to the specified cutoff
 #' \code{Q_value} together with the adjusted p-values; same as the list element
-#' \code{DE_results} of the output value.
+#' \code{ImpulseDE_results} of the output value.
 #' \item \code{pvals_and_flags.txt} Text-file containing all gene names
 #' together with the adjusted p-values and flags for differential expression
 #' according to additional tests.
@@ -303,11 +263,7 @@ source("srcImpulseDE_plot_impulse.R")
 #   case_name: (str) name of the case condition in annotation_table.
 #   expr_type: (str) ["Array" or "Seq"] In case of Sequencing data ("Seq") a 
 #       DESeq2 test is added to the results. Default is "Array".
-#   plot_clusters: (bool) [Default TRUE] plot the clusters
-#   n_iter: (scalar) [Defaul 100] number of iterations, which are performed to 
-#       fit the impulse model to the clusters.
-#   n_randoms: (scalar) [Default 50000] number of generated randomized background 
-#       iterations, which are used for differential expression analysis Don't decrease.
+#   n_iter: (scalar) [Defaul 100] Number of iterations
 #   n_process: (scalar) [Default 4] number of processes, which can be used on the 
 #       machine to run the background calculation in parallel
 #   Q_value: (scalar) [default 0.01] cutoff to call genes significantly 
@@ -318,168 +274,219 @@ source("srcImpulseDE_plot_impulse.R")
 #   ...more output saved to working directory, see documentation
 
 impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
-    colname_time = NULL, colname_condition = NULL, control_timecourse = FALSE,
-    control_name = NULL, case_name = NULL, expr_type = "Array",
-    plot_clusters = TRUE, n_iter = 100, n_process = 4,
-    Q_value = 0.01){
+  colname_time = NULL, colname_condition = NULL, control_timecourse = FALSE,
+  control_name = NULL, case_name = NULL, expr_type = "Array",
+  n_iter = 100, n_process = 4, Q_value = 0.01){
   
   print("Impulse v1.3 loglik based")
-
+  
   tm_tot <- system.time({
-
-    #' @import compiler
-    #' @importFrom grDevices dev.off pdf
-    #' @importFrom graphics abline axis legend par plot points
-    #' @importFrom stats aov cor dist kmeans mad median nlminb optim p.adjust
-    #' @importFrom stats runif sd
-    #' @importFrom utils head write.table
-
-    # 1. READ IN DATA
-    # Convert list of matrices into 3D array
+    
+    print("Testing input")
+    # Test annotation table
+    replicates <- unique(annotation_table$Replicate)
+    # Test that all replicates contain all timepoints
+    for(iRep in 1:length(replicates)){
+      if(!identical(unique(annotation_table$Time),unique(annotation_table[
+        annotation_table$Replicate==replicates[iRep],]$Time))){
+        print(paste0("ERROR: [Annotation table] Not all timepoints listed for replicate ",replicates[iRep]))
+        print("Each replicate must contain a sample for each time point.")
+        print("Aborting.")
+        return(NULL)
+      }
+    }
+    # Test that all Replicates contain the same number of samples
+    for(iRep in 1:length(replicates)){
+      # Establish number of samples in first replicate
+      if(iRep==1){
+        nSamples <- sum( annotation_table$Replicate==replicates[iRep] )
+        # Check for equality of number of samples in remaining replicates
+      } else {
+        if(sum( annotation_table$Replicate==replicates[iRep] ) != nSamples){
+          print(paste0("ERROR: [Annotation table] Replicate ",replicates[iRep],
+            " contains different number of samples compared to replicate ",
+            replicates[1]))
+          print("All replicates should contain the same number of samples.")
+          print("Aborting.")
+          return(NULL)
+        }
+      }
+    }
+    # Test that Replicate_name do not occur twice
+    if(length(unique(annotation_table$Replicate_name)) != dim(annotation_table)[1]){
+      print(paste0("ERROR: [Annotation table]",
+        "Number of Replicate_name instances different to annotation table number of rows."))
+      print("Replicate_name cannot occur multiple times.")
+      print("Aborting.")
+      return(NULL)
+    }
+    
+    # Test validity of expression table column naming with respect
+    # to annotation table.
+    # Test that all entries in annotation table occur in expression table
+    if( sum(annotation_table$Replicate_name %in% colnames(expression_table)) < 
+        length(annotation_table$Replicate_name) ){
+      print(paste0("ERROR: [Expression table] Replicate_names ",
+        as.character( annotation_table$Replicate_name[
+          !annotation_table$Replicate_name %in% colnames(expression_table)] ),
+        " do not occur in expression table."))
+      print(paste0("All Replicate_names mentioned in the annotation table",
+        "must occur in the exprresion table."))
+      print("Aborting.")
+      return(NULL)
+    }
+    # Reduce expression table to columns contained in annotation table
+    if( sum(!(colnames(expression_table) %in% annotation_table$Replicate_name)) > 0 ){
+      print(paste0("WARNING: Omitting samples ",
+        unlist(colnames(expression_table)[
+          !(colnames(expression_table) %in% annotation_table$Replicate_name)]),
+        " from expression table because they were not mentioned in annotation table."))
+      print(paste0("This does not affect the algorithm.",
+        "Adjust annotation table if you wish that these samples are included."))
+      expression_table <- expression_table[,as.character(annotation_table$Replicate_name)]
+    }
+    # Reduce expression table to rows containing at least one non-zero count
+    allzero_rowIdx <- apply(expression_table,1,function(x){all(x==0)})
+    if(sum(allzero_rowIdx) > 0){
+      print(paste0("WARNING: ",sum(allzero_rowIdx), " out of ",
+        dim(expression_table)[1]," genes had only zero counts in all considered samples."))
+      print("These genes are omitted in the analysis.")
+      expression_table <- expression_table[!allzero_rowIdx,]
+    }
+    
+    # DAVID to be deprecated
+    # Shorten expression table
+    if(TRUE){
+      ind_toKeep <- 1:100
+      print(paste0("Working on subset of data: ",length(ind_toKeep)," genes."))
+      expression_table <- expression_table[ind_toKeep,]
+    }
+    
+    ## 1. Prepare data
+    print("1. Preparing data.")
+    
+    # Assign samples to replicates
+    expression_tables <- list()
+    replicates <- unique(annotation_table$Replicate)
+    for(iRep in 1:length(replicates)){
+      expression_tables[[iRep]] <- expression_table[,as.character( annotation_table[
+        annotation_table$Replicate %in% replicates[iRep],]$Replicate_name) ]
+      # Call columns after sample (not specific replicate)
+      colnames(expression_tables[[iRep]]) <- as.character( 
+        annotation_table[annotation_table$Replicate %in% replicates[iRep],]$Sample )
+    }
+    head(expression_tables[1])
+    
+    # Convert list of matrices into 3D array  
     expression_array=array(NA,c(dim(expression_tables[[1]]),length(expression_tables)))
     for (i in 1:length(expression_tables)){
       expression_array[,,i] <- as.matrix(expression_tables[[i]])    # make numeric
     }
     rownames(expression_array) <- rownames(expression_tables[[1]])
     colnames(expression_array) <- colnames(expression_tables[[1]])
+    save(expression_array,file=file.path(getwd(),"ImpulseDE_expression_array.RData"))
     
-    ## prepare annotation table for internal usage: chose samples from input
-    print("START: Prepare annotation table for internal usage")
+    # 2. Run DESeq2
+    print("2. Run DESeq2")
+    dfCountData <- expression_table[,colnames(expression_table) %in% annotation_table$Replicate_name]
+    colnames(dfCountData) <- annotation_table$Sample[match(colnames(dfCountData),annotation_table$Replicate_name)]
+    dds <- DESeqDataSetFromMatrix(countData = dfCountData,
+      colData = annotation_table,
+      design = ~ Sample)
+    ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample, reduced = ~1)
+    # Get gene-wise dispersion estimates
+    # var = mean + alpha * mean^2, alpha is dispersion
+    # DESeq2 dispersion is 1/dispersion used in negative binomial in R
+    dds_dispersions <- 1/dispersions(ddsDESeqObject) 
+    # DESeq results for comparison
+    dds_resultsTable <- results(ddsDESeqObject)
+    # Correct counts by size factors
+    save(dds_dispersions,file=file.path(getwd(),"ImpulseDE_DEseq2_dispersions.RData"))
+    save(dds_resultsTable,file=file.path(getwd(),"ImpulseDE_DEseq2_results.RData"))
+    
+    head(dds)
+    
+    ## 2. Prepare annotation table for internal usage: chose samples from input
+    print("2. Prepare annotation table for internal usage")
     print("-------------------------------------------------------------------")
     tm_annot <- system.time({
-      prepared_annotation <- annotation_preparation(annotation_table,
-          expression_array, colname_time ,colname_condition, control_timecourse, 
-          control_name,case_name)
+      prepared_annotation <- annotation_preparation(
+        data_annotation=annotation_table,data_tables=expression_tables[[1]], 
+        colname_time=colname_time, colname_condition=colname_condition, 
+        control_timecourse=control_timecourse, control_name=control_name, 
+        case_name=case_name)
     })
     prepared_annotation <- prepared_annotation[order(
-            prepared_annotation$Condition),]
+      prepared_annotation$Condition),]
     prepared_annotation <- prepared_annotation[order(prepared_annotation$Time),]
-    save(prepared_annotation, file=file.path(getwd(),
-            "/prepared_annotation.RData"))
+    save(prepared_annotation, file=file.path(getwd(),"ImpulseDE_prepared_annotation.RData"))
     print("DONE")
     print("###################################################################")
-
+    
     # Get expression values of target samples specifcied in prepared_annotation
-    expression_array <- expression_array[,rownames(prepared_annotation),]
-
+    # DAVID unnecessary, done above
+    #expression_array <- expression_array[,rownames(prepared_annotation),]
+    
     # DAVID: Can my model handle this?
     # exclude genes with missing values(NAs)
     indx <- apply(expression_array,1,function(x){TRUE %in% is.na(x)})
     expression_array <- expression_array[!(indx),,]
     
-    # Precompute standard deviations over replicates for residual scaling
-    ### DAVID: smoothen out estimates, get rid of 0s
-    sigma_matrix <- apply(expression_array,c(1,2),sd)
-    # Precompute weights for fitting
-    weight_matrix <- compute_weights(expression_array)
-
     # if rownames are just 1,2,3 or if there are no rownames
     if(is.null(rownames(expression_array))){
-       rownames(expression_array) <- paste("G", 1:nrow(expression_array),
-            sep = "_")
+      rownames(expression_array) <- paste("G", 1:nrow(expression_array),
+        sep = "_")
     } else if(length(grep("[a-zA-Z]",rownames(expression_array))) == 0){
-       rownames(expression_array) <- paste(rownames(expression_array),"G",
-            sep = "_")
+      rownames(expression_array) <- paste(rownames(expression_array),"G",
+        sep = "_")
     }
-
-    ### 2. cluster genes to reduce efforts for fitting the impulse model
-    # Cluster based on mean over replicates
-    print("START: Clustering genes for Impulse model fit")
+    
+    ###  3. Fit Impule model to each gene 
+    print("3. Fitting Impulse model to the genes")
     print("-------------------------------------------------------------------")
-    load(file.path(getwd(),"/prepared_annotation.RData"))
-    tm_clust <- system.time({
-      clustering_results <- cluster_genes_for_impulse(
-          apply(expression_array,c(1,2),mean),
-          prepared_annotation, control_timecourse, control_name, plot_clusters)
-    })
-    save(clustering_results, file=file.path(getwd(),"clustering_results.RData"))
-    print("DONE")
-    print(paste("Consumed time: ",round(tm_clust["elapsed"]/60,2)," min",sep=""))
-    print("##################################################################")
-
-    # 3. fit Impulse model to the clusters
-    print("START: Fitting Impulse model to the clusters")
-    print("-------------------------------------------------------------------")
-    load(file.path(getwd(),"clustering_results.RData"))
-    tm_imp_fit_clus <- system.time({
-      impulse_fit_clusters <- impulse_fit(clustering_results,prepared_annotation,
-          weight_matrix,n_iter, control_timecourse, control_name, n_proc = n_process)
-    })
-    save(impulse_fit_clusters,file=file.path(getwd(),
-        "impulse_fit_clusters.RData"))
-    print("DONE")
-    print(paste("Consumed time: ",round(tm_imp_fit_clus["elapsed"]/60,2)," min",
-        sep=""))
-    print("###################################################################")
-
-    ###  4. Fit Impule model to each gene by using the cluster fits as start values
-    print("START: Fitting Impulse model to the genes")
-    print("-------------------------------------------------------------------")
-    load(file.path(getwd(),"impulse_fit_clusters.RData"))
     tm_imp_fit_gen <- system.time({
-      impulse_fit_genes <- impulse_fit(expression_array, prepared_annotation,
-        weight_matrix,n_iter, control_timecourse, control_name, clustering_results,
-        impulse_fit_clusters, n_proc = n_process)
+      impulse_fit_genes <- impulse_fit(data_input=expression_array, 
+        data_annotation=prepared_annotation,n_iter=n_iter, 
+        control_timecourse=control_timecourse, control_name=control_name, 
+        n_proc = n_process,dispersion_vector=dds_dispersions)
     })
-    save(impulse_fit_genes,file=file.path(getwd(),"impulse_fit_genes.RData"))
+    save(impulse_fit_genes,file=file.path(getwd(),"ImpulseDE_model_fit.RData"))
     print("DONE")
     print(paste("Consumed time: ",round(tm_imp_fit_gen["elapsed"]/60,2),
-        " min",sep=""))
+      " min",sep=""))
     print("###################################################################")
-
-    ### 5. Generate background for the DE analysis
-    print("START: Generate background")
+    
+    ### 5. Detect differentially expressed genes
+    print("5. DE analysis")
     print("-------------------------------------------------------------------")
-    load(file.path(getwd(),"impulse_fit_genes.RData"))
-    tm_bg <- system.time({
-      background_results <-  generate_background(expression_array,
-        prepared_annotation, sigma_matrix, n_iter, impulse_fit_genes, 
-        control_timecourse, control_name, clustering_results, n_randoms, n_process)
-    })
-    save(background_results,file=file.path(getwd(),"background_results.RData"))
-    print("DONE")
-    print(paste("Consumed time: ",round(tm_bg["elapsed"]/60,2)," min",sep=""))
-    print("###################################################################")
-
-    ### 6. Detect differentially expressed genes
-    print("START: DE analysis")
-    print("-------------------------------------------------------------------")
-    load(file.path(getwd(),"background_results.RData"))
     tm_DE <- system.time({
-      impulse_DE_genes <- DE_analysis(expression_array,prepared_annotation,
-            weight_matrix,impulse_fit_genes, background_results, control_timecourse,
-            control_name, expr_type, Q_value)
+      ImpulseDE_results <- DE_analysis_loglik(data_array=expression_array,
+        data_annotation=prepared_annotation,impulse_fit_results=impulse_fit_genes,
+        control_timecourse=control_timecourse,control_name=control_name, e_type=expr_type, Q=Q_value,
+        dispersion_vector=dds_dispersions)
+      impulse_DE_genes <- as.character(as.vector( 
+        ImpulseDE_results[as.numeric(ImpulseDE_results$adj.p) <= Q_value,"Gene"] ))
     })
-   
-    ### 7. Plot the top DE genes
-    if(control_timecourse == TRUE){
-      case_ind = as.character(prepared_annotation$Condition[prepared_annotation$
-            Condition != control_name][1])
-    } else { case_ind = NULL}
-    if(is.null(impulse_DE_genes) == FALSE & length(impulse_DE_genes) > 1 ){
-      if(is.list(impulse_DE_genes) == TRUE &
-         is.data.frame(impulse_DE_genes) == FALSE){
-            plot_impulse(as.character(impulse_DE_genes[[1]][,
-              "Gene"])[1:(min(nrow(impulse_DE_genes[[1]]),2*18))],
-              expression_array, prepared_annotation,impulse_fit_genes,
-              control_timecourse, control_name, case_ind, file_name_part = "DE",
-              title_line = "", sub_line = "")
-        } else {
-            plot_impulse(as.character(impulse_DE_genes[,
-              "Gene"])[1:(min(nrow(impulse_DE_genes),2*18))],
-              expression_array, prepared_annotation, impulse_fit_genes,
-              control_timecourse, control_name, case_ind, file_name_part = "DE",
-              title_line = "", sub_line = "")
-      }
-    }
-    save(impulse_DE_genes,file=file.path(getwd(),"impulse_DE_genes.RData"))
+    save(ImpulseDE_results,file=file.path(getwd(),"ImpulseDE_results.RData"))
+    save(impulse_DE_genes,file=file.path(getwd(),"ImpulseDE_DE_genes.RData"))
+    
+    ### 6. Plot the top DE genes
+    print("6. Plot top DE genes")
+    plot_impulse(impulse_DE_genes,
+      expression_array, prepared_annotation, impulse_fit_genes,
+      control_timecourse, control_name, case_ind, file_name_part = "DE",
+      title_line = "", sub_line = "",
+      ImpulseDE_res=ImpulseDE_results,DESeq2_res=dds_resultsTable)
     print("DONE")
     print(paste("Consumed time: ",round(tm_DE["elapsed"]/60,2)," min",sep=""))
     print("##################################################################")
   })
   print(paste("TOTAL consumed time: ",round(tm_tot["elapsed"]/60,2),
-        " min",sep=""))
+    " min",sep=""))
   
-  return(list("impulse_fit_results"=impulse_fit_genes,
-        "DE_results" = impulse_DE_genes))
+  return(list(
+    "ImpulseDE_DE_genes"=impulse_DE_genes,
+    "ImpulseDE_results"=ImpulseDE_results,
+    "ImpulseDE_impulse_fit_results"=impulse_fit_genes,
+    "DESeq2_results"=dds_resultsTable))
 }

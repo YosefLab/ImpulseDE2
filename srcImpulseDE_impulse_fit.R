@@ -99,7 +99,6 @@ impulse_fit <- function(data_input, data_annotation, n_iter = 100,
     optim_method <- "optim"
     #optim_method <- "nlminb"
     #optim_method <- c("optim","nlminb")
-    print(timepts)
     
     # If handed a list, i.e. not replicates
     if (is.vector(expression_values)==TRUE){
@@ -169,7 +168,6 @@ impulse_fit <- function(data_input, data_annotation, n_iter = 100,
           y_mat=expression_values, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
-      print("valley")
       # 2. Valley
       # Beta: Has to be negative
       # Theta1: High
@@ -257,7 +255,6 @@ impulse_fit <- function(data_input, data_annotation, n_iter = 100,
           y_mat=expression_values, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
-      print("down done")
       # 5. Mean
       # Parameter estimates: Only h1 is in modeled time interval and represents mean
       mu_guess <- mean(expression_values)
@@ -278,8 +275,7 @@ impulse_fit <- function(data_input, data_annotation, n_iter = 100,
       # much later (3*tmax in modelled range)
       fit_mean <- c(100,fit_mean[1],fit_mean[1]+1,fit_mean[1],
         3*timepts[num_points],4*timepts[num_points],fit_mean[2])
-      
-      print("mean done")
+
       
       # Summarise results
       if(("optim" %in% optim_method) && ("nlminb" %in% optim_method)){

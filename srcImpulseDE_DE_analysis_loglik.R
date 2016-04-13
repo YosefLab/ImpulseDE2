@@ -66,10 +66,8 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
   error_index = unlist(lapply(SS1_flag,function(x){if(x == FALSE){
     "Fit stability measure not build yet, srcImpulseDE_DE_analysis"} else {""}}))
   
-  # Create warning if no non-DE genes were detected
-  if(!(TRUE %in% (p_BH <= Q))){
-    warning("No DE genes were detected. Maybe amount of background genes is
-              too low.")
+  if(all(p_BH > Q)){
+    print("WARNING: No DE genes were detected.")
   }  
   
   # Summarise results

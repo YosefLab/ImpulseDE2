@@ -28,41 +28,12 @@
 # OUTPUT:
 #   -
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
-#' Plot impulse model fits
-#'
-#' Plots impulse model fits for the specified gene IDs. In the case of two
-#' time courses, the fits for the combined, case and control data are plotted.
-#' @aliases plot_impulse
-#' @param gene_IDs character vector of gene names to be plotted; must be part
-#' of the \code{rownames} of \code{data_array}
-#' @param data_array numeric matrix of expression values; genes should be in
-#' rows, samples in columns. Data should be properly normalized and
-#' log2-transformed as well as filtered for present or variable genes.
-#' @param data_annotation table providing co-variables for the samples including
-#' condition and time points. Time points must be numeric numbers.
-#' @param imp_fit_genes list of  fitted impulse model values and parameters as
-#' produced by \code{impulse_DE} as list element \code{impulse_fit_results};
-#' another possibility is load the saved fitting object
-#' \code{load("impulse_fit_genes.RData")}.
-#' @param control_timecourse logical indicating whether a control time
-#' timecourse is part of the data set (\code{TRUE}) or not (\code{FALSE}).
-#' Default is \code{FALSE}.
-#' @param control_name character string specifying the name of the control
-#' condition in \code{annotation_table}.
-#' @param case_name character string specifying the name of the case
-#' condition in \code{annotation_table}. Should be set if more than two
-#' conditions are present in \code{data_annotation}.
-#' @param file_name_part character string to be used as file extention.
-#' @param title_line character string to be used as title for each plot.
-#' @param sub_line character string to be used as subtitle for each plot.
-#' @export
 plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
   control_timecourse = FALSE, control_name = NULL, case_name = NULL,
   file_name_part = "", title_line = "", sub_line = "",
-  pvals_impulse_deseq=NULL){
-  # DEVELOPMENTAL NOTE : remove pval_deseq later again?
+  ImpulseDE_res = NULL, DESeq2_res=NULL){
+  #pvals_impulse_deseq=NULL){
+  # DAVID DEVELOPMENTAL NOTE : remove pval_deseq later again?
   
   if(length(grep("[a-zA-Z]",rownames(data_array))) == 0 ){
     rownames(data_array) <- paste(rownames(data_array),"G", sep = "_")
@@ -105,9 +76,10 @@ plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
       } else {
         calc_case <- calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:6],x_vec)
       }
-      
-      pval_DEseq <- round( log(pvals_impulse_deseq[gene_ID,"DESeq"])/log(10), 2 )
-      pval_Impulse <- round( log(pvals_impulse_deseq[gene_ID,"Impulse"])/log(10), 2 )
+      pval_DEseq <- round( log(DESeq2_res[gene_ID,]$padj)/log(10), 2 )
+      pval_Impulse <- round( log(ImpulseDE_res[gene_ID,]$adj.p)/log(10), 2 )
+      #pval_DEseq <- round( log(pvals_impulse_deseq[gene_ID,"DESeq"]))/log(10), 2 )
+      #pval_Impulse <- round( log(pvals_impulse_deseq[gene_ID,"Impulse"])/log(10), 2 )
       plot(timep_arr,(t(data_array[gene_ID,,])),col="blue",pch=3,xlim=c(0,max(timep)),
         ylim=c((min(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case)))-0.5),
           (max(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case)))+0.5)),

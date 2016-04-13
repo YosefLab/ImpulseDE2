@@ -23,16 +23,22 @@
 
 #Prepares the annotation table for internal use
 annotation_preparation <- function(data_annotation, data_tables = NULL,
-   colname_time = NULL, colname_condition = NULL, control_timecourse = FALSE,
-   control_name = NULL, case_name = NULL){
+  colname_time = NULL, colname_condition = NULL, control_timecourse = FALSE,
+  control_name = NULL, case_name = NULL){
+  
+  # Read annotation table on one sample (this should be the same for all
+  # samples)
+  data_annotation <- data_annotation[
+    data_annotation$Replicate %in% unique(data_annotation$Replicate)[1],]
+  rownames(data_annotation) <- data_annotation$Sample
   
   # 1. Check Input is valid
   if(is.null(data_tables)){
     stop("ERROR: table of data values must be specified")
   }
   if((nrow(data_annotation) != ncol(data_tables)) ||
-       (FALSE %in% (sort(rownames(data_annotation)) ==
-                      sort(colnames(data_tables))))){
+      (FALSE %in% (sort(rownames(data_annotation)) ==
+          sort(colnames(data_tables))))){
     stop("ERROR: column names of data table must be the same as
          row names of annotation table!")
   }
@@ -49,12 +55,12 @@ annotation_preparation <- function(data_annotation, data_tables = NULL,
          contain characters!")
   }
   if(control_timecourse == FALSE &
-       length(summary(as.factor(data_annotation[,colname_condition]))) >= 2){
+      length(summary(as.factor(data_annotation[,colname_condition]))) >= 2){
     stop("ERROR: if you have only one time course do not provide more than
          one condition!")
   }
   if(control_timecourse == TRUE & (length(summary(as.factor(data_annotation[,
-      colname_condition]))) > 2) & is.null(case_name)){
+    colname_condition]))) > 2) & is.null(case_name)){
     stop("ERROR: please specify case and control names of interest
          since you provide more than three conditions!")
   }
@@ -70,14 +76,14 @@ annotation_preparation <- function(data_annotation, data_tables = NULL,
     print(paste("Case condition: ", case_name, sep  = ""))
   } else {
     print(paste("Case condition: ",  data_annotation[!(data_annotation[,
-        colname_condition] %in% control_name),colname_condition][1], sep = ""))
+      colname_condition] %in% control_name),colname_condition][1], sep = ""))
   }
   if(control_timecourse == TRUE){
     print(paste("Control condition: ", control_name, sep  = ""))
   }
   if(control_timecourse == TRUE & (length(summary(as.factor(data_annotation[,
-        colname_condition]))) > 2)){
+    colname_condition]))) > 2)){
     annot <- annot[annot$Condition %in% c(control_name, case_name),]
   }
   return(annot)
-  }
+}

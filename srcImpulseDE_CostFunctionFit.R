@@ -39,8 +39,6 @@ cost_fun_logl <- function(theta,x_vec,y_mat,disp_est){
 # Cost function for optim for mean fitting without impulse model
 # Only the mean (h0) is fitted in this case
 cost_fun_logl_meanfit <- function(mu_est,y_mat,disp_est){
-  print("incost")
-  
   # Compute log likelihood assuming constant mean of negative binomial
   logl_impulse <- log( prod(dnbinom(y_mat, mu=mu_est, size=disp_est)) )
 
