@@ -277,6 +277,7 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
   control_name = NULL, case_name = NULL, n_process = 4, Q_value = 0.01){
   
   print("Impulse v1.3 loglik based")
+  NPARAM=6
   
   tm_tot <- system.time({
     
@@ -450,7 +451,7 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
       impulse_fit_genes <- impulse_fit(data_input=expression_array, 
         data_annotation=prepared_annotation, 
         control_timecourse=control_timecourse, control_name=control_name, 
-        n_proc = n_process,dispersion_vector=dds_dispersions)
+        n_proc = n_process,dispersion_vector=dds_dispersions,NPARAM=NPARAM)
     })
     save(impulse_fit_genes,file=file.path(getwd(),"ImpulseDE_model_fit.RData"))
     print("DONE")
@@ -465,7 +466,7 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
       ImpulseDE_results <- DE_analysis_loglik(data_array=expression_array,
         data_annotation=prepared_annotation,impulse_fit_results=impulse_fit_genes,
         control_timecourse=control_timecourse,control_name=control_name,Q=Q_value,
-        dispersion_vector=dds_dispersions)
+        NPARAM=NPARAM,dispersion_vector=dds_dispersions)
       impulse_DE_genes <- as.character(as.vector( 
         ImpulseDE_results[as.numeric(ImpulseDE_results$adj.p) <= Q_value,"Gene"] ))
     })

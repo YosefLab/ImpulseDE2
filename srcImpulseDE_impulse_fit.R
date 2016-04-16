@@ -54,7 +54,7 @@
 
 impulse_fit <- function(data_input, data_annotation,
   control_timecourse = FALSE, control_name = NULL, n_proc = 4,
-  dispersion_vector=NULL){
+  dispersion_vector=NULL,NPARAM=6){
   
   ### Check dataset for consistency
   if(ncol(data_annotation) != 2 ||
@@ -112,12 +112,6 @@ impulse_fit <- function(data_input, data_annotation,
     }
     
     num_points <- length(expression_means)
-    max_value = max(expression_values)
-    min_value = min(expression_values)
-    max_mean <- max(expression_means)
-    min_mean <- min(expression_means)
-    max_mean_ind <- match(max_mean,expression_means)
-    min_mean_ind <- match(min_mean,expression_means)
     max_middle_mean <- max(expression_means[2:(num_points-1)])
     min_middle_mean <- min(expression_means[2:(num_points-1)])
     max_middle_val <- max(expression_values[2:(num_points-1),])
@@ -128,12 +122,6 @@ impulse_fit <- function(data_input, data_annotation,
     # Gradients between neighbouring points
     neighbour_grad <- unlist( lapply(c(1:(num_points-1)),function(x){
       (expression_means[x+1]-expression_means[x])/(timepts[x+1]-timepts[x])}) )
-    if(max_mean < 1.001){max_mean <- 1.001}
-    if(min_mean < 0.001){min_mean <- 0.0001}
-    if(max_value < 1.001){max_value <- 1.001}
-    if(min_value < 0.001){min_value <- 0.001}
-    if(max_middle_mean < 1.001){max_middle_mean <- 1.001}
-    if(min_middle_mean < 0.001){min_middle_mean <- 0.001}
     
     tmm2 <- system.time({
       
@@ -146,25 +134,18 @@ impulse_fit <- function(data_input, data_annotation,
       # t2: Around second observed inflexion point
       lower_inflexion_point_ind <- match(max(neighbour_grad[1:(max_middle_mean_ind-1)]), neighbour_grad[1:(max_middle_mean_ind-1)])
       upper_inflexion_point_ind <- max_middle_mean_ind - 1 + match(min(neighbour_grad[max_middle_mean_ind:length(neighbour_grad)]), neighbour_grad[max_middle_mean_ind:length(neighbour_grad)])
-      #upper_h0 <- min( max(expression_values[1:(max_middle_mean_ind-1),]), max_middle_mean )
-      #upper_h2 <- min( max(expression_values[(max_middle_mean_ind+1):num_points,]), max_middle_mean )
       par_guess <- c(1,log(expression_means[1]+1),log(max_middle_mean+1),log(expression_means[num_points]+1),
         (timepts[lower_inflexion_point_ind]+timepts[lower_inflexion_point_ind+1])/2,
         (timepts[upper_inflexion_point_ind]+timepts[upper_inflexion_point_ind+1])/2)
-      #lower_b <- c(0.01,0.001,max(expression_means[1],expression_means[num_points]),0.001,(timepts[1]+timepts[2])/3,timepts[max_middle_mean_ind])
-      #upper_b <- c(100,upper_h0,max_middle_val,upper_h2,timepts[max_middle_mean_ind],timepts[num_points])
-      # check validity of bounds
-      #upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
-      # check that guess fullfills bounds
-      #par_guess[par_guess <= lower_b] <- lower_b[par_guess <= lower_b] + 0.01
-      #par_guess[par_guess >= upper_b] <- upper_b[par_guess >= upper_b] - 0.01
+      
       if("optim" %in% optim_method){
         fit_peak1 <- unlist( optim(par=par_guess, fn=cost_fun_logl_comp, x_vec=timepts,
           y_mat=expression_values, disp_est=dispersion_estimate,
-          method="BFGS", control=list(maxit=MAXIT))[c("par","convergence","value")] )
-        #method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
+          method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
       }
       if("nlminb" %in% optim_method){
+        # switched optimisation to maximisation which is not used here
+        return(NULL)
         fit_peak2 <- unlist(nlminb(start=par_guess, objective=cost_fun_logl_comp, x_vec=timepts,
           y_mat=expression_values, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
@@ -178,123 +159,39 @@ impulse_fit <- function(data_input, data_annotation,
       # t2: Around second observed inflexion point
       lower_inflexion_point_ind <- match(min(neighbour_grad[1:(min_middle_mean_ind-1)]), neighbour_grad[1:(min_middle_mean_ind-1)])
       upper_inflexion_point_ind <- min_middle_mean_ind - 1 + match(max(neighbour_grad[min_middle_mean_ind:(num_points-1)]), neighbour_grad[min_middle_mean_ind:(num_points-1)])
-      #upper_h0 <- max(expression_values[1:(min_middle_mean_ind-1),])
-      #upper_h2 <- max(expression_values[(min_middle_mean_ind+1):num_points,])
       par_guess <- c(1,log(expression_means[1]+1),log(min_middle_mean+1),log(expression_means[num_points]+1),
         (timepts[lower_inflexion_point_ind]+timepts[lower_inflexion_point_ind+1])/2,
         (timepts[upper_inflexion_point_ind]+timepts[upper_inflexion_point_ind+1])/2 )
-      #lower_b <- c(-0.01,min_middle_mean,0.001,min_middle_mean,(timepts[1]+timepts[2])/3,timepts[min_middle_mean_ind])
-      #upper_b <- c(-100,upper_h0,min(expression_means[1],expression_means[num_points]),upper_h2,timepts[min_middle_mean_ind],timepts[num_points])
-      # check validity of bounds
-      #upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1      
-      # check that guess fullfills bounds
-      #par_guess[par_guess <= lower_b] <- lower_b[par_guess <= lower_b] + 0.01
-      #par_guess[par_guess >= upper_b] <- upper_b[par_guess >= upper_b] - 0.01
+      
       if("optim" %in% optim_method){
         fit_valley1 <- unlist( optim(par=par_guess, fn=cost_fun_logl_comp, x_vec=timepts,
           y_mat=expression_values, disp_est=dispersion_estimate,
-          method="BFGS", control=list(maxit=MAXIT))[c("par","convergence","value")] )
-        #method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
+          method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
       }
       if("nlminb" %in% optim_method){
+        # switched optimisation to maximisation which is not used here
+        return(NULL)
         fit_valley2 <- unlist(nlminb(start=par_guess, objective=cost_fun_logl_comp, x_vec=timepts,
           y_mat=expression_values, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
-      # DAVID take out these initialisations to save time
-      if(FALSE){
-        # 3. Up
-        # Beta: Has to be positive
-        # Theta1: Low
-        # Theta2: High
-        # Theta3: Arbitrary (outside reach - defined through t2)
-        # t1: Around observed inflexion point
-        # t2: Should be well outside reach so that model doesn't use the 2nd sigmoid.
-        inflexion_point_ind <- match(max(neighbour_grad), neighbour_grad)
-        par_guess <- c(1,min_mean,max_mean,min_mean,
-          (timepts[inflexion_point_ind]+timepts[inflexion_point_ind+1])/2,
-          2.5*timepts[num_points])
-        #lower_b <- c(0.01,0.001,max_middle_mean,0.001,(timepts[1]+timepts[2])/3,2*timepts[num_points])
-        #upper_b <- c(100,max_middle_mean,max_value,max_middle_mean,timepts[num_points],3*timepts[num_points])
-        # check validity of bounds
-        #upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1      
-        # check that guess fullfills bounds
-        #par_guess[par_guess <= lower_b] <- lower_b[par_guess <= lower_b] + 0.01
-        #par_guess[par_guess >= upper_b] <- upper_b[par_guess >= upper_b] - 0.01
-        if("optim" %in% optim_method){
-          fit_up1 <- unlist(optim(par=par_guess, fn=cost_fun_logl_comp, x_vec=timepts,
-            y_mat=expression_values, disp_est=dispersion_estimate,
-            method="L-BFGS-B")[c("par","value")])
-          #method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
-        }
-        if("nlminb" %in% optim_method){
-          fit_up2 <- unlist(nlminb(start=par_guess, objective=cost_fun_logl_comp, x_vec=timepts,
-            y_mat=expression_values, disp_est=dispersion_estimate,
-            lower=lower_b, upper=upper_b)[c("par","objective")])
-        }
-        # 4. Down
-        # Beta: Has to be negative
-        # Theta1: High
-        # Theta2: Low
-        # Theta3: Arbitrary (outside reach - defined through t2)
-        # t1: Around observed inflexion point
-        # t2: Should be well outside reach so that model doesn't use the 2nd sigmoid.
-        inflexion_point_ind <- match(min(neighbour_grad), neighbour_grad)
-        par_guess <- c(-1,max_mean,min_mean,max_mean,
-          (timepts[inflexion_point_ind]+timepts[inflexion_point_ind+1])/2,
-          2.5*timepts[num_points])
-        #lower_b <- c(-0.01,min_middle_mean,0.001,0.001,(timepts[1]+timepts[2])/3,2*timepts[num_points])
-        #upper_b <- c(-100,max_value,max_middle_mean,max_value,timepts[num_points],3*timepts[num_points])
-        # check validity of bounds
-        #upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
-        # check that guess fullfills bounds
-        #par_guess[par_guess <= lower_b] <- lower_b[par_guess <= lower_b] + 0.01
-        #par_guess[par_guess >= upper_b] <- upper_b[par_guess >= upper_b] - 0.01
-        if("optim" %in% optim_method){
-          fit_down1 <- unlist(optim(par=par_guess, fn=cost_fun_logl_comp, x_vec=timepts,
-            y_mat=expression_values, disp_est=dispersion_estimate,
-            method="L-BFGS-B")[c("par","value")])
-          #method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
-        }
-        if("nlminb" %in% optim_method){
-          fit_down2 <- unlist(nlminb(start=par_guess, objective=cost_fun_logl_comp, x_vec=timepts,
-            y_mat=expression_values, disp_est=dispersion_estimate,
-            lower=lower_b, upper=upper_b)[c("par","objective")])
-        }
-      }
+      
       # 5. Mean
       # Parameter estimates: Only h1 is in modeled time interval and represents mean
       mu_guess <- log(mean(expression_values))
-      #lower_b <- c(min_value-1)
-      #upper_b <- c(max_value+1)
-      # check validity of bounds
-      #upper_b[upper_b <= lower_b] <- lower_b[upper_b <= lower_b] + 1
-      # check that guess fullfills bounds
-      #if(mu_guess <= lower_b){mu_guess <- lower_b + 0.01}
-      #if(mu_guess >= upper_b){mu_guess <- upper_b - 0.01}
       fit_mean <- unlist(optim(par=mu_guess, fn=cost_fun_logl_meanfit_comp,
         y_mat=expression_values, disp_est=dispersion_estimate,
-        method="L-BFGS-B", control=list(maxit=MAXIT))[c("par","value","convergence")])
-      #method="L-BFGS-B",lower=lower_b, upper=upper_b)[c("par","value")])
-      # fit_mean is object of 1D optimisation, fill up missing parameters
-      # to conform with impulse model reporting scheme
-      # This impulse model corresponds to a peak which is almost 
-      # constant in the modelled time range and only starts peaking 
-      # much later (3*tmax in modelled range)
-      #fit_mean <- c(100,fit_mean[1],fit_mean[1],fit_mean[1],
-      #  timepts[1],timepts[num_points],fit_mean[2])
+        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])
       
       # Summarise results
       if(("optim" %in% optim_method) && ("nlminb" %in% optim_method)){
-        fmin_outs <- cbind(fit_peak1,fit_peak2,fit_valley1,fit_valley2,fit_up1,fit_up2,
-          fit_down1,fit_down2,fit_mean)
+        fmin_outs <- cbind(fit_peak1,fit_peak2,fit_valley1,fit_valley2)
       }
       if(("optim" %in% optim_method) && !("nlminb" %in% optim_method)){
-        #fmin_outs <- cbind(fit_peak1,fit_valley1,fit_up1,fit_down1,fit_mean)
         fmin_outs <- cbind(fit_peak1,fit_valley1)
       }
       if(!("optim" %in% optim_method) && ("nlminb" %in% optim_method)){
-        fmin_outs <- cbind(fit_peak2,fit_valley2,fit_up2,fit_down2,fit_mean)
+        fmin_outs <- cbind(fit_peak2,fit_valley2)
       } 
       
       # Name row containing value of objective as value 
@@ -307,8 +204,9 @@ impulse_fit <- function(data_input, data_annotation,
     # Report mean fit objective value as null hypothesis, too.
     # match() selects first hit if minimum occurs multiple times
     best_fit <- match(min(fmin_outs["value",]),fmin_outs["value",])
-    fit_and_null <- c(fmin_outs[,best_fit],fit_mean[2])
-    names(fit_and_null) <- c("beta","h0","h1","h2","t1","t2","convergence","objective","nullfit")
+    fit_and_null <- c(fmin_outs[,best_fit],fit_mean)
+    names(fit_and_null) <- c("beta","h0","h1","h2","t1","t2",
+      "logL_H1","converge_H1","mu","logL_H0","converge_H0")
     
     return(fit_and_null)
   }
@@ -345,9 +243,8 @@ impulse_fit <- function(data_input, data_annotation,
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
   impulse_fit_matrix <- function(data_arr, timepoints,
-    ctrl_tc = FALSE, ctrl = NULL, n_process = 4, dispersion_vec=NULL){
+    ctrl_tc = FALSE, ctrl = NULL, n_process = 4, dispersion_vec=NULL,NPARAM=6){
     
-    NPARAM = 6 # Number of model parameters
     MAXIT <- 1000 # Number of maximum iterations for MLE fitting
     mc <- min(detectCores() - 1, n_process)
     
@@ -416,25 +313,28 @@ impulse_fit <- function(data_input, data_annotation,
       }
       matFits <- matFits_temp
     }   
+    colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
+      "converge_H1","mu","logL_H0","converge_H0")
+    rownames(matFits) <- rownames(data_arr)
     
     ### DAVID: can reduce this if clause?
-    # Use obtained impulse parameters to calculate impulse fit values
-    colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","convergence","objective","nullfit")
-    if(nrow(matFits) == 1){      # if matrix contains only one gene
+    # Use obtained impulse parameters to calculate impulse fit values   
+    if(nrow(matFits) == 1){
+      # if matrix contains only one gene
       matImpulseValues <- as.data.frame(t(calc_impulse_comp(matFits[,1:NPARAM],
         unique(sort(timepoints)))),row.names=rownames(matFits))
-      colnames(matImpulseValues) = unique(sort(timepoints))
-    } else {                    # if matrix contains > 1 genes
+    } else {                    
+      # if matrix contains > 1 genes
       matImpulseValues <- t(apply(matFits[,1:NPARAM],1,function(x){calc_impulse_comp(x,
         unique(sort(timepoints)))}))
-      colnames(matImpulseValues) = unique(sort(timepoints))
     } 
+    colnames(matImpulseValues) = unique(sort(timepoints))
+    rownames(matImpulseValues) <- rownames(data_arr)
     
     # Report results.
     res <- list()
-    rownames(matFits) <- rownames(data_arr)
-    rownames(matImpulseValues) <- rownames(data_arr)
-    res[[1]] <- matFits    # "beta","h0","h1","h2","t1","t2","objective","nullfit" [x3 if with control]
+    res[[1]] <- matFits   # "beta","h0","h1","h2","t1","t2","logL_H1",
+                          # "converge_H1","mu","logL_H0","converge_H0" [x3 if with control]
     res[[2]] <- matImpulseValues   # values of impulse model on input timepoints and given genes
     names(res) <- c("impulse_parameters","impulse_fits")
     return(res)
@@ -444,14 +344,15 @@ impulse_fit <- function(data_input, data_annotation,
   #~~~~~~~~~~~~~~~~~~ 3. Prepare data for impulse model fit ~~~~~~~~~~~~~~~~~~~#
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
-  ### assume only one timecourse as default and perform only 1 run
   g_names = rownames(data_input)
-  runs = 1
-  label = "case"
   results = list()
+  
   if(control_timecourse == TRUE){
     runs = 3
     label = c("combined","case","control")
+  } else {
+    runs = 1
+    label = "case"
   }
   
   # data_input is defined in the following as:
@@ -459,8 +360,6 @@ impulse_fit <- function(data_input, data_annotation,
   #   2) A list of a single data 3D array if only have case
   
   # Perform 3 runs (combined, case and control) if control timecourse is present
-  # datX contains expression data of genes associates with cluster
-  # datX_n contains expression data of genes NOT in cluster (low variation)
   if(control_timecourse == TRUE){    
     # Combined: Expression values of both case and control (all columns).
     dat1 = data_input
@@ -512,11 +411,11 @@ impulse_fit <- function(data_input, data_annotation,
       timepoints=as.numeric(as.character(
         data_annotation[colnames(data_input[[c_runs]]),"Time"])), 
       ctrl_tc = control_timecourse,ctrl = control_name,
-      n_process = n_proc, dispersion_vec=dispersion_vector)
+      n_process = n_proc, dispersion_vec=dispersion_vector,NPARAM=NPARAM)
     
     # DAVID: do i still need this?
-    imp_res$impulse_parameters <- (imp_res$impulse_parameters)[g_names,]
-    imp_res$impulse_fits <- (imp_res$impulse_fits)[g_names,]
+    #imp_res$impulse_parameters <- (imp_res$impulse_parameters)[g_names,]
+    #imp_res$impulse_fits <- (imp_res$impulse_fits)[g_names,]
     
     names(imp_res) <- paste(c("impulse_parameters","impulse_fits"),label[c_runs],sep="_")
     results[[names(imp_res)[1]]] <- imp_res[[1]]

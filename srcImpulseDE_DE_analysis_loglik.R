@@ -28,9 +28,7 @@
 
 DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
   impulse_fit_results,background, control_timecourse = FALSE,
-  control_name = NULL,Q = 0.01, dispersion_vector=NULL){
-  
-  NPARAM <- 6
+  control_name = NULL,Q = 0.01, dispersion_vector=NULL,NPARAM=6){
   
   ### if control timecourse is present split data into case and control data
   if(control_timecourse == TRUE){
@@ -47,49 +45,39 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
     "Time"]))
   
   if(control_timecourse == FALSE){
-    loglik_fullmodel <- -impulse_fit_results$impulse_parameters_case[,"objective"]
-    loglik_redmodel <- -impulse_fit_results$impulse_parameters_case[,"nullfit"]
+    loglik_fullmodel <- impulse_fit_results$impulse_parameters_case[,"logL_H1"]
+    loglik_redmodel <- impulse_fit_results$impulse_parameters_case[,"logL_H0"]
+    mu <- impulse_fit_results$impulse_parameters_case[,"mu"]
     df_fullmodel <- NPARAM
     df_redmodel <- 1
   }
+  # Compute difference in degrees of freedom between null model and alternative model.
   df <- df_fullmodel - df_redmodel
+  # Compute test statistic: Deviance
   deviance <- 2*(loglik_fullmodel - loglik_redmodel)
+  # Get p-values from Chi-square distribution (assumption about null model)
   p <- pchisq(deviance,df=df,lower.tail=FALSE)
-  
+  # Multiple testing correction (Benjamini-Hochberg)
   p_BH = p.adjust(p, method = "BH")
   
-  # SS1 Flag
-  ### DAVID: SS flag still valid under my model?
-  ### Could leave like this or find new threshold for weighted SS
-  #SS_1_s = apply(RESD_1_s, 1, function(x){sum(x^2)})
-  #SS1_flag = SS_1_s < 20
-  SS1_flag <- array(1,length(p_BH))
-  error_index = unlist(lapply(SS1_flag,function(x){if(x == FALSE){
-    "Fit stability measure not build yet, srcImpulseDE_DE_analysis"} else {""}}))
-  
-  if(all(p_BH > Q)){
-    print("WARNING: No DE genes were detected.")
-  }  
-  
   # Summarise results
-  result =   as.data.frame(cbind(
-    "Gene" = row.names(data_array),
-    "adj.p"=as.numeric(p_BH),
-    "loglik_full"=round(loglik_fullmodel),
-    "loglik_red"=round(loglik_redmodel),
-    "deviance"=round(deviance),
-    "mu"=round(apply(data_array,1,mean)),
-    "size"=round(dispersion_vector),
-    "convergence"=impulse_fit_results$impulse_parameters_case[,"convergence"],
-    stringsAsFactors = FALSE))
+  if(control_timecourse == FALSE){
+    result =   as.data.frame(cbind(
+      "Gene" = row.names(data_array),
+      "p"=as.numeric(p),
+      "adj.p"=as.numeric(p_BH),
+      "loglik_full"=round(loglik_fullmodel),
+      "loglik_red"=round(loglik_redmodel),
+      "deviance"=round(deviance),
+      "mu"=round(mu),
+      "size"=round(dispersion_vector),
+      "converge_H1"=impulse_fit_results$impulse_parameters_case[,"converge_H1"],
+      "converge_H0"=impulse_fit_results$impulse_parameters_case[,"converge_H0"],
+      stringsAsFactors = FALSE))
+  }
   result$adj.p <- as.numeric(as.character(result$adj.p))
   result = result[order(result$adj.p),]
   print(paste("Found ",nrow(result[result$adj.p <= Q,])," DE genes",sep=""))
-  
-  write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-    "adj.p"=p_BH,"prediction error" = error_index)),
-    "pvals_and_flags.txt", quote = FALSE, sep ="\t",
-    row.names = TRUE, col.names = NA)
   
   return(result)
 }
