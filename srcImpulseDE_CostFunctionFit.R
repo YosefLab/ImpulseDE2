@@ -23,14 +23,13 @@ cost_fun_logl <- function(theta,x_vec,y_mat,disp_est){
   impulse_value = calc_impulse_comp(theta,x_vec)
   
   # Without dispersion estimation, take given
-  lik_tps <- unlist( lapply(c(1:length(x_vec)), function(tp){
-    prod(dnbinom(y_mat[tp,], mu=impulse_value[tp], size=disp_est))}) )
-  logl_impulse <- log(prod( lik_tps ))
+  logl_impulse <- sum(unlist( lapply(c(1:length(x_vec)), function(tp){
+    sum(dnbinom(y_mat[tp,], mu=impulse_value[tp], size=disp_est, log=TRUE))}) ))
   
   # log(10^(-323))=-743.7469 is the smallest number not to give an
   # error in log. -800 is smaller than that - sets the boundary
   # for optimisation to move away from.
-  if(is.na(logl_impulse) || !is.finite(logl_impulse)){logl_impulse <- -800}
+  #if(is.na(logl_impulse) | !is.finite(logl_impulse)){logl_impulse <- -800}
   
   # Maximise log likelihood, optim minimises objective -> take negative
   return(-logl_impulse)
@@ -40,12 +39,12 @@ cost_fun_logl <- function(theta,x_vec,y_mat,disp_est){
 # Only the mean (h0) is fitted in this case
 cost_fun_logl_meanfit <- function(mu_est,y_mat,disp_est){
   # Compute log likelihood assuming constant mean of negative binomial
-  logl_impulse <- log( prod(dnbinom(y_mat, mu=mu_est, size=disp_est)) )
-
+  logl_impulse <- sum (dnbinom(y_mat, mu=exp(mu_est), size=disp_est, log=TRUE))
+  
   # log(10^(-323))=-743.7469 is the smallest number not to give an
   # error in log. -800 is smaller than that - sets the boundary
   # for optimisation to move away from.
-  if(is.na(logl_impulse) || !is.finite(logl_impulse)){logl_impulse <- -800}
+  #if(is.na(logl_impulse) | !is.finite(logl_impulse)){logl_impulse <- -800}
   
   # Maximise log likelihood, optim minimises objective -> take negative
   return(-logl_impulse)

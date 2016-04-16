@@ -20,7 +20,6 @@
 #   control_timecourse: (bool) [Default FALSE] Control time timecourse is 
 #       part of the data set (TRUE) or not (FALSE).
 #   control_name: (str) name of the control condition in annotation_table.
-#   e_type:
 #   Q: (scalar) [Defaul 0.01]
 # OUTPUT:
 #   res2:
@@ -29,7 +28,9 @@
 
 DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
   impulse_fit_results,background, control_timecourse = FALSE,
-  control_name = NULL,e_type = "Array", Q = 0.01, dispersion_vector=NULL){
+  control_name = NULL,Q = 0.01, dispersion_vector=NULL){
+  
+  NPARAM <- 6
   
   ### if control timecourse is present split data into case and control data
   if(control_timecourse == TRUE){
@@ -48,7 +49,7 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
   if(control_timecourse == FALSE){
     loglik_fullmodel <- -impulse_fit_results$impulse_parameters_case[,"objective"]
     loglik_redmodel <- -impulse_fit_results$impulse_parameters_case[,"nullfit"]
-    df_fullmodel <- 6
+    df_fullmodel <- NPARAM
     df_redmodel <- 1
   }
   df <- df_fullmodel - df_redmodel
@@ -79,29 +80,16 @@ DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
     "deviance"=round(deviance),
     "mu"=round(apply(data_array,1,mean)),
     "size"=round(dispersion_vector),
+    "convergence"=impulse_fit_results$impulse_parameters_case[,"convergence"],
     stringsAsFactors = FALSE))
   result$adj.p <- as.numeric(as.character(result$adj.p))
   result = result[order(result$adj.p),]
   print(paste("Found ",nrow(result[result$adj.p <= Q,])," DE genes",sep=""))
   
+  write.table(as.data.frame(cbind("Gene" = row.names(data_array),
+    "adj.p"=p_BH,"prediction error" = error_index)),
+    "pvals_and_flags.txt", quote = FALSE, sep ="\t",
+    row.names = TRUE, col.names = NA)
   
-  if(control_timecourse == TRUE){
-    write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-      "adj.p"=p_BH,
-      "prediction error" = error_index)),"pvals_and_flags.txt",
-      quote = FALSE, sep ="\t", row.names = TRUE, col.names = NA)
-  } else {
-    if(e_type == "Array"){
-      write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-        "adj.p"=p_BH,"prediction error" = error_index)),
-        "pvals_and_flags.txt", quote = FALSE, sep ="\t", row.names = TRUE,
-        col.names = NA)
-    } else {
-      write.table(as.data.frame(cbind("Gene" = row.names(data_array),
-        "adj.p"=p_BH,"prediction error" = error_index)),
-        "pvals_and_flags.txt", quote = FALSE, sep ="\t",
-        row.names = TRUE, col.names = NA)
-    }
-  }
   return(result)
 }

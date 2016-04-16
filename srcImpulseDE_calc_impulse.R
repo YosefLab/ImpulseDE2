@@ -24,16 +24,16 @@
 #' @return The predicted impulse model values for the given time point(s).
 #' @export
 calc_impulse <- function(theta,timepoints){
-  beta1 = theta[1]
-  h0 = theta[2]
-  h1 = theta[3]
-  h2 = theta[4]
+  beta = theta[1]
+  h0 = exp(theta[2])
+  h1 = exp(theta[3])
+  h2 = exp(theta[4])
   t1 = theta[5]
   t2 = theta[6]
   
   y_vec = unlist(lapply(timepoints, function(x) {(1/h1) * 
-      (h0 + (h1-h0) * (1/(1+exp(-beta1*(x-t1))))) *
-      (h2 + (h1-h2) * (1/(1+exp(beta1*(x-t2)))))}))
+      (h0 + (h1-h0) * (1/(1+exp(-beta*(x-t1))))) *
+      (h2 + (h1-h2) * (1/(1+exp(beta*(x-t2)))))}))
   
   return(y_vec)
 }

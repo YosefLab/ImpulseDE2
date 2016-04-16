@@ -263,7 +263,6 @@ source("srcImpulseDE_plot_impulse.R")
 #   case_name: (str) name of the case condition in annotation_table.
 #   expr_type: (str) ["Array" or "Seq"] In case of Sequencing data ("Seq") a 
 #       DESeq2 test is added to the results. Default is "Array".
-#   n_iter: (scalar) [Defaul 100] Number of iterations
 #   n_process: (scalar) [Default 4] number of processes, which can be used on the 
 #       machine to run the background calculation in parallel
 #   Q_value: (scalar) [default 0.01] cutoff to call genes significantly 
@@ -275,8 +274,7 @@ source("srcImpulseDE_plot_impulse.R")
 
 impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
   colname_time = NULL, colname_condition = NULL, control_timecourse = FALSE,
-  control_name = NULL, case_name = NULL, expr_type = "Array",
-  n_iter = 100, n_process = 4, Q_value = 0.01){
+  control_name = NULL, case_name = NULL, n_process = 4, Q_value = 0.01){
   
   print("Impulse v1.3 loglik based")
   
@@ -346,12 +344,16 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
       expression_table <- expression_table[,as.character(annotation_table$Replicate_name)]
     }
     # Reduce expression table to rows containing at least one non-zero count
-    allzero_rowIdx <- apply(expression_table,1,function(x){all(x==0)})
-    if(sum(allzero_rowIdx) > 0){
-      print(paste0("WARNING: ",sum(allzero_rowIdx), " out of ",
-        dim(expression_table)[1]," genes had only zero counts in all considered samples."))
+    # with mean expression > 1
+    #rowIdx_lowCounts <- apply(expression_table,1,function(x){all(x==0)})
+    rowIdx_lowCounts <- apply(expression_table,1,function(x){mean(x) < 1})
+    if(sum(rowIdx_lowCounts) > 0){
+      #print(paste0("WARNING: ",sum(rowIdx_lowCounts), " out of ",
+      #  dim(expression_table)[1]," genes had only zero counts in all considered samples."))
+      print(paste0("WARNING: ",sum(rowIdx_lowCounts), " out of ",
+        dim(expression_table)[1]," genes had a mean RNA count of < 1."))
       print("These genes are omitted in the analysis.")
-      expression_table <- expression_table[!allzero_rowIdx,]
+      expression_table <- expression_table[!rowIdx_lowCounts,]
     }
     
     # DAVID to be deprecated
@@ -446,7 +448,7 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
     print("-------------------------------------------------------------------")
     tm_imp_fit_gen <- system.time({
       impulse_fit_genes <- impulse_fit(data_input=expression_array, 
-        data_annotation=prepared_annotation,n_iter=n_iter, 
+        data_annotation=prepared_annotation, 
         control_timecourse=control_timecourse, control_name=control_name, 
         n_proc = n_process,dispersion_vector=dds_dispersions)
     })
@@ -462,7 +464,7 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
     tm_DE <- system.time({
       ImpulseDE_results <- DE_analysis_loglik(data_array=expression_array,
         data_annotation=prepared_annotation,impulse_fit_results=impulse_fit_genes,
-        control_timecourse=control_timecourse,control_name=control_name, e_type=expr_type, Q=Q_value,
+        control_timecourse=control_timecourse,control_name=control_name,Q=Q_value,
         dispersion_vector=dds_dispersions)
       impulse_DE_genes <- as.character(as.vector( 
         ImpulseDE_results[as.numeric(ImpulseDE_results$adj.p) <= Q_value,"Gene"] ))

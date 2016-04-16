@@ -14,6 +14,8 @@ dfDESeq_Impulse <- as.data.frame( cbind(
   stringsAsFactors=FALSE)
 rownames(dfDESeq_Impulse) <- as.character(as.vector( ImpulseDE_results$Gene ))
 dfDESeq_Impulse$DESeq <- as.numeric(dfDESeq_Impulse$DESeq)
+# Set NA as not detected:
+dfDESeq_Impulse$DESeq[is.na(dfDESeq_Impulse$DESeq)] <- 1
 dfDESeq_Impulse$Impulse <- as.numeric(dfDESeq_Impulse$Impulse)
 
 mat_overlap <- array(NA,c(10,10))

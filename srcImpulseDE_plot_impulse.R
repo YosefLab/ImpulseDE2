@@ -35,6 +35,8 @@ plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
   #pvals_impulse_deseq=NULL){
   # DAVID DEVELOPMENTAL NOTE : remove pval_deseq later again?
   
+  NPARAM=6
+  
   if(length(grep("[a-zA-Z]",rownames(data_array))) == 0 ){
     rownames(data_array) <- paste(rownames(data_array),"G", sep = "_")
     gene_IDs <- paste(gene_IDs, "G", sep = "_")
@@ -74,7 +76,7 @@ plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
       if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_ID,])){
         calc_case <- imp_fit_genes$impulse_fits_case[gene_ID,1]
       } else {
-        calc_case <- calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:6],x_vec)
+        calc_case <- calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:NPARAM],x_vec)
       }
       pval_DEseq <- round( log(DESeq2_res[gene_ID,]$padj)/log(10), 2 )
       pval_Impulse <- round( log(ImpulseDE_res[gene_ID,]$adj.p)/log(10), 2 )
@@ -101,21 +103,21 @@ plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
         calc_case = imp_fit_genes$impulse_fits_case[gene_ID,1]
         status_case = FALSE
       } else {
-        calc_case = calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:6],x_vec)
+        calc_case = calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:NPARAM],x_vec)
         status_case = TRUE
       }
       if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_control[gene_ID,])){
         calc_ctrl = imp_fit_genes$impulse_fits_control[gene_ID,1]
         status_ctrl = FALSE
       } else {
-        calc_ctrl = calc_impulse_comp(imp_fit_genes$impulse_parameters_control[gene_ID,1:6],x_vec)
+        calc_ctrl = calc_impulse_comp(imp_fit_genes$impulse_parameters_control[gene_ID,1:NPARAM],x_vec)
         status_ctrl = TRUE
       }
       if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_combined[gene_ID,])){
         calc_comb = imp_fit_genes$impulse_fits_combined[gene_ID,1]
         status_comb = FALSE
       } else {
-        calc_comb = calc_impulse_comp(imp_fit_genes$impulse_parameters_combined[gene_ID,1:6],x_vec)
+        calc_comb = calc_impulse_comp(imp_fit_genes$impulse_parameters_combined[gene_ID,1:NPARAM],x_vec)
         status_comb = TRUE
       }
       

@@ -4,7 +4,6 @@ rm(list = ls())
 ### LOAD DATA
 ### Load annotation
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test")
-# DAVID: take out timepoints
 annotation_table <- read.table("annotation_table_RNAseq_D50-D51-D54.tab",header=T)
 rownames(annotation_table) <- annotation_table$Replicate_name
 
@@ -36,14 +35,12 @@ colname_condition = "Condition"
 control_timecourse = FALSE
 control_name = NULL
 case_name = "case"
-expr_type = "Array"
-n_iter = 100
 n_process = 3
 Q_value = 0.01
 lsImpulseDE_results <- impulse_DE(expression_tables = expression_table, annotation_table = annotation_table,
   colname_time=colname_time, colname_condition=colname_condition, control_timecourse=control_timecourse,
-  control_name = control_name, case_name =case_name, expr_type =expr_type,
-  n_iter =n_iter, n_process =n_process, Q_value =Q_value)
+  control_name = control_name, case_name =case_name,
+  n_process =n_process, Q_value =Q_value)
 
 impulse_DE_genes <- lsImpulseDE_results$ImpulseDE_DE_genes
 ImpulseDE_results <- lsImpulseDE_results$ImpulseDE_results
