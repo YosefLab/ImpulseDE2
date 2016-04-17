@@ -276,7 +276,6 @@ impulse_fit <- function(data_input, data_annotation,
         "impulse_fit_matrix", "timepoints",
         "MAXIT","NPARAM"), envir = my.env)
       
-      junk <- clusterEvalQ(cl,library(MASS))
       # Fit impulse model to each gene of matrix and get impulse parameters:
       # clusterApply runs the function impulse_fit_gene_wise
       # The input data are distributed to nodes by ind_list partitioning

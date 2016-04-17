@@ -8,8 +8,8 @@
 ### Author v1.0:  Jil Sander
 ### Author v1.1:  David Fischer --Divide file into src files, annotation
 ### Author v1.2:  David Fischer --Support replicate samples, WLS fitting and residual scaling
-### Author v1.3:  David Fischer --WLS fitting with CV weights
-### Author v1.3:  David Fischer --NB fitting
+### Author v1.3.1:  David Fischer --WLS fitting with CV weights
+### Author v1.3.2:  David Fischer --NB fitting
 
 ################################################################################
 # Variance extension: implement this inside functions, v1.2
@@ -21,11 +21,7 @@
 ################################################################################
 
 library(compiler)
-library(amap)
-library(longitudinal)
 library(parallel)
-library(graphics)
-library(MASS)
 library(DESeq2)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
