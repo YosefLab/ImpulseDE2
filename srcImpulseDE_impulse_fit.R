@@ -56,7 +56,7 @@ impulse_fit <- function(data_input, data_annotation,
   control_timecourse = FALSE, control_name = NULL, n_proc = 4,
   dispersion_vector=NULL,NPARAM=6){
   
-  ### Check dataset for consistency
+  # Check dataset for consistency
   if(ncol(data_annotation) != 2 ||
       FALSE %in% (colnames(data_annotation) == c("Time","Condition"))){
     stop("Please use function 'annotation_preparation' to prepare
@@ -78,13 +78,9 @@ impulse_fit <- function(data_input, data_annotation,
   #   data_annotation: (Table samples x 2[time and condition]) 
   #       Co-variables for the samples including condition and time points.
   #       Time points must be numeric.
-  #   weight_vector:
   #   NPARAM: (scalar) Number of model parameters
   #   n_iter: (scalar) [Default 100] Number of iterations, which are performed 
   #       to fit the impulse model to the clusters.
-  #   fit_to_clusters: (bool) [Default FALSE]
-  #   start_val: 
-  #   fit_backg: (bool) [Default FALSE]
   #   n_process: (scalar) [Default 4] number of processes, which can be used on 
   #       the machine to run the background calculation in parallel
   # OUTPUT:
@@ -94,7 +90,7 @@ impulse_fit <- function(data_input, data_annotation,
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
   impulse_fit_gene_wise <- function(expression_values, timepts, 
-    NPARAM=6, MAXIT=10000, dispersion_estimate=NULL,...){
+    NPARAM=6, MAXIT=1000, dispersion_estimate=NULL,...){
     
     optim_method <- "optim"
     #optim_method <- "nlminb"
@@ -125,7 +121,7 @@ impulse_fit <- function(data_input, data_annotation,
     
     tmm2 <- system.time({
       
-      # 1. Peak:
+      # 1. Alternative model: Peak
       # Beta: Has to be negative
       # Theta1: Low
       # Theta2: High
@@ -137,6 +133,7 @@ impulse_fit <- function(data_input, data_annotation,
       par_guess <- c(1,log(expression_means[1]+1),log(max_middle_mean+1),log(expression_means[num_points]+1),
         (timepts[lower_inflexion_point_ind]+timepts[lower_inflexion_point_ind+1])/2,
         (timepts[upper_inflexion_point_ind]+timepts[upper_inflexion_point_ind+1])/2)
+      #par_guess <- c(1,1,2,1,timepts[2],timepts[3])
       
       if("optim" %in% optim_method){
         fit_peak1 <- unlist( optim(par=par_guess, fn=cost_fun_logl_comp, x_vec=timepts,
@@ -144,13 +141,13 @@ impulse_fit <- function(data_input, data_annotation,
           method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
       }
       if("nlminb" %in% optim_method){
-        # switched optimisation to maximisation which is not used here
-        return(NULL)
+        stop("switched optimisation to maximisation which is not used here")
         fit_peak2 <- unlist(nlminb(start=par_guess, objective=cost_fun_logl_comp, x_vec=timepts,
           y_mat=expression_values, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
-      # 2. Valley
+      
+      # 2. Alternative model: Valley
       # Beta: Has to be negative
       # Theta1: High
       # Theta2: Low
@@ -162,6 +159,7 @@ impulse_fit <- function(data_input, data_annotation,
       par_guess <- c(1,log(expression_means[1]+1),log(min_middle_mean+1),log(expression_means[num_points]+1),
         (timepts[lower_inflexion_point_ind]+timepts[lower_inflexion_point_ind+1])/2,
         (timepts[upper_inflexion_point_ind]+timepts[upper_inflexion_point_ind+1])/2 )
+      #par_guess <- c(1,1,2,1,timepts[2],timepts[3])
       
       if("optim" %in% optim_method){
         fit_valley1 <- unlist( optim(par=par_guess, fn=cost_fun_logl_comp, x_vec=timepts,
@@ -169,15 +167,14 @@ impulse_fit <- function(data_input, data_annotation,
           method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
       }
       if("nlminb" %in% optim_method){
-        # switched optimisation to maximisation which is not used here
-        return(NULL)
+        stop("switched optimisation to maximisation which is not used here")
         fit_valley2 <- unlist(nlminb(start=par_guess, objective=cost_fun_logl_comp, x_vec=timepts,
           y_mat=expression_values, disp_est=dispersion_estimate,
           lower=lower_b, upper=upper_b)[c("par","objective")])
       }
       
-      # 5. Mean
-      # Parameter estimates: Only h1 is in modeled time interval and represents mean
+      # 3. Null model: Single mean
+      # Parameter estimate: Overall mean
       mu_guess <- log(mean(expression_values))
       fit_mean <- unlist(optim(par=mu_guess, fn=cost_fun_logl_meanfit_comp,
         y_mat=expression_values, disp_est=dispersion_estimate,
@@ -185,26 +182,26 @@ impulse_fit <- function(data_input, data_annotation,
       
       # Summarise results
       if(("optim" %in% optim_method) && ("nlminb" %in% optim_method)){
-        fmin_outs <- cbind(fit_peak1,fit_peak2,fit_valley1,fit_valley2)
+        fmax_outs <- cbind(fit_peak1,fit_peak2,fit_valley1,fit_valley2)
       }
       if(("optim" %in% optim_method) && !("nlminb" %in% optim_method)){
-        fmin_outs <- cbind(fit_peak1,fit_valley1)
+        fmax_outs <- cbind(fit_peak1,fit_valley1)
       }
       if(!("optim" %in% optim_method) && ("nlminb" %in% optim_method)){
-        fmin_outs <- cbind(fit_peak2,fit_valley2)
+        fmax_outs <- cbind(fit_peak2,fit_valley2)
       } 
       
       # Name row containing value of objective as value 
       # This name differs between optimisation functions
       # DAVID: take out when take out nlminb
-      rownames(fmin_outs) <- c(rownames(fmin_outs[1:(nrow(fmin_outs)-1),]),"value")
+      rownames(fmax_outs) <- c(rownames(fmax_outs[1:(nrow(fmax_outs)-1),]),"value")
     })
     
     # Select best fit and report fit type
     # Report mean fit objective value as null hypothesis, too.
-    # match() selects first hit if minimum occurs multiple times
-    best_fit <- match(min(fmin_outs["value",]),fmin_outs["value",])
-    fit_and_null <- c(fmin_outs[,best_fit],fit_mean)
+    # match() selects first hit if maximum occurs multiple times
+    best_fit <- match(max(fmax_outs["value",]),fmax_outs["value",])
+    fit_and_null <- c(fmax_outs[,best_fit],fit_mean)
     names(fit_and_null) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1","mu","logL_H0","converge_H0")
     
@@ -228,9 +225,6 @@ impulse_fit <- function(data_input, data_annotation,
   #       to fit the impulse model to the clusters.
   #   ctrl_tc
   #   ctrl: (bool)
-  #   fit_to_clus: (bool) [Default FALSE]
-  #   start_val: 
-  #   fit_bg: (bool) [Default FALSE]
   #   n_process: (scalar) [Default 4] number of processes, which can be used on 
   #       the machine to run the background calculation in parallel
   #   ...
@@ -344,7 +338,7 @@ impulse_fit <- function(data_input, data_annotation,
   #~~~~~~~~~~~~~~~~~~ 3. Prepare data for impulse model fit ~~~~~~~~~~~~~~~~~~~#
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
-  g_names = rownames(data_input)
+  #g_names = rownames(data_input)
   results = list()
   
   if(control_timecourse == TRUE){

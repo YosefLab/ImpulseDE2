@@ -55,7 +55,7 @@ cost_fun_logl_meanfit_comp <- cmpfun(cost_fun_logl_meanfit)
 source("srcImpulseDE_impulse_fit.R")
 
 # Detect differentially expressed genes over time
-source("srcImpulseDE_DE_analysis_loglik.R")
+source("srcImpulseDE_DE_analysis.R")
 
 ### plots the impulse fits to timecourse data and also the control data if present
 source("srcImpulseDE_plot_impulse.R")
@@ -305,9 +305,7 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
           print(paste0("ERROR: [Annotation table] Replicate ",replicates[iRep],
             " contains different number of samples compared to replicate ",
             replicates[1]))
-          print("All replicates should contain the same number of samples.")
-          print("Aborting.")
-          return(NULL)
+          stop("All replicates should contain the same number of samples.")
         }
       }
     }
@@ -315,9 +313,7 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
     if(length(unique(annotation_table$Replicate_name)) != dim(annotation_table)[1]){
       print(paste0("ERROR: [Annotation table]",
         "Number of Replicate_name instances different to annotation table number of rows."))
-      print("Replicate_name cannot occur multiple times.")
-      print("Aborting.")
-      return(NULL)
+      stop("Replicate_name cannot occur multiple times.")
     }
     
     # Test validity of expression table column naming with respect
@@ -329,10 +325,8 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
         as.character( annotation_table$Replicate_name[
           !annotation_table$Replicate_name %in% colnames(expression_table)] ),
         " do not occur in expression table."))
-      print(paste0("All Replicate_names mentioned in the annotation table",
+      stop(paste0("All Replicate_names mentioned in the annotation table",
         "must occur in the exprresion table."))
-      print("Aborting.")
-      return(NULL)
     }
     # Reduce expression table to columns contained in annotation table
     if( sum(!(colnames(expression_table) %in% annotation_table$Replicate_name)) > 0 ){
@@ -407,8 +401,6 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
     save(dds_dispersions,file=file.path(getwd(),"ImpulseDE_DEseq2_dispersions.RData"))
     save(dds_resultsTable,file=file.path(getwd(),"ImpulseDE_DEseq2_results.RData"))
     
-    head(dds)
-    
     ## 2. Prepare annotation table for internal usage: chose samples from input
     print("2. Prepare annotation table for internal usage")
     print("-------------------------------------------------------------------")
@@ -463,7 +455,7 @@ impulse_DE <- function(expression_tables = NULL, annotation_table = NULL,
     print("5. DE analysis")
     print("-------------------------------------------------------------------")
     tm_DE <- system.time({
-      ImpulseDE_results <- DE_analysis_loglik(data_array=expression_array,
+      ImpulseDE_results <- DE_analysis(data_array=expression_array,
         data_annotation=prepared_annotation,impulse_fit_results=impulse_fit_genes,
         control_timecourse=control_timecourse,control_name=control_name,Q=Q_value,
         NPARAM=NPARAM,dispersion_vector=dds_dispersions)

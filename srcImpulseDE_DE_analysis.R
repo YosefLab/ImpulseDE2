@@ -10,23 +10,21 @@
 #   data_annotation: (Table samples x 2[time and condition]) 
 #       Co-variables for the samples including condition and time points.
 #       Time points must be numeric.
-#   weight_mat:
 #   imp_fit_results: (list runs*2 ["impulse_parameters","impulse_fits"])
 #       impulse_parameters: (matrix genes x (NPARAM+1)*runs) +1 is value of 
 #         objective of optimisation (i.e. sum of squares or weighted SS)
 #       impulse_fits: (matrix genes x timepoints) model values for gene data
-#   background: (vector number of F-scores simulated under H0)  Empirical 
-#       F-values simulated under H0.
 #   control_timecourse: (bool) [Default FALSE] Control time timecourse is 
 #       part of the data set (TRUE) or not (FALSE).
 #   control_name: (str) name of the control condition in annotation_table.
 #   Q: (scalar) [Defaul 0.01]
 # OUTPUT:
-#   res2:
+#   result: (data frame genes x fitting characteristics) Summary of fitting
+#       procedure for each gene.
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-DE_analysis_loglik <- function(data_array,data_annotation,weight_mat,
+DE_analysis <- function(data_array,data_annotation,weight_mat,
   impulse_fit_results,background, control_timecourse = FALSE,
   control_name = NULL,Q = 0.01, dispersion_vector=NULL,NPARAM=6){
   
