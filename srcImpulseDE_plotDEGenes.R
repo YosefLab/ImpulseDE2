@@ -28,7 +28,7 @@
 # OUTPUT:
 #   -
 
-plot_impulse <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
+plotDEGenes <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
   control_timecourse = FALSE, control_name = NULL, case_name = NULL,
   file_name_part = "", title_line = "", sub_line = "",
   ImpulseDE_res = NULL, DESeq2_res=NULL){

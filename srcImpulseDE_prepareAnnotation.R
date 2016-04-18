@@ -2,6 +2,8 @@
 #++++++++++++++++++++++     Annotation preparation    +++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+# Prepare annotation table for internal use
+
 # INPUT:
 #   annotation_table: (Table samples x 2 [time and condition]) providing 
 #       co-variables for the samples including condition and time points.
@@ -21,8 +23,7 @@
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#Prepares the annotation table for internal use
-annotation_preparation <- function(data_annotation, data_tables = NULL,
+prepareAnnotation <- function(data_annotation, data_tables = NULL,
   colname_time = NULL, colname_condition = NULL, control_timecourse = FALSE,
   control_name = NULL, case_name = NULL){
   

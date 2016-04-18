@@ -23,7 +23,7 @@
 #' @param timepoints numercial vector of time point(s).
 #' @return The predicted impulse model values for the given time point(s).
 #' @export
-calc_impulse <- function(theta,timepoints){
+calcImpulse <- function(theta,timepoints){
   beta = theta[1]
   h0 = exp(theta[2])
   h1 = exp(theta[3])
