@@ -23,8 +23,6 @@
 #       Time points must be numeric.
 #   n_iter: (scalar) [Defaul 100] Number of iterations, which are performed 
 #       to fit the impulse model to the clusters.
-#   boolControlTimecourse: (bool) [Default FALSE] Control time timecourse is 
-#       part of the data set (TRUE) or not (FALSE).
 #   strControlName: (str) name of the control condition in annotation_table.
 #   cluster_results: (list ["kmeans_clus","cluster_means", "n_pre_clus",
 #       "fine_clus"] x number of runs [combined, case, control])
@@ -51,19 +49,8 @@
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-fitImpulse <- function(arrCountData, dfAnnotation,
-  boolControlTimecourse = FALSE, strControlName = NULL, nProcessesAssigned = 4,
-  vecDispersions=NULL, NPARAM=6){
-  
-  # Check dataset for consistency
-  if(ncol(dfAnnotation) != 2 ||
-      FALSE %in% (colnames(dfAnnotation) == c("Time","Condition"))){
-    stop("Please use function 'annotation_preparation' to prepare
-            the annotation table")
-  }
-  if(boolControlTimecourse == TRUE & is.null(strControlName)){
-    stop("Please specify the name of the control in the column 'Condition'")
-  }
+fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
+  strCaseName=NULL, strControlName=NULL, nProcessesAssigned=4, NPARAM=6){
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   #~~~~~~~~~~~~~~~~~~~~~~ 1. Fit impulse model to gene ~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -207,7 +194,7 @@ fitImpulse <- function(arrCountData, dfAnnotation,
   ### Fits an impulse model to all genes of a dataset
   
   # INPUT:
-  #   arrCounts: (Numeric 3D array genes x samples x replicates).
+  #   arrCountDataCondition: (Numeric 3D array genes x samples x replicates).
   #       Contains expression values or similar locus-specific read-outs.
   #   vecTimepoints: (Table samples x 2 [time and condition]) 
   #       Co-variables for the samples including condition and time points.
@@ -215,8 +202,7 @@ fitImpulse <- function(arrCountData, dfAnnotation,
   #   NPARAM: 
   #   n_it: (scalar) [Defaul 100] Number of iterations, which are performed 
   #       to fit the impulse model to the clusters.
-  #   ctrl_tc
-  #   ctrl: (bool)
+  #   strControlName
   #   nProcessesAssigned: (scalar) [Default 4] number of processes, which can be used on 
   #       the machine to run the background calculation in parallel
   #   ...
@@ -228,8 +214,8 @@ fitImpulse <- function(arrCountData, dfAnnotation,
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
-  fitImpulse_matrix <- function(arrCounts, vecTimepoints,
-    ctrl_tc = FALSE, ctrl = NULL, nProcessesAssigned = 3, vecDispersions=NULL,NPARAM=6){
+  fitImpulse_matrix <- function(arrCountDataCondition, vecTimepoints, vecDispersions=NULL,
+    strCaseName=NULL, strControlName=NULL, nProcessesAssigned=3, NPARAM=6){
     
     # Maximum number of iterations for numerical optimisation of
     # likelihood function in MLE fitting of Impulse model:
@@ -238,22 +224,22 @@ fitImpulse <- function(arrCountData, dfAnnotation,
     # Set number of processes to number of cores assigned if available
     nProcesses <- min(detectCores() - 1, nProcessesAssigned)
     # Use parallelisation if number of genes/centroids to fit is large
-    if(nrow(arrCounts) > max(2*nProcesses,10)){
+    if(nrow(arrCountDataCondition) > max(2*nProcesses,10)){
       # Define partitioning of genes onto nodes: lsGeneIndexByCore
       lsGeneIndexByCore = list()
-      bord = floor(nrow(arrCounts)/nProcesses)
+      bord = floor(nrow(arrCountDataCondition)/nProcesses)
       for (i in 1:nProcesses){
         lsGeneIndexByCore[[i]] <- ((i-1)*bord+1):(i*bord)
       }
-      if(nProcesses*bord < nrow(arrCounts)){
+      if(nProcesses*bord < nrow(arrCountDataCondition)){
         # Add remaining genes to last node
-        lsGeneIndexByCore[[nProcesses]] <-  c(lsGeneIndexByCore[[nProcesses]],(nProcesses*bord+1):nrow(arrCounts))
+        lsGeneIndexByCore[[nProcesses]] <-  c(lsGeneIndexByCore[[nProcesses]],(nProcesses*bord+1):nrow(arrCountDataCondition))
       }
       
       cl <- makeCluster(nProcesses, outfile = "clus_out_impulse_fit.txt")
-      #DAVDI take fitImpulse out?
+      #DAVID take fitImpulse out?
       my.env <- new.env()
-      assign("arrCounts", arrCounts, envir = my.env)
+      assign("arrCountDataCondition", arrCountDataCondition, envir = my.env)
       assign("calcImpulse_comp", calcImpulse_comp, envir = my.env)
       assign("fitImpulse", fitImpulse, envir = my.env)
       assign("evalLogLikImpulse_comp", evalLogLikImpulse_comp, envir = my.env)
@@ -265,7 +251,7 @@ fitImpulse <- function(arrCountData, dfAnnotation,
       assign("MAXIT", MAXIT, envir = my.env)
       assign("vecDispersions", vecDispersions, envir = my.env)
       
-      clusterExport(cl=cl, varlist=c("arrCounts","vecDispersions", "vecTimepoints",
+      clusterExport(cl=cl, varlist=c("arrCountDataCondition","vecDispersions", "vecTimepoints",
         "calcImpulse_comp", "evalLogLikImpulse_comp", "evalLogLikMean_comp",
         "fitImpulse", "fitImpulse_matrix", "fitImpulse_gene_wise",
         "MAXIT", "NPARAM"), envir = my.env)
@@ -274,12 +260,12 @@ fitImpulse <- function(arrCountData, dfAnnotation,
       # clusterApply runs the function impulse_fit_gene_wise
       # The input data are distributed to nodes by lsGeneIndexByCore partitioning
       lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore), function(z){t(sapply(lsGeneIndexByCore[[z]],
-        function(x){fitImpulse_gene_wise(matCounts=arrCounts[x,,],
+        function(x){fitImpulse_gene_wise(matCounts=arrCountDataCondition[x,,],
           vecTimepoints=vecTimepoints,NPARAM=NPARAM,MAXIT=MAXIT,
           scaDispersionEstimate=vecDispersions[x])}))})
       # Give output rownames again, which are lost above
       for(i in 1:length(lsGeneIndexByCore)){
-        rownames(lsmatFits[[i]]) <- rownames(arrCounts[lsGeneIndexByCore[[i]],,])
+        rownames(lsmatFits[[i]]) <- rownames(arrCountDataCondition[lsGeneIndexByCore[[i]],,])
       }
       # Concatenate the output objects of each node
       matFits <- do.call(rbind,lsmatFits)
@@ -289,9 +275,9 @@ fitImpulse <- function(arrCountData, dfAnnotation,
       # Do not use parallelisation if number of genes to fit is small
     } else {
       # Fit impulse model to each gene of matrix and get impulse parameters
-      lsGeneIndexByCore_all <- 1:nrow(arrCounts)
+      lsGeneIndexByCore_all <- 1:nrow(arrCountDataCondition)
       matFits <- lapply(lsGeneIndexByCore_all,function(x){
-        fitImpulse_gene_wise(matCounts=arrCounts[x,,],
+        fitImpulse_gene_wise(matCounts=arrCountDataCondition[x,,],
           vecTimepoints=vecTimepoints,NPARAM=NPARAM,MAXIT=MAXIT,
           scaDispersionEstimate=vecDispersions[x])})
       matFits_temp <- array(NA,c(length(matFits),length(matFits[[1]])))
@@ -302,7 +288,7 @@ fitImpulse <- function(arrCountData, dfAnnotation,
     }   
     colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
       "converge_H1","mu","logL_H0","converge_H0")
-    rownames(matFits) <- rownames(arrCounts)
+    rownames(matFits) <- rownames(arrCountDataCondition)
     
     ### DAVID: can reduce this if clause?
     # Use obtained impulse parameters to calculate impulse fit values   
@@ -316,7 +302,7 @@ fitImpulse <- function(arrCountData, dfAnnotation,
         unique(sort(vecTimepoints)))}))
     } 
     colnames(matImpulseValues) = unique(sort(vecTimepoints))
-    rownames(matImpulseValues) <- rownames(arrCounts)
+    rownames(matImpulseValues) <- rownames(arrCountDataCondition)
     
     # Report results.
     lsFitResults_matrix <- list()
@@ -335,7 +321,7 @@ fitImpulse <- function(arrCountData, dfAnnotation,
   #g_names = rownames(arrCountData)
   lsFitResults_all = list()
   
-  if(boolControlTimecourse == TRUE){
+  if(!is.null(strControlName)){
     nRuns = 3
     lsLabels = c("combined","case","control")
   } else {
@@ -348,12 +334,12 @@ fitImpulse <- function(arrCountData, dfAnnotation,
   #   2) A list of a single data 3D array if only have case
   
   # Perform 3 runs (combined, case and control) if control timecourse is present
-  if(boolControlTimecourse == TRUE){    
-    # Combined: Count data of both case and control (all columns).
-    arrCountDataAll = arrCountData
-    # Case: Count data of case.
-    arrCountDataCase = arrCountData[,!(dfAnnotation$Condition %in% strControlName),]
-    # Control: Count data of control.  
+  if(!is.null(strControlName)){    
+    # Combined: Count data of both case and control
+    arrCountDataAll = arrCountData[,,]
+    # Case: Count data of case
+    arrCountDataCase = arrCountData[,(dfAnnotation$Condition %in% strCaseName),]
+    # Control: Count data of control
     arrCountDataCtrl = arrCountData[,(dfAnnotation$Condition %in% strControlName),]
     
     # Formatting into 3D breaks if single gene is selected:
@@ -370,16 +356,16 @@ fitImpulse <- function(arrCountData, dfAnnotation,
       arrCountDataCase <- arrCountDataCase_temp
       arrCountDataCtrl <- arrCountDataCtrl_temp
       rownames(arrCountDataAll) <- rownames(arrCountData)
-      colnames(arrCountDataAll) <- colnames(arrCountData)
+      colnames(arrCountDataAll) <- colnames(arrCountData[,,])
       rownames(arrCountDataCase) <- rownames(arrCountData)
-      colnames(arrCountDataCase) <- colnames(arrCountData[,!(dfAnnotation$Condition %in% strControlName),])
+      colnames(arrCountDataCase) <- colnames(arrCountData[,(dfAnnotation$Condition %in% strCaseName),])
       rownames(arrCountDataCtrl) <- rownames(arrCountData)
       colnames(arrCountDataCtrl) <- colnames(arrCountData[,(dfAnnotation$Condition %in% strControlName),])
     }
-    arrCountData <- list(arrCountDataAll, arrCountDataCase, arrCountDataCtrl)
+    lsarrCountData <- list(arrCountDataAll, arrCountDataCase, arrCountDataCtrl)
     
-  } else if(boolControlTimecourse == FALSE){
-    arrCountDataAll = arrCountData[,,]
+  } else {
+    arrCountDataAll = arrCountData[,(dfAnnotation$Condition %in% strCaseName),]
     # Formatting into 3D breaks if only single gene is selected:
     # If exactly one gene is tested:
     if(dim(arrCountDataAll)[1]==1){ 
@@ -389,18 +375,19 @@ fitImpulse <- function(arrCountData, dfAnnotation,
       }
       arrCountDataAll <- arrCountDataAll_temp
       rownames(arrCountDataAll) <- rownames(arrCountData)
-      colnames(arrCountDataAll) <- colnames(arrCountData)
+      colnames(arrCountDataAll) <- colnames(arrCountData[,(dfAnnotation$Condition %in% strCaseName),])
     }
-    arrCountData <- list(arrCountDataAll)
+    lsarrCountData <- list(arrCountDataAll)
   }
   
   # Fitting for different runs
   for (iRuns in 1:nRuns){
-    lsFitResults_run <- impulse_fit_matrix(arrCounts=arrCountData[[iRuns]],
+    lsFitResults_run <- impulse_fit_matrix(arrCountDataCondition=lsarrCountData[[iRuns]],
       vecTimepoints=as.numeric(as.character(
-        dfAnnotation[colnames(arrCountData[[iRuns]]),"Time"])), 
-      ctrl_tc = boolControlTimecourse,ctrl = strControlName,
-      nProcessesAssigned = nProcessesAssigned, vecDispersions=vecDispersions,NPARAM=NPARAM)
+        dfAnnotation[colnames(lsarrCountData[[iRuns]]),"Time"])),
+      vecDispersions=vecDispersions,
+      strCaseName=strCaseName, strControlName=strControlName,
+      nProcessesAssigned = nProcessesAssigned, NPARAM=NPARAM)
     
     # DAVID: do i still need this?
     #imp_res$impulse_parameters <- (imp_res$impulse_parameters)[g_names,]

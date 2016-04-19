@@ -5,21 +5,17 @@
 # Plots the impulse fits to timecourse data and also the control data if present
 
 # INPUT:
-#   gene_IDs: (character vector) of gene names to be plotted; must be part
-#       of the rownames of data_array.
-#   data_array: (Numeric 3D array genes x samples x replicates)
+#   lsGeneIDs: (character vector) of gene names to be plotted; must be part
+#       of the rownames of arr3DCountData.
+#   arr3DCountData: (Numeric 3D array genes x samples x replicates)
 #       Contains expression values or similar locus-specific read-outs.
 #   data_annotation: (Table samples x 2[time and condition]) 
 #       Co-variables for the samples including condition and time points.
 #       Time points must be numeric.
-#   imp_fit_genes: (list runs*2 ["impulse_parameters","impulse_fits"])
-#       impulse_parameters: (matrix genes x (NPARAM+1)*runs) +1 is value of 
+#   lsImpulseFits: (list runs*2 ["parameters","impulse_fits"])
+#       parameters: (matrix genes x (NPARAM+1)*runs) +1 is value of 
 #         objective of optimisation (i.e. sum of squares or weighted SS)
 #       impulse_fits: (matrix genes x timepoints) model values for gene data
-#   background: (vector number of F-scores simulated under H0)  Empirical 
-#       F-values simulated under H0.
-#   control_timecourse: (bool) [Default FALSE] Control time timecourse is 
-#       part of the data set (TRUE) or not (FALSE).
 #   control_name: (str) Name of the control condition in annotation_table.
 #   case_name (str) Name of the control condition in annotation_table.
 #   file_name_part: (character string) File extention.
@@ -28,124 +24,129 @@
 # OUTPUT:
 #   -
 
-plotDEGenes <- function(gene_IDs, data_array, data_annotation,imp_fit_genes,
-  control_timecourse = FALSE, control_name = NULL, case_name = NULL,
+plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
+  lsImpulseFits, ImpulseDE_res = NULL, DESeq2_res=NULL, 
+  strCaseName=NULL, strControlName=NULL,
   file_name_part = "", title_line = "", sub_line = "",
-  ImpulseDE_res = NULL, DESeq2_res=NULL){
-  #pvals_impulse_deseq=NULL){
-  # DAVID DEVELOPMENTAL NOTE : remove pval_deseq later again?
-  
-  NPARAM=6
-  
-  if(length(grep("[a-zA-Z]",rownames(data_array))) == 0 ){
-    rownames(data_array) <- paste(rownames(data_array),"G", sep = "_")
-    gene_IDs <- paste(gene_IDs, "G", sep = "_")
+  NPARAM=6){
+
+  # Name genes if not previously named (already done if this function is
+  # called within the wrapper function).
+  if(length(grep("[a-zA-Z]",rownames(arr3DCountData))) == 0 ){
+    rownames(arr3DCountData) <- paste(rownames(arr3DCountData),"G", sep = "_")
+    lsGeneIDs <- paste(lsGeneIDs, "G", sep = "_")
   }
   
-  ### if control timecourse is present split data into case and control data
-  if(control_timecourse == TRUE){
-    farr_case <- data_array[,!(data_annotation$Condition %in% control_name),]
-    farr_ctrl <- data_array[,data_annotation$Condition %in% control_name,]
-    timep_case <-  as.numeric(as.character(data_annotation[colnames(farr_case),"Time"]))
-    timep_ctrl <- as.numeric(as.character(data_annotation[colnames(farr_ctrl),"Time"]))
+  if(!is.null(strControlName)){
+    arr3DCountData_Case <- arr3DCountData[,data_annotation$Condition %in% strCaseName,]
+    arr3DCountData_Ctrl <- arr3DCountData[,data_annotation$Condition %in% strControlName,]
+    lsTimepoints_Case <-  as.numeric(as.character(data_annotation[colnames(arr3DCountData_Case),"Time"]))
+    lsTimepoints_Ctrl <- as.numeric(as.character(data_annotation[colnames(arr3DCountData_Ctrl),"Time"]))
   }
-  timep <- as.numeric(as.character(data_annotation[colnames(data_array),"Time"]))
-  # expand timep vector to size of expression array
-  timep_arr <- t(matrix(rep(timep,dim(data_array)[3]),length(timep),dim(data_array)[3]))
-  if(control_timecourse == TRUE){
-    timep_case_arr <- t(matrix(rep(timep_case,dim(data_array)[3]),length(timep_case),dim(data_array)[3]))
-    timep_ctrl_arr <- t(matrix(rep(timep_ctrl,dim(data_array)[3]),length(timep_ctrl),dim(data_array)[3]))
-  }
+  lsTimepoints_All <- as.numeric(as.character(data_annotation[colnames(arr3DCountData),"Time"]))
   
+  # expand lsTimepoints_All vector to size of expression array
+  if(!is.null(strControlName)){
+    arrTimepoints_Case <- t(matrix(rep(lsTimepoints_Case,dim(arr3DCountData)[3]),length(lsTimepoints_Case),dim(arr3DCountData)[3]))
+    arrTimepoints_Ctrl <- t(matrix(rep(lsTimepoints_Ctrl,dim(arr3DCountData)[3]),length(lsTimepoints_Ctrl),dim(arr3DCountData)[3]))
+  }
+  arrTimepoints_All <- t(matrix(rep(lsTimepoints_All,dim(arr3DCountData)[3]),length(lsTimepoints_All),dim(arr3DCountData)[3]))
+  
+  # Open .pdf
   pdf(paste("impulse_fit_genes_",file_name_part,".pdf",sep=""),height=6.0,width=9.0)
-  if (length(gene_IDs) == 1){
+  
+  # Define grid for printing plots
+  if (length(lsGeneIDs) == 1){
     par(mfrow=c(1,1))
-  } else if (length(gene_IDs) <= 4){
+  } else if (length(lsGeneIDs) <= 4){
     par(mfrow=c(2,2))
-  } else if (length(gene_IDs) <= 6){
+  } else if (length(lsGeneIDs) <= 6){
     par(mfrow=c(2,3))
   } else {
     par(mfrow=c(3,3))
   }
-  x_vec <- seq(0,max(timep),0.1)
-  for (gene_ID in gene_IDs){
-    # If there is no control data plot only case time course data and fit
-    if(control_timecourse == FALSE){
+  # Time points for plotting of impulse model
+  vecX <- seq(0,max(lsTimepoints_All),0.1)
+  for (geneID in lsGeneIDs){
+    # Without control  data 
+    if(is.null(strControlName)){
       # Chose impulse fit if parameters of fitted model are not NAN,
       # only plot first timepoint otherwise
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_ID,])){
-        calc_case <- imp_fit_genes$impulse_fits_case[gene_ID,1]
+      if(TRUE %in% is.na(lsImpulseFits$parameters_case[geneID,])){
+        calc_case <- lsImpulseFits$values_case[geneID,1]
       } else {
-        calc_case <- calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:NPARAM],x_vec)
+        calc_case <- calc_impulse_comp(lsImpulseFits$parameters_case[geneID,1:NPARAM],vecX)
       }
-      pval_DEseq <- round( log(DESeq2_res[gene_ID,]$padj)/log(10), 2 )
-      pval_Impulse <- round( log(ImpulseDE_res[gene_ID,]$adj.p)/log(10), 2 )
-      #pval_DEseq <- round( log(pvals_impulse_deseq[gene_ID,"DESeq"]))/log(10), 2 )
-      #pval_Impulse <- round( log(pvals_impulse_deseq[gene_ID,"Impulse"])/log(10), 2 )
-      plot(timep_arr,(t(data_array[gene_ID,,])),col="blue",pch=3,xlim=c(0,max(timep)),
-        ylim=c((min(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case)))-0.5),
-          (max(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case)))+0.5)),
+      pval_DEseq <- round( log(DESeq2_res[geneID,]$padj)/log(10), 2 )
+      pval_Impulse <- round( log(ImpulseDE_res[geneID,]$adj.p)/log(10), 2 )
+
+      plot(arrTimepoints_All,(t(arr3DCountData[geneID,,])),col="blue",pch=3,xlim=c(0,max(lsTimepoints_All)),
+        ylim=c((min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case)))-0.5),
+          (max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case)))+0.5)),
         xlab="Time", ylab="Impulse fit and expression values",
-        main=paste0(gene_ID," ",title_line," log(Pval):\n DESeq2 ",pval_DEseq,
+        main=paste0(geneID," ",title_line," log(Pval):\n DESeq2 ",pval_DEseq,
           " ImpulseDE2 ",pval_Impulse),sub=sub_line)
-      points(timep_arr[1,],(apply(data_array[gene_ID,,],1,mean)),col="red",pch=1)
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_ID,])){
+      
+      points(arrTimepoints_All[1,],(apply(arr3DCountData[geneID,,],1,mean)),col="red",pch=1)
+      
+      if(TRUE %in% is.na(lsImpulseFits$parameters_case[geneID,])){
         abline(h = calc_case , col = "blue")
       } else {
-        points(x_vec, calc_case, col = "blue", type="l")
+        points(vecX, calc_case, col = "blue", type="l")
       } 
       legend(x="bottomright",as.character(data_annotation[1,"Condition"]),fill=c("blue"), cex=0.6)
       
-      ### if there is control data
-    } else if(control_timecourse == TRUE){
+    # With control data
+    } else {
       
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_case[gene_ID,])){
-        calc_case = imp_fit_genes$impulse_fits_case[gene_ID,1]
+      if(TRUE %in% is.na(lsImpulseFits$parameters_case[geneID,])){
+        calc_case = lsImpulseFits$values_case[geneID,1]
         status_case = FALSE
       } else {
-        calc_case = calc_impulse_comp(imp_fit_genes$impulse_parameters_case[gene_ID,1:NPARAM],x_vec)
+        calc_case = calc_impulse_comp(lsImpulseFits$parameters_case[geneID,1:NPARAM],vecX)
         status_case = TRUE
       }
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_control[gene_ID,])){
-        calc_ctrl = imp_fit_genes$impulse_fits_control[gene_ID,1]
+      if(TRUE %in% is.na(lsImpulseFits$parameters_control[geneID,])){
+        calc_ctrl = lsImpulseFits$values_control[geneID,1]
         status_ctrl = FALSE
       } else {
-        calc_ctrl = calc_impulse_comp(imp_fit_genes$impulse_parameters_control[gene_ID,1:NPARAM],x_vec)
+        calc_ctrl = calc_impulse_comp(lsImpulseFits$parameters_control[geneID,1:NPARAM],vecX)
         status_ctrl = TRUE
       }
-      if(TRUE %in% is.na(imp_fit_genes$impulse_parameters_combined[gene_ID,])){
-        calc_comb = imp_fit_genes$impulse_fits_combined[gene_ID,1]
+      if(TRUE %in% is.na(lsImpulseFits$parameters_combined[geneID,])){
+        calc_comb = lsImpulseFits$values_combined[geneID,1]
         status_comb = FALSE
       } else {
-        calc_comb = calc_impulse_comp(imp_fit_genes$impulse_parameters_combined[gene_ID,1:NPARAM],x_vec)
+        calc_comb = calc_impulse_comp(lsImpulseFits$parameters_combined[geneID,1:NPARAM],vecX)
         status_comb = TRUE
       }
       
-      plot(timep_case_arr,(t(farr_case[gene_ID,,])),col="blue",pch=3,xlim=c(0,max(timep)),
-        ylim=c((min(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))-0.5),
-          (max(c(as.numeric(data_array[gene_ID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))+0.5)),
+      plot(arrTimepoints_Case,(t(arr3DCountData_Case[geneID,,])),col="blue",pch=3,xlim=c(0,max(lsTimepoints_All)),
+        ylim=c((min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))-0.5),
+          (max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))+0.5)),
         xlab="Time", ylab="Impulse fit or log2 expression value",
-        main=paste(gene_ID," ",title_line,sep=""),sub=sub_line)
+        main=paste(geneID," ",title_line,sep=""),sub=sub_line)
       
-      points(timep_ctrl,farr_ctrl[gene_ID,],col="red",pch=4)
+      points(lsTimepoints_Ctrl,arr3DCountData_Ctrl[geneID,],col="red",pch=4)
       
       if(status_case == FALSE){
         abline(h = calc_case , col = "blue")
       } else {
-        points(x_vec,calc_case, col = "blue", type="l")
+        points(vecX,calc_case, col = "blue", type="l")
       }
       if(status_ctrl == FALSE){
         abline(h = calc_ctrl , col = "red")
       } else {
-        points(x_vec,calc_ctrl, col = "red", type="l")
+        points(vecX,calc_ctrl, col = "red", type="l")
       }
       if(status_comb == FALSE){
         abline(h = calc_comb , col = "grey")
       } else {
-        points(x_vec,calc_comb, col = "grey", type="l")
+        points(vecX,calc_comb, col = "grey", type="l")
       }
       legend(x="bottomright",c(as.character(data_annotation$Condition[data_annotation$Condition != control_name][1]),control_name,"combined"),fill=c("blue","red","grey"), cex=0.6)
     }
   }
+  # Close .pdf
   dev.off()
 }

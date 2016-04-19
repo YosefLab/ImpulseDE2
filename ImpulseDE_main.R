@@ -176,7 +176,7 @@ source("srcImpulseDE_plotDEGenes.R")
 #' multi-threading related to the randomized data. Can be ignored.
 #' \item \code{background_results.RData} F-score values generated based on the
 #' fits to the randomized data as used for the differential expression analysis.
-#' \item \code{impulse_DE_genes.RData} Object containing names of genes being
+#' \item \code{lsDEGenes.RData} Object containing names of genes being
 #' called as differentially expressed according to the specified cutoff
 #' \code{Q_value} together with the adjusted p-values; same as the list element
 #' \code{ImpulseDE_results} of the output value.
@@ -254,12 +254,6 @@ source("srcImpulseDE_plotDEGenes.R")
 #   annotation_table: (Table) providing co-variables for the samples including 
 #       condition and time points. Time points must be numeric numbers.
 #       Provide on 2D table to represent all replicates.
-#   strColnameTime: (str) column name of the co-variable "Time" in 
-#       annotation_table
-#   colanme_condition: (str) column name of the co-variable "Condition" in 
-#       annotation_table
-#   boolControlTimecourse: (bool) [Default FALSE]control time timecourse is part 
-#       of the data set (TRUE) or not (FALSE).
 #   strControlName: (str) name of the control condition in annotation_table.
 #   strCaseName: (str) name of the case condition in annotation_table.
 #   expr_type: (str) ["Array" or "Seq"] In case of Sequencing data ("Seq") a 
@@ -270,12 +264,11 @@ source("srcImpulseDE_plotDEGenes.R")
 #       differentially expressed after FDR correction
 # OUTPUT
 #   lsImpulseFits: (list) List containing fitted values and model parameters
-#   impulse_DE_genes: names of genes being called as differentially expressed
+#   lsDEGenes: names of genes being called as differentially expressed
 #   ...more output saved to working directory, see documentation
 
 runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
-  strColnameTime=NULL, strColnameCondition=NULL, boolControlTimecourse=FALSE,
-  strControlName=NULL, strCaseName = NULL, nProc=3, Q_value=0.01){
+  strCaseName = NULL, strControlName=NULL, nProc=3, Q_value=0.01){
   
   print("###################################################################")
   print("Impulse v1.3 for count data")
@@ -285,17 +278,17 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
   
   tm_runImpulseDE <- system.time({
     
-    # 1. Prepare data 
+    # 1. Process input data 
     print("1. Prepare data:")
     tm_processData <- system.time({
-      lsPreparedData <- processData(
+      lsProcessedData <- processData(
         dfAnnotationFull=dfAnnotationFull,matCountData=matCountData,
-        strColnameTime=strColnameTime, strColnameCondition=strColnameCondition,
         boolControlTimecourse=boolControlTimecourse, 
         strControlName=strControlName, strCaseName=strCaseName)
     })
-    arr2DCountData <- lsPreparedData[[1]]
-    arr3DCountData <- lsPreparedData[[2]]
+    arr2DCountData <- lsProcessedData[[1]]
+    arr3DCountData <- lsProcessedData[[2]]
+    dfAnnotationRed <- lsProcessedData[[3]]
     save(arr3DCountData,file=file.path(getwd(),"ImpulseDE_arr3DCountData.RData"))
     print("DONE")
     print(paste("Consumed time: ",round(tm_processData["elapsed"]/60,2),
@@ -316,28 +309,12 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
       " min",sep=""))
     print("###################################################################")
     
-    ## 2. Prepare annotation table for internal usage
-    print("2. Prepare annotation table for internal usage")
-    tm_annot <- system.time({
-      prepared_annotation <- prepareAnnotation(
-        data_annotation=dfAnnotationFull,data_tables=matCountData[[1]], 
-        strColnameTime=strColnameTime, strColnameCondition=strColnameCondition, 
-        boolControlTimecourse=boolControlTimecourse, strControlName=strControlName, 
-        strCaseName=strCaseName)
-    })
-    prepared_annotation <- prepared_annotation[order(
-      prepared_annotation$Condition),]
-    prepared_annotation <- prepared_annotation[order(prepared_annotation$Time),]
-    save(prepared_annotation, file=file.path(getwd(),"ImpulseDE_prepared_annotation.RData"))
-    print("DONE")
-    print("###################################################################")
-    
     ###  3. Fit Impule model to each gene 
     print("3. Fitting Impulse model to the genes")
     tm_fitImpulse <- system.time({
       lsImpulseFits <- fitImpulse(arrCountData=arr3DCountData, 
-        vecDispersions=vecDESeq2Dispersions, dfAnnotation=dfAnnotationFull, 
-        boolControlTimecourse=boolControlTimecourse, strControlName=strControlName, 
+        vecDispersions=vecDESeq2Dispersions, dfAnnotation=dfAnnotationRed, 
+        strCaseName=strCaseName, strControlName=strControlName, 
         nProcessesAssigned=nProc, NPARAM=NPARAM)
     })
     save(lsImpulseFits,file=file.path(getwd(),"ImpulseDE_model_fit.RData"))
@@ -346,32 +323,36 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
       " min",sep=""))
     print("###################################################################")
     
-    ### 5. Detect differentially expressed genes
-    print("5. DE analysis")
+    ### 4. Detect differentially expressed genes
+    print("4. DE analysis")
     tm_DE <- system.time({
-      ImpulseDE_results <- DE_analysis(
-        data_array=arr3DCountData,dispersion_vector=vecDESeq2Dispersions,
-        data_annotation=dfAnnotationFull,impulse_fit_results=lsImpulseFits,
-        boolControlTimecourse=boolControlTimecourse,strControlName=strControlName,
-        Q=Q_value, NPARAM=NPARAM)
-      impulse_DE_genes <- as.character(as.vector( 
-        ImpulseDE_results[as.numeric(ImpulseDE_results$adj.p) <= Q_value,"Gene"] ))
+      dfImpulseResults <- computePval(
+        arr3DCountData=arr3DCountData,vecDispersions=vecDESeq2Dispersions,
+        dfAnnotationRed=dfAnnotationRed,impulse_fit_results=lsImpulseFits,
+        strCaseName=strCaseName, strControlName=strControlName,
+        NPARAM=NPARAM)
+      
+      lsDEGenes <- as.character(as.vector( 
+        dfImpulseResults[as.numeric(dfImpulseResults$adj.p) <= Q_value,"Gene"] ))
     })
-    save(ImpulseDE_results,file=file.path(getwd(),"ImpulseDE_results.RData"))
-    save(impulse_DE_genes,file=file.path(getwd(),"ImpulseDE_DE_genes.RData"))
+    save(dfImpulseResults,file=file.path(getwd(),"dfImpulseResults.RData"))
+    save(lsDEGenes,file=file.path(getwd(),"ImpulseDE_DE_genes.RData"))
+    print(paste("Found ", length(lsDEGenes)," DE genes",sep=""))
     print("DONE")
     print(paste("Consumed time: ",round(tm_DE["elapsed"]/60,2),
       " min",sep=""))
     print("###################################################################")
     
-    ### 6. Plot the top DE genes
-    print("6. Plot top DE genes")
+    ### 5. Plot the top DE genes
+    print("5. Plot top DE genes")
     tm_plotDEGenes <- system.time({
-      plotDEGenes(impulse_DE_genes,
-        arr3DCountData, dfAnnotationFull, lsImpulseFits,
-        boolControlTimecourse, strControlName, case_ind, file_name_part = "DE",
-        title_line = "", sub_line = "",
-        ImpulseDE_res=ImpulseDE_results,DESeq2_res=dfDESeq2Results)
+      plotDEGenes(lsGeneIDs=lsDEGenes,
+        arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
+        lsImpulseFits=lsImpulseFits,
+        strCaseName=strCaseName, strControlName=strControlName, 
+        file_name_part = "DE", title_line = "", sub_line = "",
+        ImpulseDE_res=ImpulseDE_results,DESeq2_res=dfDESeq2Results,
+        NPARAM=NPARAM)
     })
     print("DONE")
     print(paste("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2),
@@ -384,7 +365,7 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
   print("##################################################################")
   
   return(list(
-    "ImpulseDE_DE_genes"=impulse_DE_genes,
+    "ImpulseDE_DE_genes"=lsDEGenes,
     "ImpulseDE_results"=ImpulseDE_results,
     "ImpulseDE_impulse_fit_results"=lsImpulseFits,
     "DESeq2_results"=dfDESeq2Results))
