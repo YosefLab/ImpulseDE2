@@ -5,9 +5,9 @@
 ### Fits impulse model to a timecourse dataset
 ### Function is split into 3 parts
 ###   Check data consistency
-###   1. [Subfunction impulse_fit_gene_wise] Fit impulse model to a single gene
-###   2. [Subfunction impulse_fit_matrix] Fit impulse model to matrix of genes.
-###       Calls impulse_fit_gene_wise, calc_impulse_comp
+###   1. [Subfunction fitImpulse_gene] Fit impulse model to a single gene
+###   2. [Subfunction fitImpulse_matrix] Fit impulse model to matrix of genes.
+###       Calls fitImpulse_gene, calcImpulse_comp
 ###   3. ["Script-body"] Prepare data and fit model by calling impulse_fit_matrix.
 
 ### Developmental note:
@@ -76,11 +76,18 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
   fitImpulse_gene <- function(matCounts, vecTimepoints, 
-    NPARAM=6, MAXIT=1000, scaDispersionEstimate=NULL,...){
+    NPARAM=6, MAXIT=1000, scaDispersionEstimate=NULL){
     
     optim_method <- "optim"
     #optim_method <- "nlminb"
     #optim_method <- c("optim","nlminb")
+    
+    # Remove timepoint if any is entirely missing
+    vecboolObservedTimepoint <- apply(matCounts,1,function(tp){any(!is.na(tp))})
+    if(any( !vecboolObservedTimepoint )){
+      vecTimepoints <- vecTimepoints[vecboolObservedTimepoint]
+      matCounts <- matCounts[vecboolObservedTimepoint,]
+    }
     
     # If handed a list, i.e. not replicates
     if (is.vector(matCounts)==TRUE){
@@ -90,12 +97,12 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
       vecExpressionMeans <- matCounts
     } else {
       # Do initial guesses based on mean over replicates:
-      vecExpressionMeans <- apply(matCounts,1,mean)
+      vecExpressionMeans <- apply(matCounts,1,function(x){mean(x, na.rm=TRUE)})
     }
     
     nTimepts <- length(vecExpressionMeans)
-    scaMaxMiddleMean <- max(vecExpressionMeans[2:(nTimepts-1)])
-    scaMinMiddleMean <- min(vecExpressionMeans[2:(nTimepts-1)])
+    scaMaxMiddleMean <- max(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
+    scaMinMiddleMean <- min(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
     # +1 to push indicices up from middle stretch to entire window (first is omitted here)
     indMaxMiddleMean <- match(scaMaxMiddleMean,vecExpressionMeans[2:(nTimepts-1)]) + 1
     indMinMiddleMean <- match(scaMinMiddleMean,vecExpressionMeans[2:(nTimepts-1)]) + 1
@@ -110,8 +117,8 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
     # Theta3: Low
     # t1: Around first observed inflexion point
     # t2: Around second observed inflexion point
-    indLowerInflexionPoint <- match(max(vecGradients[1:(indMaxMiddleMean-1)]), vecGradients[1:(indMaxMiddleMean-1)])
-    indUpperInflexionPoint <- indMaxMiddleMean - 1 + match(min(vecGradients[indMaxMiddleMean:length(vecGradients)]), vecGradients[indMaxMiddleMean:length(vecGradients)])
+    indLowerInflexionPoint <- match(max(vecGradients[1:(indMaxMiddleMean-1)], na.rm=TRUE), vecGradients[1:(indMaxMiddleMean-1)])
+    indUpperInflexionPoint <- indMaxMiddleMean - 1 + match(min(vecGradients[indMaxMiddleMean:length(vecGradients)], na.rm=TRUE), vecGradients[indMaxMiddleMean:length(vecGradients)])
     vecParamGuess <- c(1,log(vecExpressionMeans[1]+1),log(scaMaxMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
       (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
       (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2)
@@ -135,8 +142,8 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
     # Theta3: High
     # t1: Around first observed inflexion point
     # t2: Around second observed inflexion point
-    indLowerInflexionPoint <- match(min(vecGradients[1:(indMinMiddleMean-1)]), vecGradients[1:(indMinMiddleMean-1)])
-    indUpperInflexionPoint <- indMinMiddleMean - 1 + match(max(vecGradients[indMinMiddleMean:(nTimepts-1)]), vecGradients[indMinMiddleMean:(nTimepts-1)])
+    indLowerInflexionPoint <- match(min(vecGradients[1:(indMinMiddleMean-1)], na.rm=TRUE), vecGradients[1:(indMinMiddleMean-1)])
+    indUpperInflexionPoint <- indMinMiddleMean - 1 + match(max(vecGradients[indMinMiddleMean:(nTimepts-1)], na.rm=TRUE), vecGradients[indMinMiddleMean:(nTimepts-1)])
     vecParamGuess <- c(1,log(vecExpressionMeans[1]+1),log(scaMinMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
       (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
       (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2 )
@@ -155,7 +162,7 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
     
     # 3. Null model: Single mean
     # Parameter estimate: Overall mean
-    scaMuGuess <- log(mean(matCounts))
+    scaMuGuess <- log(mean(matCounts, na.rm=TRUE))
     lsFitMean <- unlist(optim(par=scaMuGuess, fn=evalLogLikMean_comp,
       matY=matCounts, scaDispEst=scaDispersionEstimate,
       method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])
@@ -298,7 +305,7 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
         unique(sort(vecTimepoints)))),row.names=rownames(matFits))
     } else {                    
       # if matrix contains > 1 genes
-      matImpulseValues <- t(apply(matFits[,1:NPARAM],1,function(x){calc_impulse_comp(x,
+      matImpulseValues <- t(apply(matFits[,1:NPARAM],1,function(x){calcImpulse_comp(x,
         unique(sort(vecTimepoints)))}))
     } 
     colnames(matImpulseValues) = unique(sort(vecTimepoints))
@@ -328,7 +335,7 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
     nRuns = 1
     lsLabels = "case"
   }
-  
+
   # arrCountData is defined in the following as:
   #   1) A list of three data 3D arrays combined, case and control
   #   2) A list of a single data 3D array if only have case
@@ -400,7 +407,7 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
   for (iRuns in 1:nRuns){
     lsFitResults_run <- fitImpulse_matrix(arrCountDataCondition=lsarrCountData[[iRuns]],
       vecTimepoints=as.numeric(as.character(
-        dfAnnotation[colnames(lsarrCountData[[iRuns]]),"Time"])),
+        dfAnnotation[dfAnnotation$Sample %in% colnames(lsarrCountData[[iRuns]]),"Time"])),
       vecDispersions=vecDispersions,
       strCaseName=strCaseName, strControlName=strControlName,
       nProcessesAssigned = nProcessesAssigned, NPARAM=NPARAM)

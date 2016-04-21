@@ -4,8 +4,9 @@ rm(list = ls())
 ### LOAD DATA
 ### Load annotation
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test")
+#annotation_table <- read.table("annotation_table_RNAseq_D50-D51-D54_missing.tab",header=T)
 annotation_table <- read.table("annotation_table_RNAseq_D50-D51-D54.tab",header=T)
-rownames(annotation_table) <- annotation_table$Replicate_name
+rownames(annotation_table) <- annotation_table$Replicate
 
 ### Load count data
 # DE Genes (as of DESeq)
@@ -35,7 +36,7 @@ control_timecourse = FALSE
 control_name = NULL
 case_name = "case"
 n_process = 3
-Q_value = 0.01
+Q_value = 10^(-2)
 lsImpulseDE_results <- runImpulseDE(matCountData=expression_table, dfAnnotationFull=annotation_table,
   strCaseName = case_name, strControlName=NULL, nProc=n_process, Q_value=Q_value)
 

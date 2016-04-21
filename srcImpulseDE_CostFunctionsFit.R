@@ -23,9 +23,11 @@ evalLogLikImpulse <- function(vecTheta,vecX,matY,scaDispEst){
   # Compute function value - mean
   vecImpulseValue = calcImpulse_comp(vecTheta,vecX)
   
-  # Without dispersion estimation, take given
-  scaLogLikImpulse <- sum(unlist( lapply(c(1:length(vecX)), function(tp){
-    sum(dnbinom(matY[tp,!is.na(matY[tp,])], mu=vecImpulseValue[tp], size=scaDispEst, log=TRUE))}) ))
+  # Compute log likelihood under impulse model by
+  # adding log likelihood of model at each timepoint.
+  # Only consider timepoints with not all entries NA.
+  scaLogLik <- sum( sapply(c(1:length(vecX)), function(tp){
+    sum(dnbinom(matY[tp,!is.na(matY[tp,])], mu=vecImpulseValue[tp], size=scaDispEst, log=TRUE))}) )
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)
@@ -35,7 +37,7 @@ evalLogLikImpulse <- function(vecTheta,vecX,matY,scaDispEst){
 # Only the mean (h0) is fitted in this case
 evalLogLikMean <- function(scaMuEst,matY,scaDispEst){
   # Compute log likelihood assuming constant mean of negative binomial
-  scaLogLikMean <- sum (dnbinom(matY[!is.na(matY[tp])], mu=exp(scaMuEst), size=scaDispEst, log=TRUE))
+  scaLogLik <- sum (dnbinom(matY[!is.na(matY)], mu=exp(scaMuEst), size=scaDispEst, log=TRUE))
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)

@@ -25,7 +25,7 @@
 #   -
 
 plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
-  lsImpulseFits, ImpulseDE_res = NULL, DESeq2_res=NULL, 
+  lsImpulseFits, dfImpulseResults = NULL, dfDESeq2Results=NULL, 
   strCaseName=NULL, strControlName=NULL,
   strFileNameSuffix = "", strPlotTitleSuffix = "", strPlotSubtitle = "",
   NPARAM=6){
@@ -38,12 +38,12 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
   }
   
   if(!is.null(strControlName)){
-    arr3DCountData_Case <- arr3DCountData[,data_annotation$Condition %in% strCaseName,]
-    arr3DCountData_Ctrl <- arr3DCountData[,data_annotation$Condition %in% strControlName,]
-    lsTimepoints_Case <-  as.numeric(as.character(data_annotation[colnames(arr3DCountData_Case),"Time"]))
-    lsTimepoints_Ctrl <- as.numeric(as.character(data_annotation[colnames(arr3DCountData_Ctrl),"Time"]))
+    arr3DCountData_Case <- arr3DCountData[,dfAnnotationRed$Condition %in% strCaseName,]
+    arr3DCountData_Ctrl <- arr3DCountData[,dfAnnotationRed$Condition %in% strControlName,]
+    lsTimepoints_Case <-  as.numeric(as.character(dfAnnotationRed[colnames(arr3DCountData_Case),"Time"]))
+    lsTimepoints_Ctrl <- as.numeric(as.character(dfAnnotationRed[colnames(arr3DCountData_Ctrl),"Time"]))
   }
-  lsTimepoints_All <- as.numeric(as.character(data_annotation[colnames(arr3DCountData),"Time"]))
+  lsTimepoints_All <- as.numeric(as.character(dfAnnotationRed[dfAnnotationRed$Sample %in% colnames(arr3DCountData),"Time"]))
   
   # expand lsTimepoints_All vector to size of expression array
   if(!is.null(strControlName)){
@@ -53,7 +53,7 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
   arrTimepoints_All <- t(matrix(rep(lsTimepoints_All,dim(arr3DCountData)[3]),length(lsTimepoints_All),dim(arr3DCountData)[3]))
   
   # Open .pdf
-  pdf(paste("impulse_fit_genes_",strFileNameSuffix,".pdf",sep=""),height=6.0,width=9.0)
+  pdf(paste("ImpulseDE_",strFileNameSuffix,"_genes.pdf",sep=""),height=6.0,width=9.0)
   
   # Define grid for printing plots
   if (length(lsGeneIDs) == 1){
@@ -73,79 +73,80 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
       # Chose impulse fit if parameters of fitted model are not NAN,
       # only plot first timepoint otherwise
       if(TRUE %in% is.na(lsImpulseFits$parameters_case[geneID,])){
-        calc_case <- lsImpulseFits$values_case[geneID,1]
+        lsCaseValues <- lsImpulseFits$values_case[geneID,1]
       } else {
-        calc_case <- calc_impulse_comp(lsImpulseFits$parameters_case[geneID,1:NPARAM],vecX)
+        lsCaseValues <- calcImpulse_comp(lsImpulseFits$parameters_case[geneID,1:NPARAM],vecX)
       }
-      pval_DEseq <- round( log(DESeq2_res[geneID,]$padj)/log(10), 2 )
-      pval_Impulse <- round( log(ImpulseDE_res[geneID,]$adj.p)/log(10), 2 )
+      pval_DEseq <- round( log(dfDESeq2Results[geneID,]$padj)/log(10), 2 )
+      pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
 
-      plot(arrTimepoints_All,(t(arr3DCountData[geneID,,])),col="blue",pch=3,xlim=c(0,max(lsTimepoints_All)),
-        ylim=c((min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case)))-0.5),
-          (max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case)))+0.5)),
+      
+      plot(arrTimepoints_All,(t(arr3DCountData[geneID,,])),col="blue",pch=3,xlim=c(0,max(lsTimepoints_All,na.rm=TRUE)),
+        ylim=c(min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(lsCaseValues)),na.rm=TRUE),
+          max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(lsCaseValues)),na.rm=TRUE)),
         xlab="Time", ylab="Impulse fit and expression values",
         main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n DESeq2 ",pval_DEseq,
           " ImpulseDE2 ",pval_Impulse),sub=strPlotSubtitle)
       
-      points(arrTimepoints_All[1,],(apply(arr3DCountData[geneID,,],1,mean)),col="red",pch=1)
+      points(arrTimepoints_All[1,],(apply(arr3DCountData[geneID,,],1,function(x){mean(x,na.rm=TRUE)})),col="red",pch=1)
       
       if(TRUE %in% is.na(lsImpulseFits$parameters_case[geneID,])){
-        abline(h = calc_case , col = "blue")
+        abline(h = lsCaseValues , col = "blue")
       } else {
-        points(vecX, calc_case, col = "blue", type="l")
+        points(vecX, lsCaseValues, col = "blue", type="l")
       } 
-      legend(x="bottomright",as.character(data_annotation[1,"Condition"]),fill=c("blue"), cex=0.6)
+      legend(x="bottomright",as.character(dfAnnotationRed[1,"Condition"]),fill=c("blue"), cex=0.6)
       
     # With control data
     } else {
       
       if(TRUE %in% is.na(lsImpulseFits$parameters_case[geneID,])){
-        calc_case = lsImpulseFits$values_case[geneID,1]
-        status_case = FALSE
+        lsCaseValues = lsImpulseFits$values_case[geneID,1]
+        boolStatusCase = FALSE
       } else {
-        calc_case = calc_impulse_comp(lsImpulseFits$parameters_case[geneID,1:NPARAM],vecX)
-        status_case = TRUE
+        lsCaseValues = calcImpulse_comp(lsImpulseFits$parameters_case[geneID,1:NPARAM],vecX)
+        boolStatusCase = TRUE
       }
       if(TRUE %in% is.na(lsImpulseFits$parameters_control[geneID,])){
-        calc_ctrl = lsImpulseFits$values_control[geneID,1]
-        status_ctrl = FALSE
+        lsCtrlValues = lsImpulseFits$values_control[geneID,1]
+        boolStatusCtrl = FALSE
       } else {
-        calc_ctrl = calc_impulse_comp(lsImpulseFits$parameters_control[geneID,1:NPARAM],vecX)
-        status_ctrl = TRUE
+        lsCtrlValues = calcImpulse_comp(lsImpulseFits$parameters_control[geneID,1:NPARAM],vecX)
+        boolStatusCtrl = TRUE
       }
       if(TRUE %in% is.na(lsImpulseFits$parameters_combined[geneID,])){
-        calc_comb = lsImpulseFits$values_combined[geneID,1]
-        status_comb = FALSE
+        lsCombValues = lsImpulseFits$values_combined[geneID,1]
+        boolStatusComb = FALSE
       } else {
-        calc_comb = calc_impulse_comp(lsImpulseFits$parameters_combined[geneID,1:NPARAM],vecX)
-        status_comb = TRUE
+        lsCombValues = calcImpulse_comp(lsImpulseFits$parameters_combined[geneID,1:NPARAM],vecX)
+        boolStatusComb = TRUE
       }
       
       plot(arrTimepoints_Case,(t(arr3DCountData_Case[geneID,,])),col="blue",pch=3,xlim=c(0,max(lsTimepoints_All)),
-        ylim=c((min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))-0.5),
-          (max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))+0.5)),
+        ylim=c(min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(lsCaseValues), as.numeric(lsCtrlValues), as.numeric(lsCombValues)),na.rm=TRUE),
+          max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(lsCaseValues), as.numeric(lsCtrlValues), as.numeric(lsCombValues)),na.rm=TRUE)),
         xlab="Time", ylab="Impulse fit and expression values",
         main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n DESeq2 ",pval_DEseq,
           " ImpulseDE2 ",pval_Impulse),sub=strPlotSubtitle)
       
       points(lsTimepoints_Ctrl,arr3DCountData_Ctrl[geneID,],col="red",pch=4)
       
-      if(status_case == FALSE){
-        abline(h = calc_case , col = "blue")
+      if(boolStatusCase == FALSE){
+        abline(h = lsCaseValues , col = "blue")
       } else {
-        points(vecX,calc_case, col = "blue", type="l")
+        points(vecX,lsCaseValues, col = "blue", type="l")
       }
-      if(status_ctrl == FALSE){
-        abline(h = calc_ctrl , col = "red")
+      if(boolStatusCtrl == FALSE){
+        abline(h = lsCtrlValues , col = "red")
       } else {
-        points(vecX,calc_ctrl, col = "red", type="l")
+        points(vecX,lsCtrlValues, col = "red", type="l")
       }
-      if(status_comb == FALSE){
-        abline(h = calc_comb , col = "grey")
+      if(boolStatusComb == FALSE){
+        abline(h = lsCombValues , col = "grey")
       } else {
-        points(vecX,calc_comb, col = "grey", type="l")
+        points(vecX,lsCombValues, col = "grey", type="l")
       }
-      legend(x="bottomright",c(as.character(data_annotation$Condition[data_annotation$Condition != control_name][1]),control_name,"combined"),fill=c("blue","red","grey"), cex=0.6)
+      legend(x="bottomright",c(as.character(dfAnnotationRed$Condition[dfAnnotationRed$Condition != control_name][1]),control_name,"combined"),fill=c("blue","red","grey"), cex=0.6)
     }
   }
   # Close .pdf

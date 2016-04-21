@@ -55,49 +55,28 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     
     ### 2. Check annotation table content
     ### a) Check column names
-    lsColNamesRequired <- c("Replicate_name","Replicate","Sample","Condition","Time")
+    lsColNamesRequired <- c("Replicate","Sample","Condition","Time")
     if( !all(lsColNamesRequired %in% colnames(dfAnnotationFull)) ){
       stop(paste0("Could not find column ",
         lsColNamesRequired[!(lsColNamesRequired %in% colnames(dfAnnotationFull))],
         " in annotation table."))
     }
     ### b) Replicates
-    lsReplicates <- unique(as.vector( dfAnnotationFull$Replicate ))
-    # Check that all replicates contain all timepoints -DAVID -deprecated
-    #for(iRep in 1:length(lsReplicates)){
-    #  if(!identical(unique(dfAnnotationFull$Time),unique(dfAnnotationFull[
-    #    dfAnnotationFull$Replicate==lsReplicates[iRep],]$Time))){
-    #    stop(paste0("ERROR: [Annotation table] Not all timepoints listed for each replicate ",lsReplicates[iRep]))
-    #  }
-    #}
-    # Check that all replicates contain the same number of samples -DAVID - deprecated
-    #for(iRep in 1:length(lsReplicates)){
-    #  # Establish number of samples in first replicate
-    #  if(iRep==1){
-    #    nSamples <- sum( dfAnnotationFull$Replicate==lsReplicates[iRep] )
-    #    # Check for equality of number of samples in remaining replicates
-    #  } else {
-    #    if(sum( dfAnnotationFull$Replicate==lsReplicates[iRep] ) != nSamples){
-    #      stop(paste0("ERROR: [Annotation table] Replicate ",lsReplicates[iRep],
-    #        " contains different number of samples compared to replicate ",
-    #        lsReplicates[1]))
-    #    }
-    #  }
-    #}
     # Check that replicate name do not occur twice
-    if(length(unique(dfAnnotationFull$Replicate_name)) != dim(dfAnnotationFull)[1]){
+    if(length(unique(dfAnnotationFull$Replicate)) != dim(dfAnnotationFull)[1]){
       stop(paste0("ERROR: [Annotation table]",
-        "Number of Replicate_name instances different to annotation table number of rows.",
-        "Replicate_name cannot occur multiple times."))
-    }
-    # Check that each replicate is associated with one condition only
-    for(replicate in lsReplicates){
-      if( length(unique( dfAnnotationFull[
-        dfAnnotationFull$Replicate %in% replicate,"Replicate_name"] )) > 1 ){
-        
-      }
+        "Number of Replicate instances different to annotation table number of rows.",
+        "Replicate cannot occur multiple times."))
     }
     ### c) Time points
+    # Check that there is not multiple samples per time point in one condition
+    lsTimepoints <- unique(as.vector( dfAnnotationFull$Time ))
+    for(tp in lsTimepoints){
+      if( length(unique(as.vector( dfAnnotationFull[dfAnnotationFull$Time %in% tp &
+          dfAnnotationFull$Sample %in% strCaseName,]$Sample )))>1 ){
+        stop(paste0("ERROR: In case condition, assigned multiple samples to time point ",tp))
+      }
+    }
     # Check that time points are numeric
     if(is.numeric(dfAnnotationFull$Time) == FALSE){
       stop("ERROR: Time variable in annotation table must be numeric.")
@@ -115,25 +94,39 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     }
     
     ### 3. Check expression table content
-    # Test that all entries in count data table occur in annotation table
-    if( any(!(colnames(arr2DCountData) %in% dfAnnotationFull$Replicate_name)) ){
-      print(paste0("WARNING: The column ",
-        as.character( colnames(arr2DCountData)[
-          !(colnames(arr2DCountData) %in% dfAnnotationFull$Replicate_name)] ),
-        " in the count data table do not occur in annotation table and will be ignored."))
+    # Check that all entries in count data table occur in annotation table
+    if( any(!(colnames(arr2DCountData) %in% dfAnnotationFull$Replicate)) ){
+      print(paste0("WARNING: The column(s) ",
+        paste0(as.character( colnames(arr2DCountData)[
+          !(colnames(arr2DCountData) %in% dfAnnotationFull$Replicate)] ),collapse=","),
+        " in the count data table do(es) not occur in annotation table and will be ignored."))
     }
     
     ### Summarise which conditions, samples, lsReplicates were found
-    print(paste0("Found conditions:",lsConditions))
+    print(paste0("Found conditions: ",lsConditions))
     print(paste0("Case condition: ", strCaseName))
     if(!is.null(strControlName)){
       print(paste0("Control condition: ", strControlName))
     }
     print(paste0( "Found time points: ",
-      paste( dfAnnotationFull$Time,collapse=",") ))
-    for(replicate in lsReplicates){
-      print(paste0( "Found the following time points for replicate ", replicate,
-        ":", paste(dfAnnotationFull[dfAnnotationFull$Replicate %in% replicate,]$Time,collapse=",") ))
+      paste( lsTimepoints,collapse=",") ))
+    for(tp in lsTimepoints){
+      print(paste0( "Case: Found the following replicates for time points: ", tp,
+        ": ", paste0(dfAnnotationFull[
+          (dfAnnotationFull$Time %in% tp) &
+            (dfAnnotationFull$Condition %in% strCaseName) &
+            (dfAnnotationFull$Replicate %in% colnames(arr2DCountData)),
+          ]$Replicate,collapse=","),collapse="," ))
+    }
+    if(!is.null(strControlName)){
+      for(tp in lsTimepoints){
+        print(paste0( "Control: Found the following replicates for time points: ", tp,
+          ":", paste(dfAnnotationFull[
+            dfAnnotationFull$Time %in% tp &
+              dfAnnotationFull$Condition %in% strControlName &
+              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
+            ]$Replicate,collapse=",") ))
+      }
     }
     
     return(NULL)
@@ -156,14 +149,21 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     # Reduce expression table to columns of considered conditions
     if(!is.null(strControlName)){
       lsReplicateNames_Case <- as.character(as.vector( 
-        dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate_name ))
+        dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate ))
       lsReplicateNames_Ctrl <- as.character(as.vector( 
-        dfAnnotationFull[dfAnnotationFull$Condition %in% strControlName,]$Replicate_name ))
+        dfAnnotationFull[dfAnnotationFull$Condition %in% strControlName,]$Replicate ))
       arr2DCountData <- arr2DCountData[,c(lsReplicateNames_Case,lsReplicateNames_Ctrl)]
     } else {
       lsReplicateNames_Case <- as.character(as.vector( 
-        dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate_name ))
+        dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate ))
       arr2DCountData <- arr2DCountData[,lsReplicateNames_Case]
+    }
+    # Check that every replicate contains at least one observed value (not NA)
+    lsNARep <- any(apply(arr2DCountData,2,function(rep){all(is.na(rep))}))
+    if(any(lsNARep)){
+      print(paste0("WARNING: Replicate(s) ",paste0(colnames(arr2DCountData[lsNARep,]),collapse=","),
+        " only contain(s) NA values and will be removed from the analysis."))
+      arr2DCountData <- arr2DCountData[,!lsNARep]
     }
     ### 2. Rows (Genes):
     # Reduce expression table to rows containing at least one non-zero count
@@ -178,15 +178,17 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     }
     # DAVID to be deprecated
     # Shorten expression table
-    if(TRUE){
+    if(FALSE){
       ind_toKeep <- 1:100
       print(paste0("Working on subset of data: ",length(ind_toKeep)," genes."))
       arr2DCountData <- arr2DCountData[ind_toKeep,]
     }
-    # DAVID: Can my model handle this? - yes - deprecated
-    # Exclude genes with missing values(NAs)
-    #indx_NA <- apply(arr2DCountData,1,function(x){any(is.na(x))})
-    #arr2DCountData <- arr2DCountData[!(indx_NA),]
+    # Exclude genes with only missing values (NAs)
+    indx_NA <- apply(arr2DCountData,1,function(x){all(is.na(x))})
+    if(any(indx_NA)){
+      print(paste0("WARNING: Excluded ",sum(indx_NA)," genes because no real valued samples were given."))
+    }
+    arr2DCountData <- arr2DCountData[!(indx_NA),]
     
     return(arr2DCountData)
   }
@@ -195,32 +197,25 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   reshapeCountData <- function(dfAnnotationFull=NULL, arr2DCountData=NULL,
     strCaseName = NULL, strControlName=NULL){
     
-    lsReplicates <- unique(as.vector( dfAnnotationFull$Replicate ))
     lsSamples <- unique(as.vector( dfAnnotationFull$Sample ))
-    
+    #lsTimepoints <- unique(as.vector( dfAnnotationFull$Time ))
+    nMaxRep <- max(unlist( lapply(lsSamples,function(sample){sum(
+      dfAnnotationFull$Sample %in% sample)}) ))
+     
     # Convert list of matrices into 3D array
     # Initialise 3D array
     nGenes <- dim(arr2DCountData)[1]
     nSamples <- length(lsSamples)
-    nRep <- length(lsReplicates)
+    nRep <- nMaxRep
     arr3DCountData=array(NA,c(nGenes,nSamples,nRep))
     rownames(arr3DCountData) <- rownames(arr2DCountData)
-    colnames(arr3DCountData) <- colnames(lsSamples)
-    dimnames(arr3DCountData)[[3]] <- lsReplicates
+    colnames(arr3DCountData) <- lsSamples
     
     # Write 3D array
     for (sample in lsSamples){
+      lsReplicates <- dfAnnotationFull[dfAnnotationFull$Sample %in% sample,]$Replicate
       for (replicate in lsReplicates){
-        # Substitute NA column by observations if this combination was observed
-        # I.e. if this sample is included in the given replicate
-        # Using more rebust boolean indexing here
-        if(any((dfAnnotationFull$Sample %in% sample) & 
-            (dfAnnotationFull$Replicate %in% replicate))){
-          arr3DCountData[,colnames(arr3DCountData) %in% sample,
-            dimnames(arr3DCountData)[[3]] %in% replicate] <- as.vector(
-              arr2DCountData[ , dfAnnotationFull[(dfAnnotationFull$Sample %in% sample) &
-                  (dfAnnotationFull$Replicate %in% replicate),]$Replicate_name ] )
-        }
+        arr3DCountData[,sample,match(replicate,lsReplicates)] <- arr2DCountData[ , replicate ]
       }
     }
     
@@ -256,7 +251,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   arr3DCountData <- reshapeCountData(
     dfAnnotationFull=dfAnnotationFull, arr2DCountData=arr2DCountData,
     strControlName=strControlName, strCaseName=strCaseName)
-  
+
   dfAnnotationRed <- reduceAnnotation(dfAnnotationFull)
   
   return(list(arr2DCountData,arr3DCountData,dfAnnotationRed))

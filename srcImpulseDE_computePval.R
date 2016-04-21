@@ -33,7 +33,7 @@ computePval <- function(arr3DCountData,dfAnnotationRed,vecDispersions,
     # The reduced model is the mean fit.
     vecLogLikRed <- lsImpulseFits$parameters_case[,"logL_H0"]
     # Mean inferred expression:
-    vecMu <- lsImpulseFits$parameters_case[,"vecMu"]
+    vecMu <- lsImpulseFits$parameters_case[,"mu"]
     # Parameters and 1 dispersion estimate
     scaDegFreedomFull <- NPARAM + 1
     # 1 mean and 1 dispersion estimate
@@ -74,8 +74,8 @@ computePval <- function(arr3DCountData,dfAnnotationRed,vecDispersions,
       "deviance"=round(vecDeviance),
       "vecMu"=round(vecMu),
       "size"=round(vecDispersions),
-      "converge_impulse"=impulse_fit_dfDEAnalysis$parameters_case[,"converge_H1"],
-      "converge_mean"=impulse_fit_dfDEAnalysis$parameters_case[,"converge_H0"],
+      "converge_impulse"=lsImpulseFits$parameters_case[,"converge_H1"],
+      "converge_mean"=lsImpulseFits$parameters_case[,"converge_H0"],
       stringsAsFactors = FALSE))
   } else {
     # With control data:
@@ -88,10 +88,10 @@ computePval <- function(arr3DCountData,dfAnnotationRed,vecDispersions,
       "deviance"=round(vecDeviance),
       "vecMu"=round(vecMu),
       "size"=round(vecDispersions),
-      "converge_combined"=impulse_fit_dfDEAnalysis$impulse_parameters_combined[,"converge_H1"],
-      "converge_case"=impulse_fit_dfDEAnalysis$impulse_parameters_case[,"converge_H1"],
-      "converge_control"=impulse_fit_dfDEAnalysis$impulse_parameters_control[,"converge_H1"],
-      "converge_mean"=impulse_fit_dfDEAnalysis$impulse_parameters_combined[,"converge_H0"],
+      "converge_combined"=lsImpulseFits$impulse_parameters_combined[,"converge_H1"],
+      "converge_case"=lsImpulseFits$impulse_parameters_case[,"converge_H1"],
+      "converge_control"=lsImpulseFits$impulse_parameters_control[,"converge_H1"],
+      "converge_mean"=lsImpulseFits$impulse_parameters_combined[,"converge_H0"],
       stringsAsFactors = FALSE))
   }
   

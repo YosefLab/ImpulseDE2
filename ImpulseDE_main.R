@@ -32,33 +32,30 @@ library(DESeq2)
 
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building")
 
-#Prepares the data table for internal use
+#Prepares the data and annotation for internal use
 source("srcImpulseDE_processData.R")
-#Prepares the annotation table for internal use
-source("srcImpulseDE_prepareAnnotation.R")
 
 # Wrapper fur running DESeq2
 source("srcImpulseDE_runDESeq2.R")
 
-### Compute value of impulse function given parameters.
+# Compute value of impulse function given parameters
 source("srcImpulseDE_calcImpulse.R")
 
-### Cost function for parametric model fit: Ordinary least squares (two_impulses)
-### or weighted least squares (two_impulses_WLS)
+# Cost functions for fitting
 source("srcImpulseDE_CostFunctionsFit.R")
 
-## Compile fitting simple functions to make them quicker
+# Compile fitting simple functions to make them quicker
 calcImpulse_comp <- cmpfun(calcImpulse)
 evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 evalLogLikMean_comp <- cmpfun(evalLogLikMean)
 
-### Fits impulse model to a timecourse dataset
+# Fit impulse model to a timecourse dataset
 source("srcImpulseDE_fitImpulse.R")
 
 # Detect differentially expressed genes over time
-source("srcImpulseDE_DE_analysis.R")
+source("srcImpulseDE_computePval.R")
 
-### plots the impulse fits to timecourse data and also the control data if present
+# Plot the impulse fits and input data
 source("srcImpulseDE_plotDEGenes.R")
 
 ################################################################################
@@ -297,7 +294,7 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
     # 2. Run DESeq2
     print("2. Run DESeq2:")
     tm_runDESeq2 <- system.time({
-      lsDESeq2Results <- runDESeq2(annotation_table=dfAnnotationFull,data_table=arr2DCountData)
+      lsDESeq2Results <- runDESeq2(dfAnnotationFull=dfAnnotationFull,arr2DCountData=arr2DCountData)
     })
     vecDESeq2Dispersions <- lsDESeq2Results[[1]]
     dfDESeq2Results <- lsDESeq2Results[[2]]
@@ -350,7 +347,7 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
         lsImpulseFits=lsImpulseFits,
         strCaseName=strCaseName, strControlName=strControlName, 
         strFileNameSuffix="DE", strPlotTitleSuffix="", strPlotSubtitle="",
-        ImpulseDE_res=ImpulseDE_results,DESeq2_res=dfDESeq2Results,
+        dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
         NPARAM=NPARAM)
     })
     print("DONE")
@@ -359,13 +356,13 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
     print("##################################################################")
   })
   print("Finished ImpulseDE.")
-  print(paste("TOTAL consumed time: ",round(runImpulseDE["elapsed"]/60,2),
+  print(paste("TOTAL consumed time: ",round(tm_runImpulseDE["elapsed"]/60,2),
     " min",sep=""))
   print("##################################################################")
   
   return(list(
-    "ImpulseDE_DE_genes"=lsDEGenes,
-    "ImpulseDE_results"=ImpulseDE_results,
-    "ImpulseDE_impulse_fit_results"=lsImpulseFits,
+    "lsDEGenes"=lsDEGenes,
+    "dfImpulseResults"=dfImpulseResults,
+    "lsImpulseFits"=lsImpulseFits,
     "DESeq2_results"=dfDESeq2Results))
 }

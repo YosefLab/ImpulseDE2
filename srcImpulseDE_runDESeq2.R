@@ -5,24 +5,24 @@
 # Prepare annotation table for internal use
 
 # INPUT:
-#   annotation_table: (Table samples x 2 [time and condition]) providing 
+#   dfAnnotationFull: (Table samples x 2 [time and condition]) providing 
 #       co-variables for the samples including condition and time points.
 #       Time points must be numeric numbers.
-#   data_tables: (Numeric 3D array genes x samples x replicates).
+#   arr2DCountDatas: (Numeric 3D array genes x samples x replicates).
 #       Contains expression values or similar locus-specific read-outs.
 # OUTPUT:
-#   annot: (Table samples x 2[time and condition]) annotation_table reduced to 
+#   annot: (Table samples x 2[time and condition]) dfAnnotationFull reduced to 
 #       target samples 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-runDESeq2 <- function(annotation_table, data_table){
+runDESeq2 <- function(dfAnnotationFull, arr2DCountData){
   
-  dfCountData <- data_table[,colnames(data_table) %in% annotation_table$Replicate_name]
-  colnames(dfCountData) <- annotation_table$Sample[match(colnames(dfCountData),annotation_table$Replicate_name)]
+  dfCountData <- arr2DCountData[,colnames(arr2DCountData) %in% dfAnnotationFull$Replicate]
+  colnames(dfCountData) <- dfAnnotationFull$Sample[match(colnames(dfCountData),dfAnnotationFull$Replicate)]
   # Create DESeq2 data object
   dds <- DESeqDataSetFromMatrix(countData = dfCountData,
-    colData = annotation_table,
+    colData = dfAnnotationFull,
     design = ~ Sample)
   # Run DESeq2
   ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample, reduced = ~1)
