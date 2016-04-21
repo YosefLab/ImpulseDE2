@@ -75,7 +75,7 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
-  fitImpulse_gene_wise <- function(matCounts, vecTimepoints, 
+  fitImpulse_gene <- function(matCounts, vecTimepoints, 
     NPARAM=6, MAXIT=1000, scaDispersionEstimate=NULL,...){
     
     optim_method <- "optim"
@@ -244,7 +244,7 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
       assign("fitImpulse", fitImpulse, envir = my.env)
       assign("evalLogLikImpulse_comp", evalLogLikImpulse_comp, envir = my.env)
       assign("evalLogLikMean_comp", evalLogLikMean_comp, envir = my.env)
-      assign("fitImpulse_gene_wise",fitImpulse_gene_wise, envir = my.env)
+      assign("fitImpulse_gene",fitImpulse_gene, envir = my.env)
       assign("fitImpulse_matrix",fitImpulse_matrix, envir = my.env)
       assign("vecTimepoints", vecTimepoints, envir = my.env)
       assign("NPARAM", NPARAM, envir = my.env)
@@ -253,14 +253,14 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
       
       clusterExport(cl=cl, varlist=c("arrCountDataCondition","vecDispersions", "vecTimepoints",
         "calcImpulse_comp", "evalLogLikImpulse_comp", "evalLogLikMean_comp",
-        "fitImpulse", "fitImpulse_matrix", "fitImpulse_gene_wise",
+        "fitImpulse", "fitImpulse_matrix", "fitImpulse_gene",
         "MAXIT", "NPARAM"), envir = my.env)
       
       # Fit impulse model to each gene of matrix and get impulse parameters:
       # clusterApply runs the function impulse_fit_gene_wise
       # The input data are distributed to nodes by lsGeneIndexByCore partitioning
       lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore), function(z){t(sapply(lsGeneIndexByCore[[z]],
-        function(x){fitImpulse_gene_wise(matCounts=arrCountDataCondition[x,,],
+        function(x){fitImpulse_gene(matCounts=arrCountDataCondition[x,,],
           vecTimepoints=vecTimepoints,NPARAM=NPARAM,MAXIT=MAXIT,
           scaDispersionEstimate=vecDispersions[x])}))})
       # Give output rownames again, which are lost above
@@ -277,7 +277,7 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
       # Fit impulse model to each gene of matrix and get impulse parameters
       lsGeneIndexByCore_all <- 1:nrow(arrCountDataCondition)
       matFits <- lapply(lsGeneIndexByCore_all,function(x){
-        fitImpulse_gene_wise(matCounts=arrCountDataCondition[x,,],
+        fitImpulse_gene(matCounts=arrCountDataCondition[x,,],
           vecTimepoints=vecTimepoints,NPARAM=NPARAM,MAXIT=MAXIT,
           scaDispersionEstimate=vecDispersions[x])})
       matFits_temp <- array(NA,c(length(matFits),length(matFits[[1]])))
@@ -335,17 +335,33 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
   
   # Perform 3 runs (combined, case and control) if control timecourse is present
   if(!is.null(strControlName)){    
-    # Combined: Count data of both case and control
-    arrCountDataAll = arrCountData[,,]
-    # Case: Count data of case
+    # (I) Combined: Count data of both case and control
+    # Bind case and control as replicates in 3rd dimension of array
+    # Find samples corresponding in time first:
+    lsTimepointsCase <- as.vector( dfAnnotation[dfAnnotation$Condition %in% strCaseName,"Time"] )
+    lsTimepointsCtrl <- as.vector( dfAnnotation[dfAnnotation$Condition %in% strControlName,"Time"] )
+    lsTimepointsAll <- unique(c(lsTimepointsCase,lsTimepointsCtrl))
+    # Pad with NA sample if one time point not present in one of the two conditions
+    # Define new array dimensions
+    nGenes <- dim(arrCountData[,,])[1]
+    nTimepoints <- length(lsTimepointsAll)
+    nRep <- dim(arrCountData[,,])[3]
+    # Leave non-sampled positions in new array (i.e. entire time points of
+    # either case or control) as NA.
+    arrCountDataAll <- array(NA,c(nGenes,nTimepoints,nRep*2))
+    arrCountDataAll[,lsTimepointsCase %in% lsTimepointsAll,1:nRep] <- arrCountData[,(dfAnnotation$Condition %in% strCaseName),]
+    arrCountDataAll[,lsTimepointsCtrl %in% lsTimepointsAll,(nRep+1):(nRep*2)] <- arrCountData[,(dfAnnotation$Condition %in% strControlName),]
+    
+    # (II) Case: Count data of case
     arrCountDataCase = arrCountData[,(dfAnnotation$Condition %in% strCaseName),]
-    # Control: Count data of control
+    
+    # (III) Control: Count data of control
     arrCountDataCtrl = arrCountData[,(dfAnnotation$Condition %in% strControlName),]
     
     # Formatting into 3D breaks if single gene is selected:
     # DAVID rework this, doesn work?
     # If exactly one gene is tested:
-    if(dim(arrCountDataAll)[1]==1){ 
+    if(nGenes==1){ 
       arrCountDataAll_temp <- array(NA,c(1,dim(arrCountData)[2],dim(arrCountData)[3]))
       for(z in 1:dim(arrCountData)[3]){
         arrCountDataAll_temp[1,,z] <- arrCountDataAll[,z]
@@ -382,7 +398,7 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
   
   # Fitting for different runs
   for (iRuns in 1:nRuns){
-    lsFitResults_run <- impulse_fit_matrix(arrCountDataCondition=lsarrCountData[[iRuns]],
+    lsFitResults_run <- fitImpulse_matrix(arrCountDataCondition=lsarrCountData[[iRuns]],
       vecTimepoints=as.numeric(as.character(
         dfAnnotation[colnames(lsarrCountData[[iRuns]]),"Time"])),
       vecDispersions=vecDispersions,

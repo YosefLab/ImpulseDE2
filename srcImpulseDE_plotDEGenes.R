@@ -9,25 +9,25 @@
 #       of the rownames of arr3DCountData.
 #   arr3DCountData: (Numeric 3D array genes x samples x replicates)
 #       Contains expression values or similar locus-specific read-outs.
-#   data_annotation: (Table samples x 2[time and condition]) 
+#   dfAnnotationRed: (Table samples x 2[time and condition]) 
 #       Co-variables for the samples including condition and time points.
 #       Time points must be numeric.
 #   lsImpulseFits: (list runs*2 ["parameters","impulse_fits"])
 #       parameters: (matrix genes x (NPARAM+1)*runs) +1 is value of 
 #         objective of optimisation (i.e. sum of squares or weighted SS)
 #       impulse_fits: (matrix genes x timepoints) model values for gene data
-#   control_name: (str) Name of the control condition in annotation_table.
-#   case_name (str) Name of the control condition in annotation_table.
-#   file_name_part: (character string) File extention.
+#   strControlName: (str) Name of the control condition in annotation_table.
+#   strCaseName (str) Name of the control condition in annotation_table.
+#   strFileNameSuffix: (character string) File extention.
 #   title_string: (character string) Title for each plot.
-#   sub_line: (character string) Subtitle for each plot.
+#   strPlotSubtitle: (character string) Subtitle for each plot.
 # OUTPUT:
 #   -
 
 plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
   lsImpulseFits, ImpulseDE_res = NULL, DESeq2_res=NULL, 
   strCaseName=NULL, strControlName=NULL,
-  file_name_part = "", title_line = "", sub_line = "",
+  strFileNameSuffix = "", strPlotTitleSuffix = "", strPlotSubtitle = "",
   NPARAM=6){
 
   # Name genes if not previously named (already done if this function is
@@ -53,7 +53,7 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
   arrTimepoints_All <- t(matrix(rep(lsTimepoints_All,dim(arr3DCountData)[3]),length(lsTimepoints_All),dim(arr3DCountData)[3]))
   
   # Open .pdf
-  pdf(paste("impulse_fit_genes_",file_name_part,".pdf",sep=""),height=6.0,width=9.0)
+  pdf(paste("impulse_fit_genes_",strFileNameSuffix,".pdf",sep=""),height=6.0,width=9.0)
   
   # Define grid for printing plots
   if (length(lsGeneIDs) == 1){
@@ -84,8 +84,8 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
         ylim=c((min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case)))-0.5),
           (max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case)))+0.5)),
         xlab="Time", ylab="Impulse fit and expression values",
-        main=paste0(geneID," ",title_line," log(Pval):\n DESeq2 ",pval_DEseq,
-          " ImpulseDE2 ",pval_Impulse),sub=sub_line)
+        main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n DESeq2 ",pval_DEseq,
+          " ImpulseDE2 ",pval_Impulse),sub=strPlotSubtitle)
       
       points(arrTimepoints_All[1,],(apply(arr3DCountData[geneID,,],1,mean)),col="red",pch=1)
       
@@ -124,8 +124,9 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
       plot(arrTimepoints_Case,(t(arr3DCountData_Case[geneID,,])),col="blue",pch=3,xlim=c(0,max(lsTimepoints_All)),
         ylim=c((min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))-0.5),
           (max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(calc_case), as.numeric(calc_ctrl), as.numeric(calc_comb)))+0.5)),
-        xlab="Time", ylab="Impulse fit or log2 expression value",
-        main=paste(geneID," ",title_line,sep=""),sub=sub_line)
+        xlab="Time", ylab="Impulse fit and expression values",
+        main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n DESeq2 ",pval_DEseq,
+          " ImpulseDE2 ",pval_Impulse),sub=strPlotSubtitle)
       
       points(lsTimepoints_Ctrl,arr3DCountData_Ctrl[geneID,],col="red",pch=4)
       

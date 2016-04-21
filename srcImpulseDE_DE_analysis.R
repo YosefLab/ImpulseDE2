@@ -22,19 +22,36 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 computePval <- function(arr3DCountData,dfAnnotationRed,vecDispersions,
-  impulse_fit_results,
+  lsImpulseFits,
   strCaseName=NULL, strControlName=NULL, NPARAM=6){
   
-  vecLogLikFull <- impulse_fit_results$impulse_parameters_case[,"logL_H1"]
-  vecLogLikRed <- impulse_fit_results$impulse_parameters_case[,"logL_H0"]
-  
-  # Without control data
   if(is.null(strControlName)){
-    vecMu <- impulse_fit_results$impulse_parameters_case[,"vecMu"]
+    # Without control data:
+    # Take Values from the only fitting performed: case
+    # The full model is the impulse fit.
+    vecLogLikFull <- lsImpulseFits$parameters_case[,"logL_H1"]
+    # The reduced model is the mean fit.
+    vecLogLikRed <- lsImpulseFits$parameters_case[,"logL_H0"]
+    # Mean inferred expression:
+    vecMu <- lsImpulseFits$parameters_case[,"vecMu"]
     # Parameters and 1 dispersion estimate
     scaDegFreedomFull <- NPARAM + 1
     # 1 mean and 1 dispersion estimate
     scaDegFreedomRed <- 1 + 1
+  } else {
+    # With control data:
+    # Full model: Case and control model separate:
+    # The log likelihood of the full model is the sum of the
+    # log likelihoods of case and control fits.
+    vecLogLikFull <- lsImpulseFits$parameters_case[,"logL_H1"] + lsImpulseFits$parameters_control[,"logL_H1"]
+    # The reduced model is the combined data fit.
+    vecLogLikRed <- lsImpulseFits$parameters_combined[,"logL_H1"]
+    # Mean inferred expression: On combined data
+    vecMu <- lsImpulseFits$parameters_combined[,"vecMu"]
+    # Parameters of both models (case and control) and 1 dispersion estimate
+    scaDegFreedomFull <- NPARAM*2 + 1
+    # Parameters of one model (combined) and 1 dispersion estimate
+    scaDegFreedomRed <- NPARAM + 1
   }
   
   # Compute difference in degrees of freedom between null model and alternative model.
@@ -46,8 +63,8 @@ computePval <- function(arr3DCountData,dfAnnotationRed,vecDispersions,
   # Multiple testing correction (Benjamini-Hochberg)
   vecPvalueBH = p.adjust(vecPvalue, method = "BH")
   
-  # Without control data
   if(is.null(strControlName)){
+    # Without control data:
     dfDEAnalysis =   as.data.frame(cbind(
       "Gene" = row.names(arr3DCountData),
       "p"=as.numeric(vecPvalue),
@@ -57,8 +74,24 @@ computePval <- function(arr3DCountData,dfAnnotationRed,vecDispersions,
       "deviance"=round(vecDeviance),
       "vecMu"=round(vecMu),
       "size"=round(vecDispersions),
-      "converge_H1"=impulse_fit_dfDEAnalysiss$impulse_parameters_case[,"converge_H1"],
-      "converge_H0"=impulse_fit_dfDEAnalysiss$impulse_parameters_case[,"converge_H0"],
+      "converge_impulse"=impulse_fit_dfDEAnalysis$parameters_case[,"converge_H1"],
+      "converge_mean"=impulse_fit_dfDEAnalysis$parameters_case[,"converge_H0"],
+      stringsAsFactors = FALSE))
+  } else {
+    # With control data:
+    dfDEAnalysis =   as.data.frame(cbind(
+      "Gene" = row.names(arr3DCountData),
+      "p"=as.numeric(vecPvalue),
+      "adj.p"=as.numeric(vecPvalueBH),
+      "loglik_full"=round(vecLogLikFull),
+      "loglik_red"=round(vecLogLikRed),
+      "deviance"=round(vecDeviance),
+      "vecMu"=round(vecMu),
+      "size"=round(vecDispersions),
+      "converge_combined"=impulse_fit_dfDEAnalysis$impulse_parameters_combined[,"converge_H1"],
+      "converge_case"=impulse_fit_dfDEAnalysis$impulse_parameters_case[,"converge_H1"],
+      "converge_control"=impulse_fit_dfDEAnalysis$impulse_parameters_control[,"converge_H1"],
+      "converge_mean"=impulse_fit_dfDEAnalysis$impulse_parameters_combined[,"converge_H0"],
       stringsAsFactors = FALSE))
   }
   

@@ -30,17 +30,14 @@ setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building")
 source("ImpulseDE_main.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 
-colname_time = "Time"
-colname_condition = "Condition"
+
 control_timecourse = FALSE
 control_name = NULL
 case_name = "case"
 n_process = 3
 Q_value = 0.01
-lsImpulseDE_results <- impulse_DE(expression_tables = expression_table, annotation_table = annotation_table,
-  colname_time=colname_time, colname_condition=colname_condition, control_timecourse=control_timecourse,
-  control_name = control_name, case_name =case_name,
-  n_process =n_process, Q_value =Q_value)
+lsImpulseDE_results <- runImpulseDE(matCountData=expression_table, dfAnnotationFull=annotation_table,
+  strCaseName = case_name, strControlName=NULL, nProc=n_process, Q_value=Q_value)
 
 impulse_DE_genes <- lsImpulseDE_results$ImpulseDE_DE_genes
 ImpulseDE_results <- lsImpulseDE_results$ImpulseDE_results

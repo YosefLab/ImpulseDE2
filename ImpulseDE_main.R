@@ -283,7 +283,6 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
     tm_processData <- system.time({
       lsProcessedData <- processData(
         dfAnnotationFull=dfAnnotationFull,matCountData=matCountData,
-        boolControlTimecourse=boolControlTimecourse, 
         strControlName=strControlName, strCaseName=strCaseName)
     })
     arr2DCountData <- lsProcessedData[[1]]
@@ -328,7 +327,7 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
     tm_DE <- system.time({
       dfImpulseResults <- computePval(
         arr3DCountData=arr3DCountData,vecDispersions=vecDESeq2Dispersions,
-        dfAnnotationRed=dfAnnotationRed,impulse_fit_results=lsImpulseFits,
+        dfAnnotationRed=dfAnnotationRed,lsImpulseFits=lsImpulseFits,
         strCaseName=strCaseName, strControlName=strControlName,
         NPARAM=NPARAM)
       
@@ -350,7 +349,7 @@ runImpulseDE <- function(matCountData=NULL, dfAnnotationFull=NULL,
         arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
         lsImpulseFits=lsImpulseFits,
         strCaseName=strCaseName, strControlName=strControlName, 
-        file_name_part = "DE", title_line = "", sub_line = "",
+        strFileNameSuffix="DE", strPlotTitleSuffix="", strPlotSubtitle="",
         ImpulseDE_res=ImpulseDE_results,DESeq2_res=dfDESeq2Results,
         NPARAM=NPARAM)
     })
