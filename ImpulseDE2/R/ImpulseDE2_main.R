@@ -18,7 +18,7 @@ library(compiler)
 library(parallel)
 library(DESeq2)
 
-setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/R")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Rset ")
 #Prepares the data and annotation for internal use
 source("srcImpulseDE2_processData.R")
 # Wrapper fur running DESeq2
@@ -197,7 +197,7 @@ evalLogLikMean_comp <- cmpfun(evalLogLikMean)
 #' \code{\link{fitImpulse}}, \code{\link{computePval}},
 #' \code{\link{plotDEGenes}}.
 #' 
-#' @author David Sebastian Fischer
+#' @authors David Sebastian Fischer
 #' 
 #' @references Benjamini, Y. and Hochberg, Y. (1995) Controlling the false
 #' discovery rate: a practical and powerful approach to multiple testing.
