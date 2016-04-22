@@ -21,6 +21,11 @@
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+#' @param ImpulseDE2_arr3DCountData: (3D array genes x samples x replicates)
+#' Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
+#' @param dfAnnotationRed: (data frame) Reduced version of 
+#' \code{dfAnnotationFull}. For internal use.
+
 computePval <- function(arr3DCountData,dfAnnotationRed,vecDispersions,
   lsImpulseFits,
   strCaseName=NULL, strControlName=NULL, NPARAM=6){

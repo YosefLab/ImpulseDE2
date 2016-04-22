@@ -1,18 +1,20 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++     Annotation preparation    +++++++++++++++++++++++++#
+#++++++++++++++++++++++++++     Run DESeq2    +++++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-# Prepare annotation table for internal use
+### Run DESeq2 and extract differential expression analysis results and 
+### overdispersion coefficients.
 
 # INPUT:
-#   dfAnnotationFull: (Table samples x 2 [time and condition]) providing 
-#       co-variables for the samples including condition and time points.
-#       Time points must be numeric numbers.
-#   arr2DCountDatas: (Numeric 3D array genes x samples x replicates).
-#       Contains expression values or similar locus-specific read-outs.
+#   dfAnnotationFull: (Table) Lists co-variables of individual replicates:
+#       Sample, Condition, Time. Time must be numeric.
+#   arr2DCountData: (2D array genes x replicates) Count data: Reduced 
+#       version of \code{matCountData}. For internal use.
 # OUTPUT:
-#   annot: (Table samples x 2[time and condition]) dfAnnotationFull reduced to 
-#       target samples 
+#   List of:
+#   dds_dispersions: (vector number of genes) Inverse of gene-wise 
+#       negative binomial dispersion coefficients computed by DESeq2.
+#   dds_resultsTable: (data frame) DESeq2 results.
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 

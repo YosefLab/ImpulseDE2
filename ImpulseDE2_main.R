@@ -61,39 +61,61 @@ evalLogLikMean_comp <- cmpfun(evalLogLikMean)
 #' Here, the impuls fit to the combined data models no differential expression
 #' between the conditions.
 #' @aliases ImpulseDE2
-#' @param matCountData (matrix genes x replicates) Count data of all conditions, 
+#' @param matCountData (matrix genes x replicates) [Default NULL] Count data of all conditions, 
 #' unobserved entries are NA. Column labels are replicate names, row labels
 #' gene names.
-#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates: 
+#' @param dfAnnotationFull (Table) [Default NULL] Lists co-variables of individual replicates: 
 #' Sample, Condition, Time. Time must be numeric.
-#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationFull}.
+#' @param strCaseName (str) [Default NULL] Name of the case condition in \code{dfAnnotationFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #' \code{dfAnnotationFull}.
 #' @param nProc (scalar) [Default 3] Number of processes for parallelisation. The
 #' specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
 #' using the \code{detectCores} function from the package \code{parallel} to avoid overload.
 #' @param Q_value (scalar) [Default 0.01] FDR-corrected p-value cutoff for significance.
-#' @return List containing the following elements:
+#' @return (list length 4) with the following elements:
 #' \itemize{
 #' \item \code{lsDEGenes} (list number of genes) Genes IDs identified
 #' as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
 #' \item \code{dfImpulseResults} (data frame) ImpulseDE2 results.
-#' \item \code{lsImpulseFits} 
+#' \item \code{lsImpulseFits} (list) List of matrices which
+#' contain parameter fits and model values for given time course for the
+#' case condition (and control and combined if control is present).
+#' Each parameter matrix is called parameter_'condition' and has the form
+#' (genes x \{"beta","h0","h1","h2","t1","t2","logL_H1","converge_H1","mu",
+#' "logL_H0","converge_H0"\}) where beta to t2 are parameters of the impulse
+#' model, mu is the single parameter of the mean model, logL are
+#' log likelihoods of full (H1) and reduced model (H0) respectively, converge
+#' is convergence status of numerical optimisation of model fitting by
+#' \code{optim} from \code{stats} of either model. Each value matrix is called
+#' value_'condition' and has the form (genes x time points) and contains the
+#' counts predicted by the impulse model at the observed time points.
 #' \item \code{dfDESeq2Results} (data frame) DESeq2 results.
 #' }
 #' Additionally, \code{ImpulseDE2} saves the following objects and tables into
 #' the working directory:
 #' \itemize{
-#' \item \code{ImpulseDE2_arr2DCountData.RData} (2D array genes x replicates) Reduced 
-#' version of \code{matCountData}. For internal use.
+#' \item \code{ImpulseDE2_arr2DCountData.RData} (2D array genes x replicates) 
+#' Count data: Reduced version of \code{matCountData}. For internal use.
 #' \item \code{ImpulseDE2_arr3DCountData.RData} (3D array genes x samples x replicates)
-#' \code{matCountData} reshaped into a 3D array. For internal use.
+#' Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
 #' \item \code{ImpulseDE2_dfAnnotationRed.RData} (data frame) Reduced version of 
-#' \code{annotation_table}. For internal use.
+#' \code{dfAnnotationFull}. For internal use.
 #' \item \code{ImpulseDE2_vecDESeq2Dispersions.RData} (vector number of genes) Inverse 
 #' of gene-wise negative binomial dispersion coefficients computed by DESeq2.
 #' \item \code{ImpulseDE2_dfDESeq2Results.RData} (data frame) DESeq2 results.
-#' \item \code{ImpulseDE2_lsImpulseFits.RData} (list) 
+#' \item \code{ImpulseDE2_lsImpulseFits.RData} (list) List of matrices which
+#' contain parameter fits and model values for given time course for the
+#' case condition (and control and combined if control is present).
+#' Each parameter matrix is called parameter_'condition' and has the form
+#' (genes x \{"beta","h0","h1","h2","t1","t2","logL_H1","converge_H1","mu",
+#' "logL_H0","converge_H0"\}) where beta to t2 are parameters of the impulse
+#' model, mu is the single parameter of the mean model, logL are
+#' log likelihoods of full (H1) and reduced model (H0) respectively, converge
+#' is convergence status of numerical optimisation of model fitting by
+#' \code{optim} from \code{stats} of either model. Each value matrix is called
+#' value_'condition' and has the form (genes x time points) and contains the
+#' counts predicted by the impulse model at the observed time points.
 #' \item \code{ImpulseDE2_dfImpulseResults.RData} (data frame) ImpulseDE2 results.
 #' \item \code{ImpulseDE2_lsDEGenes.RData} (list number of genes) Genes IDs identified
 #' as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
@@ -101,47 +123,65 @@ evalLogLikMean_comp <- cmpfun(evalLogLikMean)
 #' cluster created in \code{fitImpulse}.
 #' }
 #' @details \code{ImpulseDE2} is based on the impulse model proposed by
-#' Chechik and Koller, which reflects a two-step behavior of genes within a cell
-#' responding to environmental changes (Chechik and Koller, 2009). To detect
-#' differentially expressed genes, a five-step workflow is followed:
+#' Chechik and Koller (Chechik and Koller, 2009). The impulse model
+#' models the response of gene activity read outs (such as RNAseq counts)
+#' to environmental or developmental stimuli as the product
+#' of two simgoids. This model can capture simple time course
+#' patterns, such as plateus, increase and decrease. ImpulseDE2 uses
+#' the impulse model to identify differntial activity over time on any
+#' type of count data which follows the negative binomial distribution
+#' (as frequently encountered in sequencing data). ImpulseDE2 performs
+#' fitting of the impulse model and a mean model to data and evaluates
+#' the fit. The computational complexity of ImpulseDE2 is O(N), where
+#' N is the number of genes or regions observed.
 #' \enumerate{
-#' \item The genes are clustered into a limited number of groups using k-means
-#' clustering. If \code{plot_clusters} = \code{TRUE}, PDF documents are
-#' generated, which contain plots of each cluster. Additionally, a text-file is
-#' produced containing each gene together with its corresponding cluster number.
-#' \item The impulse model is fitted to the mean expression profiles of the
-#' clusters. The best parameter sets are then used for the next step.
-#' \item The impulse model is fitted to each gene separately using the parameter
-#' sets from step 2 as optimal start point guesses.
-#' \item The impulse model is fitted to a randomized dataset (bootstrap), which
-#' is essential to detect significantly differentially expressed genes
-#' (Storey et al., 2005).
-#' \item Detection of differentially expressed genes utilizing the fits to the
-#' real and randomized data sets. FDR-correction is performed to obtain adjusted
-#' p-values (Benjamini and Hochberg, 1995).
+#' \item Impulse fitting: The impulse model is fitted based on the assumption
+#' that the input count data follow a negative binomial distribution with
+#' overdispersion as identified by DESeq2. The impulse model does not have
+#' a closed form maximum likelihood parameter estimate and must therefore
+#' be inferred from numerical optimisation.
+#' \enumerate{
+#' \item Inititialisation: Initialisation is performed twice for each gene,
+#' based on a peak and a valley model. The parameters representing these 
+#' models reflect the form that these two models would have given the count
+#' data of each gene and are specific to each gene.
+#' \item Optimisation: The cost function for the fit is the log likelihood
+#' of the data which is evaluated based on negative binomial likelihoods
+#' at each observed time point, with the value of the impulse model as the
+#' mean and the gene overdisperion inferred using DESeq2 as the 
+#' overdispersion. Numerical optimisation is performed using the
+#' BFGS algorithm. In analogy to generlised linear models for count data,
+#' the fitting of the parameters representing limit behavious of the two
+#' sigmoids (which are counts) are fitted in log space so that they cannot
+#' adopt negative values.
+#' \item Fit selection: The fit with the higher log likelihood of the two
+#' initialisation is selected and kept as a maximum likelihood estimate.
 #' }
-#' @examples
-#' \dontrun{
-#' #' Install package longitudinal and load it
-#' library(longitudinal)
-#' #' Attach datasets
-#' data(tcell)
-#' #' check dimension of data matrix of interest
-#' dim(tcell.10)
-#' #' generate a proper annotation table
-#' annot <- as.data.frame(cbind("Time" =
-#'    sort(rep(get.time.repeats(tcell.10)$time,10)),
-#'    "Condition" = "activated"), stringsAsFactors = FALSE)
-#' #' Time columns must be numeric
-#' annot$Time <- as.numeric(annot$Time)
-#' #' rownames of annotation table must appear in data table
-#' rownames(annot) = rownames(tcell.10)
-#' #' apply ImpulseDE2 in single time course mode
-#' #' since genes must be in rows, transpose data matrix using t()
-#' #' For the example, reduce random iterations to 100 and number of
-#' #' used processors to 1
-#' impulse_results <- impulse_DE(t(tcell.10), annot, "Time", "Condition",
-#'    n_randoms = 50, nProc = 1)
+#' \item Mean fitting: The mean model is a single negative binomial and
+#' serves as the null model in the case of differential expression over
+#' time within a single condition. The mean model does not have a closed
+#' form maximum likelihood estimate and must be inferred from numerical 
+#' optimisation. This problem is comparatively easy and fast compared
+#' to impulse model fitting, as the optimisation problem is one
+#' dimensional and convex (DAVID yes?).
+#' \enumerate{
+#' \item Inititialisation: The mean is initialised to the overall mean
+#' of the gene.
+#' \item Optimisation: The cost function for the fit is the log likelihood
+#' of the data which is the negative binomial likelihood with the overall
+#' mean as the mean and the gene overdisperion inferred using DESeq2 as the 
+#' overdispersion. Numerical optimisation is performed using the
+#' BFGS algorithm. In analogy to generlised linear models for count data,
+#' the mean is fitted in log space so that it cannot adopt negative values.
+#' }
+#' \item Fit evaluation: The model comparison statistic is the deviance
+#' -2*(loglikelihood(H1)-loglikelihood(H0)). The deviance is chi-squared
+#' distributed with the difference in degrees of freedom of both models
+#' as degrees of freedom if the null model is contained in the alternative
+#' model, which is given in both modes of differential expression analysis
+#' with ImpulseDE (with and without control). Therefore p-values for 
+#' differential expression are computed based on the chi-squared distribution.
+#' The p-values are the FDR corrected (Benjamini and Hochberg, 1995).
 #' }
 #' @seealso \code{\link{processData}}, \code{\link{runDESeq2}},
 #' \code{\link{fitImpulse}}, \code{\link{evalLogLikImpulse}}, 
@@ -174,9 +214,22 @@ evalLogLikMean_comp <- cmpfun(evalLogLikMean)
 #   nProc: (scalar) [Default 3] Number of processes for parallelisation.
 #   Q_value: (scalar) [default 0.01] FDR-corrected p-value cutoff for significance.
 # OUTPUT
-#   lsImpulseFits: (list) List containing fitted values and model parameters
-#   lsDEGenes: names of genes being called as differentially expressed
-#   ...more output saved to working directory, see documentation
+#   lsDEGenes: (list number of genes) Genes IDs identified
+#       as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
+#   dfImpulseResults: (data frame) ImpulseDE2 results.
+#   lsImpulseFits: (list) List of matrices which
+#       contain parameter fits and model values for given time course for the
+#       case condition (and control and combined if control is present).
+#       Each parameter matrix is called parameter_'condition' and has the form
+#       (genes x \{"beta","h0","h1","h2","t1","t2","logL_H1","converge_H1","mu",
+#       "logL_H0","converge_H0"\}) where beta to t2 are parameters of the impulse
+#       model, mu is the single parameter of the mean model, logL are
+#       log likelihoods of full (H1) and reduced model (H0) respectively, converge
+#       is convergence status of numerical optimisation of model fitting by
+#       \code{optim} from \code{stats} of either model. Each value matrix is called
+#       value_'condition' and has the form (genes x time points) and contains the
+#       counts predicted by the impulse model at the observed time points.
+#   dfDESeq2Results: (data frame) DESeq2 results.
 
 runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
   strCaseName = NULL, strControlName=NULL, nProc=3, Q_value=0.01){
@@ -224,7 +277,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     ###  3. Fit Impule model to each gene 
     print("3. Fitting Impulse model to the genes")
     tm_fitImpulse <- system.time({
-      lsImpulseFits <- fitImpulse(arrCountData=arr3DCountData, 
+      lsImpulseFits <- fitImpulse(arr3DCountData=arr3DCountData, 
         vecDispersions=vecDESeq2Dispersions, dfAnnotation=dfAnnotationRed, 
         strCaseName=strCaseName, strControlName=strControlName, 
         nProcessesAssigned=nProc, NPARAM=NPARAM)
