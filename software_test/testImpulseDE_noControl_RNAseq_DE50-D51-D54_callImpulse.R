@@ -27,7 +27,7 @@ colnames(expression_table) <- colnames(expression_table_raw)[2:dim(expression_ta
 # expression_table_cut[,] <- rnbinom(dim(expression_table_cut)[1]*dim(expression_table_cut)[2],
 #  size=2,mu=100)
 
-setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
 source("ImpulseDE2_main.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 
