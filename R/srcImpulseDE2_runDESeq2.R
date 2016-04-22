@@ -2,21 +2,24 @@
 #++++++++++++++++++++++++++     Run DESeq2    +++++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-### Run DESeq2 and extract differential expression analysis results and 
-### overdispersion coefficients.
-
-# INPUT:
-#   dfAnnotationFull: (Table) Lists co-variables of individual replicates:
-#       Sample, Condition, Time. Time must be numeric.
-#   arr2DCountData: (2D array genes x replicates) Count data: Reduced 
-#       version of \code{matCountData}. For internal use.
-# OUTPUT:
-#   List of:
-#   dds_dispersions: (vector number of genes) Inverse of gene-wise 
-#       negative binomial dispersion coefficients computed by DESeq2.
-#   dds_resultsTable: (data frame) DESeq2 results.
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+#' Wrapper function for running DESeq2
+#' 
+#' Run DESeq2 and extract differential expression analysis results and 
+#' overdispersion coefficients.
+#' 
+#' @seealso Called by \code{runImpulseDE2}.
+#' 
+#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
+#'    Replicate, Sample, Condition, Time. Time must be numeric.
+#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
+#'    version of \code{matCountData}. For internal use.
+#' @return (list length 2) with the following elements:
+#' \itemize{
+#'  \item \code{dds_dispersions} (vector number of genes) Inverse of gene-wise 
+#'      negative binomial dispersion coefficients computed by DESeq2.
+#'  \item \code{dds_resultsTable} (data frame) DESeq2 results.
+#' }
+#' @export
 
 runDESeq2 <- function(dfAnnotationFull, arr2DCountData){
   

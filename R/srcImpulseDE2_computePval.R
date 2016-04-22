@@ -1,33 +1,45 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#+++++++++++++++++++++++++++     DE analysis   ++++++++++++++++++++++++++++++++#
+#+++++++++++++++++++++++++++    computePval   +++++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-### Compute p-value of differential expression and report summary of statistics.
-
-# INPUT:
-#   arr3DCountData: (Numeric 3D array genes x samples x replicates)
-#       Contains expression values or similar locus-specific read-outs.
-#   dfAnnotationRed: (Table samples x 2[time and condition]) 
-#       Co-variables for the samples including condition and time points.
-#       Time points vecMust be numeric.
-#   imp_fit_results: (list runs*2 ["impulse_parameters","impulse_fits"])
-#       impulse_parameters: (matrix genes x (NPARAM+1)*runs) +1 is value of 
-#         objective of optimisation (i.e. sum of squares or weighted SS)
-#       impulse_fits: (matrix genes x timepoints) model values for gene data
-#   control_name: (str) name of the control condition in annotation_table.
-# OUTPUT:
-#   dfDEAnalysis: (data frame genes x fitting characteristics) Summary of fitting
-#       procedure for each gene.
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
+#' Compute p-values for model fit
+#' 
+#' Compute p-value of differential expression based on chi-squared distribution
+#' of deviance of liklihoods and report summary of statistics.
+#' 
+#' @seealso Called by \code{runImpulseDE2}.
+#' 
 #' @param ImpulseDE2_arr3DCountData: (3D array genes x samples x replicates)
-#' Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
-#' @param dfAnnotationRed: (data frame) Reduced version of 
-#' \code{dfAnnotationFull}. For internal use.
+#'    Count data: \code{arr2DCountData} reshaped into a 3D array. 
+#'    For internal use.
+#' @param vecDispersions (vector number of genes) Inverse of gene-wise 
+#'    negative binomial dispersion coefficients computed by DESeq2.
+#' @param dfAnnotationRed (data frame) Reduced version of 
+#'    \code{dfAnnotationFull}. Lists co-variables of samples: 
+#'    Sample, Condition, Time. Time must be numeric. For internal use.
+#' @param lsImpulseFits (list length 2 or 6) List of matrices which
+#'    contain parameter fits and model values for given time course for the
+#'    case condition (and control and combined if control is present).
+#'    Each parameter matrix is called parameter_'condition' and has the form
+#'    (genes x \{"beta","h0","h1","h2","t1","t2","logL_H1","converge_H1","mu",
+#'    "logL_H0","converge_H0"\}) where beta to t2 are parameters of the impulse
+#'    model, mu is the single parameter of the mean model, logL are
+#'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
+#'    is convergence status of numerical optimisation of model fitting by
+#'    \code{optim} from \code{stats} of either model. Each value matrix is called
+#'    value_'condition' and has the form (genes x time points) and contains the
+#'    counts predicted by the impulse model at the observed time points.
+#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
+#' @param strControlName: (str) [Default NULL] Name of the control condition in 
+#'    \code{dfAnnotationRedFull}.
+#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
+#' 
+#' @return dfDEAnalysis (data frame genes x fitting characteristics) 
+#'    Summary of fitting procedure for each gene.
+#' @export
 
-computePval <- function(arr3DCountData,dfAnnotationRed,vecDispersions,
-  lsImpulseFits,
+computePval <- function(arr3DCountData,vecDispersions,
+  dfAnnotationRed, lsImpulseFits,
   strCaseName=NULL, strControlName=NULL, NPARAM=6){
   
   if(is.null(strControlName)){

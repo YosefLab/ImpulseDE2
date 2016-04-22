@@ -2,45 +2,39 @@
 #++++++++++++++++++++++     Annotation preparation    +++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-### Check validity of input and process count data matrix and annotation
-### into data structures used later in \code{runImpulseDE2}.
-
-### Structure:
-### (I) Helper functions:
-###   checkData()
-###   nameGenes()
-###   reduceCountData()
-###   reshapeCountData()
-### (II) Script body
-
-# INPUT:
-#   dfAnnotationFull: (Table) [Default NULL] Lists co-variables of individual replicates:
-#       Sample, Condition, Time. Time must be numeric.
-#   matCountData: (matrix genes x replicates) [Default NULL] Count data of all conditions, 
-#       unobserved entries are NA. Column labels are replicate names, row labels
-#       gene names.
-#   strCaseName: (str) [Default NULL] Name of the case condition in dfAnnotationFull.
-#   strControlName: (str) [Default NULL] Name of the control condition in dfAnnotationFull.
-# OUTPUT:
-#   List of:
-#   arr2DCountData: (2D array genes x replicates) Count data: Reduced 
-#       version of \code{matCountData}. For internal use.
-#   arr3DCountData: (3D array genes x samples x replicates) Count data: 
-#       \code{arr2DCountData} reshaped into a 3D array. For internal use.
-#   dfAnnotationRed:(data frame) Reduced version of 
-#       \code{dfAnnotationFull}. For internal use.
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
+#' Process annotation and count data
+#' 
+#' Check validity of input and process count data matrix and annotation
+#' into data structures used later in \code{runImpulseDE2}.
+#' \code{processData} is structure in the following way:
+#' (I) Helper functions:
+#'   checkData()
+#'   nameGenes()
+#'   reduceCountData()
+#'   reshapeCountData()
+#' (II) Script body
+#' 
+#' @seealso Called by \code{runImpulseDE2}.
+#' 
 #' @param matCountData (matrix genes x replicates) [Default NULL] Count data of all conditions, 
-#' unobserved entries are NA. Column labels are replicate names, row labels
-#' gene names.
-#' @param dfAnnotationFull (Table) [Default NULL] Lists co-variables of individual replicates: 
-#' Sample, Condition, Time. Time must be numeric.
+#'    unobserved entries are NA. Column labels are replicate names, row labels
+#'    gene names.
+#' @param dfAnnotationFull (Table) [Default NULL] Lists co-variables of replicates: 
+#'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param strCaseName (str) [Default NULL] Name of the case condition in \code{dfAnnotationFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
-#' \code{dfAnnotationFull}.
-#' @return NULL
+#'    \code{dfAnnotationFull}.
+#' @return (list length 3) with the following elements:
+#' \itemize{
+#'    \item \code{arr2DCountData} (2D array genes x replicates) Count data: Reduced 
+#'        version of \code{matCountData}. For internal use.
+#'    \item \code{arr3DCountData} (3D array genes x samples x replicates) Count data: 
+#'        \code{arr2DCountData} reshaped into a 3D array. For internal use.
+#'    \item \code{dfAnnotationRed} (data frame) Reduced version of 
+#'        \code{dfAnnotationFull}. Lists co-variables of samples: 
+#'        Sample, Condition, Time. Time must be numeric. For internal use.
+#' }
+#' @export
 
 processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   strCaseName=NULL, strControlName=NULL){

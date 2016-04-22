@@ -2,31 +2,47 @@
 #++++++++++++++++++++++     Plot impulse fits    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-# Plots the impulse fits to timecourse data and also the control data if present
-
-# INPUT:
-#   lsGeneIDs: (character vector) of gene names to be plotted; must be part
-#       of the rownames of arr3DCountData.
-#   arr3DCountData: (Numeric 3D array genes x samples x replicates)
-#       Contains expression values or similar locus-specific read-outs.
-#   dfAnnotationRed: (Table samples x 2[time and condition]) 
-#       Co-variables for the samples including condition and time points.
-#       Time points must be numeric.
-#   lsImpulseFits: (list runs*2 ["parameters","impulse_fits"])
-#       parameters: (matrix genes x (NPARAM+1)*runs) +1 is value of 
-#         objective of optimisation (i.e. sum of squares or weighted SS)
-#       impulse_fits: (matrix genes x timepoints) model values for gene data
-#   strControlName: (str) Name of the control condition in annotation_table.
-#   strCaseName (str) Name of the control condition in annotation_table.
-#   strFileNameSuffix: (character string) File extention.
-#   title_string: (character string) Title for each plot.
-#   strPlotSubtitle: (character string) Subtitle for each plot.
-# OUTPUT:
-#   -
+#' Plots the impulse fits and data to pdf.
+#' 
+#' @seealso Called by \code{runImpulseDE2}.
+#' 
+#' @param lsGeneIDs (character vector) of gene names to be plotted; must be
+#     trownames of arr3DCountData.
+#' @param arr3DCountData (3D array genes x samples x replicates)
+#'    Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
+#' @param dfAnnotationRed (data frame) Reduced version of 
+#'    \code{dfAnnotationFull}. Lists co-variables of samples: 
+#'    Sample, Condition, Time. Time must be numeric. For internal use.
+#' @param lsImpulseFits (list length 2 or 6) List of matrices which
+#'    contain parameter fits and model values for given time course for the
+#'    case condition (and control and combined if control is present).
+#'    Each parameter matrix is called parameter_'condition' and has the form
+#'    (genes x \{"beta","h0","h1","h2","t1","t2","logL_H1","converge_H1","mu",
+#'    "logL_H0","converge_H0"\}) where beta to t2 are parameters of the impulse
+#'    model, mu is the single parameter of the mean model, logL are
+#'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
+#'    is convergence status of numerical optimisation of model fitting by
+#'    \code{optim} from \code{stats} of either model. Each value matrix is called
+#'    value_'condition' and has the form (genes x time points) and contains the
+#'    counts predicted by the impulse model at the observed time points.
+#' @param dfDEAnalysis (data frame genes x fitting characteristics) 
+#'    Summary of fitting procedure for each gene.
+#' @param dfDESeq2Results (data frame) DESeq2 results.
+#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
+#' @param strControlName: (str) [Default NULL] Name of the control condition in 
+#'    \code{dfAnnotationRedFull}.
+#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
+#' @param strFileNameSuffix (character string) [Default ""] File extention.
+#' @param title_string (character string) [Default ""] Title for each plot.
+#' @param strPlotSubtitle (character string) [Default ""] Subtitle for each plot.
+#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
+#' 
+#' @return NULL
+#' @export
 
 plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
-  lsImpulseFits, dfImpulseResults = NULL, dfDESeq2Results=NULL, 
-  strCaseName=NULL, strControlName=NULL,
+  lsImpulseFits, dfImpulseResults, dfDESeq2Results, 
+  strCaseName, strControlName=NULL,
   strFileNameSuffix = "", strPlotTitleSuffix = "", strPlotSubtitle = "",
   NPARAM=6){
 

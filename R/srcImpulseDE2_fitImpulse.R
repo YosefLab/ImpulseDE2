@@ -2,93 +2,83 @@
 #++++++++++++++++++++++     Impulse model fit    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-### Fits impulse model to a timecourse dataset with either one condition
-### or case and control condition.
-### Function is split into 3 parts:
-###   1. [Subfunction fitImpulse_gene] Fit impulse model to a single gene
-###   2. [Subfunction fitImpulse_matrix] Fit impulse model to matrix of genes.
-###       Calls fitImpulse_gene, calcImpulse_comp
-###   3. ["Script-body"] Prepare data and fit model by calling impulse_fit_matrix.
-
-# INPUT:
-#   arr3DCountData: (3D array genes x samples x replicates) Count data: 
-#       \code{matCountData} reshaped into a 3D array. For internal use.
-#   dfAnnotationRed:(data frame) Reduced version of 
-#       \code{dfAnnotationFull}. For internal use.
-#   strCaseName: (str) Name of the case condition in dfAnnotationFull.
-#   strControlName: (str) Name of the control condition in dfAnnotationFull.
-#   nProcessesAssigned: (scalar) [Default 3] Number of processes for 
-#       parallelisation.
-#   NPARAM: (scalar) [Default 6] Number of parameters of impulse model.
-# OUTPUT:
-#   lsFitResults_all: (list) List of matrices which
-#       contain parameter fits and model values for given time course for the
-#       case condition (and control and combined if control is present).
-#       Each parameter matrix is called parameter_'condition' and has the form
-#       (genes x \{"beta","h0","h1","h2","t1","t2","logL_H1","converge_H1","mu",
-#       "logL_H0","converge_H0"\}) where beta to t2 are parameters of the impulse
-#       model, mu is the single parameter of the mean model, logL are
-#       log likelihoods of full (H1) and reduced model (H0) respectively, converge
-#       is convergence status of numerical optimisation of model fitting by
-#       \code{optim} from \code{stats} of either model. Each value matrix is called
-#       value_'condition' and has the form (genes x time points) and contains the
-#       counts predicted by the impulse model at the observed time points.
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
-#' @param ImpulseDE2_arr3DCountData: (3D array genes x samples x replicates)
-#' Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
-#' @param dfAnnotationRed: (data frame) Reduced version of 
-#' \code{dfAnnotationFull}. For internal use.
-#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationFull}.
+#' Fits impulse model to a timecourse dataset
+#' 
+#' Function is split into 3 parts:
+#'  1. [Subfunction \code{fitImpulse_gene}] Fit impulse model to a single gene.
+#'      Calls cost functions (\code{evalLogLikImpulse} and \code{evalLogLikMean})
+#'      and \code{calcImpulse_comp}.
+#'  2. [Subfunction \code{fitImpulse_matrix}] Fit impulse model to matrix of genes.
+#'      Calls \code{fitImpulse_gene}.
+#'  3. ["Script-body"] Prepare data and fit model. Calls \code{impulse_fit_matrix}.
+#'  
+#' @seealso Called by \code{runImpulseDE2}. Calls \code{fitImpulse_matrix}.
+#'  
+#' @param ImpulseDE2_arr3DCountData (3D array genes x samples x replicates)
+#'    Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
+#' @param vecDispersions (vector number of genes) Inverse of gene-wise 
+#'    negative binomial dispersion coefficients computed by DESeq2.
+#' @param dfAnnotationRedRed (data frame) Reduced version of 
+#'    \code{dfAnnotationRedFull}. Lists co-variables of samples: 
+#'    Sample, Condition, Time. Time must be numeric. For internal use.
+#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
-#' \code{dfAnnotationFull}.
-#' @param nProc (scalar) [Default 3] Number of processes for parallelisation. The
-#' specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
-#' using the \code{detectCores} function from the package \code{parallel} to 
-#' avoid overload.
+#'    \code{dfAnnotationRedFull}.
+#' @param nProcessesAssigned (scalar) [Default 3] Number of processes for parallelisation. The
+#'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
+#'    using the \code{detectCores} function from the package \code{parallel} to 
+#'    avoid overload.
 #' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
-#' @return lsFitResults_all (list) List of matrices which
-#' contain parameter fits and model values for given time course for the
-#' case condition (and control and combined if control is present).
-#' Each parameter matrix is called parameter_'condition' and has the form
-#' (genes x \{"beta","h0","h1","h2","t1","t2","logL_H1","converge_H1","mu",
-#' "logL_H0","converge_H0"\}) where beta to t2 are parameters of the impulse
-#' model, mu is the single parameter of the mean model, logL are
-#' log likelihoods of full (H1) and reduced model (H0) respectively, converge
-#' is convergence status of numerical optimisation of model fitting by
-#' \code{optim} from \code{stats} of either model. Each value matrix is called
-#' value_'condition' and has the form (genes x time points) and contains the
-#' counts predicted by the impulse model at the observed time points.
+#' 
+#' @return lsFitResults_all (list length 2 or 6) List of matrices which
+#'    contain parameter fits and model values for given time course for the
+#'    case condition (and control and combined if control is present).
+#'    Each parameter matrix is called parameter_'condition' and has the form
+#'    (genes x \{"beta","h0","h1","h2","t1","t2","logL_H1","converge_H1","mu",
+#'    "logL_H0","converge_H0"\}) where beta to t2 are parameters of the impulse
+#'    model, mu is the single parameter of the mean model, logL are
+#'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
+#'    is convergence status of numerical optimisation of model fitting by
+#'    \code{optim} from \code{stats} of either model. Each value matrix is called
+#'    value_'condition' and has the form (genes x time points) and contains the
+#'    counts predicted by the impulse model at the observed time points.
+#' @export
 
-fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotation,
+fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotationRed,
   strCaseName=NULL, strControlName=NULL, nProcessesAssigned=3, NPARAM=6){
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   #~~~~~~~~~~~~~~~~~~~~~~ 1. Fit impulse model to gene ~~~~~~~~~~~~~~~~~~~~~~~~#
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
-  ### Fits an impulse model to a single gene. Fitted are 1. peak, 2. valley,
-  ### 3. up, 4. down and 5. mean model, the best fit is kept.
+  #' Fits an impulse model to a single gene.
+  #' 
+  #' The optimisation method is set within this function (\code{optim}:
+  #' BFGS).
+  #' 
+  #' @seealso Called by \code{fitImpulse_matrix}. Calls \code{evalLogLikImpulse},
+  #'    \code{evalLogLikMean} and \code{calcImpulse_comp}.
+  #' 
+  #' @param matCounts (numeric 2D array vecTimepoints x replicates)
+  #' @param vecTimepoints (vector number timepoints) Observed timepoints, numeric.
+  #' @param scaDispersionEstimate (scalar) Inverse of negative binomial 
+  #'    dispersion coefficients computed by DESeq2 for given gene
+  #' @param NPARAM (scalar) [Default 6] Number of impulse model parameters
+  #' @param MAXIT (scalar) [Default 100] Number of iterations, which are performed 
+  #'    to fit the impulse model to the clusters.
+  #' 
+  #' @return lsBestFitSummary (list \{"beta","h0","h1","h2","t1","t2","logL_H1","converge_H1","mu",
+  #'    "logL_H0","converge_H0"\}) Beta to t2 are parameters of the impulse
+  #'    model, mu is the single parameter of the mean model, logL are
+  #'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
+  #'    is convergence status of numerical optimisation of model fitting by
+  #'    \code{optim} from \code{stats} of either model. Each value matrix is called
+  #'    value_'condition' and has the form (genes x time points) and contains the
+  #'    counts predicted by the impulse model at the observed time points.)
+  #' @export
   
-  # INPUT:
-  #   matCounts: (numeric 2D array vecTimepoints x replicates) 
-  #   dfAnnotation: (Table samples x 2[time and condition]) 
-  #       Co-variables for the samples including condition and time points.
-  #       Time points must be numeric.
-  #   NPARAM: (scalar) Number of model parameters
-  #   n_iter: (scalar) [Default 100] Number of iterations, which are performed 
-  #       to fit the impulse model to the clusters.
-  #   nProcessesAssigned: (scalar) [Default 4] number of processes, which can be used on 
-  #       the machine to run the background calculation in parallel
-  # OUTPUT:
-  #   pvec_and_objective: (vector NPARAM+1) +1 is value of objective of optimisation 
-  #       (i.e. sum of squares or weighted SS)
-  
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-  
-  fitImpulse_gene <- function(matCounts, vecTimepoints, 
-    NPARAM=6, MAXIT=1000, scaDispersionEstimate=NULL){
+  fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints, 
+    NPARAM=6, MAXIT=1000){
     
     optim_method <- "optim"
     #optim_method <- "nlminb"
@@ -210,31 +200,51 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotation,
   #~~~~~~~~~~~~~~~~~~~~~ 2. Fit impulse model to matrix ~~~~~~~~~~~~~~~~~~~~~~~#
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
   
-  ### Fits an impulse model to all genes of a dataset
+  #' Fits an impulse model to all genes of a dataset. Performs parallelisation.
+  #' 
+  #' @details Maximum number of iterations for optimisation is set within this 
+  #'    function as \code{MAXIT}. In the case of single condition differential 
+  #'    expression over time, this function is called once for the case condition.
+  #'    In the case of case and control condition, this function is called three 
+  #'    times: data from case, control and combined conditions.
+  #'    Calls \code{fitImpulse_gene}.
+  #' 
+  #' @seealso Called by \code{fitImpulse}. Calls \code{fitImpulse_gene}.
+  #'   
+  #' @param ImpulseDE2_arr3DCountData (3D array genes x samples x replicates)
+  #'    Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
+  #' @param vecDispersions (vector number of genes) Inverse of gene-wise 
+  #'    negative binomial dispersion coefficients computed by DESeq2.
+  #' @param dfAnnotationRedRed (data frame) Reduced version of 
+  #'    \code{dfAnnotationRedFull}. Lists co-variables of samples: 
+  #'    Sample, Condition, Time. Time must be numeric. For internal use.
+  #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
+  #' @param strControlName: (str) [Default NULL] Name of the control condition in 
+  #'    \code{dfAnnotationRedFull}.
+  #' @param nProcessesAssigned (scalar) [Default 3] Number of processes for parallelisation. The
+  #'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
+  #'    using the \code{detectCores} function from the package \code{parallel} to 
+  #'    avoid overload.
+  #' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
+  #' 
+  #' @return lsFitResults_matrix (list length 2) List of two matrices which
+  #'    contain parameter fits and model values for given time course for the
+  #'    given condition.
+  #' \itemize{
+  #'    \item \code{parameter}(genes x \{"beta","h0","h1","h2","t1","t2",
+  #'        "logL_H1","converge_H1","mu","logL_H0","converge_H0"\}) 
+  #'        Beta to t2 are parameters of the impulse model, mu is the single 
+  #'        parameter of the mean model, logL are log likelihoods of full 
+  #'        (H1) and reduced model (H0) respectively, converge is convergence 
+  #'        status of numerical optimisation of model fitting by
+  #'        \code{optim} from \code{stats} of either model.
+  #'    \item \code{values} (genes x time points) Contains the counts 
+  #'        predicted by the impulse model at the observed time points.
+  #' }
+  #' @export
   
-  # INPUT:
-  #   arr3DCountDataCondition: (Numeric 3D array genes x samples x replicates).
-  #       Contains expression values or similar locus-specific read-outs.
-  #   vecTimepoints: (Table samples x 2 [time and condition]) 
-  #       Co-variables for the samples including condition and time points.
-  #       Time points must be numeric.
-  #   NPARAM: 
-  #   n_it: (scalar) [Defaul 100] Number of iterations, which are performed 
-  #       to fit the impulse model to the clusters.
-  #   strControlName
-  #   nProcessesAssigned: (scalar) [Default 4] number of processes, which can be used on 
-  #       the machine to run the background calculation in parallel
-  #   ...
-  # OUTPUT:
-  #   res: (list 2 ["impulse_parameters","impulse_fits"])
-  #       impulse_parameters: (matrix genes x (NPARAM+1)*runs) +1 is value of 
-  #           objective of optimisation (i.e. sum of squares or weighted SS)
-  #       impulse_fits: (matrix genes x vecTimepoints) model values for gene data
-  
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-  
-  fitImpulse_matrix <- function(arr3DCountDataCondition, vecTimepoints, vecDispersions=NULL,
-    strCaseName=NULL, strControlName=NULL, nProcessesAssigned=3, NPARAM=6){
+  fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepoints,
+    strCaseName, strControlName=NULL, nProcessesAssigned=3, NPARAM=6){
     
     # Maximum number of iterations for numerical optimisation of
     # likelihood function in MLE fitting of Impulse model:
@@ -330,6 +340,7 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotation,
     # "converge_H1","mu","logL_H0","converge_H0"] (x3 if with control)
     lsFitResults_matrix[[2]] <- matImpulseValues
     # Values of impulse model on input timepoints by gene
+    names(lsFitResults_matrix) <- c("parameters","values")
     return(lsFitResults_matrix)
   }
   
@@ -357,8 +368,8 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotation,
     # (I) Combined: Count data of both case and control
     # Bind case and control as replicates in 3rd dimension of array
     # Find samples corresponding in time first:
-    lsTimepointsCase <- as.vector( dfAnnotation[dfAnnotation$Condition %in% strCaseName,"Time"] )
-    lsTimepointsCtrl <- as.vector( dfAnnotation[dfAnnotation$Condition %in% strControlName,"Time"] )
+    lsTimepointsCase <- as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,"Time"] )
+    lsTimepointsCtrl <- as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,"Time"] )
     lsTimepointsAll <- unique(c(lsTimepointsCase,lsTimepointsCtrl))
     # Pad with NA sample if one time point not present in one of the two conditions
     # Define new array dimensions
@@ -368,14 +379,14 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotation,
     # Leave non-sampled positions in new array (i.e. entire time points of
     # either case or control) as NA.
     arr3DCountDataAll <- array(NA,c(nGenes,nTimepoints,nRep*2))
-    arr3DCountDataAll[,lsTimepointsCase %in% lsTimepointsAll,1:nRep] <- arr3DCountData[,(dfAnnotation$Condition %in% strCaseName),]
-    arr3DCountDataAll[,lsTimepointsCtrl %in% lsTimepointsAll,(nRep+1):(nRep*2)] <- arr3DCountData[,(dfAnnotation$Condition %in% strControlName),]
+    arr3DCountDataAll[,lsTimepointsCase %in% lsTimepointsAll,1:nRep] <- arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]
+    arr3DCountDataAll[,lsTimepointsCtrl %in% lsTimepointsAll,(nRep+1):(nRep*2)] <- arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),]
     
     # (II) Case: Count data of case
-    arr3DCountDataCase = arr3DCountData[,(dfAnnotation$Condition %in% strCaseName),]
+    arr3DCountDataCase = arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]
     
     # (III) Control: Count data of control
-    arr3DCountDataCtrl = arr3DCountData[,(dfAnnotation$Condition %in% strControlName),]
+    arr3DCountDataCtrl = arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),]
     
     # Formatting into 3D breaks if single gene is selected:
     # DAVID rework this, doesn work?
@@ -393,14 +404,14 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotation,
       rownames(arr3DCountDataAll) <- rownames(arr3DCountData)
       colnames(arr3DCountDataAll) <- colnames(arr3DCountData[,,])
       rownames(arr3DCountDataCase) <- rownames(arr3DCountData)
-      colnames(arr3DCountDataCase) <- colnames(arr3DCountData[,(dfAnnotation$Condition %in% strCaseName),])
+      colnames(arr3DCountDataCase) <- colnames(arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),])
       rownames(arr3DCountDataCtrl) <- rownames(arr3DCountData)
-      colnames(arr3DCountDataCtrl) <- colnames(arr3DCountData[,(dfAnnotation$Condition %in% strControlName),])
+      colnames(arr3DCountDataCtrl) <- colnames(arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),])
     }
     lsarr3DCountData <- list(arr3DCountDataAll, arr3DCountDataCase, arr3DCountDataCtrl)
     
   } else {
-    arr3DCountDataAll = arr3DCountData[,(dfAnnotation$Condition %in% strCaseName),]
+    arr3DCountDataAll = arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]
     # Formatting into 3D breaks if only single gene is selected:
     # If exactly one gene is tested:
     if(dim(arr3DCountDataAll)[1]==1){ 
@@ -410,7 +421,7 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotation,
       }
       arr3DCountDataAll <- arr3DCountDataAll_temp
       rownames(arr3DCountDataAll) <- rownames(arr3DCountData)
-      colnames(arr3DCountDataAll) <- colnames(arr3DCountData[,(dfAnnotation$Condition %in% strCaseName),])
+      colnames(arr3DCountDataAll) <- colnames(arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),])
     }
     lsarr3DCountData <- list(arr3DCountDataAll)
   }
@@ -419,7 +430,7 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotation,
   for (iRuns in 1:nRuns){
     lsFitResults_run <- fitImpulse_matrix(arr3DCountDataCondition=lsarr3DCountData[[iRuns]],
       vecTimepoints=as.numeric(as.character(
-        dfAnnotation[dfAnnotation$Sample %in% colnames(lsarr3DCountData[[iRuns]]),"Time"])),
+        dfAnnotationRed[dfAnnotationRed$Sample %in% colnames(lsarr3DCountData[[iRuns]]),"Time"])),
       vecDispersions=vecDispersions,
       strCaseName=strCaseName, strControlName=strControlName,
       nProcessesAssigned = nProcessesAssigned, NPARAM=NPARAM)
