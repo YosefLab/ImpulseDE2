@@ -1,23 +1,33 @@
 print("Run after completion of DESeq")
 
+########################################
+# Load data
+
 # Load files from interior of ImpulseDE
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-load("ImpulseDE_expression_array.RData")
-load("ImpulseDE_prepared_annotation.RData")
+load("ImpulseDE_arr3DCountData.RData")
+load("ImpulseDE_dfAnnotationRed.RData")
+# Load Impulse output
+load("ImpulseDE_dfImpulseResults.RData")
+load("ImpulseDE_lsDEGenes.RData")
+load("ImpulseDE_lsImpulseFits.RData")
+load("ImpulseDE_dfDESeq2Results.RData")
 
 # Compare against DESeq
 # Make summary table to compare against plots
 dfDESeq_Impulse <- as.data.frame( cbind(
-  "Gene"=as.character(as.vector( ImpulseDE_results$Gene )),
-  "DESeq"=(dds_resultsTable[as.character(as.vector( ImpulseDE_results$Gene )),])$padj,
-  "Impulse"=(ImpulseDE_results[as.character(as.vector( ImpulseDE_results$Gene )),])$adj.p),
+  "Gene"=as.character(as.vector( dfImpulseResults$Gene )),
+  "DESeq"=(dfDESeq2Results[as.character(as.vector( dfImpulseResults$Gene )),])$padj,
+  "Impulse"=(dfImpulseResults[as.character(as.vector( dfImpulseResults$Gene )),])$adj.p),
   stringsAsFactors=FALSE)
-rownames(dfDESeq_Impulse) <- as.character(as.vector( ImpulseDE_results$Gene ))
+rownames(dfDESeq_Impulse) <- as.character(as.vector( dfImpulseResults$Gene ))
 dfDESeq_Impulse$DESeq <- as.numeric(dfDESeq_Impulse$DESeq)
 # Set NA as not detected:
 dfDESeq_Impulse$DESeq[is.na(dfDESeq_Impulse$DESeq)] <- 1
 dfDESeq_Impulse$Impulse <- as.numeric(dfDESeq_Impulse$Impulse)
 
+########################################
+# 1. Heatmap: Q-value thresholds
 mat_overlap <- array(NA,c(10,10))
 mat_intersect <- array(NA,c(10,10))
 mat_union <- array(NA,c(10,10))
@@ -45,12 +55,12 @@ heatmap(mat_overlap, keep.dendro = FALSE,Rowv=NA,Colv= "Rowv",symm=FALSE,
 breaks <- seq(0,1,by=0.01)
 hm.colors <- colorpanel( length(breaks)-1, "yellow", "red" )
 graphics.off()
-pdf(paste('DESeq-Impulse_OverlapSigGenes_Heatmap.pdf',sep=''),width=7,height=7)
+pdf(paste('DESeq-Impulse_JaccardCoeff-SignificantGenes_Heatmap.pdf',sep=''),width=7,height=7)
 heatmap.2(mat_overlap, dendrogram="none", Rowv=FALSE,Colv=FALSE, 
   xlab =  paste0("log(p-value) ImpulseDE"), ylab = "log(p-value) DESeq2",
   breaks=breaks,col=hm.colors, scale="none",
   trace="none",density.info="none",
-  key.title = " ", key.xlab = paste0("Overlap"), key.ylab = NULL,
+  key.title = " ", key.xlab = paste0("Jaccard coefficient"), key.ylab = NULL,
   symkey=FALSE,
   cellnote=round(mat_overlap,digits=2),notecol="white",
   lmat=rbind( c(3,4),c(2,1) ),lhei=c(1,4), lwid=c(1,4), margins=c(5,5))
@@ -60,20 +70,45 @@ print(mat_intersect)
 print("Union")
 print(mat_union)
 
+########################################
+# 2. Impulse fits, differentially called DE genes
+
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building")
+# Plot the impulse fits and input data
+source("srcImpulseDE_plotDEGenes.R")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+
 Q = 10^(-3)
+NPARAM=6
 DEgenes_both <- dfDESeq_Impulse[(dfDESeq_Impulse[,"DESeq"] < Q & dfDESeq_Impulse[,"Impulse"] < Q),"Gene"]
 DEgenes_DESeq_only <- dfDESeq_Impulse[(dfDESeq_Impulse[,"DESeq"] < Q & dfDESeq_Impulse[,"Impulse"] >= Q),"Gene"]
 DEgenes_Impulse_only <- dfDESeq_Impulse[(dfDESeq_Impulse[,"DESeq"] >= Q & dfDESeq_Impulse[,"Impulse"] < Q),"Gene"]
 graphics.off()
-plot_impulse(DEgenes_both,
-  expression_array, prepared_annotation, impulse_fit_genes,
-  control_timecourse, control_name, case_ind, file_name_part = "DE_DESeqAndImpulse",
-  title_line = "", sub_line = "",ImpulseDE_res=ImpulseDE_results,DESeq2_res=dds_resultsTable)
-plot_impulse(DEgenes_DESeq_only,
-  expression_array, prepared_annotation, impulse_fit_genes,
-  control_timecourse, control_name, case_ind, file_name_part = "DE_DESeq_only",
-  title_line = "", sub_line = "",ImpulseDE_res=ImpulseDE_results,DESeq2_res=dds_resultsTable)
-plot_impulse(DEgenes_Impulse_only,
-  expression_array, prepared_annotation, impulse_fit_genes,
-  control_timecourse, control_name, case_ind, file_name_part = "DE_Impulse_only",
-  title_line = "", sub_line = "",ImpulseDE_res=ImpulseDE_results,DESeq2_res=dds_resultsTable)
+print(paste0("Number of significant DE genes at q-value of ",Q))
+print(paste0("ImpulseDE only ",length(DEgenes_Impulse_only)))
+print(paste0("DESeq2 only ",length(DEgenes_DESeq_only)))
+print(paste0("Both ",length(DEgenes_both)))
+
+plotDEGenes(lsGeneIDs=DEgenes_both,
+  arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
+  lsImpulseFits=lsImpulseFits,
+  strCaseName="case", strControlName=NULL, 
+  strFileNameSuffix="DE_DESeqAndImpulse", strPlotTitleSuffix="", strPlotSubtitle="",
+  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
+  NPARAM=NPARAM)
+
+plotDEGenes(lsGeneIDs=DEgenes_DESeq_only,
+  arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
+  lsImpulseFits=lsImpulseFits,
+  strCaseName="case", strControlName=NULL, 
+  strFileNameSuffix="DE_DESeq_only", strPlotTitleSuffix="", strPlotSubtitle="",
+  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
+  NPARAM=NPARAM)
+
+plotDEGenes(lsGeneIDs=DEgenes_Impulse_only,
+  arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
+  lsImpulseFits=lsImpulseFits,
+  strCaseName="case", strControlName=NULL, 
+  strFileNameSuffix="DE_Impulse_only", strPlotTitleSuffix="", strPlotSubtitle="",
+  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
+  NPARAM=NPARAM)

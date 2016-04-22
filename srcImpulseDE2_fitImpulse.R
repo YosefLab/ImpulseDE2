@@ -243,7 +243,7 @@ fitImpulse <- function(arrCountData, vecDispersions=NULL, dfAnnotation,
         lsGeneIndexByCore[[nProcesses]] <-  c(lsGeneIndexByCore[[nProcesses]],(nProcesses*bord+1):nrow(arrCountDataCondition))
       }
       
-      cl <- makeCluster(nProcesses, outfile = "clus_out_impulse_fit.txt")
+      cl <- makeCluster(nProcesses, outfile = "ImpulseDE2_ClusterOut.txt")
       #DAVID take fitImpulse out?
       my.env <- new.env()
       assign("arrCountDataCondition", arrCountDataCondition, envir = my.env)

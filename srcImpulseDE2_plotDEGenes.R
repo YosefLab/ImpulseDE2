@@ -53,7 +53,7 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
   arrTimepoints_All <- t(matrix(rep(lsTimepoints_All,dim(arr3DCountData)[3]),length(lsTimepoints_All),dim(arr3DCountData)[3]))
   
   # Open .pdf
-  pdf(paste("ImpulseDE_",strFileNameSuffix,"_genes.pdf",sep=""),height=6.0,width=9.0)
+  pdf(paste("ImpulseDE_",strFileNameSuffix,".pdf",sep=""),height=6.0,width=9.0)
   
   # Define grid for printing plots
   if (length(lsGeneIDs) == 1){

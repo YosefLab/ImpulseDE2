@@ -28,7 +28,7 @@ colnames(expression_table) <- colnames(expression_table_raw)[2:dim(expression_ta
 #  size=2,mu=100)
 
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building")
-source("ImpulseDE_main.R")
+source("ImpulseDE2_main.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 
 
@@ -37,10 +37,10 @@ control_name = NULL
 case_name = "case"
 n_process = 3
 Q_value = 10^(-2)
-lsImpulseDE_results <- runImpulseDE(matCountData=expression_table, dfAnnotationFull=annotation_table,
+lsImpulseDE_results <- runImpulseDE2(matCountData=expression_table, dfAnnotationFull=annotation_table,
   strCaseName = case_name, strControlName=NULL, nProc=n_process, Q_value=Q_value)
 
-impulse_DE_genes <- lsImpulseDE_results$ImpulseDE_DE_genes
-ImpulseDE_results <- lsImpulseDE_results$ImpulseDE_results
-impulse_fit_genes <- lsImpulseDE_results$ImpulseDE_impulse_fit_results
-dds_resultsTable <- lsImpulseDE_results$DESeq2_results
+lsDEGenes <- lsImpulseDE_results$lsDEGenes
+dfImpulseResults <- lsImpulseDE_results$dfImpulseResults
+lsImpulseFits <- lsImpulseDE_results$lsImpulseFits
+dfDESeq2Results <- lsImpulseDE_results$dfDESeq2Results
