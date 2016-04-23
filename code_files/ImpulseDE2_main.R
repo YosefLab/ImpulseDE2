@@ -19,6 +19,7 @@ library(parallel)
 library(DESeq2)
 
 # Source functions in .R files from same directory as this function.
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
 #Prepares the data and annotation for internal use
 source("srcImpulseDE2_processData.R")
 # Wrapper fur running DESeq2

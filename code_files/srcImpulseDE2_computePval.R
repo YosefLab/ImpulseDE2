@@ -64,7 +64,7 @@ computePval <- function(arr3DCountData,vecDispersions,
     # The reduced model is the combined data fit.
     vecLogLikRed <- lsImpulseFits$parameters_combined[,"logL_H1"]
     # Mean inferred expression: On combined data
-    vecMu <- lsImpulseFits$parameters_combined[,"vecMu"]
+    vecMu <- lsImpulseFits$parameters_combined[,"mu"]
     # Parameters of both models (case and control) and 1 dispersion estimate
     scaDegFreedomFull <- NPARAM*2 + 1
     # Parameters of one model (combined) and 1 dispersion estimate
@@ -86,11 +86,11 @@ computePval <- function(arr3DCountData,vecDispersions,
       "Gene" = row.names(arr3DCountData),
       "p"=as.numeric(vecPvalue),
       "adj.p"=as.numeric(vecPvalueBH),
-      "loglik_full"=round(vecLogLikFull),
-      "loglik_red"=round(vecLogLikRed),
-      "deviance"=round(vecDeviance),
-      "vecMu"=round(vecMu),
-      "size"=round(vecDispersions),
+      "loglik_full"=vecLogLikFull,
+      "loglik_red"=vecLogLikRed,
+      "deviance"=vecDeviance,
+      "mean"=vecMu,
+      "size"=vecDispersions,
       "converge_impulse"=lsImpulseFits$parameters_case[,"converge_H1"],
       "converge_mean"=lsImpulseFits$parameters_case[,"converge_H0"],
       stringsAsFactors = FALSE))
@@ -100,11 +100,11 @@ computePval <- function(arr3DCountData,vecDispersions,
       "Gene" = row.names(arr3DCountData),
       "p"=as.numeric(vecPvalue),
       "adj.p"=as.numeric(vecPvalueBH),
-      "loglik_full"=round(vecLogLikFull),
-      "loglik_red"=round(vecLogLikRed),
-      "deviance"=round(vecDeviance),
-      "vecMu"=round(vecMu),
-      "size"=round(vecDispersions),
+      "loglik_full"=vecLogLikFull,
+      "loglik_red"=vecLogLikRed,
+      "deviance"=vecDeviance,
+      "mean"=vecMu,
+      "size"=vecDispersions,
       "converge_combined"=lsImpulseFits$impulse_parameters_combined[,"converge_H1"],
       "converge_case"=lsImpulseFits$impulse_parameters_case[,"converge_H1"],
       "converge_control"=lsImpulseFits$impulse_parameters_control[,"converge_H1"],

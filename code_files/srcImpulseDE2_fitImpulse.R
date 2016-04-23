@@ -145,6 +145,8 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
   lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],lsFitMean)
   names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
     "logL_H1","converge_H1","mu","logL_H0","converge_H0")
+  # Remove log scale for counts
+  lsBestFitSummary[c("h0","h1","h2","mu")] <- exp(lsBestFitSummary[c("h0","h1","h2","mu")])
   
   return(lsBestFitSummary)
 }

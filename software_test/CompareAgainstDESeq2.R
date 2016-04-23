@@ -4,27 +4,45 @@ print("Run after completion of DESeq")
 # Load data
 
 # Load files from interior of ImpulseDE
+#setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/R_data/fullrun_final")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-load("ImpulseDE_arr3DCountData.RData")
-load("ImpulseDE_dfAnnotationRed.RData")
+load("ImpulseDE2_arr3DCountData.RData")
+load("ImpulseDE2_dfAnnotationRed.RData")
 # Load Impulse output
-load("ImpulseDE_dfImpulseResults.RData")
-load("ImpulseDE_lsDEGenes.RData")
-load("ImpulseDE_lsImpulseFits.RData")
-load("ImpulseDE_dfDESeq2Results.RData")
+load("ImpulseDE2_dfImpulseResults.RData")
+load("ImpulseDE2_lsDEGenes.RData")
+load("ImpulseDE2_lsImpulseFits.RData")
+load("ImpulseDE2_dfDESeq2Results.RData")
 
 # Compare against DESeq
 # Make summary table to compare against plots
 dfDESeq_Impulse <- as.data.frame( cbind(
   "Gene"=as.character(as.vector( dfImpulseResults$Gene )),
-  "DESeq"=(dfDESeq2Results[as.character(as.vector( dfImpulseResults$Gene )),])$padj,
-  "Impulse"=(dfImpulseResults[as.character(as.vector( dfImpulseResults$Gene )),])$adj.p),
+  "DESeq"=dfDESeq2Results[as.character(as.vector( dfImpulseResults$Gene )),]$padj,
+  "Impulse"=dfImpulseResults[as.character(as.vector( dfImpulseResults$Gene )),]$adj.p),
   stringsAsFactors=FALSE)
 rownames(dfDESeq_Impulse) <- as.character(as.vector( dfImpulseResults$Gene ))
 dfDESeq_Impulse$DESeq <- as.numeric(dfDESeq_Impulse$DESeq)
 # Set NA as not detected:
-dfDESeq_Impulse$DESeq[is.na(dfDESeq_Impulse$DESeq)] <- 1
+#dfDESeq_Impulse$DESeq[is.na(dfDESeq_Impulse$DESeq)] <- 1
 dfDESeq_Impulse$Impulse <- as.numeric(dfDESeq_Impulse$Impulse)
+
+# Compare inferred means
+lsIndToCompare <- 1:10
+apply(arr3DCountData[lsIndToCompare,,],1,mean)
+dfDESeq2Results[rownames(arr3DCountData[lsIndToCompare,,]),]$baseMean
+dfImpulseResults[rownames(arr3DCountData[lsIndToCompare,,]),]$mean
+
+# Find gene where ImpulseDE2 has lower p value
+ImpulseLower <- dfDESeq_Impulse[dfDESeq_Impulse$Impulse < dfDESeq_Impulse$DESeq,]
+pvalratio <- (ImpulseLower$Impulse - ImpulseLower$DESeq)
+sortedratio <- sort(pvalratio, decreasing=TRUE)
+sortedratio[1:50]
+tail(sortedratio)
+ImpulseLower[pvalratio %in% sortedratio[1:10],]
+outliersIDs <- ImpulseLower[pvalratio %in% sortedratio[1:10],]$Gene
+as.data.frame(dfDESeq2Results[outliersIDs,])
+dfImpulseResults[outliersIDs,]
 
 ########################################
 # 1. Heatmap: Q-value thresholds
@@ -73,9 +91,9 @@ print(mat_union)
 ########################################
 # 2. Impulse fits, differentially called DE genes
 
-setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
 # Plot the impulse fits and input data
-source("srcImpulseDE_plotDEGenes.R")
+source("srcImpulseDE2_plotDEGenes.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 
 Q = 10^(-3)

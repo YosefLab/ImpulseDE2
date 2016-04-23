@@ -93,11 +93,13 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
       if(TRUE %in% is.na(lsImpulseFits$parameters_case[geneID,])){
         lsCaseValues <- lsImpulseFits$values_case[geneID,1]
       } else {
-        lsCaseValues <- calcImpulse_comp(lsImpulseFits$parameters_case[geneID,1:NPARAM],vecX)
+        # Convert h0,h1,h2 to log space again
+        lsImpulseParamCaseLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
+        lsImpulseParamCaseLog[c("h0","h1","h2")] <- log( lsImpulseParamCaseLog[c("h0","h1","h2")] )
+        lsCaseValues <- calcImpulse_comp(lsImpulseParamCaseLog,vecX)
       }
       pval_DEseq <- round( log(dfDESeq2Results[geneID,]$padj)/log(10), 2 )
       pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
-
       
       plot(arrTimepoints_All,(t(arr3DCountData[geneID,,])),col="blue",pch=3,xlim=c(0,max(lsTimepoints_All,na.rm=TRUE)),
         ylim=c(min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(lsCaseValues)),na.rm=TRUE),
@@ -122,21 +124,27 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
         lsCaseValues = lsImpulseFits$values_case[geneID,1]
         boolStatusCase = FALSE
       } else {
-        lsCaseValues = calcImpulse_comp(lsImpulseFits$parameters_case[geneID,1:NPARAM],vecX)
+        lsImpulseParamCaseLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
+        lsImpulseParamCaseLog[c("h0","h1","h2")] <- log( lsImpulseParamCaseLog[c("h0","h1","h2")] )
+        lsCaseValues = calcImpulse_comp(lsImpulseParamCaseLog,vecX)
         boolStatusCase = TRUE
       }
       if(TRUE %in% is.na(lsImpulseFits$parameters_control[geneID,])){
         lsCtrlValues = lsImpulseFits$values_control[geneID,1]
         boolStatusCtrl = FALSE
       } else {
-        lsCtrlValues = calcImpulse_comp(lsImpulseFits$parameters_control[geneID,1:NPARAM],vecX)
+        lsImpulseParamCtrlLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
+        lsImpulseParamCtrlLog[c("h0","h1","h2")] <- log( lsImpulseParamCtrlLog[c("h0","h1","h2")] )
+        lsCtrlValues = calcImpulse_comp(lsImpulseParamCtrlLog,vecX)
         boolStatusCtrl = TRUE
       }
       if(TRUE %in% is.na(lsImpulseFits$parameters_combined[geneID,])){
         lsCombValues = lsImpulseFits$values_combined[geneID,1]
         boolStatusComb = FALSE
       } else {
-        lsCombValues = calcImpulse_comp(lsImpulseFits$parameters_combined[geneID,1:NPARAM],vecX)
+        lsImpulseParamCombLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
+        lsImpulseParamCombLog[c("h0","h1","h2")] <- log( lsImpulseParamCombLog[c("h0","h1","h2")] )
+        lsCombValues = calcImpulse_comp(lsImpulseParamCombLog,vecX)
         boolStatusComb = TRUE
       }
       
