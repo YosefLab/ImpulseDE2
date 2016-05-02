@@ -21,7 +21,7 @@
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
-evalLogLikImpulse <- function(vecTheta,vecX,matY,scaDispEst){  
+evalLogLikImpulseBatch <- function(vecTheta,vecX,matY,scaDispEst){  
   # Compute function value - mean
   vecImpulseValue = calcImpulse_comp(vecTheta,vecX)
   
@@ -30,6 +30,23 @@ evalLogLikImpulse <- function(vecTheta,vecX,matY,scaDispEst){
   # Only consider timepoints with not all entries NA.
   scaLogLik <- sum( sapply(c(1:length(vecX)), function(tp){
     sum(dnbinom(matY[tp,!is.na(matY[tp,])], mu=vecImpulseValue[tp], size=scaDispEst, log=TRUE))}) )
+  
+  # Maximise log likelihood: Return likelihood as value to optimisation routine
+  return(scaLogLik)
+}
+
+evalLogLikImpulseByTC <- function(vecTheta,vecX,matY,scaDispEst,scaMuEst,vecMuEstTimecourse){  
+  # Compute function value - mean
+  vecImpulseValue = calcImpulse_comp(vecTheta,vecX)
+  
+  # Compute log likelihood under impulse model by
+  # adding log likelihood of model at each timepoint.
+  # Only consider timepoints with not all entries NA.
+  vecTranslationFactors <- exp(vecMuEstTimecourse)/exp(scaMuEst)
+  scaLogLik <- sum( sapply(c(1:length(vecX)), function(tp){
+    sum(dnbinom(matY[tp,!is.na(matY[tp,])], 
+      mu=vecImpulseValue[tp] * vecTranslationFactors[!is.na(matY[tp,])], 
+      size=scaDispEst, log=TRUE))}) )
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)
@@ -57,7 +74,7 @@ evalLogLikImpulse <- function(vecTheta,vecX,matY,scaDispEst){
 
 evalLogLikMean <- function(scaMuEst,matY,scaDispEst){
   # Compute log likelihood assuming constant mean of negative binomial
-  scaLogLik <- sum (dnbinom(matY[!is.na(matY)], mu=exp(scaMuEst), size=scaDispEst, log=TRUE))
+  scaLogLik <- sum(dnbinom(matY[!is.na(matY)], mu=exp(scaMuEst), size=scaDispEst, log=TRUE))
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)

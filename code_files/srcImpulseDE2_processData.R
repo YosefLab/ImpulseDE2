@@ -118,7 +118,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     print(paste0( "Found time points: ",
       paste( lsTimepoints,collapse=",") ))
     for(tp in lsTimepoints){
-      print(paste0( "Case: Found the following replicates for time points: ", tp,
+      print(paste0( "Case: Found the following replicates for time point: ", tp,
         ": ", paste0(dfAnnotationFull[
           (dfAnnotationFull$Time %in% tp) &
             (dfAnnotationFull$Condition %in% strCaseName) &
@@ -186,7 +186,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     # DAVID to be deprecated
     # Shorten expression table
     if(TRUE){
-      ind_toKeep <- 1:100
+      ind_toKeep <- 1:8
       print(paste0("Working on subset of data: ",length(ind_toKeep)," genes."))
       arr2DCountData <- arr2DCountData[ind_toKeep,]
     }

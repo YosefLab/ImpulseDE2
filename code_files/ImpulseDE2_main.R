@@ -34,7 +34,8 @@ calcImpulse_comp <- cmpfun(calcImpulse)
 source("srcImpulseDE2_CostFunctionsFit.R")
 
 # Compile functions
-evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
+evalLogLikImpulseByTC_comp <- cmpfun(evalLogLikImpulseByTC)
+evalLogLikImpulseBatch_comp <- cmpfun(evalLogLikImpulseBatch)
 evalLogLikMean_comp <- cmpfun(evalLogLikMean)
 
 # Fit impulse model to a timecourse dataset
@@ -130,7 +131,7 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'    unobserved entries are NA. Column labels are replicate names, row labels
 #'    gene names.
 #' @param dfAnnotationFull (Table) [Default NULL] Lists co-variables of individual replicates: 
-#'    Sample, Condition, Time. Time must be numeric.
+#'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param strCaseName (str) [Default NULL] Name of the case condition in \code{dfAnnotationFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationFull}.
@@ -216,7 +217,8 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' @export
 
 runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
-  strCaseName = NULL, strControlName=NULL, nProc=3, Q_value=0.01){
+  strCaseName = NULL, strControlName=NULL, strMode="batch",
+  nProc=3, Q_value=0.01){
   
   print("###################################################################")
   print("Impulse v1.3 for count data")
@@ -263,7 +265,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     tm_fitImpulse <- system.time({
       lsImpulseFits <- fitImpulse(arr3DCountData=arr3DCountData, 
         vecDispersions=vecDESeq2Dispersions, dfAnnotationRed=dfAnnotationRed, 
-        strCaseName=strCaseName, strControlName=strControlName, 
+        strCaseName=strCaseName, strControlName=strControlName, strMode=strMode,
         nProcessesAssigned=nProc, NPARAM=NPARAM)
     })
     save(lsImpulseFits,file=file.path(getwd(),"ImpulseDE2_lsImpulseFits.RData"))
@@ -279,7 +281,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
         arr3DCountData=arr3DCountData,vecDispersions=vecDESeq2Dispersions,
         dfAnnotationRed=dfAnnotationRed,lsImpulseFits=lsImpulseFits,
         strCaseName=strCaseName, strControlName=strControlName,
-        NPARAM=NPARAM)
+        strMode=strMode, NPARAM=NPARAM)
       
       lsDEGenes <- as.character(as.vector( 
         dfImpulseResults[as.numeric(dfImpulseResults$adj.p) <= Q_value,"Gene"] ))
@@ -301,7 +303,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
         strCaseName=strCaseName, strControlName=strControlName, 
         strFileNameSuffix="DE", strPlotTitleSuffix="", strPlotSubtitle="",
         dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
-        NPARAM=NPARAM)
+        strMode=strMode, NPARAM=NPARAM)
     })
     print("DONE")
     print(paste("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2),

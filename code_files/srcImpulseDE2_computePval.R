@@ -40,7 +40,8 @@
 
 computePval <- function(arr3DCountData,vecDispersions,
   dfAnnotationRed, lsImpulseFits,
-  strCaseName=NULL, strControlName=NULL, NPARAM=6){
+  strCaseName=NULL, strControlName=NULL, strMode="batch",
+  NPARAM=6){
   
   if(is.null(strControlName)){
     # Without control data:
@@ -51,10 +52,18 @@ computePval <- function(arr3DCountData,vecDispersions,
     vecLogLikRed <- lsImpulseFits$parameters_case[,"logL_H0"]
     # Mean inferred expression:
     vecMu <- lsImpulseFits$parameters_case[,"mu"]
-    # Parameters and 1 dispersion estimate
-    scaDegFreedomFull <- NPARAM + 1
-    # 1 mean and 1 dispersion estimate
-    scaDegFreedomRed <- 1 + 1
+    if(strMode=="batch"){
+      # Parameters and 1 dispersion estimate
+      scaDegFreedomFull <- NPARAM + 1
+      # 1 dispersion estimate and overall mean estimate
+      scaDegFreedomRed <- 1 + 1
+    } else if(strMode=="timecourses"){
+      # Parameters, 1 dispersion estimate and 
+      # mean estimates for each time course + 1 overall mean estimate
+      scaDegFreedomFull <- NPARAM + 1 + dim(arr3DCountData)[3]  + 1
+      # 1 dispersion estimate and 1 mean estimate for each time course
+      scaDegFreedomRed <- 1 + dim(arr3DCountData)[3] 
+    }
   } else {
     # With control data:
     # Full model: Case and control model separate:
@@ -65,10 +74,19 @@ computePval <- function(arr3DCountData,vecDispersions,
     vecLogLikRed <- lsImpulseFits$parameters_combined[,"logL_H1"]
     # Mean inferred expression: On combined data
     vecMu <- lsImpulseFits$parameters_combined[,"mu"]
-    # Parameters of both models (case and control) and 1 dispersion estimate
-    scaDegFreedomFull <- NPARAM*2 + 1
-    # Parameters of one model (combined) and 1 dispersion estimate
-    scaDegFreedomRed <- NPARAM + 1
+    if(strMode=="batch"){
+      # Parameters of both models (case and control) and 1 dispersion estimate
+      scaDegFreedomFull <- NPARAM*2 + 1
+      # Parameters of one model (combined) and 1 dispersion estimate
+      scaDegFreedomRed <- NPARAM + 1
+    } else if(strMode=="timecourses"){
+      # Parameters of both models (case and control), 1 dispersion estimate and 
+      # mean estimates for each time course + 1 overall mean estimate
+      scaDegFreedomFull <- NPARAM*2 + 1 + dim(arr3DCountData)[3]  + 1
+      # Parameters of one model (combined), 1 dispersion estimate 
+      # and 1 mean estimate for each time course
+      scaDegFreedomRed <- 1 + dim(arr3DCountData)[3] 
+    }
   }
   
   # Compute difference in degrees of freedom between null model and alternative model.
