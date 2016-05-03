@@ -21,16 +21,33 @@
 #' }
 #' @export
 
-runDESeq2 <- function(dfAnnotationFull, arr2DCountData){
+runDESeq2 <- function(dfAnnotationFull, arr2DCountData, 
+  strMode="batch"){
   
   dfCountData <- arr2DCountData[,colnames(arr2DCountData) %in% dfAnnotationFull$Replicate]
-  colnames(dfCountData) <- dfAnnotationFull$Sample[match(colnames(dfCountData),dfAnnotationFull$Replicate)]
-  # Create DESeq2 data object
-  dds <- DESeqDataSetFromMatrix(countData = dfCountData,
-    colData = dfAnnotationFull,
-    design = ~ Sample + Timecourse)
-  # Run DESeq2
-  ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample + Timecourse, reduced = ~ Timecourse)
+  colnames(dfCountData) <- dfAnnotationFull$Sample[
+    match(colnames(dfCountData),dfAnnotationFull$Replicate)]
+  # The covariate Timecourses, indicating the time series
+  # experiment a sample belongs to, is ignored in batch mode,
+  # in which replicates of one sample from different time series
+  # experimentes are assumed to be i.i.d. In batch mode,
+  # all samples should originate form the same series of 
+  # independent samples.
+  if(strMode=="batch"){
+    # Create DESeq2 data object
+    dds <- DESeqDataSetFromMatrix(countData = dfCountData,
+      colData = dfAnnotationFull,
+      design = ~ Sample)
+    # Run DESeq2
+    ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample, reduced = ~ 1)
+  } else {
+    # Create DESeq2 data object
+    dds <- DESeqDataSetFromMatrix(countData = dfCountData,
+      colData = dfAnnotationFull,
+      design = ~ Sample + Timecourse)
+    # Run DESeq2
+    ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample + Timecourse, reduced = ~ Timecourse)
+  }
   # Get gene-wise dispersion estimates
   # var = mean + alpha * mean^2, alpha is dispersion
   # DESeq2 dispersion is 1/size used dnbinom (used in cost function

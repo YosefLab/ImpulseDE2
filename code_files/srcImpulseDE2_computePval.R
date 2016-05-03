@@ -59,8 +59,8 @@ computePval <- function(arr3DCountData,vecDispersions,
       scaDegFreedomRed <- 1 + 1
     } else if(strMode=="timecourses"){
       # Parameters, 1 dispersion estimate and 
-      # mean estimates for each time course + 1 overall mean estimate
-      scaDegFreedomFull <- NPARAM + 1 + dim(arr3DCountData)[3]  + 1
+      # scaling factor for each time course
+      scaDegFreedomFull <- NPARAM + 1 + dim(arr3DCountData)[3]
       # 1 dispersion estimate and 1 mean estimate for each time course
       scaDegFreedomRed <- 1 + dim(arr3DCountData)[3] 
     }
@@ -81,8 +81,8 @@ computePval <- function(arr3DCountData,vecDispersions,
       scaDegFreedomRed <- NPARAM + 1
     } else if(strMode=="timecourses"){
       # Parameters of both models (case and control), 1 dispersion estimate and 
-      # mean estimates for each time course + 1 overall mean estimate
-      scaDegFreedomFull <- NPARAM*2 + 1 + dim(arr3DCountData)[3]  + 1
+      # scaling factor for each time course
+      scaDegFreedomFull <- NPARAM*2 + 1 + dim(arr3DCountData)[3]
       # Parameters of one model (combined), 1 dispersion estimate 
       # and 1 mean estimate for each time course
       scaDegFreedomRed <- 1 + dim(arr3DCountData)[3] 

@@ -175,8 +175,6 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     ### 2. Rows (Genes):
     # Reduce expression table to rows containing at least one non-zero count
     rowIdx_lowCounts <- apply(arr2DCountData,1,function(x){all(x==0)})
-    # with mean expression > 1
-    #rowIdx_lowCounts <- apply(arr2DCountData,1,function(x){mean(x) < 1})
     if(sum(rowIdx_lowCounts) > 0){
       print(paste0("WARNING: ",sum(rowIdx_lowCounts), " out of ",
         dim(arr2DCountData)[1]," genes had only zero counts in all considered samples."))
@@ -186,7 +184,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     # DAVID to be deprecated
     # Shorten expression table
     if(TRUE){
-      ind_toKeep <- 1:8
+      ind_toKeep <- 1:100
       print(paste0("Working on subset of data: ",length(ind_toKeep)," genes."))
       arr2DCountData <- arr2DCountData[ind_toKeep,]
     }

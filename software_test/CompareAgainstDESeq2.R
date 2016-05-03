@@ -24,7 +24,7 @@ dfDESeq_Impulse <- as.data.frame( cbind(
 rownames(dfDESeq_Impulse) <- as.character(as.vector( dfImpulseResults$Gene ))
 dfDESeq_Impulse$DESeq <- as.numeric(dfDESeq_Impulse$DESeq)
 # Set NA as not detected:
-#dfDESeq_Impulse$DESeq[is.na(dfDESeq_Impulse$DESeq)] <- 1
+dfDESeq_Impulse$DESeq[is.na(dfDESeq_Impulse$DESeq)] <- 1
 dfDESeq_Impulse$Impulse <- as.numeric(dfDESeq_Impulse$Impulse)
 
 # Compare inferred means
@@ -112,7 +112,7 @@ plotDEGenes(lsGeneIDs=DEgenes_both,
   lsImpulseFits=lsImpulseFits,
   strCaseName="case", strControlName=NULL, 
   strFileNameSuffix="DE_DESeqAndImpulse", strPlotTitleSuffix="", strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
+  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,strMode=strMode,
   NPARAM=NPARAM)
 
 plotDEGenes(lsGeneIDs=DEgenes_DESeq_only,
@@ -120,7 +120,7 @@ plotDEGenes(lsGeneIDs=DEgenes_DESeq_only,
   lsImpulseFits=lsImpulseFits,
   strCaseName="case", strControlName=NULL, 
   strFileNameSuffix="DE_DESeq_only", strPlotTitleSuffix="", strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
+  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,strMode=strMode,
   NPARAM=NPARAM)
 
 plotDEGenes(lsGeneIDs=DEgenes_Impulse_only,
@@ -128,5 +128,5 @@ plotDEGenes(lsGeneIDs=DEgenes_Impulse_only,
   lsImpulseFits=lsImpulseFits,
   strCaseName="case", strControlName=NULL, 
   strFileNameSuffix="DE_Impulse_only", strPlotTitleSuffix="", strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
+  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,strMode=strMode,
   NPARAM=NPARAM)

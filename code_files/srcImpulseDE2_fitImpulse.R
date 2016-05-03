@@ -43,6 +43,11 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
     vecTimepoints <- vecTimepoints[vecboolObservedTimepoint]
     matCounts <- matCounts[vecboolObservedTimepoint,]
   }
+  # Remove time course if is entirely missing
+  vecboolObservedTimecourse <- apply(matCounts,2,function(tp){any(!is.na(tp))})
+  if(any( !vecboolObservedTimecourse )){
+    matCounts <- matCounts[vecboolObservedTimecourse,]
+  }
   
   # If handed a list, i.e. not replicates
   if (is.vector(matCounts)==TRUE){
@@ -67,7 +72,7 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
   
   # Null model (batch) and reference: Single mean
   # Parameter estimate: Overall mean
-  scaMuGuess <- log(mean(matCounts, na.rm=TRUE))
+  scaMuGuess <- log(mean(matCounts, na.rm=TRUE)+1)
   lsFitMean <- unlist(optim(par=scaMuGuess, fn=evalLogLikMean_comp,
     matY=matCounts, scaDispEst=scaDispersionEstimate,
     method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])
@@ -81,7 +86,7 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
     scaLoglikNull <- 0
     boolConverged <- 0
     for(tc in 1:nTimecourses){
-      scaMuGuess <- log(mean(matCounts[,tc], na.rm=TRUE))
+      scaMuGuess <- log(mean(matCounts[,tc], na.rm=TRUE)+1)
       lsFitMeanTC <- unlist(optim(par=scaMuGuess, fn=evalLogLikMean_comp,
         matY=matCounts[,tc], scaDispEst=scaDispersionEstimate,
         method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])

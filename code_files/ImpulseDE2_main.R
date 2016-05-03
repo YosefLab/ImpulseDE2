@@ -249,7 +249,8 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     # 2. Run DESeq2
     print("2. Run DESeq2:")
     tm_runDESeq2 <- system.time({
-      lsDESeq2Results <- runDESeq2(dfAnnotationFull=dfAnnotationFull,arr2DCountData=arr2DCountData)
+      lsDESeq2Results <- runDESeq2(dfAnnotationFull=dfAnnotationFull,
+        arr2DCountData=arr2DCountData, strMode=strMode)
     })
     vecDESeq2Dispersions <- lsDESeq2Results[[1]]
     dfDESeq2Results <- lsDESeq2Results[[2]]

@@ -24,7 +24,7 @@ rownames(expression_table) <- expression_table_raw[,1]
 colnames(expression_table) <- colnames(expression_table_raw)[2:dim(expression_table_raw)[2]]
 
 # Only chose high counts
-expression_table <- expression_table[apply(expression_table,1,function(gene){max(gene,na.rm=TRUE)}>500),]
+#expression_table <- expression_table[apply(expression_table,1,function(gene){max(gene,na.rm=TRUE)}>500),]
 
 # replace by simulation data
 # expression_table_cut[,] <- rnbinom(dim(expression_table_cut)[1]*dim(expression_table_cut)[2],
@@ -50,7 +50,7 @@ dfImpulseResults <- lsImpulseDE_results$dfImpulseResults
 lsImpulseFits <- lsImpulseDE_results$lsImpulseFits
 dfDESeq2Results <- lsImpulseDE_results$dfDESeq2Results
 
-# test plotting
+# test plotting to change minor aspects
 if(FALSE){
   # Load files from interior of ImpulseDE
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
