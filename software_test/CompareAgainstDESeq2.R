@@ -1,11 +1,14 @@
 print("Run after completion of DESeq")
-
+rm(list = ls())
 ########################################
 # Load data
 
 # Load files from interior of ImpulseDE
-#setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/R_data/fullrun_final")
-setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+#setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/R_data/fullrun_batch")
+#strMode="batch"
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/R_data/fullrun_timecourses")
+strMode="timecourses"
+#setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 load("ImpulseDE2_arr3DCountData.RData")
 load("ImpulseDE2_dfAnnotationRed.RData")
 # Load Impulse output
@@ -14,6 +17,7 @@ load("ImpulseDE2_lsDEGenes.RData")
 load("ImpulseDE2_lsImpulseFits.RData")
 load("ImpulseDE2_dfDESeq2Results.RData")
 
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 # Compare against DESeq
 # Make summary table to compare against plots
 dfDESeq_Impulse <- as.data.frame( cbind(
@@ -46,26 +50,26 @@ dfImpulseResults[outliersIDs,]
 
 ########################################
 # 1. Heatmap: Q-value thresholds
-mat_overlap <- array(NA,c(10,10))
-mat_intersect <- array(NA,c(10,10))
-mat_union <- array(NA,c(10,10))
+mat_overlap <- array(NA,c(11,11))
+mat_intersect <- array(NA,c(11,11))
+mat_union <- array(NA,c(11,11))
 # DESeq on vertical
-for(i in 1:10){
+for(i in 0:10){
   # Impulse on horicontal
-  for(j in 1:10){
+  for(j in 0:10){
     sig_DESeq <- dfDESeq_Impulse$DESeq <= 10^(-i)
     sig_Impulse <- dfDESeq_Impulse$Impulse <= 10^(-j)
-    mat_overlap[i,j] <- sum(sig_DESeq & sig_Impulse)/sum(sig_DESeq | sig_Impulse)
-    mat_intersect[i,j] <- sum(sig_DESeq & sig_Impulse)
-    mat_union[i,j] <- sum(sig_DESeq | sig_Impulse)
+    mat_overlap[i+1,j+1] <- sum(sig_DESeq & sig_Impulse)/sum(sig_DESeq | sig_Impulse)
+    mat_intersect[i+1,j+1] <- sum(sig_DESeq & sig_Impulse)
+    mat_union[i+1,j+1] <- sum(sig_DESeq | sig_Impulse)
   }
 }
-rownames(mat_overlap) <- -1:-10
-colnames(mat_overlap) <- -1:-10
-rownames(mat_intersect) <- -1:-10
-colnames(mat_intersect) <- -1:-10
-rownames(mat_union) <- -1:-10
-colnames(mat_union) <- -1:-10
+rownames(mat_overlap) <- 0:-10
+colnames(mat_overlap) <- 0:-10
+rownames(mat_intersect) <- 0:-10
+colnames(mat_intersect) <- 0:-10
+rownames(mat_union) <- 0:-10
+colnames(mat_union) <- 0:-10
 library(gplots)
 graphics.off()
 heatmap(mat_overlap, keep.dendro = FALSE,Rowv=NA,Colv= "Rowv",symm=FALSE,
@@ -80,7 +84,7 @@ heatmap.2(mat_overlap, dendrogram="none", Rowv=FALSE,Colv=FALSE,
   trace="none",density.info="none",
   key.title = " ", key.xlab = paste0("Jaccard coefficient"), key.ylab = NULL,
   symkey=FALSE,
-  cellnote=round(mat_overlap,digits=2),notecol="white",
+  cellnote=round(mat_overlap,digits=2),notecol="grey",
   lmat=rbind( c(3,4),c(2,1) ),lhei=c(1,4), lwid=c(1,4), margins=c(5,5))
 dev.off()
 print("Intersection")
@@ -93,6 +97,7 @@ print(mat_union)
 
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
 # Plot the impulse fits and input data
+source("ImpulseDE2_main.R")
 source("srcImpulseDE2_plotDEGenes.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 
@@ -107,20 +112,26 @@ print(paste0("ImpulseDE only ",length(DEgenes_Impulse_only)))
 print(paste0("DESeq2 only ",length(DEgenes_DESeq_only)))
 print(paste0("Both ",length(DEgenes_both)))
 
+vecDeSeq2Results <- dfDESeq_Impulse$DESeq
+names(vecDeSeq2Results) <- dfDESeq_Impulse$Gene
+
 plotDEGenes(lsGeneIDs=DEgenes_both,
   arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
   lsImpulseFits=lsImpulseFits,
   strCaseName="case", strControlName=NULL, 
   strFileNameSuffix="DE_DESeqAndImpulse", strPlotTitleSuffix="", strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,strMode=strMode,
+  dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDeSeq2Results,strMode=strMode,
   NPARAM=NPARAM)
 
-plotDEGenes(lsGeneIDs=DEgenes_DESeq_only,
+# sort DESeq2 only genes by padj of DESeq2
+dfDESeq_ImpulseDESeqOnly <- dfDESeq_Impulse[DEgenes_DESeq_only,]
+DEgenes_DESeq_onlySorted <- dfDESeq_ImpulseDESeqOnly[order(dfDESeq_ImpulseDESeqOnly$DESeq),]$Gene
+plotDEGenes(lsGeneIDs=DEgenes_DESeq_onlySorted,
   arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
   lsImpulseFits=lsImpulseFits,
   strCaseName="case", strControlName=NULL, 
   strFileNameSuffix="DE_DESeq_only", strPlotTitleSuffix="", strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,strMode=strMode,
+  dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDeSeq2Results,strMode=strMode,
   NPARAM=NPARAM)
 
 plotDEGenes(lsGeneIDs=DEgenes_Impulse_only,
@@ -128,5 +139,5 @@ plotDEGenes(lsGeneIDs=DEgenes_Impulse_only,
   lsImpulseFits=lsImpulseFits,
   strCaseName="case", strControlName=NULL, 
   strFileNameSuffix="DE_Impulse_only", strPlotTitleSuffix="", strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,strMode=strMode,
+  dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDeSeq2Results,strMode=strMode,
   NPARAM=NPARAM)

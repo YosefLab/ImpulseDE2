@@ -298,12 +298,14 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     ### 5. Plot the top DE genes
     print("5. Plot top DE genes")
     tm_plotDEGenes <- system.time({
+      vecDESeq2Results <- dfDESeq2Results$padj
+      names(vecDESeq2Results) <- rownames(dfDESeq2Results)
       plotDEGenes(lsGeneIDs=lsDEGenes,
         arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
         lsImpulseFits=lsImpulseFits,
         strCaseName=strCaseName, strControlName=strControlName, 
         strFileNameSuffix="DE", strPlotTitleSuffix="", strPlotSubtitle="",
-        dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
+        dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDESeq2Results,
         strMode=strMode, NPARAM=NPARAM)
     })
     print("DONE")

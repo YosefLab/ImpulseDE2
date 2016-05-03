@@ -29,7 +29,7 @@
 #'    counts predicted by the impulse model at the observed time points.
 #' @param dfDEAnalysis (data frame genes x fitting characteristics) 
 #'    Summary of fitting procedure for each gene.
-#' @param dfDESeq2Results (data frame) DESeq2 results.
+#' @param vecMethod2Results (vec length genes) Method 2 (DESeq2) adjusted p-values
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationRedFull}.
@@ -43,9 +43,10 @@
 #' @export
 
 plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
-  lsImpulseFits, dfImpulseResults, dfDESeq2Results, 
+  lsImpulseFits, dfImpulseResults, vecMethod2Results, 
   strCaseName, strControlName=NULL, strMode="batch",
   strFileNameSuffix = "", strPlotTitleSuffix = "", strPlotSubtitle = "",
+  strNameMethod1="ImpulseDE2", strNameMethod2="DESeq2",
   NPARAM=6){
   
   # Width of pdf in time units for plotting
@@ -102,8 +103,8 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
       lsImpulseParamCaseLog[c("h0","h1","h2")] <- log( lsImpulseParamCaseLog[c("h0","h1","h2")] )
       lsCaseValues <- calcImpulse_comp(lsImpulseParamCaseLog,vecX)
       
-      pval_DEseq <- round( log(dfDESeq2Results[geneID,]$padj)/log(10), 2 )
       pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
+      pval_Method2 <- round( log(vecMethod2Results[geneID])/log(10), 2 )
       
       if(strMode=="batch"){
         # Plot observed points in blue - all time courses in same colour
@@ -112,8 +113,8 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
         plot(arrTimepoints_All,t(arr3DCountData[geneID,,]),col="blue",pch=3,
           xlim=c(0,max(lsTimepoints_All,na.rm=TRUE)+PDF_WIDTH), ylim=c(scaYlim_lower,scaYlim_upper),
           xlab="Time", ylab="Impulse fit and expression values",
-          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n DESeq2 ",pval_DEseq,
-            " ImpulseDE2 ",pval_Impulse),sub=strPlotSubtitle)
+          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
+            " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
         # Plot impulse
         points(vecX, lsCaseValues, col = "blue", type="l")
         
@@ -141,8 +142,8 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
         plot(arrTimepoints_All[1,],t(arr3DCountData[geneID,,1]),col=vecCol[1],pch=3,
           xlim=c(0,max(lsTimepoints_All,na.rm=TRUE)+PDF_WIDTH), ylim=c(scaYlim_lower,scaYlim_upper),
           xlab="Time", ylab="Impulse fit and expression values",
-          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n DESeq2 ",pval_DEseq,
-            " ImpulseDE2 ",pval_Impulse),sub=strPlotSubtitle)
+          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
+            " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
         legend(x="bottomright",as.character(dfAnnotationRed[1,"Condition"]),fill=c("blue"), cex=0.6, inset=c(0,scaLegendInset))
         # Plot impulse fit to time course
         points(vecX, lsCaseValues*vecTranslationFactors[1], col=vecCol[1], type="l")
@@ -158,7 +159,7 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
         }
       }
       
-      # Plot mean of each time point in red
+      # Plot mean of each time point
       points(arrTimepoints_All[1,],(apply(arr3DCountData[geneID,,],1,function(x){mean(x,na.rm=TRUE)})),col="black",pch=1)
       
       # With control data
@@ -196,8 +197,8 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
         ylim=c(min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(lsCaseValues), as.numeric(lsCtrlValues), as.numeric(lsCombValues)),na.rm=TRUE),
           max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(lsCaseValues), as.numeric(lsCtrlValues), as.numeric(lsCombValues)),na.rm=TRUE)),
         xlab="Time", ylab="Impulse fit and expression values",
-        main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n DESeq2 ",pval_DEseq,
-          " ImpulseDE2 ",pval_Impulse),sub=strPlotSubtitle)
+        main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
+          " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
       
       points(lsTimepoints_Ctrl,arr3DCountData_Ctrl[geneID,],col="red",pch=4)
       
