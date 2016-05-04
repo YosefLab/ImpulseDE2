@@ -24,7 +24,8 @@
 #' @export
 
 evalLogLikImpulseBatch <- function(vecTheta,vecX,matY,scaDispEst){  
-  # Compute function value - mean
+  # Compute impulse function value: Mean of negative binomial
+  # likelihood function for each time point.
   vecImpulseValue = calcImpulse_comp(vecTheta,vecX)
   
   # Compute log likelihood under impulse model by
@@ -55,26 +56,28 @@ evalLogLikImpulseBatch <- function(vecTheta,vecX,matY,scaDispEst){
 #' @param matY (2D array timepoints x replicates) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' @param scaMuEst: (scalar) Overall mean estimate for given gene assuming negative
-#'    binomial model.
-#' @param vecMuEstTimecourse: (vector time courses) Mean estimates by time course
-#'    for given gene assuming negative binomial model.
+#' @param scaMu: (scalar) MLE of overall mean of negative binomial
+#'    constant model on all data.
+#' @param vecMuTimecourses: (vector time courses) MLEs of meana of negative binomial
+#'    constant models by time course.
 #'    
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
 evalLogLikImpulseByTC <- function(vecTheta,vecX,matY,scaDispEst,
-  scaMuEst,vecMuEstTimecourse){  
-  # Compute function value - mean
+  scaMu,vecMuTimecourses){  
+  # Compute impulse function value: Mean of negative binomial
+  # likelihood function for each time point.
   vecImpulseValue = calcImpulse_comp(vecTheta,vecX)
   
   # Compute log likelihood under impulse model by
   # adding log likelihood of model at each timepoint.
-  vecTranslationFactors <- exp(vecMuEstTimecourse)/exp(scaMuEst)
-  scaLogLik <- sum( sapply(c(1:length(vecX)), function(tp){
+  vecTranslationFactors <- vecMuTimecourses/scaMu
+  scaLogLik <- sum(sapply( c(1:length(vecX)), function(tp){
     sum(dnbinom(matY[tp,!is.na(matY[tp,])], 
       mu=vecImpulseValue[tp] * vecTranslationFactors[!is.na(matY[tp,])], 
-      size=scaDispEst, log=TRUE))}) )
+      size=scaDispEst, log=TRUE))
+    }) )
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)
@@ -82,6 +85,7 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,matY,scaDispEst,
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+### DAVID to be deprecated - closed form solution for this case
 #' Cost function mean model fit
 #' 
 #' Log likelihood cost function for mean model fit based on negative binomial
@@ -117,7 +121,7 @@ evalLogLikMean <- function(scaMuEst,matY,scaDispEst){
 #' for sequencing data with high drop out rate, commonly observed in single
 #' cell data (e.g. scRNA-seq).
 #' 
-#' @aliases evalLogLikImpulseBatch
+#' @aliases evalLogLikImpulseSC_comp
 #' 
 #' @seealso Called by \code{fitImpulse}:\code{fitImpulse_gene}.
 #' Calls \code{calcImpulse}.
@@ -133,9 +137,10 @@ evalLogLikMean <- function(scaMuEst,matY,scaDispEst){
 #' @export
 
 ### DAVID developmental note: think about taking this from 2D into 1D, only need 2D if work in clusters
-evalLogLikImpulseBatch <- function(vecTheta,vecX,matY,
+evalLogLikImpulseSC <- function(vecTheta,vecX,matY,
   scaDispEst,scaDropoutEst){  
-  # Compute function value - mean
+  # Compute impulse function value: Mean of negative binomial
+  # likelihood function for each time point.
   vecImpulseValue = calcImpulse_comp(vecTheta,vecX)
   
   # Compute log likelihood under impulse model by

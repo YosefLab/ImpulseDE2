@@ -70,31 +70,41 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
   vecGradients <- unlist( lapply(c(1:(nTimepts-1)),function(x){
     (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepoints[x+1]-vecTimepoints[x])}) )
   
+  ### DAVID to be deprecated: use closed form solution for means
   # Null model (batch) and reference: Single mean
   # Parameter estimate: Overall mean
-  scaMuGuess <- log(mean(matCounts, na.rm=TRUE)+1)
-  lsFitMean <- unlist(optim(par=scaMuGuess, fn=evalLogLikMean_comp,
-    matY=matCounts, scaDispEst=scaDispersionEstimate,
-    method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])
-  scaMuEst <- lsFitMean[[1]]
-  
-  if(strMode=="timecourses"){
-    # Null model (timecourses): Single mean for each time course
-    # Parameter estimate: Mean for each time course
+  #scaMuGuess <- log(mean(matCounts, na.rm=TRUE)+1)
+  #lsFitMean <- unlist(optim(par=scaMuGuess, fn=evalLogLikMean_comp,
+  #  matY=matCounts, scaDispEst=scaDispersionEstimate,
+  #  method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])
+  #scaMuEst <- lsFitMean[[1]]
+  scaMu <- mean(matCounts, na.rm=TRUE)
+  if(strMode=="batch"){
+    # Null model (timecourses): One mean for all points
+    scaLoglikNull <- sum(dnbinom(matCounts[!is.na(matCounts)], mu=scaMu, size=scaDispersionEstimate, log=TRUE))
+  }else if(strMode=="timecourses"){
+    # Null model (timecourses): One mean for each time course
     nTimecourses <- dim(matCounts)[2]
-    vecMuEstTimecourse <- array(NA,nTimecourses)
-    scaLoglikNull <- 0
-    boolConverged <- 0
-    for(tc in 1:nTimecourses){
-      scaMuGuess <- log(mean(matCounts[,tc], na.rm=TRUE)+1)
-      lsFitMeanTC <- unlist(optim(par=scaMuGuess, fn=evalLogLikMean_comp,
-        matY=matCounts[,tc], scaDispEst=scaDispersionEstimate,
-        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])
-      vecMuEstTimecourse[tc] <- lsFitMeanTC[[1]]
-      scaLoglikNull <- scaLoglikNull + lsFitMeanTC[[2]]
-      if(lsFitMeanTC[[3]] != 0){boolConverged <- 1}
-    }
-    lsFitMean <- c(scaMuEst,scaLoglikNull,boolConverged)
+    vecMuTimecourses <- apply(matCounts,2,function(vecTC){mean(vecTC, na.rm=TRUE)})
+    scaLoglikNull <- sum(sapply( c(1:nTimecourses),function(indTC){
+      sum(dnbinom(matCounts[!is.na(matCounts[,indTC]),indTC], 
+        mu=vecMuTimecourses[indTC], size=scaDispersionEstimate, log=TRUE))
+    }))
+    # vecMuEstTimecourse <- array(NA,nTimecourses)
+    # scaLoglikNull <- 0
+    #boolConverged <- 0
+    #for(tc in 1:nTimecourses){
+      #scaMuGuess <- log(mean(matCounts[,tc], na.rm=TRUE)+1)
+      #lsFitMeanTC <- unlist(optim(par=scaMuGuess, fn=evalLogLikMean_comp,
+      #  matY=matCounts[,tc], scaDispEst=scaDispersionEstimate,
+      #  method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])
+      #vecMuEstTimecourse[tc] <- lsFitMeanTC[[1]]
+      #scaLoglikNull <- scaLoglikNull + lsFitMeanTC[[2]]
+      #if(lsFitMeanTC[[3]] != 0){boolConverged <- 1}
+    #}
+    #lsFitMean <- c(scaMuEst,scaLoglikNull)
+  } else {
+    stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
   
   # 1. Alternative model: Peak
@@ -107,15 +117,21 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2)
   
   if("optim" %in% optim_method){
-    if(strMode=="timecourses"){
-      lsFitPeak <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseByTC_comp, vecX=vecTimepoints,
-        matY=matCounts, scaDispEst=scaDispersionEstimate,
-        scaMuEst=scaMuEst, vecMuEstTimecourse=vecMuEstTimecourse,
-        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
-    }else{
+    if(strMode=="batch"){
       lsFitPeak <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseBatch_comp, vecX=vecTimepoints,
         matY=matCounts, scaDispEst=scaDispersionEstimate,
         method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+    }else if(strMode=="timecourses"){
+      lsFitPeak <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseByTC_comp, vecX=vecTimepoints,
+        matY=matCounts, scaDispEst=scaDispersionEstimate,
+        scaMu=scaMu, vecMuTimecourses=vecMuTimecourses,
+        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+    }else if(strMode=="singlecell"){
+      lsFitPeak <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseSC_comp, vecX=vecTimepoints,
+        matY=matCounts, scaDispEst=scaDispersionEstimate, scaDropoutEst=scaDropoutEstimate,
+        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+    } else {
+      stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
     }
   }
   if("nlminb" %in% optim_method){
@@ -134,15 +150,21 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2 )
   
   if("optim" %in% optim_method){
-    if(strMode=="timecourses"){
+    if(strMode=="batch"){
+      lsFitValley <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseBatch_comp, vecX=vecTimepoints,
+        matY=matCounts, scaDispEst=scaDispersionEstimate,
+        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+    }else if(strMode=="timecourses"){
       lsFitValley <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseByTC_comp, vecX=vecTimepoints,
         matY=matCounts, scaDispEst=scaDispersionEstimate,
         scaMuEst=scaMuEst, vecMuEstTimecourse=vecMuEstTimecourse,
         method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
-    } else {
-      lsFitValley <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseBatch_comp, vecX=vecTimepoints,
-        matY=matCounts, scaDispEst=scaDispersionEstimate,
+    }else if(strMode=="singlecell"){
+      lsFitValley <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseSC_comp, vecX=vecTimepoints,
+        matY=matCounts, scaDispEst=scaDispersionEstimate, scaDropoutEst=scaDropoutEstimate,
         method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+    } else {
+      stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
     }
   }
   if("nlminb" %in% optim_method){
@@ -172,20 +194,18 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
   # match() selects first hit if maximum occurs multiple times
   indBestFit <- match(max(dfFitsByInitialisation["value",]),dfFitsByInitialisation["value",])
   if(strMode=="batch"){
-    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],lsFitMean)
+    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLoglikNull)
     names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
-      "logL_H1","converge_H1","mu","logL_H0","converge_H0")
+      "logL_H1","converge_H1","mu","logL_H0")
   } else {
-    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],lsFitMean,vecMuEstTimecourse)
+    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLoglikNull,vecMuTimecourses)
     nTimecourses <- length(lsBestFitSummary)-11
     vecColnamesMubyTimecourse <- paste0(rep("muByTimecourse",nTimecourses),c(1:nTimecourses))
     names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
-      "logL_H1","converge_H1","mu","logL_H0","converge_H0",vecColnamesMubyTimecourse)
-    # Remove log scale from count parameters scaling time courses
-    lsBestFitSummary[vecColnamesMubyTimecourse] <- exp(lsBestFitSummary[c(vecColnamesMubyTimecourse)])
+      "logL_H1","converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
   }
   # Remove log scale from count parameters of impulse model
-  lsBestFitSummary[c("h0","h1","h2","mu")] <- exp(lsBestFitSummary[c("h0","h1","h2","mu")])
+  lsBestFitSummary[c("h0","h1","h2")] <- exp(lsBestFitSummary[c("h0","h1","h2")])
   
   return(lsBestFitSummary)
 }
@@ -316,12 +336,12 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
   # Name output columns
   if(strMode=="batch"){
     colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
-      "converge_H1","mu","logL_H0","converge_H0")
+      "converge_H1","mu","logL_H0")
   } else {
     nTimecourses <- dim(matFits)[2]-11
     vecColnamesMubyTimecourse <- paste0(rep("muByTimecourse",nTimecourses),c(1:nTimecourses))
     colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
-      "converge_H1","mu","logL_H0","converge_H0",vecColnamesMubyTimecourse)
+      "converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
   }
   rownames(matFits) <- rownames(arr3DCountDataCondition)
   
@@ -345,7 +365,7 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
   lsFitResults_matrix <- list()
   lsFitResults_matrix[[1]] <- matFits   
   # ["beta","h0","h1","h2","t1","t2","logL_H1",
-  # "converge_H1","mu","logL_H0","converge_H0",("muByTimecourse")] (x3 if with control)
+  # "converge_H1","mu","logL_H0",("muByTimecourse")] (x3 if with control)
   lsFitResults_matrix[[2]] <- matImpulseValues
   # Values of impulse model on input timepoints by gene
   names(lsFitResults_matrix) <- c("parameters","values")

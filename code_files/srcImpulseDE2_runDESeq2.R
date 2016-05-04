@@ -33,21 +33,24 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
   # experimentes are assumed to be i.i.d. In batch mode,
   # all samples should originate form the same series of 
   # independent samples.
-  if(strMode=="batch"){
+  if(strMode=="batch" | strMode=="singlecell"){
     # Create DESeq2 data object
     dds <- DESeqDataSetFromMatrix(countData = dfCountData,
       colData = dfAnnotationFull,
       design = ~ Sample)
     # Run DESeq2
     ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample, reduced = ~ 1)
-  } else {
+  } else if(strMode=="timecourses"){
     # Create DESeq2 data object
     dds <- DESeqDataSetFromMatrix(countData = dfCountData,
       colData = dfAnnotationFull,
       design = ~ Sample + Timecourse)
     # Run DESeq2
     ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample + Timecourse, reduced = ~ Timecourse)
+  } else {
+    stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
   }
+  
   # Get gene-wise dispersion estimates
   # var = mean + alpha * mean^2, alpha is dispersion
   # DESeq2 dispersion is 1/size used dnbinom (used in cost function
