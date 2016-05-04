@@ -37,6 +37,8 @@ evalLogLikImpulseBatch <- function(vecTheta,vecX,matY,scaDispEst){
   return(scaLogLik)
 }
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
 #' Cost function impulse model fit - Time course mode
 #' 
 #' Log likelihood cost function for impulse model fit based on negative 

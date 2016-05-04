@@ -10,7 +10,7 @@
 #' Internal function of \code{fitImpulse}.
 #' 
 #' @seealso Called by \code{fitImpulse_matrix}. Calls \code{evalLogLikImpulse},
-#'    \code{evalLogLikMean} and \code{calcImpulse_comp}.
+#'    and \code{calcImpulse_comp}.
 #' 
 #' @param matCounts (numeric 2D array vecTimepoints x replicates)
 #' @param vecTimepoints (vector number timepoints) Observed timepoints, numeric.
@@ -263,9 +263,9 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
     assign("arr3DCountDataCondition", arr3DCountDataCondition, envir = my.env)
     assign("calcImpulse_comp", calcImpulse_comp, envir = my.env)
     assign("fitImpulse", fitImpulse, envir = my.env)
-    assign("evalLogLikImpulseByTC_comp", evalLogLikImpulseByTC_comp, envir = my.env)
     assign("evalLogLikImpulseBatch_comp", evalLogLikImpulseBatch_comp, envir = my.env)
-    assign("evalLogLikMean_comp", evalLogLikMean_comp, envir = my.env)
+    assign("evalLogLikImpulseByTC_comp", evalLogLikImpulseByTC_comp, envir = my.env)
+    assign("evalLogLikImpulseSC_comp", evalLogLikImpulseSC_comp, envir = my.env)
     assign("fitImpulse_gene",fitImpulse_gene, envir = my.env)
     assign("fitImpulse_matrix",fitImpulse_matrix, envir = my.env)
     assign("vecTimepoints", vecTimepoints, envir = my.env)
@@ -275,8 +275,8 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
     assign("vecDispersions", vecDispersions, envir = my.env)
     
     clusterExport(cl=cl, varlist=c("arr3DCountDataCondition","vecDispersions", "vecTimepoints",
-      "calcImpulse_comp", "evalLogLikImpulseByTC_comp", "evalLogLikImpulseBatch_comp",
-      "evalLogLikMean_comp", "fitImpulse", "fitImpulse_matrix", "fitImpulse_gene",
+      "calcImpulse_comp", "evalLogLikImpulseBatch_comp", "evalLogLikImpulseByTC_comp",
+      "evalLogLikImpulseSC_comp", "fitImpulse", "fitImpulse_matrix", "fitImpulse_gene",
       "strMode", "MAXIT", "NPARAM"), envir = my.env)
     
     # Fit impulse model to each gene of matrix and get impulse parameters:
@@ -355,7 +355,8 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
 #' 
 #' This function coordinates helper functions for fitting:
 #'  1. [Helper \code{fitImpulse_gene}] Fit impulse model to a single gene.
-#'      Calls cost functions (\code{evalLogLikImpulse} and \code{evalLogLikMean})
+#'      Calls cost functions (\code{evalLogLikImpulseBatch_comp},
+#'      \code{evalLogLikImpulseByTC_comp} and \code{evalLogLikImpulseSC_comp})
 #'      and \code{calcImpulse_comp}.
 #'  2. [Helper \code{fitImpulse_matrix}] Fit impulse model to matrix of genes.
 #'      Calls \code{fitImpulse_gene}.
