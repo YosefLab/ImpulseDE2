@@ -17,6 +17,7 @@
 library(compiler)
 library(parallel)
 library(DESeq2)
+library(BiocParallel)
 
 # Source functions in .R files from same directory as this function.
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
@@ -220,46 +221,37 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
   strCaseName = NULL, strControlName=NULL, strMode="batch",
   nProc=3, Q_value=0.01){
   
-  print("###################################################################")
-  print("Impulse v1.3 for count data")
-  print("###################################################################")
-  
   NPARAM=6
   
-  tm_runImpulseDE2 <- system.time({
-    
+  print("Impulse v1.3 for count data")
+  
+  tm_runImpulseDE2 <- system.time({    
     # 1. Process input data 
     print("1. Prepare data:")
-    tm_processData <- system.time({
-      lsProcessedData <- processData(
-        dfAnnotationFull=dfAnnotationFull,matCountData=matCountData,
-        strControlName=strControlName, strCaseName=strCaseName)
-    })
+    lsProcessedData <- processData(
+      dfAnnotationFull=dfAnnotationFull,matCountData=matCountData,
+      strControlName=strControlName, strCaseName=strCaseName)
+    
     arr2DCountData <- lsProcessedData[[1]]
     arr3DCountData <- lsProcessedData[[2]]
     dfAnnotationRed <- lsProcessedData[[3]]
     save(arr2DCountData,file=file.path(getwd(),"ImpulseDE2_arr2DCountData.RData"))
     save(arr3DCountData,file=file.path(getwd(),"ImpulseDE2_arr3DCountData.RData"))
     save(dfAnnotationRed,file=file.path(getwd(),"ImpulseDE2_dfAnnotationRed.RData"))
-    print("DONE")
-    print(paste("Consumed time: ",round(tm_processData["elapsed"]/60,2),
-      " min",sep=""))
-    print("###################################################################")
     
     # 2. Run DESeq2
     print("2. Run DESeq2:")
     tm_runDESeq2 <- system.time({
       lsDESeq2Results <- runDESeq2(dfAnnotationFull=dfAnnotationFull,
-        arr2DCountData=arr2DCountData, strMode=strMode)
+        arr2DCountData=arr2DCountData, nProcessesAssigned=nProc,
+        strMode=strMode)
     })
     vecDESeq2Dispersions <- lsDESeq2Results[[1]]
     dfDESeq2Results <- lsDESeq2Results[[2]]
     save(vecDESeq2Dispersions,file=file.path(getwd(),"ImpulseDE2_vecDESeq2Dispersions.RData"))
     save(dfDESeq2Results,file=file.path(getwd(),"ImpulseDE2_dfDESeq2Results.RData"))
-    print("DONE")
     print(paste("Consumed time: ",round(tm_runDESeq2["elapsed"]/60,2),
       " min",sep=""))
-    print("###################################################################")
     
     ###  3. Fit Impule model to each gene 
     print("3. Fitting Impulse model to the genes")
@@ -270,30 +262,22 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
         nProcessesAssigned=nProc, NPARAM=NPARAM)
     })
     save(lsImpulseFits,file=file.path(getwd(),"ImpulseDE2_lsImpulseFits.RData"))
-    print("DONE")
     print(paste("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2),
       " min",sep=""))
-    print("###################################################################")
     
     ### 4. Detect differentially expressed genes
     print("4. DE analysis")
-    tm_DE <- system.time({
-      dfImpulseResults <- computePval(
-        arr3DCountData=arr3DCountData,vecDispersions=vecDESeq2Dispersions,
-        dfAnnotationRed=dfAnnotationRed,lsImpulseFits=lsImpulseFits,
-        strCaseName=strCaseName, strControlName=strControlName,
-        strMode=strMode, NPARAM=NPARAM)
-      
-      lsDEGenes <- as.character(as.vector( 
-        dfImpulseResults[as.numeric(dfImpulseResults$adj.p) <= Q_value,"Gene"] ))
-    })
+    dfImpulseResults <- computePval(
+      arr3DCountData=arr3DCountData,vecDispersions=vecDESeq2Dispersions,
+      dfAnnotationRed=dfAnnotationRed,lsImpulseFits=lsImpulseFits,
+      strCaseName=strCaseName, strControlName=strControlName,
+      strMode=strMode, NPARAM=NPARAM)
+    
+    lsDEGenes <- as.character(as.vector( 
+      dfImpulseResults[as.numeric(dfImpulseResults$adj.p) <= Q_value,"Gene"] ))
     save(dfImpulseResults,file=file.path(getwd(),"ImpulseDE2_dfImpulseResults.RData"))
     save(lsDEGenes,file=file.path(getwd(),"ImpulseDE2_lsDEGenes.RData"))
     print(paste("Found ", length(lsDEGenes)," DE genes",sep=""))
-    print("DONE")
-    print(paste("Consumed time: ",round(tm_DE["elapsed"]/60,2),
-      " min",sep=""))
-    print("###################################################################")
     
     ### 5. Plot the top DE genes
     print("5. Plot top DE genes")
@@ -308,15 +292,12 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
         dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDESeq2Results,
         strMode=strMode, NPARAM=NPARAM)
     })
-    print("DONE")
     print(paste("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2),
       " min",sep=""))
-    print("##################################################################")
   })
   print("Finished ImpulseDE2.")
   print(paste("TOTAL consumed time: ",round(tm_runImpulseDE2["elapsed"]/60,2),
     " min",sep=""))
-  print("##################################################################")
   
   return(list(
     "lsDEGenes"=lsDEGenes,

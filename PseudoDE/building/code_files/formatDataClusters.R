@@ -13,5 +13,5 @@ formatDataClusters <- function(matCounts,vecPseudotime,lsResultsClustering){
   colnames(dfAnnotationImpulseDE2) <- c("Replicate","Sample","Condition","Time")
   dfAnnotationImpulseDE2$Time <- as.numeric(as.vector( dfAnnotationImpulseDE2$Time ))
   
-  return(dfAnnotationClusters)
+  return(dfAnnotationImpulseDE2)
 }

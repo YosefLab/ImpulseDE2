@@ -1,11 +1,19 @@
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
+library(DESeq2)
+library(BiocParallel)
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_CostFunctionsFit.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_runDESeq2.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/PseudoDE/building/code_files/clusterCellsInPseudotime.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/PseudoDE/building/code_files/formatDataClusters.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/PseudoDE/building/code_files/fitHurdleModel.R")
 
 runPseudoDE <- function(matCounts,vecPseudotime){
   
   # 1. Data preprocessing
   print("1. Data preprocessing:")
   tm_preproc <- system.time({
+    # Take out NA cells
+    vecPseudotime <- vecPseudotime[!is.na(vecPseudotime)]
     # Adjust ording of cells in objects
     matCounts <- matCounts[,names(vecPseudotime)]
   })
@@ -29,7 +37,7 @@ runPseudoDE <- function(matCounts,vecPseudotime){
   # 3. Fit mixture model
   print("3. Fit mixture model:")
   tm_fitmm <- system.time({
-    lsResultsClustering <- clusterCellsInPseudotime(matCounts=matCounts, 
+    lsHurdleParamters <- fitHurdleModel(matCounts=matCounts, 
       lsResultsClustering=lsResultsClustering, dfAnnotationClusters=dfAnnotationClusters)
   })
   print("DONE")

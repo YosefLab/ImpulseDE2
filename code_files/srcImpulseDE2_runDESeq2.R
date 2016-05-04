@@ -22,7 +22,11 @@
 #' @export
 
 runDESeq2 <- function(dfAnnotationFull, arr2DCountData, 
-  strMode="batch"){
+  nProcessesAssigned=1, strMode="batch"){
+  
+  # Set number of processes to number of cores assigned if available
+  nProcesses <- min(detectCores() - 1, nProcessesAssigned)
+  register(MulticoreParam(nProcesses))
   
   dfCountData <- arr2DCountData[,colnames(arr2DCountData) %in% dfAnnotationFull$Replicate]
   colnames(dfCountData) <- dfAnnotationFull$Sample[
@@ -39,14 +43,18 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
       colData = dfAnnotationFull,
       design = ~ Sample)
     # Run DESeq2
-    ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample, reduced = ~ 1)
+    ddsDESeqObject <- DESeq(dds, test = "LRT", 
+      full = ~ Sample, reduced = ~ 1,
+      parallel=TRUE)
   } else if(strMode=="timecourses"){
     # Create DESeq2 data object
     dds <- DESeqDataSetFromMatrix(countData = dfCountData,
       colData = dfAnnotationFull,
       design = ~ Sample + Timecourse)
     # Run DESeq2
-    ddsDESeqObject <- DESeq(dds, test = "LRT", full = ~ Sample + Timecourse, reduced = ~ Timecourse)
+    ddsDESeqObject <- DESeq(dds, test = "LRT", 
+      full = ~ Sample + Timecourse, reduced = ~ Timecourse,
+      parallel=TRUE)
   } else {
     stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
   }
