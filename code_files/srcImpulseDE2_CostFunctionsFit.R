@@ -85,35 +85,6 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,matY,scaDispEst,
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-### DAVID to be deprecated - closed form solution for this case
-#' Cost function mean model fit
-#' 
-#' Log likelihood cost function for mean model fit based on negative binomial
-#' model.
-#' 
-#' @aliases evalLogLikMean_comp
-#' 
-#' @seealso Called by \code{fitImpulse}:\code{fitImpulse_gene}.
-#' Calls \code{calcImpulse}.
-#' 
-#' @param scaMuEst (scalar) Mean for single negative binomial model.
-#' @param matY (2D array timepoints x replicates) Observed expression values for 
-#     given gene.
-#' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' 
-#' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
-#' @export
-
-evalLogLikMean <- function(scaMuEst,matY,scaDispEst){
-  # Compute log likelihood assuming constant mean of negative binomial
-  scaLogLik <- sum(dnbinom(matY[!is.na(matY)], mu=exp(scaMuEst), size=scaDispEst, log=TRUE))
-  
-  # Maximise log likelihood: Return likelihood as value to optimisation routine
-  return(scaLogLik)
-}
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
 #' Cost function impulse model fit - Single cell mode
 #' 
 #' Log likelihood cost function for impulse model fit based on zero inflated  

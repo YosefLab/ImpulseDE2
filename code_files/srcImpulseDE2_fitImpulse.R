@@ -70,14 +70,6 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
   vecGradients <- unlist( lapply(c(1:(nTimepts-1)),function(x){
     (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepoints[x+1]-vecTimepoints[x])}) )
   
-  ### DAVID to be deprecated: use closed form solution for means
-  # Null model (batch) and reference: Single mean
-  # Parameter estimate: Overall mean
-  #scaMuGuess <- log(mean(matCounts, na.rm=TRUE)+1)
-  #lsFitMean <- unlist(optim(par=scaMuGuess, fn=evalLogLikMean_comp,
-  #  matY=matCounts, scaDispEst=scaDispersionEstimate,
-  #  method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])
-  #scaMuEst <- lsFitMean[[1]]
   scaMu <- mean(matCounts, na.rm=TRUE)
   if(strMode=="batch"){
     # Null model (timecourses): One mean for all points
@@ -90,19 +82,6 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
       sum(dnbinom(matCounts[!is.na(matCounts[,indTC]),indTC], 
         mu=vecMuTimecourses[indTC], size=scaDispersionEstimate, log=TRUE))
     }))
-    # vecMuEstTimecourse <- array(NA,nTimecourses)
-    # scaLoglikNull <- 0
-    #boolConverged <- 0
-    #for(tc in 1:nTimecourses){
-      #scaMuGuess <- log(mean(matCounts[,tc], na.rm=TRUE)+1)
-      #lsFitMeanTC <- unlist(optim(par=scaMuGuess, fn=evalLogLikMean_comp,
-      #  matY=matCounts[,tc], scaDispEst=scaDispersionEstimate,
-      #  method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")])
-      #vecMuEstTimecourse[tc] <- lsFitMeanTC[[1]]
-      #scaLoglikNull <- scaLoglikNull + lsFitMeanTC[[2]]
-      #if(lsFitMeanTC[[3]] != 0){boolConverged <- 1}
-    #}
-    #lsFitMean <- c(scaMuEst,scaLoglikNull)
   } else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
