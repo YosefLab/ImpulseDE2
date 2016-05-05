@@ -39,6 +39,10 @@ evalLogLikImpulseBatch_comp <- cmpfun(evalLogLikImpulseBatch)
 evalLogLikImpulseByTC_comp <- cmpfun(evalLogLikImpulseByTC)
 evalLogLikImpulseSC_comp <- cmpfun(evalLogLikImpulseSC)
 
+evalLogLikHurdleNB_comp <- cmpfun(evalLogLikHurdleNB)
+evalLogLikHurdleDrop_comp <- cmpfun(evalLogLikHurdleDrop)
+evalLogLikHurdle_comp <- cmpfun(evalLogLikHurdle)
+
 # Fit impulse model to a timecourse dataset
 source("srcImpulseDE2_fitImpulse.R")
 # Detect differentially expressed genes over time

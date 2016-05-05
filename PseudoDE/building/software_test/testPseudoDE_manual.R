@@ -27,13 +27,23 @@ sum(colnames(matCounts) %in% names(vecPseudotime))
 vecPseudotime <- vecPseudotime[names(vecPseudotime) %in% colnames(matCounts)]
 matCounts <- matCounts[,names(vecPseudotime)]
 
+library(compiler)
+library(parallel)
 library(DESeq2)
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_CostFunctionsFit.R")
+
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_runDESeq2.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/clusterCellsInPseudotime.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/formatDataClusters.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/fitHurdleModel.R")
+
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_CostFunctionsFit.R")
+evalLogLikHurdleNB_comp <- cmpfun(evalLogLikHurdleNB)
+evalLogLikHurdleDrop_comp <- cmpfun(evalLogLikHurdleDrop)
+evalLogLikHurdle_comp <- cmpfun(evalLogLikHurdle)
+
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+
+matCounts <- matCounts[apply(matCounts,1,function(gene){!all(is.na(gene) | gene==0)}),]
 
 lsResultsClustering <- clusterCellsInPseudotime(vecPseudotime=vecPseudotime)
 dfAnnotationClusters <- formatDataClusters(matCounts=matCounts,

@@ -1,4 +1,6 @@
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
+library(compiler)
+library(parallel)
 library(DESeq2)
 library(BiocParallel)
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_CostFunctionsFit.R")
@@ -6,6 +8,10 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_f
 source("/Users/davidsebastianfischer/MasterThesis/code/PseudoDE/building/code_files/clusterCellsInPseudotime.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/PseudoDE/building/code_files/formatDataClusters.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/PseudoDE/building/code_files/fitHurdleModel.R")
+
+evalLogLikHurdleNB_comp <- cmpfun(evalLogLikHurdleNB)
+evalLogLikHurdleDrop_comp <- cmpfun(evalLogLikHurdleDrop)
+evalLogLikHurdle_comp <- cmpfun(evalLogLikHurdle)
 
 runPseudoDE <- function(matCounts,vecPseudotime){
   

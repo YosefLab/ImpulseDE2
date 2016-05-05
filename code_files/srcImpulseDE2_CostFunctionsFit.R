@@ -192,14 +192,14 @@ evalLogLikHurdle <- function(lsThetaHurdle,matY,
     
     # Evaluate on all zero count genes in cells
     scaLogLikZerosCluster <- sum(log(
-      (1-scaDropoutEst) * dnbinom(matYZeros[,vecCells], 
-        mu=matMeanEst[,cluster], size=scaDispEst, log=FALSE) +
-        scaDropoutEst
+      (1-vecDropoutEst[vecCells]) * dnbinom(matYZeros[,vecCells], 
+        mu=matMeanEst[,cluster], size=vecDispEst, log=FALSE) +
+        vecDropoutEst[vecCells]
     ), na.rm=TRUE)
     # Evaluate on all nonzero count genes in cells
     scaLogLikNonzerosCluster <- sum(log(
-      (1-scaDropoutEst) * dnbinom(matYNonzeros[,vecCells], 
-        mu=matMeanEst[,cluster], size=scaDispEst, log=FALSE)
+      (1-vecDropoutEst[vecCells]) * dnbinom(matYNonzeros[,vecCells], 
+        mu=matMeanEst[,cluster], size=vecDispEst, log=FALSE)
     ), na.rm=TRUE)
     
     # Get likelihood of all data in cluster
@@ -262,15 +262,15 @@ evalLogLikHurdleNB <- function(vecTheta,vecY,
   # Evaluate on all zero count genes in cells
   scaLogLikZeros <- sum(log(
     (1-vecDropoutEst[indZeros]) * dnbinom(vecY[indZeros],
-      mu=vecMeanEst[lsResultsClustering$Assignments[indZeros]], 
-      size=scaDispEst[indZeros],
+      mu=exp(vecMeanEst[lsResultsClustering$Assignments[indZeros]]), 
+      size=exp(scaDispEst[indZeros]),
       log=FALSE) + vecDropoutEst[indZeros]
   ), na.rm=TRUE)
   # Evaluate on all nonzero count genes in cells
   scaLogLikNonzeros <- sum(log(
     (1-vecDropoutEst[indNonzeros]) * dnbinom(vecY[indNonzeros],
-      mu=vecMeanEst[lsResultsClustering$Assignments[indNonzeros]],
-      size=scaDispEst[indNonzeros],
+      mu=exp(vecMeanEst[lsResultsClustering$Assignments[indNonzeros]]),
+      size=exp(scaDispEst[indNonzeros]),
       log=FALSE)
   ), na.rm=TRUE)
   
@@ -312,6 +312,7 @@ evalLogLikHurdleNB <- function(vecTheta,vecY,
 evalLogLikHurdleDrop <- function(scaTheta,vecY,
   vecMeanEst,vecDispEst){ 
   
+  scaDropoutEst <- scaTheta
   # Likelihood function of hurdle modle differs between
   # zero and non-zero counts: Add likelihood of both together.
   # Note that the log is taken over the sum of mixture model 
@@ -324,13 +325,17 @@ evalLogLikHurdleDrop <- function(scaTheta,vecY,
   
   # Evaluate on all zero count genes in cells
   scaLogLikZeros <- sum(log(
-    (1-scaDropoutEst) * dnbinom(vecY[indZeros], mu=vecMeanEst[indZeros], 
-      size=vecDispEst[indZeros], log=FALSE) + scaDropoutEst
+    (1-scaDropoutEst) * dnbinom(vecY[indZeros],
+      mu=exp(vecMeanEst[indZeros]), 
+      size=exp(vecDispEst[indZeros]),
+      log=FALSE) + scaDropoutEst
   ), na.rm=TRUE)
   # Evaluate on all nonzero count genes in cells
   scaLogLikNonzeros <- sum(log(
-    (1-scaDropoutEst) * dnbinom(vecY[indNonzeros], mu=vecMeanEst[indNonzeros],
-      size=vecDispEst[indNonzeros], log=FALSE)
+    (1-scaDropoutEst) * dnbinom(vecY[indNonzeros], 
+      mu=exp(vecMeanEst[indNonzeros]),
+      size=exp(vecDispEst[indNonzeros]),
+      log=FALSE)
   ), na.rm=TRUE)
   
   # Get likelihood of all data in cluster
