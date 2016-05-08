@@ -184,7 +184,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     # DAVID to be deprecated
     # Shorten expression table
     if(TRUE){
-      ind_toKeep <- 1:8
+      ind_toKeep <- 1:100
       print(paste0("Working on subset of data: ",length(ind_toKeep)," genes."))
       arr2DCountData <- arr2DCountData[ind_toKeep,]
     }
