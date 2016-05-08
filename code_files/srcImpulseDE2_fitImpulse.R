@@ -136,7 +136,7 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
     }else if(strMode=="timecourses"){
       lsFitValley <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseByTC_comp, vecX=vecTimepoints,
         matY=matCounts, scaDispEst=scaDispersionEstimate,
-        scaMuEst=scaMuEst, vecMuEstTimecourse=vecMuEstTimecourse,
+        scaMu=scaMu, vecMuTimecourses=vecMuTimecourses,
         method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
     }else if(strMode=="singlecell"){
       lsFitValley <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseSC_comp, vecX=vecTimepoints,
@@ -177,8 +177,10 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
     names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1","mu","logL_H0")
   } else {
-    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLoglikNull,vecMuTimecourses)
-    nTimecourses <- length(lsBestFitSummary)-11
+    vecMuTimecoursesWithNA <- array(NA,length(vecboolObservedTimecourse))
+    vecMuTimecoursesWithNA[vecboolObservedTimecourse] <- vecMuTimecourses
+    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLoglikNull,vecMuTimecoursesWithNA)
+    nTimecourses <- length(vecboolObservedTimecourse)
     vecColnamesMubyTimecourse <- paste0(rep("muByTimecourse",nTimecourses),c(1:nTimecourses))
     names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
@@ -317,7 +319,7 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
     colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
       "converge_H1","mu","logL_H0")
   } else {
-    nTimecourses <- dim(matFits)[2]-11
+    nTimecourses <- dim(arr3DCountDataCondition)[3]
     vecColnamesMubyTimecourse <- paste0(rep("muByTimecourse",nTimecourses),c(1:nTimecourses))
     colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
       "converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)

@@ -263,14 +263,14 @@ evalLogLikHurdleNB <- function(vecTheta,vecY,
   scaLogLikZeros <- sum(log(
     (1-vecDropoutEst[indZeros]) * dnbinom(vecY[indZeros],
       mu=exp(vecMeanEst[lsResultsClustering$Assignments[indZeros]]), 
-      size=exp(scaDispEst[indZeros]),
+      size=scaDispEst[indZeros],
       log=FALSE) + vecDropoutEst[indZeros]
   ), na.rm=TRUE)
   # Evaluate on all nonzero count genes in cells
   scaLogLikNonzeros <- sum(log(
     (1-vecDropoutEst[indNonzeros]) * dnbinom(vecY[indNonzeros],
       mu=exp(vecMeanEst[lsResultsClustering$Assignments[indNonzeros]]),
-      size=exp(scaDispEst[indNonzeros]),
+      size=scaDispEst[indNonzeros],
       log=FALSE)
   ), na.rm=TRUE)
   
@@ -327,14 +327,14 @@ evalLogLikHurdleDrop <- function(scaTheta,vecY,
   scaLogLikZeros <- sum(log(
     (1-scaDropoutEst) * dnbinom(vecY[indZeros],
       mu=exp(vecMeanEst[indZeros]), 
-      size=exp(vecDispEst[indZeros]),
+      size=vecDispEst[indZeros],
       log=FALSE) + scaDropoutEst
   ), na.rm=TRUE)
   # Evaluate on all nonzero count genes in cells
   scaLogLikNonzeros <- sum(log(
     (1-scaDropoutEst) * dnbinom(vecY[indNonzeros], 
       mu=exp(vecMeanEst[indNonzeros]),
-      size=exp(vecDispEst[indNonzeros]),
+      size=vecDispEst[indNonzeros],
       log=FALSE)
   ), na.rm=TRUE)
   
