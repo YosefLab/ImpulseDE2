@@ -37,7 +37,7 @@
 #' @export
 
 processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
-  strCaseName=NULL, strControlName=NULL){
+  strCaseName=NULL, strControlName=NULL, strMode=NULL){
   
   ###############################################################
   # (I) Helper functions
@@ -58,6 +58,9 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     # strCaseName
     if(is.null(strCaseName)){
       stop("ERROR: No name for case condition given.")
+    }
+    if(is.null(strMode)){
+      stop("ERROR: ImpulseDE2 mode (strMode) was not given as input.")
     }
     
     ### 2. Check annotation table content
@@ -109,7 +112,14 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
         " in the count data table do(es) not occur in annotation table and will be ignored."))
     }
     
-    ### Summarise which conditions, samples, lsReplicates were found
+    ### 4. Check mode
+    lsAllowedModes <- c("batch", "timecourses", "singlecell")
+    if(sum(strMode==lsAllowedModes) != 1){
+      stop(paste0( "ERROR: ImpulseDE2 mode given as input, strMode=", strMode,
+        ", is not recognised. Chose from {", paste0(lsAllowedModes, collapse=","), "}." ))
+    }
+    
+    ### Summarise which conditions, samples, lsReplicates were found and mode
     print(paste0("Found conditions: ",lsConditions))
     print(paste0("Case condition: ", strCaseName))
     if(!is.null(strControlName)){
@@ -135,6 +145,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
             ]$Replicate,collapse=",") ))
       }
     }
+    print(paste0( "ImpulseDE2 runs in mode: ", strMode ))
     
     return(NULL)
   }
@@ -184,9 +195,9 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     # DAVID to be deprecated
     # Shorten expression table
     if(TRUE){
-      ind_toKeep <- 1:100
-      print(paste0("Working on subset of data: ",length(ind_toKeep)," genes."))
-      arr2DCountData <- arr2DCountData[ind_toKeep,]
+      ind_toKeep <- 100
+      print(paste0("Working on subset of data: ",min(ind_toKeep,dim(arr2DCountData)[1])," genes."))
+      arr2DCountData <- arr2DCountData[1:min(ind_toKeep,dim(arr2DCountData)[1]),]
     }
     # Exclude genes with only missing values (NAs)
     indx_NA <- apply(arr2DCountData,1,function(x){all(is.na(x))})

@@ -49,7 +49,13 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
   strNameMethod1="ImpulseDE2", strNameMethod2="DESeq2",
   NPARAM=6){
   
-  # Width of pdf in time units for plotting
+  # Only for batch/singlecell plotting:
+  # Width of negative binomial pdf (ylim) in time units for plotting
+  # E.g. PDF_WIDTH <- 1 means that the inferred negative binomial
+  # density of a sample will be scaled into the interval [0,1]
+  # and plotted at sample x time units vertically in the interval
+  # [x,x+1] time units, with the y axis (the counts) being the
+  # horizontal axis of the pdf.
   PDF_WIDTH <- 1
   
   # Name genes if not previously named (already done if this function is
@@ -120,9 +126,10 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
           main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
             " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
         # Plot impulse within boundaries of observed points
-        indImpulseValToPlot <- lsCaseValues >= scaYlim_lower & lsCaseValues <= scaYlim_upper
-        lsCaseValuesTC[!indImpulseValToPlot] <- NA
-        points(vecX, lsCaseValuesTC,col="blue", type="l")
+        lsCaseValuesToPlot <- lsCaseValues
+        indImpulseValToPlot <- lsCaseValuesToPlot >= scaYlim_lower & lsCaseValuesToPlot <= scaYlim_upper
+        lsCaseValuesToPlot[!indImpulseValToPlot] <- NA
+        points(vecX, lsCaseValuesToPlot,col="blue", type="l")
         
         # Plot inferred negative binomial pdf at each time point in black (vertical)
         vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
@@ -152,10 +159,10 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
             " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
         legend(x="bottomright",as.character(dfAnnotationRed[1,"Condition"]),fill=c("blue"), cex=0.6, inset=c(0,scaLegendInset))
         # Plot impulse fit to time course
-        lsCaseValuesTC <- lsCaseValues*vecTranslationFactors[1]
-        indImpulseValToPlot <- lsCaseValuesTC >= scaYlim_lower & lsCaseValuesTC <= scaYlim_upper
-        lsCaseValuesTC[!indImpulseValToPlot] <- NA
-        points(vecX, lsCaseValuesTC,col=vecCol[1], type="l")
+        lsCaseValuesToPlotTC <- lsCaseValues*vecTranslationFactors[1]
+        indImpulseValToPlot <- lsCaseValuesToPlotTC >= scaYlim_lower & lsCaseValuesToPlotTC <= scaYlim_upper
+        lsCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
+        points(vecX, lsCaseValuesToPlotTC,col=vecCol[1], type="l")
         
         # Plot remaining time courses
         if(dim(arr3DCountData)[3]>1){
@@ -163,10 +170,10 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
             # Plot data of time course
             points(x=arrTimepoints_All[1,],y=t(arr3DCountData[geneID,,timecourse]),col=vecCol[timecourse],pch=3)
             # Plot impulse within boundaries of observed points
-            lsCaseValuesTC <- lsCaseValues*vecTranslationFactors[timecourse]
-            indImpulseValToPlot <- lsCaseValuesTC >= scaYlim_lower & lsCaseValuesTC <= scaYlim_upper
-            lsCaseValuesTC[!indImpulseValToPlot] <- NA
-            points(vecX, lsCaseValuesTC,col=vecCol[timecourse], type="l")
+            lsCaseValuesToPlotTC <- lsCaseValues*vecTranslationFactors[timecourse]
+            indImpulseValToPlot <- lsCaseValuesToPlotTC >= scaYlim_lower & lsCaseValuesToPlotTC <= scaYlim_upper
+            lsCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
+            points(vecX, lsCaseValuesToPlotTC,col=vecCol[timecourse], type="l")
           }
         }
       } else {

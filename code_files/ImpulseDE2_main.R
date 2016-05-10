@@ -21,6 +21,7 @@ library(BiocParallel)
 
 # Source functions in .R files from same directory as this function.
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
+#setwd("/data/yosef2/users/fischerd/code/ImpulseDE2")
 #Prepares the data and annotation for internal use
 source("srcImpulseDE2_processData.R")
 # Wrapper fur running DESeq2
@@ -73,8 +74,8 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' models the response of gene activity read outs (such as RNAseq counts)
 #' to environmental or developmental stimuli as the product
 #' of two simgoids. This model can capture simple time course
-#' patterns, such as plateus, increase and decrease. ImpulseDE2 uses
-#' the impulse model to identify differntial activity over time on any
+#' patterns, such as plateaus, increase and decrease. ImpulseDE2 uses
+#' the impulse model to identify differential activity over time on any
 #' type of count data which follows the negative binomial distribution
 #' (as frequently encountered in sequencing data). ImpulseDE2 performs
 #' fitting of the impulse model and a mean model to data and evaluates
@@ -83,21 +84,21 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' \enumerate{
 #'  \item Impulse fitting: The impulse model is fitted based on the assumption
 #'    that the input count data follow a negative binomial distribution with
-#'    overdispersion as identified by DESeq2. The impulse model does not have
+#'    dispersion as identified by DESeq2. The impulse model does not have
 #'    a closed form maximum likelihood parameter estimate and must therefore
 #'    be inferred from numerical optimisation.
 #'  \enumerate{
-#'    \item Inititialisation: Initialisation is performed twice for each gene,
+#'    \item Initialisation: Initialisation is performed twice for each gene,
 #'      based on a peak and a valley model. The parameters representing these 
 #'      models reflect the form that these two models would have given the count
 #'      data of each gene and are specific to each gene.
 #'    \item Optimisation: The cost function for the fit is the log likelihood
 #'      of the data which is evaluated based on negative binomial likelihoods
 #'      at each observed time point, with the value of the impulse model as the
-#'      mean and the gene overdisperion inferred using DESeq2 as the 
-#'      overdispersion. Numerical optimisation is performed using the
-#'      BFGS algorithm. In analogy to generlised linear models for count data,
-#'      the fitting of the parameters representing limit behavious of the two
+#'      mean and the gene dispersion inferred using DESeq2 as the 
+#'      dispersion. Numerical optimisation is performed using the
+#'      BFGS algorithm. In analogy to generalised linear models for count data,
+#'      the fitting of the parameters representing limit behaviours of the two
 #'      sigmoids (which are counts) are fitted in log space so that they cannot
 #'      adopt negative values.
 #'    \item Fit selection: The fit with the higher log likelihood of the two
@@ -105,29 +106,18 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'  }
 #'  \item Mean fitting: The mean model is a single negative binomial and
 #'    serves as the null model in the case of differential expression over
-#'    time within a single condition. The mean model does not have a closed
-#'    form maximum likelihood estimate and must be inferred from numerical 
-#'    optimisation. This problem is comparatively easy and fast compared
-#'    to impulse model fitting, as the optimisation problem is one
-#'    dimensional and convex (DAVID yes?).
-#'  \enumerate{
-#'    \item Inititialisation: The mean is initialised to the overall mean
-#'      of the gene.
-#'    \item Optimisation: The cost function for the fit is the log likelihood
-#'      of the data which is the negative binomial likelihood with the overall
-#'      mean as the mean and the gene overdisperion inferred using DESeq2 as the 
-#'      overdispersion. Numerical optimisation is performed using the
-#'      BFGS algorithm. In analogy to generlised linear models for count data,
-#'      the mean is fitted in log space so that it cannot adopt negative values.
-#' }
-#'    \item Fit evaluation: The model comparison statistic is the deviance
-#'      2 * (loglikelihood(H1) - loglikelihood(H0)). The deviance is chi-squared
-#'      distributed with the difference in degrees of freedom of both models
-#'      as degrees of freedom if the null model is contained in the alternative
-#'      model, which is given in both modes of differential expression analysis
-#'      with ImpulseDE (with and without control). Therefore p-values for 
-#'      differential expression are computed based on the chi-squared distribution.
-#'      The p-values are the FDR corrected (Benjamini and Hochberg, 1995).
+#'    time within a single condition. The maximum likelihood estimate of
+#'    the mean of a negative binomial distribution given the data  and 
+#'    the dispersion is the sample average. This closed form solution 
+#'    is used here.
+#'  \item Fit evaluation: The model comparison statistic is the deviance
+#'    2 * (loglikelihood(H1) - loglikelihood(H0)). The deviance is chi-squared
+#'    distributed with the difference in degrees of freedom of both models
+#'    as degrees of freedom if the null model is contained in the alternative
+#'    model, which is given in both modes of differential expression analysis
+#'    with ImpulseDE (with and without control). Therefore p-values for 
+#'    differential expression are computed based on the chi-squared distribution.
+#'    The p-values are the FDR corrected (Benjamini and Hochberg, 1995).
 #' }
 #' 
 #' @aliases ImpulseDE2
@@ -144,6 +134,8 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
 #'    using the \code{detectCores} function from the package \code{parallel} to avoid overload.
 #' @param Q_value (scalar) [Default 0.01] FDR-corrected p-value cutoff for significance.
+#' @param boolPlotting (bool) [TRUE] Whether to plot significant DE genes into output pdf.
+#'    Consider setting FALSE for large data sets with many hits.
 #' 
 #' @return (list length 4) with the following elements:
 #' \itemize{
@@ -223,7 +215,7 @@ source("srcImpulseDE2_plotDEGenes.R")
 
 runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
   strCaseName = NULL, strControlName=NULL, strMode="batch",
-  nProc=3, Q_value=0.01){
+  nProc=3, Q_value=0.01, boolPlotting=TRUE){
   
   NPARAM=6
   
@@ -234,7 +226,8 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     print("1. Prepare data:")
     lsProcessedData <- processData(
       dfAnnotationFull=dfAnnotationFull,matCountData=matCountData,
-      strControlName=strControlName, strCaseName=strCaseName)
+      strControlName=strControlName, strCaseName=strCaseName,
+      strMode=strMode)
     
     arr2DCountData <- lsProcessedData[[1]]
     arr3DCountData <- lsProcessedData[[2]]
@@ -284,20 +277,22 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     print(paste("Found ", length(lsDEGenes)," DE genes",sep=""))
     
     ### 5. Plot the top DE genes
-    print("5. Plot top DE genes")
-    tm_plotDEGenes <- system.time({
-      vecDESeq2Results <- dfDESeq2Results$padj
-      names(vecDESeq2Results) <- rownames(dfDESeq2Results)
-      plotDEGenes(lsGeneIDs=lsDEGenes,
-        arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
-        lsImpulseFits=lsImpulseFits,
-        strCaseName=strCaseName, strControlName=strControlName, 
-        strFileNameSuffix="DE", strPlotTitleSuffix="", strPlotSubtitle="",
-        dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDESeq2Results,
-        strMode=strMode, NPARAM=NPARAM)
-    })
-    print(paste("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2),
-      " min",sep=""))
+    if(boolPlotting){
+      print("5. Plot top DE genes")
+      tm_plotDEGenes <- system.time({
+        vecDESeq2Results <- dfDESeq2Results$padj
+        names(vecDESeq2Results) <- rownames(dfDESeq2Results)
+        plotDEGenes(lsGeneIDs=lsDEGenes,
+          arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
+          lsImpulseFits=lsImpulseFits,
+          strCaseName=strCaseName, strControlName=strControlName, 
+          strFileNameSuffix="DE", strPlotTitleSuffix="", strPlotSubtitle="",
+          dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDESeq2Results,
+          strMode=strMode, NPARAM=NPARAM)
+      })
+      print(paste("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2),
+        " min",sep=""))
+    }
   })
   print("Finished ImpulseDE2.")
   print(paste("TOTAL consumed time: ",round(tm_runImpulseDE2["elapsed"]/60,2),

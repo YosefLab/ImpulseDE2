@@ -9,7 +9,7 @@ rownames(dfAnnotationFull) <- dfAnnotationFull$Replicate
 
 ### Load count data
 # All genes
-setwd("/data/yosef2/users/fischerd/code/ImpulseDE2")
+setwd("/data/yosef2/users/fischerd/data/ImpulseDE2_input")
 expression_table_raw <- read.table("E70-E72-E81-E91_peak_counts_DESeq_E72_24h_LPS_downsampled.tab",
   sep="\t",header=T,colClasses=c(
     "character","character","character",
@@ -35,12 +35,12 @@ setwd( "/data/yosef2/users/fischerd/code/ImpulseDE2")
 source("ImpulseDE2_main.R")
 
 # Run ImpulseDE2
-setwd( "/data/yosef2/users/fischerd/data/ImpulseDE2_output")
+setwd( "/data/yosef2/users/fischerd/data/ImpulseDE2_output/timecourses_ATACseq_E70-E72-E81-E91")
 
 control_timecourse = FALSE
 strControlName = NULL
 strCaseName = "case"
-n_process = 3
+n_process = 16
 Q_value = 10^(-3)
 strMode <- "timecourses"
 lsImpulseDE_results <- runImpulseDE2(matCountData=expression_table, dfAnnotationFull=dfAnnotationFull,
