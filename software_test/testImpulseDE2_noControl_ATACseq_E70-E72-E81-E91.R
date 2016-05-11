@@ -42,7 +42,7 @@ strControlName = NULL
 strCaseName = "case"
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "timecourses"
+strMode <- "batch"
 lsImpulseDE_results <- runImpulseDE2(matCountData=expression_table, dfAnnotationFull=dfAnnotationFull,
   strCaseName = strCaseName, strControlName=strControlName, strMode=strMode,
   nProc=n_process, Q_value=Q_value)

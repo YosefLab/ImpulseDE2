@@ -42,17 +42,6 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
   #optim_method <- c("optim","nlminb")
   
   # (I) Prepare data
-  # Remove timepoint if any is entirely missing
-  vecboolObservedTimepoint <- apply(matCounts,1,function(tp){any(!is.na(tp))})
-  if(any( !vecboolObservedTimepoint )){
-    vecTimepoints <- vecTimepoints[vecboolObservedTimepoint]
-    matCounts <- matCounts[vecboolObservedTimepoint,]
-  }
-  # Remove time course if is entirely missing
-  vecboolObservedTimecourse <- apply(matCounts,2,function(tp){any(!is.na(tp))})
-  if(any( !vecboolObservedTimecourse )){
-    matCounts <- matCounts[vecboolObservedTimecourse,]
-  }
   # Transform into 2D array if handed a list, i.e. one replicate
   if (is.vector(matCounts)==TRUE){
     matCounts <- array(matCounts,c(length(matCounts),1))
@@ -257,18 +246,18 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
   # Report mean fit objective value as null hypothesis, too.
   # match() selects first hit if maximum occurs multiple times
   indBestFit <- match(max(dfFitsByInitialisation["value",]),dfFitsByInitialisation["value",])
-  if(strMode=="batch"){
+  if(strMode=="batch" | strMode=="singlecell"){
     lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLoglikNull)
     names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1","mu","logL_H0")
-  } else {
-    vecMuTimecoursesWithNA <- array(NA,length(vecboolObservedTimecourse))
-    vecMuTimecoursesWithNA[vecboolObservedTimecourse] <- vecMuTimecourses
-    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLoglikNull,vecMuTimecoursesWithNA)
-    nTimecourses <- length(vecboolObservedTimecourse)
+  } else if(strMode=="timecourses") {
+    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLoglikNull,vecMuTimecourses)
+    nTimecourses <- length(vecMuTimecourses)
     vecColnamesMubyTimecourse <- paste0(rep("muByTimecourse",nTimecourses),c(1:nTimecourses))
     names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
+  }  else {
+    stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
   # Remove log scale from count parameters of impulse model
   lsBestFitSummary[c("h0","h1","h2")] <- exp(lsBestFitSummary[c("h0","h1","h2")])
@@ -335,8 +324,9 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
   
   # Set number of processes to number of cores assigned if available
   nProcesses <- min(detectCores() - 1, nProcessesAssigned)
-  # Use parallelisation if number of genes/centroids to fit is large
   if(nrow(arr3DCountDataCondition) > max(2*nProcesses,10)){
+    # Use parallelisation if number of genes/centroids to fit is large
+    
     # Define partitioning of genes onto nodes: lsGeneIndexByCore
     lsGeneIndexByCore = list()
     bord = floor(nrow(arr3DCountDataCondition)/nProcesses)
@@ -405,11 +395,12 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
     }
     # Concatenate the output objects of each node
     matFits <- do.call(rbind,lsmatFits)
-    stopCluster(cl)
     # Parallelisation ends here
+    stopCluster(cl)
     
-    # Do not use parallelisation if number of genes to fit is small
   } else {
+    # Do not use parallelisation if number of genes to fit is small
+    
     # Fit impulse model to each gene of matrix and get impulse parameters
     lsGeneIndexByCore_all <- 1:nrow(arr3DCountDataCondition)
     matFits <- lapply(lsGeneIndexByCore_all,function(x){
@@ -458,11 +449,8 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
   
   # Report results.
   lsFitResults_matrix <- list()
-  lsFitResults_matrix[[1]] <- matFits   
-  # ["beta","h0","h1","h2","t1","t2","logL_H1",
-  # "converge_H1","mu","logL_H0",("muByTimecourse")] (x3 if with control)
+  lsFitResults_matrix[[1]] <- matFits
   lsFitResults_matrix[[2]] <- matImpulseValues
-  # Values of impulse model on input timepoints by gene
   names(lsFitResults_matrix) <- c("parameters","values")
   return(lsFitResults_matrix)
 }
@@ -529,7 +517,8 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
     lsLabels = "case"
   }
   
-  # arr3DCountData is defined in the following as:
+  # DAVID: outsource array formatting into function?
+  # lsarr3DCountData is defined in the following as:
   #   1) A list of three data 3D arrays combined, case and control
   #   2) A list of a single data 3D array if only have case
   
@@ -541,16 +530,48 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
     lsTimepointsCase <- as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,"Time"] )
     lsTimepointsCtrl <- as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,"Time"] )
     lsTimepointsAll <- unique(c(lsTimepointsCase,lsTimepointsCtrl))
-    # Pad with NA sample if one time point not present in one of the two conditions
     # Define new array dimensions
-    nGenes <- dim(arr3DCountData[,,])[1]
+    nGenes <- dim(arr3DCountData)[1]
     nTimepoints <- length(lsTimepointsAll)
-    nRep <- dim(arr3DCountData[,,])[3]
-    # Leave non-sampled positions in new array (i.e. entire time points of
-    # either case or control) as NA.
-    arr3DCountDataAll <- array(NA,c(nGenes,nTimepoints,nRep*2))
-    arr3DCountDataAll[,lsTimepointsCase %in% lsTimepointsAll,1:nRep] <- arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]
-    arr3DCountDataAll[,lsTimepointsCtrl %in% lsTimepointsAll,(nRep+1):(nRep*2)] <- arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),]
+    if(strMode=="batch" | strMode=="singlecell"){
+      # All replicates for both case and control
+      nThirdDim <- dim(arr3DCountData)[3]*2
+    } else if(strMode=="timecourses"){
+      # Extract ordering of time courses in 3D array
+      vecTimecourses <- dimnames(arr3DCountData)[[3]]
+      # Find numer of time courses by condition
+      vecTimecoursesCase <- unique(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,"Timecourse"] ))
+      vecTimecoursesCtrl <- unique(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,"Timecourse"] ))
+      nTimecoursesCase <- length(vecTimecoursesCase)
+      nTimecoursesCtrl <- length(vecTimecoursesCtrl)
+      nThirdDim <- nTimecoursesCase + nTimecoursesCtrl
+      #DAVID deprecate sanity check
+      print(paste0( "DAVID: Sanity check: Max TC:", length(vecTimecourses), " case ", nTimecoursesCase, " ctrl ", nTimecoursesCtrl ))
+    } else {
+      stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
+    }
+    
+    # Pad with NA sample if one time point not present in one of the two conditions
+    arr3DCountDataAll <- array(NA,c(nGenes,nTimepoints,nThirdDim))
+    if(strMode=="batch" | strMode=="singlecell"){
+      arr3DCountDataAll[, lsTimepointsCase %in% lsTimepointsAll, 1:(dim(arr3DCountData)[3])] <- 
+        arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]
+      arr3DCountDataAll[, lsTimepointsCtrl %in% lsTimepointsAll, (dim(arr3DCountData)[3]+1):nThirdDim] <- 
+        arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),]
+      # There might be slices in the third dimension now which are
+      # entirely empty if the max number of replicates per sample
+      # differed between case and control:
+      vecbool3rdDimSliceAllNA <- apply(arr3DCountDataAll,3,
+        function(slice){ all(is.na(slice)) } )
+      arr3DCountDataAll <- arr3DCountDataAll[,,!vecbool3rdDimSliceAllNA]
+    } else if(strMode=="timecourses"){
+      arr3DCountDataAll[, lsTimepointsCase %in% lsTimepointsAll, 1:nTimecoursesCase] <- 
+        arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),vecTimecoursesCase]
+      arr3DCountDataAll[, lsTimepointsCtrl %in% lsTimepointsAll, (nTimecoursesCase+1):nThirdDim] <- 
+        arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),vecTimecoursesCtrl]
+    } else {
+      stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
+    }
     
     # (II) Case: Count data of case
     arr3DCountDataCase = arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]

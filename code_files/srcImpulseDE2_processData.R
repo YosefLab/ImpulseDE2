@@ -44,7 +44,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   
   # Check format and presence of input data
   checkData <- function(dfAnnotationFull=NULL, arr2DCountData=NULL,
-    strCaseName=NULL, strControlName=NULL){
+    strCaseName=NULL, strControlName=NULL, strMode=NULL){
     
     ### 1. Check that all necessary input was specified
     # dfAnnotationFull
@@ -65,10 +65,10 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     
     ### 2. Check annotation table content
     ### a) Check column names
-    lsColNamesRequired <- c("Replicate","Sample","Condition","Time")
-    if( !all(lsColNamesRequired %in% colnames(dfAnnotationFull)) ){
+    vecColNamesRequired <- c("Replicate","Sample","Condition","Time")
+    if( !all(vecColNamesRequired %in% colnames(dfAnnotationFull)) ){
       stop(paste0("Could not find column ",
-        lsColNamesRequired[!(lsColNamesRequired %in% colnames(dfAnnotationFull))],
+        vecColNamesRequired[!(vecColNamesRequired %in% colnames(dfAnnotationFull))],
         " in annotation table."))
     }
     ### b) Replicates
@@ -80,8 +80,8 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     }
     ### c) Time points
     # Check that there is not multiple samples per time point in one condition
-    lsTimepoints <- unique(as.vector( dfAnnotationFull$Time ))
-    for(tp in lsTimepoints){
+    vecTimepoints <- unique(as.vector( dfAnnotationFull$Time ))
+    for(tp in vecTimepoints){
       if( length(unique(as.vector( dfAnnotationFull[dfAnnotationFull$Time %in% tp &
           dfAnnotationFull$Sample %in% strCaseName,]$Sample )))>1 ){
         stop(paste0("ERROR: In case condition, assigned multiple samples to time point ",tp))
@@ -126,8 +126,8 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
       print(paste0("Control condition: ", strControlName))
     }
     print(paste0( "Found time points: ",
-      paste( lsTimepoints,collapse=",") ))
-    for(tp in lsTimepoints){
+      paste( vecTimepoints,collapse=",") ))
+    for(tp in vecTimepoints){
       print(paste0( "Case: Found the following replicates for time point: ", tp,
         ": ", paste0(dfAnnotationFull[
           (dfAnnotationFull$Time %in% tp) &
@@ -136,7 +136,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
           ]$Replicate,collapse=","),collapse="," ))
     }
     if(!is.null(strControlName)){
-      for(tp in lsTimepoints){
+      for(tp in vecTimepoints){
         print(paste0( "Control: Found the following replicates for time points: ", tp,
           ":", paste(dfAnnotationFull[
             dfAnnotationFull$Time %in% tp &
@@ -166,15 +166,15 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     ### 1. Columns (Conditions):
     # Reduce expression table to columns of considered conditions
     if(!is.null(strControlName)){
-      lsReplicateNames_Case <- as.character(as.vector( 
+     vecReplicateNames_Case <- as.character(as.vector( 
         dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate ))
-      lsReplicateNames_Ctrl <- as.character(as.vector( 
+     vecReplicateNames_Ctrl <- as.character(as.vector( 
         dfAnnotationFull[dfAnnotationFull$Condition %in% strControlName,]$Replicate ))
-      arr2DCountData <- arr2DCountData[,c(lsReplicateNames_Case,lsReplicateNames_Ctrl)]
+      arr2DCountData <- arr2DCountData[,c(vecReplicateNames_Ctrl,lsReplicateNames_Ctrl)]
     } else {
-      lsReplicateNames_Case <- as.character(as.vector( 
+     vecReplicateNames_Case <- as.character(as.vector( 
         dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate ))
-      arr2DCountData <- arr2DCountData[,lsReplicateNames_Case]
+      arr2DCountData <- arr2DCountData[,vecReplicateNames_Case]
     }
     # Check that every replicate contains at least one observed value (not NA)
     lsNARep <- any(apply(arr2DCountData,2,function(rep){all(is.na(rep))}))
@@ -210,31 +210,65 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   }
   
   # Prepare 3D count data array
-  reshapeCountData <- function(dfAnnotationFull=NULL, arr2DCountData=NULL,
-    strCaseName = NULL, strControlName=NULL){
+  reshapeCountData <- function(dfAnnotationFull, arr2DCountData,
+    strCaseName, strControlName=NULL, strMode="batch"){
     
-    lsSamples <- unique(as.vector( dfAnnotationFull$Sample ))
-    #lsTimepoints <- unique(as.vector( dfAnnotationFull$Time ))
-    nMaxRep <- max(unlist( lapply(lsSamples,function(sample){sum(
-      dfAnnotationFull$Sample %in% sample)}) ))
-     
+    vecSamples <- unique(as.vector( dfAnnotationFull$Sample ))
+    if(strMode=="batch" | strMode=="singlecell"){
+      # Take maximum number of replicates as third dimension:
+      # 3D array will be build as dense (few NA) as possible
+      # as replicates are not correlated.
+      nThirdDim <- max(unlist(lapply( vecSamples,
+        function(sample){
+          sum(dfAnnotationFull$Sample %in% sample)
+        }
+      )))
+    } else if(strMode=="timecourses"){
+      # Take number of timecourses as third dimension:
+      # Third dimension reflect correlation between replicates
+      # taken from one time course measurement.
+      # Create a reference list of time courses:
+      vecTimecourses <- unique(as.vector( dfAnnotationFull$Timecourse ))
+      nThirdDim <- length(vecTimecourses)
+    } else {
+      stop(paste0("ERROR: Unrecognised strMode in processData::reshapeCountData(): ",strMode))
+    }
+    
     # Convert list of matrices into 3D array
     # Initialise 3D array
     nGenes <- dim(arr2DCountData)[1]
-    nSamples <- length(lsSamples)
-    nRep <- nMaxRep
-    arr3DCountData=array(NA,c(nGenes,nSamples,nRep))
+    nSamples <- length(vecSamples)
+    arr3DCountData=array(NA,c(nGenes,nSamples,nThirdDim))
     rownames(arr3DCountData) <- rownames(arr2DCountData)
-    colnames(arr3DCountData) <- lsSamples
-    
-    # Write 3D array
-    for (sample in lsSamples){
-      lsReplicates <- dfAnnotationFull[dfAnnotationFull$Sample %in% sample,]$Replicate
-      for (replicate in lsReplicates){
-        arr3DCountData[,sample,match(replicate,lsReplicates)] <- arr2DCountData[ , replicate ]
-      }
+    colnames(arr3DCountData) <- vecSamples
+    if(strMode=="timecourses"){
+      dimnames(arr3DCountData)[[3]] <- vecTimecourses
     }
     
+    # Write 3D array
+    for (sample in vecSamples){
+      if(strMode=="batch" | strMode=="singlecell"){
+        # Fill replicate vectors in 3D array by sample.
+        # Note that not all possible (max number of 
+        # replicates) slots will be filled for each sample.
+        vecReplicatesInSample <- dfAnnotationFull[dfAnnotationFull$Sample %in% sample,]$Replicate
+        for (replicate in vecReplicatesInSample){
+          arr3DCountData[,sample,match(replicate,vecReplicatesInSample)] <-
+            arr2DCountData[,replicate]
+        }
+      } else if(strMode=="timecourses"){
+        # Fill replicate vectors in 3D array by sample,
+        # keeping the time course structure of the replicates.
+        vecReplicatesInSample <-
+          dfAnnotationFull[dfAnnotationFull$Sample %in% sample,]$Replicate
+        vecindReplicatesInTimecourses <-
+          match(dfAnnotationFull[dfAnnotationFull$Sample %in% sample,]$Timecourse, vecTimecourses)
+        arr3DCountData[,sample,vecindReplicatesInTimecourses] <-
+          arr2DCountData[,vecReplicatesInSample]
+      } else {
+        stop(paste0("ERROR: Unrecognised strMode in processData::reshapeCountData(): ",strMode))
+      }
+    }
     return(arr3DCountData)
   }
   
@@ -256,19 +290,27 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   ###############################################################
   # (II) Main body of function
   
-  checkData(dfAnnotationFull=dfAnnotationFull, arr2DCountData=matCountData,
-    strControlName=strControlName, strCaseName=strCaseName)
+  checkData(
+    dfAnnotationFull=dfAnnotationFull,
+    arr2DCountData=matCountData,
+    strControlName=strControlName,
+    strCaseName=strCaseName,
+    strMode=strMode)
   
   arr2DCountData <- nameGenes(arr2DCountData=matCountData)
   
-  arr2DCountData <- reduceCountData(dfAnnotationFull=dfAnnotationFull, 
+  arr2DCountData <- reduceCountData(
+    dfAnnotationFull=dfAnnotationFull, 
     arr2DCountData=arr2DCountData)
   
   arr3DCountData <- reshapeCountData(
-    dfAnnotationFull=dfAnnotationFull, arr2DCountData=arr2DCountData,
-    strControlName=strControlName, strCaseName=strCaseName)
-
+    dfAnnotationFull=dfAnnotationFull,
+    arr2DCountData=arr2DCountData,
+    strControlName=strControlName,
+    strCaseName=strCaseName,
+    strMode=strMode)
+  
   dfAnnotationRed <- reduceAnnotation(dfAnnotationFull)
   
-  return(list(arr2DCountData,arr3DCountData,dfAnnotationRed))
+  return( list(arr2DCountData,arr3DCountData,dfAnnotationRed) )
 }
