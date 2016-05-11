@@ -22,8 +22,10 @@ library(BiocParallel)
 # Source functions in .R files from same directory as this function.
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2")
-#Prepares the data and annotation for internal use
+# Prepares the data and annotation for internal use
 source("srcImpulseDE2_processData.R")
+# Compute normalisation constants
+source("srcImpulseDE2_computeNormConst.R")
 # Wrapper fur running DESeq2
 source("srcImpulseDE2_runDESeq2.R")
 # Compute value of impulse function given parameters
@@ -223,10 +225,12 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
   
   tm_runImpulseDE2 <- system.time({    
     # 1. Process input data 
-    print("1. Prepare data:")
+    print("1. Prepare data")
     lsProcessedData <- processData(
-      dfAnnotationFull=dfAnnotationFull,matCountData=matCountData,
-      strControlName=strControlName, strCaseName=strCaseName,
+      dfAnnotationFull=dfAnnotationFull,
+      matCountData=matCountData,
+      strControlName=strControlName, 
+      strCaseName=strCaseName,
       strMode=strMode)
     
     arr2DCountData <- lsProcessedData[[1]]
@@ -236,11 +240,18 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     save(arr3DCountData,file=file.path(getwd(),"ImpulseDE2_arr3DCountData.RData"))
     save(dfAnnotationRed,file=file.path(getwd(),"ImpulseDE2_dfAnnotationRed.RData"))
     
-    # 2. Run DESeq2
-    print("2. Run DESeq2:")
+    # 2. Compute normalisation constants
+    print("2. Compute Normalisation constants")
+    matNormConst <- computeNormConst(arr3DCountData=arr3DCountData)
+    save(matNormConst,file=file.path(getwd(),"ImpulseDE2_matNormConst.RData"))
+    
+    # 3. Run DESeq2
+    print("3. Run DESeq2")
     tm_runDESeq2 <- system.time({
-      lsDESeq2Results <- runDESeq2(dfAnnotationFull=dfAnnotationFull,
-        arr2DCountData=arr2DCountData, nProcessesAssigned=nProc,
+      lsDESeq2Results <- runDESeq2(
+        dfAnnotationFull=dfAnnotationFull,
+        arr2DCountData=arr2DCountData, 
+        nProcessesAssigned=nProc,
         strMode=strMode)
     })
     vecDESeq2Dispersions <- lsDESeq2Results[[1]]
@@ -250,25 +261,35 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     print(paste("Consumed time: ",round(tm_runDESeq2["elapsed"]/60,2),
       " min",sep=""))
     
-    ###  3. Fit Impule model to each gene 
-    print("3. Fitting Impulse model to the genes")
+    ###  4. Fit Impule model to each gene 
+    print("4. Fitting Impulse model to the genes")
     tm_fitImpulse <- system.time({
-      lsImpulseFits <- fitImpulse(arr3DCountData=arr3DCountData, 
-        vecDispersions=vecDESeq2Dispersions, dfAnnotationRed=dfAnnotationRed, 
-        strCaseName=strCaseName, strControlName=strControlName, strMode=strMode,
-        nProcessesAssigned=nProc, NPARAM=NPARAM)
+      lsImpulseFits <- fitImpulse(
+        arr3DCountData=arr3DCountData, 
+        vecDispersions=vecDESeq2Dispersions, 
+        matNormConst,
+        dfAnnotationRed=dfAnnotationRed, 
+        strCaseName=strCaseName, 
+        strControlName=strControlName,
+        strMode=strMode,
+        nProcessesAssigned=nProc, 
+        NPARAM=NPARAM)
     })
     save(lsImpulseFits,file=file.path(getwd(),"ImpulseDE2_lsImpulseFits.RData"))
     print(paste("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2),
       " min",sep=""))
     
-    ### 4. Detect differentially expressed genes
-    print("4. DE analysis")
+    ### 5. Detect differentially expressed genes
+    print("5. DE analysis")
     dfImpulseResults <- computePval(
-      arr3DCountData=arr3DCountData,vecDispersions=vecDESeq2Dispersions,
-      dfAnnotationRed=dfAnnotationRed,lsImpulseFits=lsImpulseFits,
-      strCaseName=strCaseName, strControlName=strControlName,
-      strMode=strMode, NPARAM=NPARAM)
+      arr3DCountData=arr3DCountData,
+      vecDispersions=vecDESeq2Dispersions,
+      dfAnnotationRed=dfAnnotationRed,
+      lsImpulseFits=lsImpulseFits,
+      strCaseName=strCaseName, 
+      strControlName=strControlName,
+      strMode=strMode, 
+      NPARAM=NPARAM)
     
     lsDEGenes <- as.character(as.vector( 
       dfImpulseResults[as.numeric(dfImpulseResults$adj.p) <= Q_value,"Gene"] ))
@@ -276,19 +297,27 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     save(lsDEGenes,file=file.path(getwd(),"ImpulseDE2_lsDEGenes.RData"))
     print(paste("Found ", length(lsDEGenes)," DE genes",sep=""))
     
-    ### 5. Plot the top DE genes
+    ### 6. Plot the top DE genes
     if(boolPlotting){
-      print("5. Plot top DE genes")
+      print("6. Plot top DE genes")
       tm_plotDEGenes <- system.time({
         vecDESeq2Results <- dfDESeq2Results$padj
         names(vecDESeq2Results) <- rownames(dfDESeq2Results)
-        plotDEGenes(lsGeneIDs=lsDEGenes,
-          arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
+        plotDEGenes(
+          lsGeneIDs=lsDEGenes,
+          arr3DCountData=arr3DCountData,
+          matNormConst=matNormConst,
+          dfAnnotationRed=dfAnnotationRed, 
           lsImpulseFits=lsImpulseFits,
-          strCaseName=strCaseName, strControlName=strControlName, 
-          strFileNameSuffix="DE", strPlotTitleSuffix="", strPlotSubtitle="",
-          dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDESeq2Results,
-          strMode=strMode, NPARAM=NPARAM)
+          strCaseName=strCaseName, 
+          strControlName=strControlName, 
+          strFileNameSuffix="DE", 
+          strPlotTitleSuffix="", 
+          strPlotSubtitle="",
+          dfImpulseResults=dfImpulseResults,
+          vecMethod2Results=vecDESeq2Results,
+          strMode=strMode, 
+          NPARAM=NPARAM)
       })
       print(paste("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2),
         " min",sep=""))

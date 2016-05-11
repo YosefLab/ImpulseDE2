@@ -4,39 +4,44 @@
 
 #' Fit an impulse model to a single gene
 #' 
-#' Fits an impulse model to a single gene.
+#' Fits an impulse model and a mean model to a single gene.
 #' The optimisation method is set within this function (\code{optim}:
-#' BFGS).
+#' BFGS). This method is divided into four parts: (I) Prepare data,
+#' (II) Fit mean model, (III) Fit impulse model, (IV) Process Fits.
 #' Internal function of \code{fitImpulse}.
 #' 
 #' @seealso Called by \code{fitImpulse_matrix}. Calls \code{evalLogLikImpulse},
 #'    and \code{calcImpulse_comp}.
 #' 
-#' @param matCounts (numeric 2D array vecTimepoints x replicates)
-#' @param vecTimepoints (vector number timepoints) Observed timepoints, numeric.
+#' @param matCounts (numeric 2D array vecTimepoints x replicates) Count data.
 #' @param scaDispersionEstimate (scalar) Inverse of negative binomial 
-#'    dispersion coefficients computed by DESeq2 for given gene
+#'    dispersion coefficients computed by DESeq2 for given gene.
+#' @param matNormConst: (matrix samples x replicates) Normalisation
+#'    constants for each replicate. Missing samples are set NA.
+#' @param vecTimepoints (vector number timepoints) Observed timepoints, numeric.
 #' @param NPARAM (scalar) [Default 6] Number of impulse model parameters
 #' @param MAXIT (scalar) [Default 100] Number of iterations, which are performed 
 #'    to fit the impulse model to the clusters.
 #' 
 #' @return lsBestFitSummary (list [beta, h0, h1, h2, t1, t2, logL_H1, 
-#'    converge_H1, mu, logL_H0, converge_H0]) Beta to t2 are parameters of the impulse
+#'    converge_H1, mu, logL_H0]) Beta to t2 are parameters of the impulse
 #'    model, mu is the single parameter of the mean model, logL are
 #'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
 #'    is convergence status of numerical optimisation of model fitting by
-#'    \code{optim} from \code{stats} of either model. Each value matrix is called
+#'    \code{optim} from \code{stats}. Each value matrix is called
 #'    value_'condition' and has the form (genes x time points) and contains the
 #'    counts predicted by the impulse model at the observed time points.)
 #' @export
 
-fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints, 
+fitImpulse_gene <- function(matCounts, scaDispersionEstimate, 
+  matNormConst, vecTimepoints,
   strMode="batch", NPARAM=6, MAXIT=1000){
   
   optim_method <- "optim"
   #optim_method <- "nlminb"
   #optim_method <- c("optim","nlminb")
   
+  # (I) Prepare data
   # Remove timepoint if any is entirely missing
   vecboolObservedTimepoint <- apply(matCounts,1,function(tp){any(!is.na(tp))})
   if(any( !vecboolObservedTimepoint )){
@@ -48,18 +53,12 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
   if(any( !vecboolObservedTimecourse )){
     matCounts <- matCounts[vecboolObservedTimecourse,]
   }
-  
-  # If handed a list, i.e. not replicates
+  # Transform into 2D array if handed a list, i.e. one replicate
   if (is.vector(matCounts)==TRUE){
-    # Transform into 2D array
     matCounts <- array(matCounts,c(length(matCounts),1))
-    # Do intitial guesses based on centroids
-    vecExpressionMeans <- matCounts
-  } else {
-    # Do initial guesses based on mean over replicates:
-    vecExpressionMeans <- apply(matCounts,1,function(x){mean(x, na.rm=TRUE)})
   }
-  
+  # Compute statistics for initialisation
+  vecExpressionMeans <- apply(matCounts,1,function(x){mean(x, na.rm=TRUE)})
   nTimepts <- length(vecExpressionMeans)
   scaMaxMiddleMean <- max(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
   scaMinMiddleMean <- min(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
@@ -70,23 +69,46 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
   vecGradients <- unlist( lapply(c(1:(nTimepts-1)),function(x){
     (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepoints[x+1]-vecTimepoints[x])}) )
   
-  scaMu <- mean(matCounts, na.rm=TRUE)
-  if(strMode=="batch"){
+  # DAVID: todo export this into extra function and handle entire matrix at once
+  # (II) Fit mean model
+  # Fit mean to normalised counts. Count normalisation 
+  # corresponds to model normalisation in impulse model 
+  # fitting.
+  scaMu <- mean(matCounts/matNormConst, na.rm=TRUE)
+  matboolObserved <- !is.na(matCounts)
+  if(strMode=="batch" | strMode=="singlecell"){
     # Null model (timecourses): One mean for all points
-    scaLoglikNull <- sum(dnbinom(matCounts[!is.na(matCounts)], mu=scaMu, size=scaDispersionEstimate, log=TRUE))
+    # Fitting is done above.
+    # Evaluate likelihood of null model
+    scaLoglikNull <- sum(dnbinom(
+      matCounts[matboolObserved], 
+      mu=scaMu, 
+      size=scaDispersionEstimate, 
+      log=TRUE))
   }else if(strMode=="timecourses"){
-    # Null model (timecourses): One mean for each time course
+    # Null model (timecourses): Fit one mean for each time course
     nTimecourses <- dim(matCounts)[2]
-    vecMuTimecourses <- apply(matCounts,2,function(vecTC){mean(vecTC, na.rm=TRUE)})
-    scaLoglikNull <- sum(sapply( c(1:nTimecourses),function(indTC){
-      sum(dnbinom(matCounts[!is.na(matCounts[,indTC]),indTC], 
-        mu=vecMuTimecourses[indTC], size=scaDispersionEstimate, log=TRUE))
-    }))
+    # Fit null model.
+    vecMuTimecourses <- apply(matCounts/matNormConst,2,function(vecTC){mean(vecTC, na.rm=TRUE)})
+    matMuTimecourses <- matrix(vecMuTimecourses, nrow=dim(matCounts)[1], ncol=dim(matCounts)[2], byrow=TRUE)
+    # Compute translation factors: Normalisation factor
+    # to scale impulse model to indivindual time courses.
+    # Note: Translation factor is the same for all replicates
+    # in a time course.
+    matTranslationFactors <- matMuTimecourses/scaMu
+    
+    # Evaluate likelihood of null model
+    scaLoglikNull <- sum(dnbinom(
+      matCounts[matboolObserved], 
+      mu=matMuTimecourses[matboolObserved], 
+      size=scaDispersionEstimate, 
+      log=TRUE))
   } else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
   
-  # 1. Alternative model: Peak
+  # (III) Fit Impulse model
+  # 1. Initialisation: Peak
   # Beta: Has to be negative, Theta1: Low, Theta2: High, Theta3: Low
   # t1: Around first observed inflexion point, t2: Around second observed inflexion point
   indLowerInflexionPoint <- match(max(vecGradients[1:(indMaxMiddleMean-1)], na.rm=TRUE), vecGradients[1:(indMaxMiddleMean-1)])
@@ -97,18 +119,41 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
   
   if("optim" %in% optim_method){
     if(strMode=="batch"){
-      lsFitPeak <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseBatch_comp, vecX=vecTimepoints,
-        matY=matCounts, scaDispEst=scaDispersionEstimate,
-        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+      lsFitPeak <- unlist( optim(
+        par=vecParamGuess,
+        fn=evalLogLikImpulseBatch_comp,
+        vecX=vecTimepoints,
+        matY=matCounts,
+        scaDispEst=scaDispersionEstimate,
+        matNormConst=matNormConst,
+        matboolObserved=matboolObserved,
+        method="BFGS",
+        control=list(maxit=MAXIT,fnscale=-1)
+      )[c("par","value","convergence")] )
     }else if(strMode=="timecourses"){
-      lsFitPeak <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseByTC_comp, vecX=vecTimepoints,
-        matY=matCounts, scaDispEst=scaDispersionEstimate,
-        scaMu=scaMu, vecMuTimecourses=vecMuTimecourses,
-        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+      lsFitPeak <- unlist( optim(
+        par=vecParamGuess, 
+        fn=evalLogLikImpulseByTC_comp, 
+        vecX=vecTimepoints,
+        matY=matCounts, 
+        scaDispEst=scaDispersionEstimate,
+        matNormConst=matNormConst,
+        matTranslationFactors=matTranslationFactors,
+        matboolObserved=matboolObserved,
+        method="BFGS", 
+        control=list(maxit=MAXIT,fnscale=-1)
+      )[c("par","value","convergence")] )
     }else if(strMode=="singlecell"){
-      lsFitPeak <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseSC_comp, vecX=vecTimepoints,
-        matY=matCounts, scaDispEst=scaDispersionEstimate, scaDropoutEst=scaDropoutEstimate,
-        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+      lsFitPeak <- unlist( optim(par=vecParamGuess, 
+        fn=evalLogLikImpulseSC_comp, 
+        vecX=vecTimepoints,
+        matY=matCounts, 
+        scaDispEst=scaDispersionEstimate,
+        scaDropoutEst=scaDropoutEstimate,
+        matNormConst=matNormConst,
+        method="BFGS", 
+        control=list(maxit=MAXIT,fnscale=-1)
+      )[c("par","value","convergence")] )
     } else {
       stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
     }
@@ -119,7 +164,7 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
       matY=matCounts, scaDispEst=scaDispersionEstimate)[c("par","objective")])
   }
   
-  # 2. Alternative model: Valley
+  # 2. Initialisation: Valley
   # Beta: Has to be negative, Theta1: High, Theta2: Low, Theta3: High
   # t1: Around first observed inflexion point, t2: Around second observed inflexion point
   indLowerInflexionPoint <- match(min(vecGradients[1:(indMinMiddleMean-1)], na.rm=TRUE), vecGradients[1:(indMinMiddleMean-1)])
@@ -130,18 +175,42 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
   
   if("optim" %in% optim_method){
     if(strMode=="batch"){
-      lsFitValley <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseBatch_comp, vecX=vecTimepoints,
-        matY=matCounts, scaDispEst=scaDispersionEstimate,
-        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+      lsFitValley <- unlist( optim(
+        par=vecParamGuess, 
+        fn=evalLogLikImpulseBatch_comp, 
+        vecX=vecTimepoints,
+        matY=matCounts, 
+        scaDispEst=scaDispersionEstimate,
+        matNormConst=matNormConst,
+        matboolObserved=matboolObserved,
+        method="BFGS", 
+        control=list(maxit=MAXIT,fnscale=-1)
+      )[c("par","value","convergence")] )
     }else if(strMode=="timecourses"){
-      lsFitValley <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseByTC_comp, vecX=vecTimepoints,
-        matY=matCounts, scaDispEst=scaDispersionEstimate,
-        scaMu=scaMu, vecMuTimecourses=vecMuTimecourses,
-        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+      lsFitValley <- unlist( optim(
+        par=vecParamGuess, 
+        fn=evalLogLikImpulseByTC_comp, 
+        vecX=vecTimepoints,
+        matY=matCounts, 
+        scaDispEst=scaDispersionEstimate,
+        matNormConst=matNormConst,
+        matTranslationFactors=matTranslationFactors,
+        matboolObserved=matboolObserved,
+        method="BFGS", 
+        control=list(maxit=MAXIT,fnscale=-1)
+      )[c("par","value","convergence")] )
     }else if(strMode=="singlecell"){
-      lsFitValley <- unlist( optim(par=vecParamGuess, fn=evalLogLikImpulseSC_comp, vecX=vecTimepoints,
-        matY=matCounts, scaDispEst=scaDispersionEstimate, scaDropoutEst=scaDropoutEstimate,
-        method="BFGS", control=list(maxit=MAXIT,fnscale=-1))[c("par","value","convergence")] )
+      lsFitValley <- unlist( optim(
+        par=vecParamGuess, 
+        fn=evalLogLikImpulseSC_comp, 
+        vecX=vecTimepoints,
+        matY=matCounts, 
+        scaDispEst=scaDispersionEstimate, 
+        scaDropoutEst=scaDropoutEstimate,
+        matNormConst=matNormConst,
+        method="BFGS", 
+        control=list(maxit=MAXIT,fnscale=-1)
+      )[c("par","value","convergence")] )
     } else {
       stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
     }
@@ -152,6 +221,7 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
       matY=matCounts, scaDispEst=scaDispersionEstimate)[c("par","objective")])
   }
   
+  # (IV) Process fits
   # Summarise results
   if(("optim" %in% optim_method) && ("nlminb" %in% optim_method)){
     dfFitsByInitialisation <- cbind(lsFitPeak,lsFitPeak2,lsFitValley,lsFitValley2)
@@ -209,6 +279,8 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
 #'    Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
 #' @param vecDispersions (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
+#' @param matNormConst: (matrix samples x replicates) Normalisation
+#'    constants for each replicate. Missing samples are set NA.
 #' @param dfAnnotationRedRed (data frame) Reduced version of 
 #'    \code{dfAnnotationRedFull}. Lists co-variables of samples: 
 #'    Sample, Condition, Time. Time must be numeric. For internal use.
@@ -237,8 +309,10 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate, vecTimepoints,
 #' }
 #' @export
 
-fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepoints,
-  strCaseName, strControlName=NULL, strMode="batch", nProcessesAssigned=3, NPARAM=6){
+fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, 
+  matNormConst, vecTimepoints,
+  strCaseName, strControlName=NULL, strMode="batch", 
+  nProcessesAssigned=3, NPARAM=6){
   
   # Maximum number of iterations for numerical optimisation of
   # likelihood function in MLE fitting of Impulse model:
@@ -262,33 +336,54 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
     cl <- makeCluster(nProcesses, outfile = "ImpulseDE2_ClusterOut.txt")
     #DAVID take fitImpulse out?
     my.env <- new.env()
+    # Variables
     assign("arr3DCountDataCondition", arr3DCountDataCondition, envir = my.env)
-    assign("calcImpulse_comp", calcImpulse_comp, envir = my.env)
-    assign("fitImpulse", fitImpulse, envir = my.env)
-    assign("evalLogLikImpulseBatch_comp", evalLogLikImpulseBatch_comp, envir = my.env)
-    assign("evalLogLikImpulseByTC_comp", evalLogLikImpulseByTC_comp, envir = my.env)
-    assign("evalLogLikImpulseSC_comp", evalLogLikImpulseSC_comp, envir = my.env)
-    assign("fitImpulse_gene",fitImpulse_gene, envir = my.env)
-    assign("fitImpulse_matrix",fitImpulse_matrix, envir = my.env)
+    assign("vecDispersions", vecDispersions, envir = my.env)
+    assign("matNormConst", matNormConst, envir = my.env)
     assign("vecTimepoints", vecTimepoints, envir = my.env)
     assign("strMode", strMode, envir = my.env)
     assign("NPARAM", NPARAM, envir = my.env)
     assign("MAXIT", MAXIT, envir = my.env)
-    assign("vecDispersions", vecDispersions, envir = my.env)
+    # Functions
+    assign("fitImpulse", fitImpulse, envir = my.env)
+    assign("fitImpulse_gene",fitImpulse_gene, envir = my.env)
+    assign("fitImpulse_matrix",fitImpulse_matrix, envir = my.env)
+    assign("calcImpulse_comp", calcImpulse_comp, envir = my.env)
+    assign("evalLogLikImpulseBatch_comp", evalLogLikImpulseBatch_comp, envir = my.env)
+    assign("evalLogLikImpulseByTC_comp", evalLogLikImpulseByTC_comp, envir = my.env)
+    assign("evalLogLikImpulseSC_comp", evalLogLikImpulseSC_comp, envir = my.env)
     
-    clusterExport(cl=cl, varlist=c("arr3DCountDataCondition","vecDispersions", "vecTimepoints",
-      "calcImpulse_comp", "evalLogLikImpulseBatch_comp", "evalLogLikImpulseByTC_comp",
-      "evalLogLikImpulseSC_comp", "fitImpulse", "fitImpulse_matrix", "fitImpulse_gene",
-      "strMode", "MAXIT", "NPARAM"), envir = my.env)
+    clusterExport(cl=cl, varlist=c(
+      "arr3DCountDataCondition",
+      "vecDispersions", 
+      "matNormConst",
+      "vecTimepoints",
+      "strMode",
+      "MAXIT",
+      "NPARAM",
+      "calcImpulse_comp", 
+      "evalLogLikImpulseBatch_comp", 
+      "evalLogLikImpulseByTC_comp",
+      "evalLogLikImpulseSC_comp", 
+      "fitImpulse", 
+      "fitImpulse_matrix", 
+      "fitImpulse_gene"
+    ), envir = my.env)
     
     # Fit impulse model to each gene of matrix and get impulse parameters:
     # clusterApply runs the function impulse_fit_gene_wise
     # The input data are distributed to nodes by lsGeneIndexByCore partitioning
-    lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore), function(z){t(sapply(lsGeneIndexByCore[[z]],
-      function(x){fitImpulse_gene(
-        matCounts=arr3DCountDataCondition[x,,], scaDispersionEstimate=vecDispersions[x],
-        vecTimepoints=vecTimepoints, strMode=strMode,
-        NPARAM=NPARAM, MAXIT=MAXIT)}))})
+    lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore),
+      function(z){ t(sapply( lsGeneIndexByCore[[z]],
+        function(x){fitImpulse_gene(
+          matCounts=arr3DCountDataCondition[x,,],
+          scaDispersionEstimate=vecDispersions[x],
+          matNormConst=matNormConst,
+          vecTimepoints=vecTimepoints, 
+          strMode=strMode,
+          NPARAM=NPARAM,
+          MAXIT=MAXIT )}
+      ))})
     # Give output rownames again, which are lost above
     for(i in 1:length(lsGeneIndexByCore)){
       rownames(lsmatFits[[i]]) <- rownames(arr3DCountDataCondition[lsGeneIndexByCore[[i]],,])
@@ -304,9 +399,13 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
     lsGeneIndexByCore_all <- 1:nrow(arr3DCountDataCondition)
     matFits <- lapply(lsGeneIndexByCore_all,function(x){
       fitImpulse_gene(
-        matCounts=arr3DCountDataCondition[x,,], scaDispersionEstimate=vecDispersions[x],
-        vecTimepoints=vecTimepoints, strMode=strMode,
-        NPARAM=NPARAM, MAXIT=MAXIT)})
+        matCounts=arr3DCountDataCondition[x,,],
+        scaDispersionEstimate=vecDispersions[x],
+        matNormConst=matNormConst,
+        vecTimepoints=vecTimepoints,
+        strMode=strMode,
+        NPARAM=NPARAM,
+        MAXIT=MAXIT )})
     matFits_temp <- array(NA,c(length(matFits),length(matFits[[1]])))
     for (i in 1:length(matFits)){
       matFits_temp[i,] <- matFits[[i]]
@@ -366,10 +465,13 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
 #'  
 #' @seealso Called by \code{runImpulseDE2}. Calls \code{fitImpulse_matrix}.
 #'  
-#' @param ImpulseDE2_arr3DCountData (3D array genes x samples x replicates)
-#'    Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
+#' @param arr3DCountData (3D array genes x samples x replicates)
+#'    Count data: \code{arr2DCountData} reshaped into a 3D array.
+#'    For internal use.
 #' @param vecDispersions (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
+#' @param matNormConst: (matrix samples x replicates) Normalisation
+#'    constants for each replicate. Missing samples are set NA.
 #' @param dfAnnotationRedRed (data frame) Reduced version of 
 #'    \code{dfAnnotationRedFull}. Lists co-variables of samples: 
 #'    Sample, Condition, Time. Time must be numeric. For internal use.
@@ -396,7 +498,8 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, vecTimepo
 #'    counts predicted by the impulse model at the observed time points.
 #' @export
 
-fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotationRed,
+fitImpulse <- function(arr3DCountData, vecDispersions=NULL, 
+  matNormConst, dfAnnotationRed,
   strCaseName=NULL, strControlName=NULL, strMode="batch",
   nProcessesAssigned=3, NPARAM=6){
   
@@ -480,12 +583,17 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL, dfAnnotationRed,
   
   # Fitting for different runs
   for (iRuns in 1:nRuns){
-    lsFitResults_run <- fitImpulse_matrix(arr3DCountDataCondition=lsarr3DCountData[[iRuns]],
+    lsFitResults_run <- fitImpulse_matrix(
+      arr3DCountDataCondition=lsarr3DCountData[[iRuns]],
+      matNormConst=matNormConst,
+      vecDispersions=vecDispersions,
       vecTimepoints=as.numeric(as.character(
         dfAnnotationRed[dfAnnotationRed$Sample %in% colnames(lsarr3DCountData[[iRuns]]),"Time"])),
-      vecDispersions=vecDispersions,
-      strCaseName=strCaseName, strControlName=strControlName, strMode=strMode,
-      nProcessesAssigned=nProcessesAssigned, NPARAM=NPARAM)
+      strCaseName=strCaseName,
+      strControlName=strControlName,
+      strMode=strMode,
+      nProcessesAssigned=nProcessesAssigned,
+      NPARAM=NPARAM )
     
     # DAVID: do i still need this?
     #imp_res$impulse_parameters <- (imp_res$impulse_parameters)[g_names,]

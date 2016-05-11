@@ -40,10 +40,12 @@ strControlName = NULL
 strCaseName = "case"
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "batch"
+strMode <- "timecourses"
+#strMode <- "batch"
+boolPlotting <- TRUE
 lsImpulseDE_results <- runImpulseDE2(matCountData=expression_table, dfAnnotationFull=dfAnnotationFull,
   strCaseName = strCaseName, strControlName=strControlName, strMode=strMode,
-  nProc=n_process, Q_value=Q_value, boolPlotting=FALSE)
+  nProc=n_process, Q_value=Q_value, boolPlotting=boolPlotting)
 
 lsDEGenes <- lsImpulseDE_results$lsDEGenes
 dfImpulseResults <- lsImpulseDE_results$dfImpulseResults

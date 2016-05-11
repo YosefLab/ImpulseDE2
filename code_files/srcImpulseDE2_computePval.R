@@ -22,13 +22,14 @@
 #'    case condition (and control and combined if control is present).
 #'    Each parameter matrix is called parameter_'condition' and has the form
 #'    (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
-#'    converge_H0]) where beta to t2 are parameters of the impulse
+#'    ) where beta to t2 are parameters of the impulse
 #'    model, mu is the single parameter of the mean model, logL are
 #'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
 #'    is convergence status of numerical optimisation of model fitting by
-#'    \code{optim} from \code{stats} of either model. Each value matrix is called
+#'    \code{optim} from \code{stats}. Each value matrix is called
 #'    value_'condition' and has the form (genes x time points) and contains the
 #'    counts predicted by the impulse model at the observed time points.
+#' @param dfDEAnalysis (data frame genes x fitting characteristics) 
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationRedFull}.

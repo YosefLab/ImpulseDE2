@@ -12,6 +12,8 @@
 #     trownames of arr3DCountData.
 #' @param arr3DCountData (3D array genes x samples x replicates)
 #'    Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
+#' @param matNormConst: (matrix samples x replicates) Normalisation
+#'    constants for each replicate. Missing samples are set NA.
 #' @param dfAnnotationRed (data frame) Reduced version of 
 #'    \code{dfAnnotationFull}. Lists co-variables of samples: 
 #'    Sample, Condition, Time. Time must be numeric. For internal use.
@@ -20,11 +22,11 @@
 #'    case condition (and control and combined if control is present).
 #'    Each parameter matrix is called parameter_'condition' and has the form
 #'    (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
-#'    converge_H0]) where beta to t2 are parameters of the impulse
+#'    ) where beta to t2 are parameters of the impulse
 #'    model, mu is the single parameter of the mean model, logL are
 #'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
 #'    is convergence status of numerical optimisation of model fitting by
-#'    \code{optim} from \code{stats} of either model. Each value matrix is called
+#'    \code{optim} from \code{stats}. Each value matrix is called
 #'    value_'condition' and has the form (genes x time points) and contains the
 #'    counts predicted by the impulse model at the observed time points.
 #' @param dfDEAnalysis (data frame genes x fitting characteristics) 
@@ -42,8 +44,9 @@
 #' @return NULL
 #' @export
 
-plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
-  lsImpulseFits, dfImpulseResults, vecMethod2Results, 
+plotDEGenes <- function(lsGeneIDs, arr3DCountData, matNormConst,
+  dfAnnotationRed, lsImpulseFits, 
+  dfImpulseResults, vecMethod2Results, 
   strCaseName, strControlName=NULL, strMode="batch",
   strFileNameSuffix = "", strPlotTitleSuffix = "", strPlotSubtitle = "",
   strNameMethod1="ImpulseDE2", strNameMethod2="DESeq2",
@@ -58,6 +61,13 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, dfAnnotationRed,
   # horizontal axis of the pdf.
   PDF_WIDTH <- 1
   
+  # Scale count data by size factors for plotting:
+  # The impulse models are fit based on normalised means.
+  # Therefore, the model curves follow the normalised
+  # count data and not the raw count data. However, 
+  # fitting was still performed based on raw count data.
+  for(gene in 1:dim(arr3DCountData)[1]){ arr3DCountData[gene,,] <- arr3DCountData[gene,,]/matNormConst }
+
   # Name genes if not previously named (already done if this function is
   # called within the wrapper function).
   if(length(grep("[a-zA-Z]",rownames(arr3DCountData))) == 0 ){
