@@ -69,16 +69,20 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
   vecGradients <- unlist( lapply(c(1:(nTimepts-1)),function(x){
     (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepoints[x+1]-vecTimepoints[x])}) )
   
+  # Precompute matrices used in cost functions:
+  matboolObserved <- !is.na(matCounts)
+  matboolZero <- matCounts==0
+  
   # DAVID: todo export this into extra function and handle entire matrix at once
   # (II) Fit mean model
   # Fit mean to normalised counts. Count normalisation 
   # corresponds to model normalisation in impulse model 
   # fitting.
-  scaMu <- mean(matCounts/matNormConst, na.rm=TRUE)
-  matboolObserved <- !is.na(matCounts)
+  scaMu <- mean(matCounts, na.rm=TRUE)
   if(strMode=="batch" | strMode=="singlecell"){
     # Null model (timecourses): One mean for all points
-    # Fitting is done above.
+    # Fitting is done above: scaMu is used in different parts
+    # of code, too. 
     # Evaluate likelihood of null model
     scaLoglikNull <- sum(dnbinom(
       matCounts[matboolObserved], 
@@ -89,13 +93,8 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
     # Null model (timecourses): Fit one mean for each time course
     nTimecourses <- dim(matCounts)[2]
     # Fit null model.
-    vecMuTimecourses <- apply(matCounts/matNormConst,2,function(vecTC){mean(vecTC, na.rm=TRUE)})
+    vecMuTimecourses <- apply(matCounts,2,function(vecTC){mean(vecTC, na.rm=TRUE)})
     matMuTimecourses <- matrix(vecMuTimecourses, nrow=dim(matCounts)[1], ncol=dim(matCounts)[2], byrow=TRUE)
-    # Compute translation factors: Normalisation factor
-    # to scale impulse model to indivindual time courses.
-    # Note: Translation factor is the same for all replicates
-    # in a time course.
-    matTranslationFactors <- matMuTimecourses/scaMu
     
     # Evaluate likelihood of null model
     scaLoglikNull <- sum(dnbinom(
@@ -103,6 +102,18 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
       mu=matMuTimecourses[matboolObserved], 
       size=scaDispersionEstimate, 
       log=TRUE))
+    
+    # Compute translation factors: Normalisation factor
+    # to scale impulse model to indivindual time courses.
+    # Note: Translation factor is the same for all replicates
+    # in a time course.
+    # Reference: Overall scaled mean
+    scaMuScaled <- mean(matCounts/matNormConst, na.rm=TRUE)
+    # Scaled means by timecourse
+    vecMuTimecoursesScaled <- apply(matCounts/matNormConst,2,function(vecTC){mean(vecTC, na.rm=TRUE)})
+    matMuScaledTimecourses <- matrix(vecMuTimecoursesScaled, nrow=dim(matCounts)[1], ncol=dim(matCounts)[2], byrow=TRUE)
+    # Scaled mean ratio
+    matTranslationFactors <- matMuScaledTimecourses/scaMuScaled
   } else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
@@ -151,6 +162,8 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
         scaDispEst=scaDispersionEstimate,
         scaDropoutEst=scaDropoutEstimate,
         matNormConst=matNormConst,
+        matboolObserved=matboolObserved, 
+        matboolZero=matboolZero,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )
@@ -208,6 +221,8 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
         scaDispEst=scaDispersionEstimate, 
         scaDropoutEst=scaDropoutEstimate,
         matNormConst=matNormConst,
+        matboolObserved=matboolObserved, 
+        matboolZero=matboolZero,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )

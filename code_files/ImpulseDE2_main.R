@@ -167,6 +167,8 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'        Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
 #'    \item \code{ImpulseDE2_dfAnnotationRed.RData} (data frame) Reduced version of 
 #'        \code{dfAnnotationFull}. For internal use.
+#'    \item \code{ImpulseDE2_matNormConst.RData} (matrix samples x replicates) Normalisation
+#'    constants for each replicate. Missing samples are set NA.
 #'    \item \code{ImpulseDE2_vecDESeq2Dispersions.RData} (vector number of genes) Inverse 
 #'        of gene-wise negative binomial dispersion coefficients computed by DESeq2.
 #'    \item \code{ImpulseDE2_dfDESeq2Results.RData} (data frame) DESeq2 results.

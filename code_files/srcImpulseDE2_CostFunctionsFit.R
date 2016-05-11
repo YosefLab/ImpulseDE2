@@ -25,6 +25,8 @@
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
 #' @param matNormConst: (matrix samples x replicates) Normalisation
 #'    constants for each replicate. Missing samples are set NA.
+#' @param matboolObserved: (bool 2D array timepoints x replicates)
+#'    Stores bool of replicate being not NA (observed).
 #'     
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
@@ -71,15 +73,16 @@ evalLogLikImpulseBatch <- function(vecTheta, vecX, matY,
 #' 
 #' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
 #' @param vecX (vector number of timepoints) Time-points at which gene was sampled
-#' @param matY (2D array timepoints x replicates) Observed expression values for 
+#' @param matY (matrix timepoints x replicates) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
 #' @param matNormConst: (matrix samples x replicates) Normalisation
 #'    constants for each replicate. Missing samples are set NA.
-#' @param scaMu: (scalar) MLE of overall mean of negative binomial
-#'    constant model on all data.
-#' @param vecMuTimecourses: (vector time courses) MLEs of meana of negative binomial
-#'    constant models by time course.
+#' @param matTranslationFactors: (matrix timepoints x replicates) Scaling
+#'    factors for impulse model between different timecourses:
+#'    Mean timecourse/overall mean, each scaled by size factors.
+#' @param matboolObserved: (bool 2D array timepoints x replicates)
+#'    Stores bool of replicate being not NA (observed).
 #'    
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
@@ -89,7 +92,9 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,matY,
   matTranslationFactors, matboolObserved){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
-  # scaled by normalisation factor of each replicate.
+  # scaled by normalisation factor of each replicate
+  # and scaled by translation factor (one for each
+  # timecourse).
   matImpulseValue = matrix(calcImpulse_comp(vecTheta,vecX),
     nrow=dim(matY)[1], ncol=dim(matY)[2], byrow=FALSE)*
     matNormConst*
@@ -133,13 +138,17 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,matY,
 #' @param scaDropoutEst: (scalar) Dropout rate estimate for given cell.
 #' @param matNormConst: (matrix samples x replicates) Normalisation
 #'    constants for each replicate. Missing samples are set NA.
+#' @param matboolObserved: (bool 2D array timepoints x replicates)
+#'    Stores bool of replicate being not NA (observed).
+#' @param matboolZero: (bool 2D array timepoints x replicates)
+#'    Stores bool of replicate having a count of 0.
 #'    
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
-### DAVID developmental note: think about taking this from 2D into 1D, only need 2D if work in clusters
 evalLogLikImpulseSC <- function(vecTheta,vecX,matY,
-  scaDispEst,scaDropoutEst,matNormConst){  
+  scaDispEst, scaDropoutEst, matNormConst,
+  matboolObserved, matboolZero){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each replicate.
@@ -153,31 +162,25 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,matY,
   # Note that the log is taken over the sum of mixture model 
   # components of the likelihood model and accordingly log=FALSE
   # inside dnbinom.
-  matboolObserved <- !is.na(matY)
-  matboolZero <- matY==0
   # Likelihood of zero counts:
-  scaLogLikZeros <- sum( sapply( seq(1:length(vecX)),
-    function(tp){ sum(log(
-      (1-scaDropoutEst)*
-        dnbinom(
-          matY[tp,matboolZero[tp,] & matboolObserved[tp,]], 
-          mu=matImpulseValue[tp,matboolZero[tp,] & matboolObserved[tp,]], 
-          size=scaDispEst, 
-          log=FALSE) +
-        scaDropoutEst
-    ))}
-  ) )
+  scaLogLikZeros <- sum(log(
+    (1-scaDropoutEst)*
+      dnbinom(
+        matY[matboolZero & matboolObserved], 
+        mu=matImpulseValue[matboolZero & matboolObserved], 
+        size=scaDispEst, 
+        log=FALSE) +
+      scaDropoutEst
+  ))
   # Likelihood of non-zero counts:
-  scaLogLikNonzeros <- sum( sapply( seq(1:length(vecX)), 
-    function(tp){ sum(log(
-      (1-scaDropoutEst)*
-        dnbinom(
-          matY[tp,!matboolZero[tp,] & matboolObserved[tp,]], 
-          mu=matImpulseValue[tp,!matboolZero[tp,] & matboolObserved[tp,]], 
-          size=scaDispEst, 
-          log=FALSE)
-    ))}
-  ) )
+  scaLogLikNonzeros <- sum(log(
+    (1-scaDropoutEst)*
+      dnbinom(
+        matY[!matboolZero & matboolObserved], 
+        mu=matImpulseValue[!matboolZero & matboolObserved], 
+        size=scaDispEst, 
+        log=FALSE)
+  ))
   # Compute likelihood of all data:
   scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
   

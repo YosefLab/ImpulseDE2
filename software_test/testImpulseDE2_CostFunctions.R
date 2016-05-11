@@ -48,15 +48,21 @@ matY <- arr3DToyData[1,,]
 scaDispEst <- 2
 scaMu <- mean(arr3DToyData[1,,]/matNormConst)
 vecMuTimecourses <- apply(arr3DToyData[1,,]/matNormConst,2,mean)
-
+matMuTimecourses <- matrix(vecMuTimecourses, nrow=dim(matY)[1], ncol=dim(matY)[2], byrow=TRUE)
+# Compute translation factors: Normalisation factor
+# to scale impulse model to indivindual time courses.
+# Note: Translation factor is the same for all replicates
+# in a time course.
+matTranslationFactors <- matMuTimecourses/scaMu
+matboolObserved <- !is.na(arr3DToyData[1,,])
 loglikH1 <- evalLogLikImpulseByTC(
   vecTheta=vecTheta, 
   vecX=vecX,
   matY=matY, 
   scaDispEst=scaDispEst, 
   matNormConst=matNormConst,
-  scaMu=scaMu, 
-  vecMuTimecourses=vecMuTimecourses)
+  matTranslationFactors=matTranslationFactors,
+  matboolObserved=matboolObserved)
 print("Reference:")
 matImpulseValue = matrix(calcImpulse_comp(vecTheta,vecX),
   nrow=dim(matY)[1], ncol=dim(matY)[2], byrow=FALSE)*matNormConst
@@ -70,8 +76,13 @@ sum(dnbinom(
 print("By timecourse")
 loglikH1
 
-loglikH1 <- evalLogLikImpulseBatch(vecTheta=vecTheta, vecX=vecX,
-  matY=matY, scaDispEst=scaDispEst, matNormConst=matNormConst)
+loglikH1 <- evalLogLikImpulseBatch(
+  vecTheta=vecTheta, 
+  vecX=vecX,
+  matY=matY, 
+  scaDispEst=scaDispEst, 
+  matNormConst=matNormConst,
+  matboolObserved=matboolObserved )
 
 print("As batch")
 loglikH1
@@ -106,6 +117,7 @@ vecX<-c(1:5)
 matY <- arr3DToyData[1,,]
 scaDispEst <- 2
 scaDropoutEst <- 0.78
+matboolZero <- matY==0 
 
 loglikH1 <- evalLogLikImpulseSC(
   vecTheta=vecTheta,
@@ -113,7 +125,9 @@ loglikH1 <- evalLogLikImpulseSC(
   matY=matY,
   scaDispEst=scaDispEst,
   scaDropoutEst=scaDropoutEst,
-  matNormConst=matNormConst)
+  matNormConst=matNormConst,
+  matboolObserved=matboolObserved,
+  matboolZero=matboolZero)
 
 print("single cell")
 loglikH1
