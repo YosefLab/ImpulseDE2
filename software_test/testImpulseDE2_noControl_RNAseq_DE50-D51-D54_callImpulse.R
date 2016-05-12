@@ -35,7 +35,6 @@ source("ImpulseDE2_main.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 
 
-control_timecourse = FALSE
 strControlName = NULL
 strCaseName = "case"
 n_process = 3
@@ -43,9 +42,14 @@ Q_value = 10^(-2)
 strMode <- "timecourses"
 #strMode <- "batch"
 boolPlotting <- TRUE
-lsImpulseDE_results <- runImpulseDE2(matCountData=expression_table, dfAnnotationFull=dfAnnotationFull,
-  strCaseName = strCaseName, strControlName=strControlName, strMode=strMode,
-  nProc=n_process, Q_value=Q_value, boolPlotting=boolPlotting)
+lsImpulseDE_results <- runImpulseDE2(matCountData=expression_table, 
+  dfAnnotationFull=dfAnnotationFull,
+  strCaseName = strCaseName, 
+  strControlName=strControlName, 
+  strMode=strMode,
+  nProc=n_process, 
+  Q_value=Q_value,
+  boolPlotting=boolPlotting)
 
 lsDEGenes <- lsImpulseDE_results$lsDEGenes
 dfImpulseResults <- lsImpulseDE_results$dfImpulseResults

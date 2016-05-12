@@ -211,9 +211,9 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     }
     arr2DCountData <- arr2DCountData[!(indx_NA),]
     
-    # Sort 2D array by time
+    # Sort 2D array by annotation table
     vecTimepoints <- as.character(sort(unique( as.numeric(as.vector(dfAnnotationFull$Time)) )))
-    arr2DCountData <- arr2DCountData[,dfAnnotationFull[match(dfAnnotationFull$Time, vecTimepoints)]$Sample]
+    arr2DCountData <- arr2DCountData[,match(colnames(arr2DCountData),as.vector(dfAnnotationFull$Replicate))]
     
     return(arr2DCountData)
   }

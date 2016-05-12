@@ -87,8 +87,6 @@ computePval <- function(arr2DCountData,vecDispersions,
       scaDegFreedomRed <- 1 + length(unique(dfAnnotationFull$Timecourse))
     }
   }
-  print("David syntax check")
-  print(unique(dfAnnotationFull$Timecourse))
   
   # Compute difference in degrees of freedom between null model and alternative model.
   scaDeltaDegFreedom <- scaDegFreedomFull - scaDegFreedomRed
@@ -102,7 +100,7 @@ computePval <- function(arr2DCountData,vecDispersions,
   if(is.null(strControlName)){
     # Without control data:
     dfDEAnalysis =   as.data.frame(cbind(
-      "Gene" = row.names(arr3DCountData),
+      "Gene" = row.names(arr2DCountData),
       "p"=as.numeric(vecPvalue),
       "adj.p"=as.numeric(vecPvalueBH),
       "loglik_full"=vecLogLikFull,
@@ -115,7 +113,7 @@ computePval <- function(arr2DCountData,vecDispersions,
   } else {
     # With control data:
     dfDEAnalysis =   as.data.frame(cbind(
-      "Gene" = row.names(arr3DCountData),
+      "Gene" = row.names(arr2DCountData),
       "p"=as.numeric(vecPvalue),
       "adj.p"=as.numeric(vecPvalueBH),
       "loglik_full"=vecLogLikFull,

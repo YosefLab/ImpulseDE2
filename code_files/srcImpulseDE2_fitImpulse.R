@@ -125,7 +125,7 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
   # Compute statistics for initialisation:
   # Expression means by timepoint
   vecExpressionMeans <- sapply(vecTimepoints,
-    function(tp){mean(vecCounts[vecTimepointAssign==tp], na.rm=TRUE)})
+    function(tp){mean(vecCounts[vecTimepointAssign==tp], na.rm=TRUE)})  
   scaMaxMiddleMean <- max(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
   scaMinMiddleMean <- min(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
   # +1 to push indicices up from middle stretch to entire window (first is omitted here)
@@ -435,7 +435,7 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
       ))})
     # Give output rownames again, which are lost above
     for(i in 1:length(lsGeneIndexByCore)){
-      rownames(lsmatFits[[i]]) <- rownames(arr2DCountDataCondition[lsGeneIndexByCore[[i]],,])
+      rownames(lsmatFits[[i]]) <- rownames(arr2DCountDataCondition[lsGeneIndexByCore[[i]],])
     }
     # Concatenate the output objects of each node
     matFits <- do.call(rbind,lsmatFits)
@@ -470,7 +470,7 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
     colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
       "converge_H1","mu","logL_H0")
   } else {
-    nTimecourses <- dim(arr2DCountDataCondition)[3]
+    nTimecourses <- length(unique( vecTimecourseAssign ))
     vecColnamesMubyTimecourse <- paste0(rep("muByTimecourse",nTimecourses),c(1:nTimecourses))
     colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
       "converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
@@ -545,7 +545,7 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
 #'    counts predicted by the impulse model at the observed time points.
 #' @export
 
-fitImpulse <- function(arr3DCountData, vecDispersions=NULL, 
+fitImpulse <- function(arr2DCountData, vecDispersions=NULL, 
   vecNormConst, dfAnnotationFull,
   strCaseName=NULL, strControlName=NULL, strMode="batch",
   nProcessesAssigned=3, NPARAM=6){
@@ -571,12 +571,12 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
   } else {
     lsReplicatesByCond <- list(
       dfAnnotationFull$Replicate )
-    names(lsReplicatesByCond) <- c("combined")
+    names(lsReplicatesByCond) <- c("case")
   }
   if(strMode=="timecourses"){
-    vecTimepointAssign <- dfAnnotationFull[match(colnames(arr2DCountData[,lsReplicatesByCond[[label]]]),dfAnnotationFull$Replicate),]$Timecourse
+    vecTimecourseAssign <- dfAnnotationFull[match(colnames(arr2DCountData),dfAnnotationFull$Replicate),]$Timecourse
   } else {
-    vecTimepointAssign <- NULL
+    vecTimecourseAssign <- NULL
   }
   
   # Fitting for different runs

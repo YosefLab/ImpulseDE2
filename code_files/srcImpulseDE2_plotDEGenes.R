@@ -149,7 +149,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
         vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
         # Get means of negative binomial at each time point
         vecCaseValueAtTP <- calcImpulse_comp(lsImpulseParamCaseLog,vecTimepoints)
-        for(tp in arrTimepoints_Comb[1,]){
+        for(tp in vecTimepoints){
           vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
             size=as.numeric(as.vector(dfImpulseResults[geneID,]$size)) )
           # Scale Y_coord to uniform peak heights of 1
@@ -159,7 +159,16 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
           lines(x=tp+vecYCoordPDF,y=vecXCoordPDF,col="black")
         }
         
-        legend(x="bottomright",c(strCaseName),fill=c("blue"), cex=0.6, inset=c(0,scaLegendInset))
+        # Plot mean of each time point
+        points(vecTimepoints,
+          sapply(vecTimepoints,function(tp){mean(arr2DCountData[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
+          col="black",pch=1)
+        
+        legend(x="bottomright",
+          legend=c(strCaseName),
+          fill=c("blue"), 
+          cex=0.6, 
+          inset=c(0,scaLegendInset))
       } else if(strMode=="timecourses"){
         vecTranslationFactors <- lsImpulseFits$parameters_case[geneID,vecindMuByTimecourse]/
           lsImpulseFits$parameters_case[geneID,"mu"]
@@ -191,7 +200,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
             # Plot data of time course
             points(x=vecTimepointAssign[vecindTimecourseAssign==tc],
               y=arr2DCountData[geneID, vecindTimecourseAssign==tc],
-              col=vecCol[timecourse],pch=3)
+              col=vecCol[tc],pch=3)
             # Plot impulse within boundaries of observed points
             vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[tc]
             indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
@@ -202,7 +211,16 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
           }
         }
         
-        legend(x="bottomright",vecTimecourses,fill=vecCol, cex=0.6+0.05*length(vecTimecourses), inset=c(0,scaLegendInset))
+        # Plot mean of each time point
+        points(vecTimepoints,
+          sapply(vecTimepoints,function(tp){mean(arr2DCountData[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
+          col="black",pch=1)
+        
+        legend(x="bottomright",
+          legend=vecTimecourses,
+          fill=vecCol, 
+          cex=0.6, 
+          inset=c(0,scaLegendInset-0.04*length(vecTimecourses)))
       } else {
         stop(paste0("ERROR: Unrecognised strMode in plotDEGenes(): ",strMode))
       }
@@ -271,14 +289,18 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
       lsCombValuesToPlot[!indImpulseValToPlot] <- NA
       points(vecX, lsCombValuesToPlot,col="black", type="l")
       
-      legend(x="bottomright",c(strCaseName,strControlName),fill=c("green","red"), cex=0.6, inset=c(0,scaLegendInset))
+      # Plot mean of each time point
+      points(vecTimepoints,
+        sapply(vecTimepoints,function(tp){mean(arr2DCountData[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
+        col="black",pch=1)
+      
+      legend(x="bottomright",
+        legend=c(strCaseName,strControlName),
+        fill=c("green","red"), 
+        cex=0.6, 
+        inset=c(0,scaLegendInset))
       
     }
-    
-    # Plot mean of each time point
-    points(vecTimepoints,
-      sapply(vecTimepoints,function(tp){mean(arr2DCountData[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
-      col="black",pch=1)
   }
   # Close .pdf
   dev.off()
