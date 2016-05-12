@@ -113,8 +113,6 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
   indVecXObs <- unlist(lapply( 
     vecTimepoints, function(t){match( min(abs(vecX-t)), abs(vecX-t) )} 
   ))
-  # Identify columns containing time course mean
-  vecindMuByTimecourse <- grep("muByTimecourse",colnames(lsImpulseFits$parameters_case))
   for (geneID in lsGeneIDs){
     if(is.null(strControlName)){
       # Without control  data 
@@ -170,8 +168,18 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
           cex=0.6, 
           inset=c(0,scaLegendInset))
       } else if(strMode=="timecourses"){
-        vecTranslationFactors <- lsImpulseFits$parameters_case[geneID,vecindMuByTimecourse]/
-          lsImpulseFits$parameters_case[geneID,"mu"]
+        # Identify columns containing translation factors
+        vecindTranslationFactors <- (colnames(lsImpulseFits$parameters_case))[
+          grep("TranslationFac_",colnames(lsImpulseFits$parameters_case))]
+        # Extract time course corresponding to translation factors
+        vecTimecoursesInResults <- sapply( vecindTranslationFactors,
+          function(strColumnName){ 
+            vecSplits <- unlist(strsplit(strColumnName, split="_"))
+            return(paste0(vecSplits[2:length(vecSplits)],collapse="_"))
+          } )
+        vecTranslationFactors <- (lsImpulseFits$parameters_case[geneID,vecindTranslationFactors])[
+          match(vecTimecoursesInResults,vecTimecourses)]
+        
         # Create colour vector
         vecCol <- rainbow(n=length(vecTimecourses))
         
@@ -260,7 +268,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
       plot(vecTimepointAssign[vecidxReplicatesCase],
         (arr2DCountData[geneID,])[vecidxReplicatesCase],
         col="green",pch=3,
-        xlim=c(0,max(vecTimepoints_Comb,na.rm=TRUE)+PDF_WIDTH),
+        xlim=c(0,max(vecTimepoints,na.rm=TRUE)+PDF_WIDTH),
         ylim=c(scaYlim_lower,scaYlim_upper),
         xlab="Time", 
         ylab="Impulse fit and expression values",

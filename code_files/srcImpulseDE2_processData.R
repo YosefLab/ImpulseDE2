@@ -56,9 +56,22 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
       stop("ERROR: ImpulseDE2 mode (strMode) was not given as input.")
     }
     
-    ### 2. Check annotation table content
+    ### 2. Check mode
+    lsAllowedModes <- c("batch", "timecourses", "singlecell")
+    if(sum(strMode==lsAllowedModes) != 1){
+      stop(paste0( "ERROR: ImpulseDE2 mode given as input, strMode=", strMode,
+        ", is not recognised. Chose from {", paste0(lsAllowedModes, collapse=","), "}." ))
+    }
+    
+    ### 3. Check annotation table content
     ### a) Check column names
-    vecColNamesRequired <- c("Replicate","Sample","Condition","Time")
+    if(strMode=="batch" | strMode=="singlecell"){
+      vecColNamesRequired <- c("Replicate","Sample","Condition","Time")
+    } else if(strMode=="timecourses"){
+      vecColNamesRequired <- c("Replicate","Sample","Condition","Time","Timecourse")
+    } else {
+      stop(paste0("ERROR: Unrecognised strMode in processData::checkData(): ",strMode))
+    }
     if( !all(vecColNamesRequired %in% colnames(dfAnnotationFull)) ){
       stop(paste0("Could not find column ",
         vecColNamesRequired[!(vecColNamesRequired %in% colnames(dfAnnotationFull))],
@@ -66,26 +79,19 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     }
     ### b) Replicates
     # Check that replicate name do not occur twice
-    if(length(unique(dfAnnotationFull$Replicate)) != dim(dfAnnotationFull)[1]){
+    if(length(unique(dfAnnotationFull$Replicate)) != length(dfAnnotationFull$Replicate)){
       stop(paste0("ERROR: [Annotation table]",
-        "Number of Replicate instances different to annotation table number of rows.",
-        "Replicate cannot occur multiple times."))
+        "Number of replicates different to number of unique replicate names.",
+        "Replicate names must be unique."))
     }
     ### c) Time points
-    # Check that there is not multiple samples per time point in one condition
     vecTimepoints <- unique(as.vector( dfAnnotationFull$Time ))
-    for(tp in vecTimepoints){
-      if( length(unique(as.vector( dfAnnotationFull[dfAnnotationFull$Time %in% tp &
-          dfAnnotationFull$Sample %in% strCaseName,]$Sample )))>1 ){
-        stop(paste0("ERROR: In case condition, assigned multiple samples to time point ",tp))
-      }
-    }
     # Check that time points are numeric
     if(is.numeric(dfAnnotationFull$Time) == FALSE){
       stop("ERROR: Time variable in annotation table must be numeric.")
     }
     ### d) Conditions
-    lsConditions <- unique(as.vector( dfAnnotationFull$Condition ))
+    lsConditions <- unique( dfAnnotationFull$Condition )
     # Check that given conditions exisit in annotation table
     if(!(strCaseName %in% lsConditions)){
       stop("ERROR: Condition given for case does not occur in annotation table condition column.")
@@ -95,8 +101,15 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
         stop("ERROR: Condition given for control does not occur in annotation table condition column.")
       }
     }
+    ### e) Timecourses
+    if(strMode=="timecourses"){
+      # Check that number of time courses given is > 1
+      if(length(unique( dfAnnotationFull$Timecourse ))==1){
+        stop("ERROR: Only one time course given in annotation table in mode timecourses. Use batch mode.")
+      }
+    }
     
-    ### 3. Check expression table content
+    ### 4. Check expression table content
     # Check that all entries in count data table occur in annotation table
     if( any(!(colnames(arr2DCountData) %in% dfAnnotationFull$Replicate)) ){
       print(paste0("WARNING: The column(s) ",
@@ -105,14 +118,8 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
         " in the count data table do(es) not occur in annotation table and will be ignored."))
     }
     
-    ### 4. Check mode
-    lsAllowedModes <- c("batch", "timecourses", "singlecell")
-    if(sum(strMode==lsAllowedModes) != 1){
-      stop(paste0( "ERROR: ImpulseDE2 mode given as input, strMode=", strMode,
-        ", is not recognised. Chose from {", paste0(lsAllowedModes, collapse=","), "}." ))
-    }
-    
-    ### Summarise which conditions, samples, lsReplicates were found and mode
+    ### Summarise which mode, conditions, samples, replicates and
+    ### timecourses were found
     print(paste0("Found conditions: ",paste0(lsConditions,collapse=",")))
     print(paste0("Case condition: ", strCaseName))
     if(!is.null(strControlName)){
@@ -151,6 +158,16 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
       }
     }
     print(paste0( "ImpulseDE2 runs in mode: ", strMode ))
+    if(strMode=="timecourses"){
+      for(tc in unique( dfAnnotationFull$Timecourse )){
+        print(paste0( "Found the following replicates for timecourse ",
+          tc, ": ",
+          paste0( dfAnnotationFull[
+            dfAnnotationFull$Timecourse %in% tc &
+              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
+            ]$Replicate,collapse=",") ))
+      }
+    }
     
     return(NULL)
   }

@@ -99,7 +99,7 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
     # Evaluate likelihood of null model
     scaLoglikNull <- sum(dnbinom(
       vecCounts[vecboolObserved], 
-      mu=(vecMuTimecourses[vecTimecourseAssign])[vecboolObserved], 
+      mu=(vecMuTimecourses[as.vector(vecTimecourseAssign)])[vecboolObserved], 
       size=scaDispersionEstimate, 
       log=TRUE))
   } else {
@@ -120,7 +120,21 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
     })
     names(vecMuTimecoursesScaled) <- vecTimecourses
     # Scaled mean ratio per replicate
-    vecTranslationFactors <- vecMuTimecoursesScaled[vecTimecourseAssign]/scaMuScaled
+    vecTranslationFactors <- vecMuTimecoursesScaled[as.vector(vecTimecourseAssign)]/scaMuScaled
+    # Note: If all replicates are zero, scaMuScaled is zero and
+    # vecTranslationFactors are NA. Genes only with zero counts
+    # are removed in processData(). The input data to this function
+    # ma still consist entirely of zeros if this function is called
+    # on the subset of case or control data (if control condition
+    # is given). Those subsets may be only zeros. This exception
+    # is caught here and vecTranslationFactors set to 1 from NA.
+    # This removes the effect of vecTranslationFactors on fitting.
+    # The negative binomial density can still be
+    # evaluated as it is initialised with values from an impulse model
+    # padded with zero counts.s 
+    if(scaMu==0){
+      vecTranslationFactors <- array(1,length(vecTranslationFactors))
+    }
   }
   # Compute statistics for initialisation:
   # Expression means by timepoint
@@ -134,7 +148,7 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
   # Gradients between neighbouring points
   vecGradients <- unlist( lapply(c(1:(nTimepts-1)),function(x){
     (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepoints[x+1]-vecTimepoints[x])}) )
-  
+
   # (III) Fit Impulse model
   # 1. Initialisation: Peak
   # Beta: Has to be negative, Theta1: Low, Theta2: High, Theta3: Low
@@ -205,7 +219,7 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
   vecParamGuess <- c(1,log(vecExpressionMeans[1]+1),log(scaMinMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
     (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2 )
-  
+
   if("optim" %in% optim_method){
     if(strMode=="batch"){
       lsFitValley <- unlist( optim(
@@ -285,17 +299,26 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
     names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1","mu","logL_H0")
   } else if(strMode=="timecourses") {
-    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLoglikNull,vecMuTimecourses)
-    nTimecourses <- length(vecMuTimecourses)
-    vecColnamesMubyTimecourse <- paste0(rep("muByTimecourse",nTimecourses),c(1:nTimecourses))
+    vecTranslationFactorsUnique <- vecTranslationFactors[as.vector(vecTimecourses)]
+    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],
+      scaMu,
+      scaLoglikNull,
+      vecMuTimecourses,
+      vecTranslationFactorsUnique)
+    vecColnamesMubyTimecourse <- paste0(rep("mu_",length(vecMuTimecourses)), names(vecMuTimecourses))
+    vecColnameTranslationFactors <- paste0(rep("TranslationFac_",length(vecTranslationFactorsUnique)), names(vecTranslationFactorsUnique))
     names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
-      "logL_H1","converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
+      "logL_H1","converge_H1",
+      "mu",
+      "logL_H0",
+      vecColnamesMubyTimecourse,
+      vecColnameTranslationFactors)
   }  else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
   # Remove log scale from count parameters of impulse model
   lsBestFitSummary[c("h0","h1","h2")] <- exp(lsBestFitSummary[c("h0","h1","h2")])
-  
+
   return(lsBestFitSummary)
 }
 
@@ -458,24 +481,26 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
         strMode=strMode,
         NPARAM=NPARAM,
         MAXIT=MAXIT )})
-    matFits_temp <- array(NA,c(length(matFits),length(matFits[[1]])))
-    for (i in 1:length(matFits)){
-      matFits_temp[i,] <- matFits[[i]]
-    }
-    matFits <- matFits_temp
+    #matFits_temp <- array(NA,c(length(matFits),length(matFits[[1]])))
+    #for (i in 1:length(matFits)){
+    #  matFits_temp[i,] <- matFits[[i]]
+    #}
+    #matFits <- matFits_temp
+    matFits <- do.call(rbind,matFits)
+    rownames(matFits) <- rownames(arr2DCountDataCondition)
   }
   
   # Name output columns
-  if(strMode=="batch"){
-    colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
-      "converge_H1","mu","logL_H0")
-  } else {
-    nTimecourses <- length(unique( vecTimecourseAssign ))
-    vecColnamesMubyTimecourse <- paste0(rep("muByTimecourse",nTimecourses),c(1:nTimecourses))
-    colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
-      "converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
-  }
-  rownames(matFits) <- rownames(arr2DCountDataCondition)
+  #if(strMode=="batch"){
+  #  colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
+  #    "converge_H1","mu","logL_H0")
+  #} else {
+  #  nTimecourses <- length(unique( vecTimecourseAssign ))
+  #  vecColnamesMubyTimecourse <- paste0(rep("mu_",nTimecourses),c(1:nTimecourses))
+  #  colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
+  #    "converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
+  #}
+  #rownames(matFits) <- rownames(arr2DCountDataCondition)
   
   ### DAVID: can reduce this if clause?
   # Use obtained impulse parameters to calculate impulse fit values
@@ -553,6 +578,8 @@ fitImpulse <- function(arr2DCountData, vecDispersions=NULL,
   #g_names = rownames(arr3DCountData)
   lsFitResults_all = list()
   
+  # Condition labels to be used in runs:
+  # These labels are used to group replicates
   if(!is.null(strControlName)){
     lsLabels <- c("combined","case","control")
     names(lsLabels) <- c("combined","case","control")
@@ -561,23 +588,28 @@ fitImpulse <- function(arr2DCountData, vecDispersions=NULL,
     names(lsLabels) <- c("case")
   }
   
-  # Perform 3 runs (combined, case and control) if control timecourse is present
+  # Create lists of replicates to be used per run
   if(!is.null(strControlName)){    
     lsReplicatesByCond <- list(
-      dfAnnotationFull$Replicate,
-      dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate,
-      dfAnnotationFull[dfAnnotationFull$Condition %in% strControlName,]$Replicate )
+      colnames(arr2DCountData),
+      (colnames(arr2DCountData))[dfAnnotationFull[match(colnames(arr2DCountData),dfAnnotationFull$Replicate),]$Condition %in% strCaseName],
+      (colnames(arr2DCountData))[dfAnnotationFull[match(colnames(arr2DCountData),dfAnnotationFull$Replicate),]$Condition %in% strControlName] )
     names(lsReplicatesByCond) <- c("combined","case","control")   
   } else {
     lsReplicatesByCond <- list(
-      dfAnnotationFull$Replicate )
+      colnames(arr2DCountData) )
     names(lsReplicatesByCond) <- c("case")
   }
+  # Get time course assignments of replicates
   if(strMode=="timecourses"){
     vecTimecourseAssign <- dfAnnotationFull[match(colnames(arr2DCountData),dfAnnotationFull$Replicate),]$Timecourse
+    names(vecTimecourseAssign) <- colnames(arr2DCountData)
   } else {
     vecTimecourseAssign <- NULL
   }
+  # Get time point assignments of replicates
+  vecTimepointAssign <- dfAnnotationFull[match(colnames(arr2DCountData),dfAnnotationFull$Replicate),]$Time
+  names(vecTimepointAssign) <- colnames(arr2DCountData)
   
   # Fitting for different runs
   for (label in lsLabels){
@@ -585,8 +617,8 @@ fitImpulse <- function(arr2DCountData, vecDispersions=NULL,
       arr2DCountDataCondition=arr2DCountData[,lsReplicatesByCond[[label]]],
       vecNormConst=vecNormConst[lsReplicatesByCond[[label]]],
       vecDispersions=vecDispersions,
-      vecTimepointAssign=dfAnnotationFull[match(colnames(arr2DCountData[,lsReplicatesByCond[[label]]]),dfAnnotationFull$Replicate),]$Time,
-      vecTimecourseAssign=vecTimecourseAssign,
+      vecTimepointAssign=vecTimepointAssign[lsReplicatesByCond[[label]]],
+      vecTimecourseAssign=vecTimecourseAssign[lsReplicatesByCond[[label]]],
       dfAnnotationFull=dfAnnotationFull,
       strCaseName=strCaseName,
       strControlName=strControlName,

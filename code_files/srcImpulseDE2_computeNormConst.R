@@ -52,5 +52,10 @@ computeNormConst <- function(arr2DCountData, dfAnnotationFull){
     })
   names(vecSizeFactors) <- colnames(arr2DCountData)
   
+  if(any(vecSizeFactors==0)){
+    warning("ERROR: One of the normalisation constants is zero. Will be set to 1.")
+    vecSizeFactors[vecSizeFactors==0] <- 1
+  }
+  
   return(vecSizeFactors)
 }

@@ -39,8 +39,8 @@ strControlName = NULL
 strCaseName = "case"
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "timecourses"
-#strMode <- "batch"
+#strMode <- "timecourses"
+strMode <- "batch"
 boolPlotting <- TRUE
 lsImpulseDE_results <- runImpulseDE2(matCountData=expression_table, 
   dfAnnotationFull=dfAnnotationFull,
@@ -60,22 +60,31 @@ dfDESeq2Results <- lsImpulseDE_results$dfDESeq2Results
 if(FALSE){
   # Load files from interior of ImpulseDE
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-  load("ImpulseDE2_arr3DCountData.RData")
-  load("ImpulseDE2_dfAnnotationRed.RData")
+  load("ImpulseDE2_arr2DCountData.RData")
+  load("ImpulseDE2_dfAnnotationFull.RData")
   # Load Impulse output
   load("ImpulseDE2_dfImpulseResults.RData")
   load("ImpulseDE2_lsDEGenes.RData")
   load("ImpulseDE2_lsImpulseFits.RData")
   load("ImpulseDE2_dfDESeq2Results.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_vecNormConst.RData")
   NPARAM <- 6
   setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
   source("srcImpulseDE2_plotDEGenes.R")
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-  plotDEGenes(lsGeneIDs=rownames(expression_table)[1:100],
-    arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
+  plotDEGenes(
+    lsGeneIDs=rownames(expression_table)[1:4],
+    arr2DCountData=arr2DCountData,
+    vecNormConst=vecNormConst,
+    dfAnnotationFull=dfAnnotationFull, 
     lsImpulseFits=lsImpulseFits,
-    strCaseName=strCaseName, strControlName=strControlName, 
-    strFileNameSuffix="DE", strPlotTitleSuffix="", strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,dfDESeq2Results=dfDESeq2Results,
-    NPARAM=NPARAM,boolPlotting=TRUE)
+    strCaseName=strCaseName, 
+    strControlName=strControlName, 
+    strFileNameSuffix="DE", 
+    strPlotTitleSuffix="", 
+    strPlotSubtitle="",
+    dfImpulseResults=dfImpulseResults,
+    vecMethod2Results=dfDESeq2Results$padj,
+    strMode=strMode, 
+    NPARAM=NPARAM)
 }

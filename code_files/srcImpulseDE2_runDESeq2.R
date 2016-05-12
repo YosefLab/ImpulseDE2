@@ -89,11 +89,11 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
     # for evaluation of likelihood)
     dds_dispersions <- 1/dispersions(ddsDESeqObjectSample)
     
-    dds <- DESeqDataSetFromMatrix(countData = dfCountData,
+    dds2 <- DESeqDataSetFromMatrix(countData = dfCountData,
       colData = dfAnnotationFull,
       design = ~ Condition)
     # Run DESeq2
-    ddsDESeqObjectCond <- DESeq(dds, test = "LRT", 
+    ddsDESeqObjectCond <- DESeq(dds2, test = "LRT", 
       full = ~ Condition, reduced = ~ 1,
       parallel=TRUE)
     # DESeq results for comparison
