@@ -9,14 +9,12 @@
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
-#' @param ImpulseDE2_arr3DCountData: (3D array genes x samples x replicates)
-#'    Count data: \code{arr2DCountData} reshaped into a 3D array. 
-#'    For internal use.
+#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
+#'    version of \code{matCountData}. For internal use.
 #' @param vecDispersions (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
-#' @param dfAnnotationRed (data frame) Reduced version of 
-#'    \code{dfAnnotationFull}. Lists co-variables of samples: 
-#'    Sample, Condition, Time. Time must be numeric. For internal use.
+#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
+#'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param lsImpulseFits (list length 2 or 6) List of matrices which
 #'    contain parameter fits and model values for given time course for the
 #'    case condition (and control and combined if control is present).
@@ -39,8 +37,8 @@
 #'    Summary of fitting procedure for each gene.
 #' @export
 
-computePval <- function(arr3DCountData,vecDispersions,
-  dfAnnotationRed, lsImpulseFits,
+computePval <- function(arr2DCountData,vecDispersions,
+  dfAnnotationFull, lsImpulseFits,
   strCaseName=NULL, strControlName=NULL, strMode="batch",
   NPARAM=6){
   
@@ -61,9 +59,9 @@ computePval <- function(arr3DCountData,vecDispersions,
     } else if(strMode=="timecourses"){
       # Parameters, 1 dispersion estimate and 
       # scaling factor for each time course
-      scaDegFreedomFull <- NPARAM + 1 + dim(arr3DCountData)[3]
+      scaDegFreedomFull <- NPARAM + 1 + length(unique(dfAnnotationFull$Timecourse))
       # 1 dispersion estimate and 1 mean estimate for each time course
-      scaDegFreedomRed <- 1 + dim(arr3DCountData)[3] 
+      scaDegFreedomRed <- 1 + length(unique(dfAnnotationFull$Timecourse))
     }
   } else {
     # With control data:
@@ -83,12 +81,14 @@ computePval <- function(arr3DCountData,vecDispersions,
     } else if(strMode=="timecourses"){
       # Parameters of both models (case and control), 1 dispersion estimate and 
       # scaling factor for each time course
-      scaDegFreedomFull <- NPARAM*2 + 1 + dim(arr3DCountData)[3]
+      scaDegFreedomFull <- NPARAM*2 + 1 + length(unique(dfAnnotationFull$Timecourse))
       # Parameters of one model (combined), 1 dispersion estimate 
       # and 1 mean estimate for each time course
-      scaDegFreedomRed <- 1 + dim(arr3DCountData)[3] 
+      scaDegFreedomRed <- 1 + length(unique(dfAnnotationFull$Timecourse))
     }
   }
+  print("David syntax check")
+  print(unique(dfAnnotationFull$Timecourse))
   
   # Compute difference in degrees of freedom between null model and alternative model.
   scaDeltaDegFreedom <- scaDegFreedomFull - scaDegFreedomRed

@@ -11,7 +11,6 @@
 #'   checkData()
 #'   nameGenes()
 #'   reduceCountData()
-#'   reshapeCountData()
 #' (II) Script body
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
@@ -24,16 +23,10 @@
 #' @param strCaseName (str) [Default NULL] Name of the case condition in \code{dfAnnotationFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationFull}.
-#' @return (list length 3) with the following elements:
-#' \itemize{
-#'    \item \code{arr2DCountData} (2D array genes x replicates) Count data: Reduced 
-#'        version of \code{matCountData}. For internal use.
-#'    \item \code{arr3DCountData} (3D array genes x samples x replicates) Count data: 
-#'        \code{arr2DCountData} reshaped into a 3D array. For internal use.
-#'    \item \code{dfAnnotationRed} (data frame) Reduced version of 
-#'        \code{dfAnnotationFull}. Lists co-variables of samples: 
-#'        Sample, Condition, Time. Time must be numeric. For internal use.
-#' }
+#'    
+#' @return arr2DCountData: (2D array genes x replicates) Count data: Reduced 
+#'    version of \code{matCountData}. For internal use.
+#'
 #' @export
 
 processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
@@ -224,101 +217,9 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     
     return(arr2DCountData)
   }
-  
-  # Prepare 3D count data array
-  reshapeCountData <- function(dfAnnotationFull, arr2DCountData,
-    strCaseName, strControlName=NULL, strMode="batch"){
     
-    vecSamples <- unique(as.vector( dfAnnotationFull$Sample ))
-    if(strMode=="batch" | strMode=="singlecell"){
-      # Take maximum number of replicates as third dimension:
-      # 3D array will be build as dense (few NA) as possible
-      # as replicates are not correlated.
-      nThirdDim <- max(unlist(lapply( vecSamples,
-        function(sample){
-          sum(dfAnnotationFull$Sample %in% sample)
-        }
-      )))
-    } else if(strMode=="timecourses"){
-      # Take number of timecourses as third dimension:
-      # Third dimension reflect correlation between replicates
-      # taken from one time course measurement.
-      # Create a reference list of time courses:
-      vecTimecourses <- unique(as.vector( dfAnnotationFull$Timecourse ))
-      nThirdDim <- length(vecTimecourses)
-    } else {
-      stop(paste0("ERROR: Unrecognised strMode in processData::reshapeCountData(): ",strMode))
-    }
-    
-    # Convert list of matrices into 3D array
-    # Initialise 3D array
-    nGenes <- dim(arr2DCountData)[1]
-    nSamples <- length(vecSamples)
-    arr3DCountData=array(NA,c(nGenes,nSamples,nThirdDim))
-    rownames(arr3DCountData) <- rownames(arr2DCountData)
-    colnames(arr3DCountData) <- vecSamples
-    if(strMode=="timecourses"){
-      dimnames(arr3DCountData)[[3]] <- vecTimecourses
-    }
-    
-    # Write 3D array
-    for (sample in vecSamples){
-      if(strMode=="batch" | strMode=="singlecell"){
-        # Fill replicate vectors in 3D array by sample.
-        # Note that not all possible (max number of 
-        # replicates) slots will be filled for each sample.
-        vecReplicatesInSample <- dfAnnotationFull[dfAnnotationFull$Sample %in% sample,]$Replicate
-        for (replicate in vecReplicatesInSample){
-          arr3DCountData[,sample,match(replicate,vecReplicatesInSample)] <-
-            arr2DCountData[,replicate]
-        }
-      } else if(strMode=="timecourses"){
-        # Fill replicate vectors in 3D array by sample,
-        # keeping the time course structure of the replicates.
-        vecReplicatesInSample <-
-          dfAnnotationFull[dfAnnotationFull$Sample %in% sample,]$Replicate
-        vecindReplicatesInTimecourses <-
-          match(dfAnnotationFull[dfAnnotationFull$Sample %in% sample,]$Timecourse, vecTimecourses)
-        arr3DCountData[,sample,vecindReplicatesInTimecourses] <-
-          arr2DCountData[,vecReplicatesInSample]
-      } else {
-        stop(paste0("ERROR: Unrecognised strMode in processData::reshapeCountData(): ",strMode))
-      }
-    }
-    # Sort 3D array by time
-    vecTimepoints <- as.character(sort(unique( as.numeric(as.vector(dfAnnotationFull$Time)) )))
-    arr2DCountData <- arr2DCountData[,dfAnnotationFull[match(dfAnnotationFull$Time, vecTimepoints)]$Replicate]
-    
-    return(arr3DCountData)
-  }
-  
-  # Create smaller annotation table with one entry per sample.
-  # This is the annotation table for the 3D count data array which has
-  # sample names as column names.
-  reduceAnnotation <- function(dfAnnotationFull=NULL,strMode="batch"){
-    # Find first occurrence of each sample in annotation table:
-    # Note: Condition and time are the same for all replicates 
-    # of a given sample.
-    if(strMode=="batch" | strMode=="singlecell"){
-      indSamples <- match( unique(as.vector(dfAnnotationFull$Sample)), 
-        as.vector(dfAnnotationFull$Sample) )
-    } else if(strMode=="timecourses"){
-      indSamples <- seq(1,dim(dfAnnotationFull)[1])
-    } else {
-      stop(paste0("ERROR: Unrecognised strMode in processData::reduceAnnotation(): ",strMode))
-    }
-    # Take one row per sample and columns [Sample,Condition,Time]
-    # From now on, the replicates are anonymous in the 3D array.
-    dfAnnotationRed <- dfAnnotationFull[indSamples,
-      c("Sample","Condition","Time","Timecourse")]
-    # Sort by time
-    dfAnnotationRed <- dfAnnotationRed[with(dfAnnotationRed, order(+Time,Condition,Sample)),]
-  }
-  
   ###############################################################
   # (II) Main body of function
-  
-  dfAnnotationFull <- dfAnnotationFull[with(dfAnnotationFull, order(+Time,Condition,Sample)),]
   
   checkData(
     dfAnnotationFull=dfAnnotationFull,
@@ -333,15 +234,5 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     dfAnnotationFull=dfAnnotationFull, 
     arr2DCountData=arr2DCountData)
   
-  arr3DCountData <- reshapeCountData(
-    dfAnnotationFull=dfAnnotationFull,
-    arr2DCountData=arr2DCountData,
-    strControlName=strControlName,
-    strCaseName=strCaseName,
-    strMode=strMode)
-  
-  dfAnnotationRed <- reduceAnnotation(dfAnnotationFull,
-    strMode=strMode)
-  
-  return( list(arr2DCountData,arr3DCountData,dfAnnotationRed,dfAnnotationFull) )
+  return( arr2DCountData )
 }

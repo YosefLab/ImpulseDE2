@@ -9,7 +9,7 @@
 #' independent.
 #' In analogy to generalised linear models, a log linker
 #' function is used for the count parameters. The inferred negative
-#' binomial model is normalised by the factors in matNormConst
+#' binomial model is normalised by the factors in vecNormConst
 #' for evaluation of the likelihood on the data.
 #' 
 #' @aliases evalLogLikImpulseBatch_comp
@@ -20,30 +20,34 @@
 #' 
 #' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
 #' @param vecX (vector number of timepoints) Time-points at which gene was sampled
-#' @param matY (2D array timepoints x replicates) Observed expression values for 
+#' @param vecY (numeric vector replicates) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' @param matNormConst: (matrix samples x replicates) Normalisation
-#'    constants for each replicate. Missing samples are set NA.
-#' @param matboolObserved: (bool 2D array timepoints x replicates)
+#' @param vecNormConst: (numeric vector number of replicates) 
+#'    Normalisation constants for each replicate.
+#' @param vecindTimepointAssign (numeric vector number replicates) 
+#'    Index of time point assigned to replicate in list of sorted
+#'    time points (vecX).
+#' @param vecboolObserved: (bool vector number of replicates)
 #'    Stores bool of replicate being not NA (observed).
 #'     
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
-evalLogLikImpulseBatch <- function(vecTheta, vecX, matY,
-  scaDispEst, matNormConst, matboolObserved){
+evalLogLikImpulseBatch <- function(vecTheta, vecX, vecY,
+  scaDispEst, vecNormConst, 
+  vecindTimepointAssign, vecboolObserved){
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each replicate.
-  matImpulseValue = matrix(calcImpulse_comp(vecTheta,vecX),
-    nrow=dim(matY)[1], ncol=dim(matY)[2], byrow=FALSE)*matNormConst
+  vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
+    vecNormConst
   
   # Compute log likelihood under impulse model by
   # adding log likelihood of model at each timepoint.
   scaLogLik <- sum(dnbinom(
-    matY[matboolObserved], 
-    mu=matImpulseValue[matboolObserved], 
+    vecY[vecboolObserved], 
+    mu=vecImpulseValue[vecboolObserved], 
     size=scaDispEst, 
     log=TRUE))
   
@@ -62,7 +66,7 @@ evalLogLikImpulseBatch <- function(vecTheta, vecX, matY,
 #' mean of each time course.
 #' In analogy to generalised linear models, a log linker
 #' function is used for the count parameters. The inferred negative
-#' binomial model is normalised by the factors in matNormConst
+#' binomial model is normalised by the factors in vecNormConst
 #' for evaluation of the likelihood on the data.
 #' 
 #' @aliases evalLogLikImpulseByTC_comp
@@ -73,38 +77,41 @@ evalLogLikImpulseBatch <- function(vecTheta, vecX, matY,
 #' 
 #' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
 #' @param vecX (vector number of timepoints) Time-points at which gene was sampled
-#' @param matY (matrix timepoints x replicates) Observed expression values for 
+#' @param vecY (numeric vector replicates) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' @param matNormConst: (matrix samples x replicates) Normalisation
-#'    constants for each replicate. Missing samples are set NA.
-#' @param matTranslationFactors: (matrix timepoints x replicates) Scaling
-#'    factors for impulse model between different timecourses:
+#' @param vecNormConst: (numeric vector number of replicates) 
+#'    Normalisation constants for each replicate.
+#' @param vecTranslationFactors: (numeric vector number of replicates)
+#'    Scaling factors for impulse model between different timecourses:
 #'    Mean timecourse/overall mean, each scaled by size factors.
-#' @param matboolObserved: (bool 2D array timepoints x replicates)
+#' @param vecindTimepointAssign (numeric vector number replicates) 
+#'    Index of time point assigned to replicate in list of sorted
+#'    time points (vecX).
+#' @param vecboolObserved: (bool vector number of replicates)
 #'    Stores bool of replicate being not NA (observed).
 #'    
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
-evalLogLikImpulseByTC <- function(vecTheta,vecX,matY,
-  scaDispEst, matNormConst,
-  matTranslationFactors, matboolObserved){  
+evalLogLikImpulseByTC <- function(vecTheta,vecX,vecY,
+  scaDispEst, vecNormConst,
+  vecTranslationFactors, 
+  vecindTimepointAssign, vecboolObserved){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each replicate
   # and scaled by translation factor (one for each
   # timecourse).
-  matImpulseValue = matrix(calcImpulse_comp(vecTheta,vecX),
-    nrow=dim(matY)[1], ncol=dim(matY)[2], byrow=FALSE)*
-    matNormConst*
-    matTranslationFactors
+  vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
+    vecNormConst*
+    vecTranslationFactors
   
   # Compute log likelihood under impulse model by
   # adding log likelihood of model at each timepoint.
   scaLogLik <- sum(dnbinom(
-    matY[matboolObserved], 
-    mu=matImpulseValue[matboolObserved],   
+    vecY[vecboolObserved], 
+    mu=vecImpulseValue[vecboolObserved],   
     size=scaDispEst, 
     log=TRUE))
   
@@ -122,7 +129,7 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,matY,
 #' cell data (e.g. scRNA-seq).
 #' In analogy to generalised linear models, a log linker
 #' function is used for the count parameters. The inferred negative
-#' binomial model is normalised by the factors in matNormConst
+#' binomial model is normalised by the factors in vecNormConst
 #' for evaluation of the likelihood on the data.
 #' 
 #' @aliases evalLogLikImpulseSC_comp
@@ -132,28 +139,31 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,matY,
 #' 
 #' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
 #' @param vecX (vector number of timepoints) Time-points at which gene was sampled
-#' @param matY (2D array timepoints x replicates) Observed expression values for 
+#' @param vecY (numeric vector replicates) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
 #' @param scaDropoutEst: (scalar) Dropout rate estimate for given cell.
-#' @param matNormConst: (matrix samples x replicates) Normalisation
-#'    constants for each replicate. Missing samples are set NA.
-#' @param matboolObserved: (bool 2D array timepoints x replicates)
+#' @param vecNormConst: (numeric vector number of replicates) 
+#'    Normalisation constants for each replicate.
+#' @param vecindTimepointAssign (numeric vector number replicates) 
+#'    Index of time point assigned to replicate in list of sorted
+#'    time points (vecX).
+#' @param vecboolObserved: (bool vector number of replicates)
 #'    Stores bool of replicate being not NA (observed).
-#' @param matboolZero: (bool 2D array timepoints x replicates)
+#' @param vecboolZero: (bool vector number of replicates)
 #'    Stores bool of replicate having a count of 0.
 #'    
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
-evalLogLikImpulseSC <- function(vecTheta,vecX,matY,
-  scaDispEst, scaDropoutEst, matNormConst,
-  matboolObserved, matboolZero){  
+evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
+  scaDispEst, scaDropoutEst, vecNormConst,
+  vecindTimepointAssign, vecboolObserved, vecboolZero){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each replicate.
-  matImpulseValue = matrix(calcImpulse_comp(vecTheta,vecX),
-    nrow=dim(matY)[1], ncol=dim(matY)[2], byrow=FALSE)*matNormConst
+  vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
+    vecNormConst
   
   # Compute log likelihood under impulse model by
   # adding log likelihood of model at each timepoint.
@@ -166,8 +176,8 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,matY,
   scaLogLikZeros <- sum(log(
     (1-scaDropoutEst)*
       dnbinom(
-        matY[matboolZero & matboolObserved], 
-        mu=matImpulseValue[matboolZero & matboolObserved], 
+        vecY[vecboolZero & vecboolObserved], 
+        mu=vecImpulseValue[vecboolZero & vecboolObserved], 
         size=scaDispEst, 
         log=FALSE) +
       scaDropoutEst
@@ -176,8 +186,8 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,matY,
   scaLogLikNonzeros <- sum(log(
     (1-scaDropoutEst)*
       dnbinom(
-        matY[!matboolZero & matboolObserved], 
-        mu=matImpulseValue[!matboolZero & matboolObserved], 
+        vecY[!vecboolZero & vecboolObserved], 
+        mu=vecImpulseValue[!vecboolZero & vecboolObserved], 
         size=scaDispEst, 
         log=FALSE)
   ))
@@ -207,7 +217,7 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,matY,
 #'    vecDropoutRate: (vector cells) Dropout rate estimate for all cells.
 #'    matMuEst: (matrix genes x clusters) Negative binomial 
 #'        component mean estimates for each gene and each cluster.
-#' @param matY (matrix genes x cells) Observed expression values of all genes
+#' @param vecY (matrix genes x cells) Observed expression values of all genes
 #'    in all cells.
 #' @param vecDispEst: (vector genes) Dispersion estimates for all genes. 
 #' @param lsResultsClustering:
@@ -216,7 +226,7 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,matY,
 #'    of hurdle model for dataset.
 #' @export
 
-evalLogLikHurdle <- function(lsThetaHurdle,matY,
+evalLogLikHurdle <- function(lsThetaHurdle,vecY,
   vecDispEst,lsResultsClustering){ 
   
   vecDropoutEst <- lsThetaHurdle$vecDropoutEst
@@ -230,10 +240,10 @@ evalLogLikHurdle <- function(lsThetaHurdle,matY,
   # Create matrices of zero and non-zero counts with all elements
   # outside the target interval ({0} or {x>0 and finite}) set
   # to NA. NA will be ignored in likelihood computation below.
-  matYZeros <- matY
-  matYZeros[matYZeros!=0] <- NA
-  matYNonzeros <- matY
-  matYNonzeros[matYNonzeros <= 0 | is.na(matYNonzeros) | !is.finite(matYNonzeros)] <- NA
+  vecYZeros <- vecY
+  vecYZeros[vecYZeros!=0] <- NA
+  vecYNonzeros <- vecY
+  vecYNonzeros[vecYNonzeros <= 0 | is.na(vecYNonzeros) | !is.finite(vecYNonzeros)] <- NA
   
   # Loop over clusters
   scaLogLik <- sum(sapply( seq(1:lsResultsClustering$K), function(cluster){ 
@@ -242,13 +252,13 @@ evalLogLikHurdle <- function(lsThetaHurdle,matY,
     
     # Evaluate on all zero count genes in cells
     scaLogLikZerosCluster <- sum(log(
-      (1-vecDropoutEst[vecCells]) * dnbinom(matYZeros[,vecCells], 
+      (1-vecDropoutEst[vecCells]) * dnbinom(vecYZeros[,vecCells], 
         mu=matMeanEst[,cluster], size=vecDispEst, log=FALSE) +
         vecDropoutEst[vecCells]
     ), na.rm=TRUE)
     # Evaluate on all nonzero count genes in cells
     scaLogLikNonzerosCluster <- sum(log(
-      (1-vecDropoutEst[vecCells]) * dnbinom(matYNonzeros[,vecCells], 
+      (1-vecDropoutEst[vecCells]) * dnbinom(vecYNonzeros[,vecCells], 
         mu=matMeanEst[,cluster], size=vecDispEst, log=FALSE)
     ), na.rm=TRUE)
     

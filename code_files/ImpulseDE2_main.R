@@ -159,13 +159,8 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' \itemize{
 #'    \item \code{ImpulseDE2_arr2DCountData.RData} (2D array genes x replicates) 
 #'        Count data: Reduced version of \code{matCountData}. For internal use.
-#'    \item \code{ImpulseDE2_arr3DCountData.RData} (3D array genes x samples x replicates)
-#'        Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
-#'    \item \code{ImpulseDE2_dfAnnotationFull.RData} (data frame) Full version of 
-#'        \code{dfAnnotationRed}. For internal use, e.g. by DESeq2.
-#'    \item \code{ImpulseDE2_dfAnnotationRed.RData} (data frame) Reduced version of 
-#'        \code{dfAnnotationFull}. For internal use.
-#'    \item \code{ImpulseDE2_matNormConst.RData} (matrix samples x replicates) Normalisation
+#'    \item \code{ImpulseDE2_dfAnnotationFull.RData} (data frame) Annotation table.
+#'    \item \code{ImpulseDE2_vecNormConst.RData} (matrix samples x replicates) Normalisation
 #'    constants for each replicate. Missing samples are set NA.
 #'    \item \code{ImpulseDE2_vecDESeq2Dispersions.RData} (vector number of genes) Inverse 
 #'        of gene-wise negative binomial dispersion coefficients computed by DESeq2.
@@ -226,26 +221,22 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
   tm_runImpulseDE2 <- system.time({    
     # 1. Process input data 
     print("1. Prepare data")
-    lsProcessedData <- processData(
+    arr2DCountData <- processData(
       dfAnnotationFull=dfAnnotationFull,
       matCountData=matCountData,
       strControlName=strControlName, 
       strCaseName=strCaseName,
       strMode=strMode)
     
-    arr2DCountData <- lsProcessedData[[1]]
-    arr3DCountData <- lsProcessedData[[2]]
-    dfAnnotationRed <- lsProcessedData[[3]]
-    dfAnnotationFull <- lsProcessedData[[4]]
     save(arr2DCountData,file=file.path(getwd(),"ImpulseDE2_arr2DCountData.RData"))
-    save(arr3DCountData,file=file.path(getwd(),"ImpulseDE2_arr3DCountData.RData"))
-    save(dfAnnotationRed,file=file.path(getwd(),"ImpulseDE2_dfAnnotationRed.RData"))
     save(dfAnnotationFull,file=file.path(getwd(),"ImpulseDE2_dfAnnotationFull.RData"))
     
     # 2. Compute normalisation constants
     print("2. Compute Normalisation constants")
-    matNormConst <- computeNormConst(arr3DCountData=arr3DCountData)
-    save(matNormConst,file=file.path(getwd(),"ImpulseDE2_matNormConst.RData"))
+    vecNormConst <- computeNormConst(
+      arr2DCountData=arr2DCountData,
+      dfAnnotationFull=dfAnnotationFull )
+    save(vecNormConst,file=file.path(getwd(),"ImpulseDE2_vecNormConst.RData"))
     
     # 3. Run DESeq2
     print("3. Run DESeq2")
@@ -267,10 +258,10 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     print("4. Fitting Impulse model to the genes")
     tm_fitImpulse <- system.time({
       lsImpulseFits <- fitImpulse(
-        arr3DCountData=arr3DCountData, 
+        arr2DCountData=arr2DCountData, 
         vecDispersions=vecDESeq2Dispersions, 
-        matNormConst,
-        dfAnnotationRed=dfAnnotationRed, 
+        vecNormConst=vecNormConst,
+        dfAnnotationFull=dfAnnotationFull, 
         strCaseName=strCaseName, 
         strControlName=strControlName,
         strMode=strMode,
@@ -284,9 +275,9 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     ### 5. Detect differentially expressed genes
     print("5. DE analysis")
     dfImpulseResults <- computePval(
-      arr3DCountData=arr3DCountData,
+      arr2DCountData=arr2DCountData,
       vecDispersions=vecDESeq2Dispersions,
-      dfAnnotationRed=dfAnnotationRed,
+      dfAnnotationFull=dfAnnotationFull,
       lsImpulseFits=lsImpulseFits,
       strCaseName=strCaseName, 
       strControlName=strControlName,
@@ -307,9 +298,9 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
         names(vecDESeq2Results) <- rownames(dfDESeq2Results)
         plotDEGenes(
           lsGeneIDs=lsDEGenes,
-          arr3DCountData=arr3DCountData,
-          matNormConst=matNormConst,
-          dfAnnotationRed=dfAnnotationRed, 
+          arr2DCountData=arr2DCountData,
+          vecNormConst=vecNormConst,
+          dfAnnotationFull=dfAnnotationFull, 
           lsImpulseFits=lsImpulseFits,
           strCaseName=strCaseName, 
           strControlName=strControlName, 

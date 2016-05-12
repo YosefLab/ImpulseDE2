@@ -16,9 +16,14 @@
 #' @param matCounts (numeric 2D array vecTimepoints x replicates) Count data.
 #' @param scaDispersionEstimate (scalar) Inverse of negative binomial 
 #'    dispersion coefficients computed by DESeq2 for given gene.
-#' @param matNormConst: (matrix samples x replicates) Normalisation
-#'    constants for each replicate. Missing samples are set NA.
-#' @param vecTimepoints (vector number timepoints) Observed timepoints, numeric.
+#' @param vecNormConst: (numeric vector number of replicates) 
+#'    Normalisation constants for each replicate.
+#' @param vecTimepointAssign (numeric vector number replicates) Timepoints 
+#'    assigned to replicates.
+#' @param vecTimecourseAssign (numeric vector number replicates) Time courses 
+#'    assigned to replicates. NULL if not operating in strMode="timecourses".
+#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
+#'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param NPARAM (scalar) [Default 6] Number of impulse model parameters
 #' @param MAXIT (scalar) [Default 100] Number of iterations, which are performed 
 #'    to fit the impulse model to the clusters.
@@ -33,22 +38,94 @@
 #'    counts predicted by the impulse model at the observed time points.)
 #' @export
 
-fitImpulse_gene <- function(matCounts, scaDispersionEstimate, 
-  matNormConst, vecTimepoints,
+fitImpulse_gene <- function(vecCounts, scaDispersionEstimate, 
+  vecNormConst,
+  vecTimepointAssign, vecTimecourseAssign, dfAnnotationFull,
   strMode="batch", NPARAM=6, MAXIT=1000){
   
   optim_method <- "optim"
   #optim_method <- "nlminb"
   #optim_method <- c("optim","nlminb")
   
-  # (I) Prepare data
-  # Transform into 2D array if handed a list, i.e. one replicate
-  if (is.vector(matCounts)==TRUE){
-    matCounts <- array(matCounts,c(length(matCounts),1))
+  # Get boolean observation vectors:
+  vecboolObserved <- !is.na(vecCounts)
+  vecboolZero <- vecCounts==0
+  
+  # The vectors vecTimepoints and vecTimecourses are shared
+  # between all genes of a condition if no observations
+  # are NA. They are computed for every gene to account
+  # for time point or time course drop  out, if all replicates
+  # corresponding to a time point or time course are NA.
+  # Get list of time points observed in this condition and gene
+  vecTimepoints <- sort(unique( vecTimepointAssign ))
+  nTimepts <- length(vecTimepoints)
+  # Get vector of numeric time point assignment indices:
+  # One index pointing at an element in vecTimepoints for
+  # each element in vecTimepointAssign, i.e. each replicate.
+  vecindTimepointAssign <- match(vecTimepointAssign, vecTimepoints)
+  # Get list of time courses observed in this condition and gene
+  if(strMode=="timecourses"){
+    vecTimecourses <- unique( vecTimecourseAssign )
+    nTimecourses <- length(vecTimecourses)
   }
-  # Compute statistics for initialisation
-  vecExpressionMeans <- apply(matCounts,1,function(x){mean(x, na.rm=TRUE)})
-  nTimepts <- length(vecExpressionMeans)
+  
+  # DAVID: todo export this into extra function and handle entire matrix at once
+  # (II) Fit mean model
+  # Fit mean to normalised counts. Count normalisation 
+  # corresponds to model normalisation in impulse model 
+  # fitting.
+  scaMu <- mean(vecCounts, na.rm=TRUE)
+  if(strMode=="batch" | strMode=="singlecell"){
+    # Null model (no longitudinal sampling): 
+    # Fit one mean for all replicates.
+    
+    # Fitting is done above: scaMu is used in different parts
+    # of code, too. 
+    # Evaluate likelihood of null model
+    scaLoglikNull <- sum(dnbinom(
+      vecCounts[vecboolObserved], 
+      mu=scaMu, 
+      size=scaDispersionEstimate, 
+      log=TRUE))
+  }else if(strMode=="timecourses"){
+    # Null model (longitudinal sampling): 
+    # Fit one mean for each time course (longitudinal series).
+    
+    # Fit null model.
+    vecMuTimecourses <- sapply(vecTimecourses,
+      function(tc){mean(vecCounts[vecTimecourseAssign==tc], na.rm=TRUE)})
+    names(vecMuTimecourses) <- vecTimecourses
+    
+    # Evaluate likelihood of null model
+    scaLoglikNull <- sum(dnbinom(
+      vecCounts[vecboolObserved], 
+      mu=(vecMuTimecourses[vecTimecourseAssign])[vecboolObserved], 
+      size=scaDispersionEstimate, 
+      log=TRUE))
+  } else {
+    stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
+  }
+  
+  # Compute translation factors for fitting:
+  if(strMode=="timecourses"){
+    # Compute translation factors: Normalisation factor
+    # to scale impulse model to indivindual time courses.
+    # Note: Translation factor is the same for all replicates
+    # in a time course.
+    # Reference: Overall scaled mean
+    scaMuScaled <- mean(vecCounts/vecNormConst, na.rm=TRUE)
+    # Scaled means by timecourse
+    vecMuTimecoursesScaled <- sapply(vecTimecourses, function(tc){
+      mean(vecCounts[vecTimecourseAssign==tc]/vecNormConst[vecTimecourseAssign==tc], na.rm=TRUE)
+    })
+    names(vecMuTimecoursesScaled) <- vecTimecourses
+    # Scaled mean ratio per replicate
+    vecTranslationFactors <- vecMuTimecoursesScaled[vecTimecourseAssign]/scaMuScaled
+  }
+  # Compute statistics for initialisation:
+  # Expression means by timepoint
+  vecExpressionMeans <- sapply(vecTimepoints,
+    function(tp){mean(vecCounts[vecTimepointAssign==tp], na.rm=TRUE)})
   scaMaxMiddleMean <- max(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
   scaMinMiddleMean <- min(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
   # +1 to push indicices up from middle stretch to entire window (first is omitted here)
@@ -57,55 +134,6 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
   # Gradients between neighbouring points
   vecGradients <- unlist( lapply(c(1:(nTimepts-1)),function(x){
     (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepoints[x+1]-vecTimepoints[x])}) )
-  
-  # Precompute matrices used in cost functions:
-  matboolObserved <- !is.na(matCounts)
-  matboolZero <- matCounts==0
-  
-  # DAVID: todo export this into extra function and handle entire matrix at once
-  # (II) Fit mean model
-  # Fit mean to normalised counts. Count normalisation 
-  # corresponds to model normalisation in impulse model 
-  # fitting.
-  scaMu <- mean(matCounts, na.rm=TRUE)
-  if(strMode=="batch" | strMode=="singlecell"){
-    # Null model (timecourses): One mean for all points
-    # Fitting is done above: scaMu is used in different parts
-    # of code, too. 
-    # Evaluate likelihood of null model
-    scaLoglikNull <- sum(dnbinom(
-      matCounts[matboolObserved], 
-      mu=scaMu, 
-      size=scaDispersionEstimate, 
-      log=TRUE))
-  }else if(strMode=="timecourses"){
-    # Null model (timecourses): Fit one mean for each time course
-    nTimecourses <- dim(matCounts)[2]
-    # Fit null model.
-    vecMuTimecourses <- apply(matCounts,2,function(vecTC){mean(vecTC, na.rm=TRUE)})
-    matMuTimecourses <- matrix(vecMuTimecourses, nrow=dim(matCounts)[1], ncol=dim(matCounts)[2], byrow=TRUE)
-    
-    # Evaluate likelihood of null model
-    scaLoglikNull <- sum(dnbinom(
-      matCounts[matboolObserved], 
-      mu=matMuTimecourses[matboolObserved], 
-      size=scaDispersionEstimate, 
-      log=TRUE))
-    
-    # Compute translation factors: Normalisation factor
-    # to scale impulse model to indivindual time courses.
-    # Note: Translation factor is the same for all replicates
-    # in a time course.
-    # Reference: Overall scaled mean
-    scaMuScaled <- mean(matCounts/matNormConst, na.rm=TRUE)
-    # Scaled means by timecourse
-    vecMuTimecoursesScaled <- apply(matCounts/matNormConst,2,function(vecTC){mean(vecTC, na.rm=TRUE)})
-    matMuScaledTimecourses <- matrix(vecMuTimecoursesScaled, nrow=dim(matCounts)[1], ncol=dim(matCounts)[2], byrow=TRUE)
-    # Scaled mean ratio
-    matTranslationFactors <- matMuScaledTimecourses/scaMuScaled
-  } else {
-    stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
-  }
   
   # (III) Fit Impulse model
   # 1. Initialisation: Peak
@@ -116,17 +144,18 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
   vecParamGuess <- c(1,log(vecExpressionMeans[1]+1),log(scaMaxMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
     (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2)
-
+  
   if("optim" %in% optim_method){
     if(strMode=="batch"){
       lsFitPeak <- unlist( optim(
         par=vecParamGuess,
         fn=evalLogLikImpulseBatch_comp,
         vecX=vecTimepoints,
-        matY=matCounts,
+        vecY=vecCounts,
         scaDispEst=scaDispersionEstimate,
-        matNormConst=matNormConst,
-        matboolObserved=matboolObserved,
+        vecNormConst=vecNormConst,
+        vecindTimepointAssign=vecindTimepointAssign,
+        vecboolObserved=vecboolObserved,
         method="BFGS",
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )
@@ -135,11 +164,12 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
         par=vecParamGuess, 
         fn=evalLogLikImpulseByTC_comp, 
         vecX=vecTimepoints,
-        matY=matCounts, 
+        vecY=vecCounts, 
         scaDispEst=scaDispersionEstimate,
-        matNormConst=matNormConst,
-        matTranslationFactors=matTranslationFactors,
-        matboolObserved=matboolObserved,
+        vecNormConst=vecNormConst,
+        vecTranslationFactors=vecTranslationFactors,
+        vecindTimepointAssign=vecindTimepointAssign,
+        vecboolObserved=vecboolObserved,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )
@@ -147,12 +177,13 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
       lsFitPeak <- unlist( optim(par=vecParamGuess, 
         fn=evalLogLikImpulseSC_comp, 
         vecX=vecTimepoints,
-        matY=matCounts, 
+        vecY=vecCounts, 
         scaDispEst=scaDispersionEstimate,
         scaDropoutEst=scaDropoutEstimate,
-        matNormConst=matNormConst,
-        matboolObserved=matboolObserved, 
-        matboolZero=matboolZero,
+        vecNormConst=vecNormConst,
+        vecindTimepointAssign=vecindTimepointAssign,
+        vecboolObserved=vecboolObserved, 
+        vecboolZero=vecboolZero,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )
@@ -181,10 +212,11 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
         par=vecParamGuess, 
         fn=evalLogLikImpulseBatch_comp, 
         vecX=vecTimepoints,
-        matY=matCounts, 
+        vecY=vecCounts, 
         scaDispEst=scaDispersionEstimate,
-        matNormConst=matNormConst,
-        matboolObserved=matboolObserved,
+        vecNormConst=vecNormConst,
+        vecindTimepointAssign=vecindTimepointAssign,
+        vecboolObserved=vecboolObserved,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )
@@ -193,11 +225,12 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
         par=vecParamGuess, 
         fn=evalLogLikImpulseByTC_comp, 
         vecX=vecTimepoints,
-        matY=matCounts, 
+        vecY=vecCounts, 
         scaDispEst=scaDispersionEstimate,
-        matNormConst=matNormConst,
-        matTranslationFactors=matTranslationFactors,
-        matboolObserved=matboolObserved,
+        vecNormConst=vecNormConst,
+        vecTranslationFactors=vecTranslationFactors,
+        vecindTimepointAssign=vecindTimepointAssign,
+        vecboolObserved=vecboolObserved,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )
@@ -206,12 +239,13 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
         par=vecParamGuess, 
         fn=evalLogLikImpulseSC_comp, 
         vecX=vecTimepoints,
-        matY=matCounts, 
+        vecY=vecCounts, 
         scaDispEst=scaDispersionEstimate, 
         scaDropoutEst=scaDropoutEstimate,
-        matNormConst=matNormConst,
-        matboolObserved=matboolObserved, 
-        matboolZero=matboolZero,
+        vecNormConst=vecNormConst,
+        vecindTimepointAssign=vecindTimepointAssign,
+        vecboolObserved=vecboolObserved,
+        vecboolZero=vecboolZero,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )
@@ -279,15 +313,18 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
 #' 
 #' @seealso Called by \code{fitImpulse}. Calls \code{fitImpulse_gene}.
 #'   
-#' @param ImpulseDE2_arr3DCountData (3D array genes x samples x replicates)
-#'    Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
+#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
+#'    version of \code{matCountData}. For internal use.
 #' @param vecDispersions (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
-#' @param matNormConst: (matrix samples x replicates) Normalisation
-#'    constants for each replicate. Missing samples are set NA.
-#' @param dfAnnotationRedRed (data frame) Reduced version of 
-#'    \code{dfAnnotationRedFull}. Lists co-variables of samples: 
-#'    Sample, Condition, Time. Time must be numeric. For internal use.
+#' @param vecNormConst: (numeric vector number of replicates) 
+#'    Normalisation constants for each replicate.
+#' @param vecTimepointAssign (numeric vector number replicates) Timepoints 
+#'    assigned to replicates.
+#' @param vecTimecourseAssign (numeric vector number replicates) Time courses 
+#'    assigned to replicates. NULL if not operating in strMode="timecourses".
+#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
+#'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationRedFull}.
@@ -313,8 +350,9 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
 #' }
 #' @export
 
-fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions, 
-  matNormConst, vecTimepoints,
+fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions, 
+  vecNormConst, 
+  vecTimepointAssign, vecTimecourseAssign, dfAnnotationFull,
   strCaseName, strControlName=NULL, strMode="batch", 
   nProcessesAssigned=3, NPARAM=6){
   
@@ -324,28 +362,30 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
   
   # Set number of processes to number of cores assigned if available
   nProcesses <- min(detectCores() - 1, nProcessesAssigned)
-  if(nrow(arr3DCountDataCondition) > max(2*nProcesses,10)){
+  if(nrow(arr2DCountDataCondition) > max(2*nProcesses,10)){
     # Use parallelisation if number of genes/centroids to fit is large
     
     # Define partitioning of genes onto nodes: lsGeneIndexByCore
     lsGeneIndexByCore = list()
-    bord = floor(nrow(arr3DCountDataCondition)/nProcesses)
+    bord = floor(nrow(arr2DCountDataCondition)/nProcesses)
     for (i in 1:nProcesses){
       lsGeneIndexByCore[[i]] <- ((i-1)*bord+1):(i*bord)
     }
-    if(nProcesses*bord < nrow(arr3DCountDataCondition)){
+    if(nProcesses*bord < nrow(arr2DCountDataCondition)){
       # Add remaining genes to last node
-      lsGeneIndexByCore[[nProcesses]] <-  c(lsGeneIndexByCore[[nProcesses]],(nProcesses*bord+1):nrow(arr3DCountDataCondition))
+      lsGeneIndexByCore[[nProcesses]] <-  c(lsGeneIndexByCore[[nProcesses]],(nProcesses*bord+1):nrow(arr2DCountDataCondition))
     }
     
     cl <- makeCluster(nProcesses, outfile = "ImpulseDE2_ClusterOut.txt")
     #DAVID take fitImpulse out?
     my.env <- new.env()
     # Variables
-    assign("arr3DCountDataCondition", arr3DCountDataCondition, envir = my.env)
+    assign("arr2DCountDataCondition", arr2DCountDataCondition, envir = my.env)
     assign("vecDispersions", vecDispersions, envir = my.env)
-    assign("matNormConst", matNormConst, envir = my.env)
-    assign("vecTimepoints", vecTimepoints, envir = my.env)
+    assign("vecNormConst", vecNormConst, envir = my.env)
+    assign("vecTimepointAssign", vecTimepointAssign, envir = my.env)
+    assign("vecTimecourseAssign", vecTimecourseAssign, envir = my.env)
+    assign("dfAnnotationFull", dfAnnotationFull, envir = my.env)
     assign("strMode", strMode, envir = my.env)
     assign("NPARAM", NPARAM, envir = my.env)
     assign("MAXIT", MAXIT, envir = my.env)
@@ -359,10 +399,12 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
     assign("evalLogLikImpulseSC_comp", evalLogLikImpulseSC_comp, envir = my.env)
     
     clusterExport(cl=cl, varlist=c(
-      "arr3DCountDataCondition",
+      "arr2DCountDataCondition",
       "vecDispersions", 
-      "matNormConst",
-      "vecTimepoints",
+      "vecNormConst",
+      "vecTimepointAssign",
+      "vecTimecourseAssign",
+      "dfAnnotationFull",
       "strMode",
       "MAXIT",
       "NPARAM",
@@ -381,17 +423,19 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
     lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore),
       function(z){ t(sapply( lsGeneIndexByCore[[z]],
         function(x){fitImpulse_gene(
-          matCounts=arr3DCountDataCondition[x,,],
+          vecCounts=arr2DCountDataCondition[x,],
           scaDispersionEstimate=vecDispersions[x],
-          matNormConst=matNormConst,
-          vecTimepoints=vecTimepoints, 
+          vecNormConst=vecNormConst,
+          vecTimepointAssign=vecTimepointAssign,
+          vecTimecourseAssign=vecTimecourseAssign,
+          dfAnnotationFull=dfAnnotationFull,
           strMode=strMode,
           NPARAM=NPARAM,
           MAXIT=MAXIT )}
       ))})
     # Give output rownames again, which are lost above
     for(i in 1:length(lsGeneIndexByCore)){
-      rownames(lsmatFits[[i]]) <- rownames(arr3DCountDataCondition[lsGeneIndexByCore[[i]],,])
+      rownames(lsmatFits[[i]]) <- rownames(arr2DCountDataCondition[lsGeneIndexByCore[[i]],,])
     }
     # Concatenate the output objects of each node
     matFits <- do.call(rbind,lsmatFits)
@@ -402,13 +446,15 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
     # Do not use parallelisation if number of genes to fit is small
     
     # Fit impulse model to each gene of matrix and get impulse parameters
-    lsGeneIndexByCore_all <- 1:nrow(arr3DCountDataCondition)
+    lsGeneIndexByCore_all <- 1:nrow(arr2DCountDataCondition)
     matFits <- lapply(lsGeneIndexByCore_all,function(x){
       fitImpulse_gene(
-        matCounts=arr3DCountDataCondition[x,,],
+        vecCounts=arr2DCountDataCondition[x,],
         scaDispersionEstimate=vecDispersions[x],
-        matNormConst=matNormConst,
-        vecTimepoints=vecTimepoints,
+        vecNormConst=vecNormConst,
+        vecTimepointAssign=vecTimepointAssign,
+        vecTimecourseAssign=vecTimecourseAssign,
+        dfAnnotationFull=dfAnnotationFull,
         strMode=strMode,
         NPARAM=NPARAM,
         MAXIT=MAXIT )})
@@ -424,12 +470,12 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
     colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
       "converge_H1","mu","logL_H0")
   } else {
-    nTimecourses <- dim(arr3DCountDataCondition)[3]
+    nTimecourses <- dim(arr2DCountDataCondition)[3]
     vecColnamesMubyTimecourse <- paste0(rep("muByTimecourse",nTimecourses),c(1:nTimecourses))
     colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
       "converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
   }
-  rownames(matFits) <- rownames(arr3DCountDataCondition)
+  rownames(matFits) <- rownames(arr2DCountDataCondition)
   
   ### DAVID: can reduce this if clause?
   # Use obtained impulse parameters to calculate impulse fit values
@@ -438,14 +484,14 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
   if(nrow(matFits) == 1){
     # if matrix contains only one gene
     matImpulseValues <- as.data.frame(t(calcImpulse_comp(matTheta,
-      unique(sort(vecTimepoints)))),row.names=rownames(matFits))
+      unique(sort(vecTimepointAssign)))),row.names=rownames(matFits))
   } else {                    
     # if matrix contains > 1 genes
     matImpulseValues <- t(apply(matTheta,1,function(x){calcImpulse_comp(x,
-      unique(sort(vecTimepoints)))}))
+      unique(sort(vecTimepointAssign)))}))
   } 
-  colnames(matImpulseValues) = unique(sort(vecTimepoints))
-  rownames(matImpulseValues) <- rownames(arr3DCountDataCondition)
+  colnames(matImpulseValues) = unique(sort(vecTimepointAssign))
+  rownames(matImpulseValues) <- rownames(arr2DCountDataCondition)
   
   # Report results.
   lsFitResults_matrix <- list()
@@ -468,16 +514,14 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
 #'  
 #' @seealso Called by \code{runImpulseDE2}. Calls \code{fitImpulse_matrix}.
 #'  
-#' @param arr3DCountData (3D array genes x samples x replicates)
-#'    Count data: \code{arr2DCountData} reshaped into a 3D array.
-#'    For internal use.
+#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
+#'    version of \code{matCountData}. For internal use.
 #' @param vecDispersions (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
-#' @param matNormConst: (matrix samples x replicates) Normalisation
-#'    constants for each replicate. Missing samples are set NA.
-#' @param dfAnnotationRedRed (data frame) Reduced version of 
-#'    \code{dfAnnotationRedFull}. Lists co-variables of samples: 
-#'    Sample, Condition, Time. Time must be numeric. For internal use.
+#' @param vecNormConst: (numeric vector number of replicates) 
+#'    Normalisation constants for each replicate.
+#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
+#'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationRedFull}.
@@ -502,7 +546,7 @@ fitImpulse_matrix <- function(arr3DCountDataCondition, vecDispersions,
 #' @export
 
 fitImpulse <- function(arr3DCountData, vecDispersions=NULL, 
-  matNormConst, dfAnnotationRed,
+  vecNormConst, dfAnnotationFull,
   strCaseName=NULL, strControlName=NULL, strMode="batch",
   nProcessesAssigned=3, NPARAM=6){
   
@@ -517,156 +561,33 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
     names(lsLabels) <- c("case")
   }
   
-  # DAVID: outsource array formatting into function?
-  # lsarr3DCountData is defined in the following as:
-  #   1) A list of three data 3D arrays combined, case and control
-  #   2) A list of a single data 3D array if only have case
-  
   # Perform 3 runs (combined, case and control) if control timecourse is present
   if(!is.null(strControlName)){    
-    # (I) Combined: Count data of both case and control
-    # Bind case and control as replicates in 3rd dimension of array
-    # Find samples corresponding in time first:
-    # Sort as numeric but keep as character
-    vecTimepointsCase <- unique(as.character( sort(as.numeric(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Time ))) ))
-    vecTimepointsCtrl <- unique(as.character( sort(as.numeric(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Time ))) ))
-    vecTimepointsAll <- unique(as.character( sort(as.numeric( c(vecTimepointsCase,vecTimepointsCtrl) )) ))
-    # Define new array dimensions
-    nGenes <- dim(arr3DCountData)[1]
-    nTimepoints <- length(vecTimepointsAll)
-    if(strMode=="batch" | strMode=="singlecell"){
-      # All replicates for both case and control
-      nThirdDim <- dim(arr3DCountData)[3]*2
-    } else if(strMode=="timecourses"){
-      # Extract ordering of time courses in 3D array
-      vecTimecourses <- dimnames(arr3DCountData)[[3]]
-      # Find numer of time courses by condition
-      vecTimecoursesCase <- unique(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Timecourse ))
-      vecTimecoursesCtrl <- unique(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Timecourse ))
-      nTimecoursesCase <- length(vecTimecoursesCase)
-      nTimecoursesCtrl <- length(vecTimecoursesCtrl)
-      nThirdDim <- nTimecoursesCase + nTimecoursesCtrl
-    } else {
-      stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
-    }
-    
-    # Pad with NA sample if one time point not present in one of the two conditions
-    arr3DCountDataAll <- array(NA,c(nGenes,nTimepoints,nThirdDim))
-    rownames(arr3DCountDataAll) <- rownames(arr3DCountData)
-    colnames(arr3DCountDataAll) <- vecTimepointsAll
-    if(strMode=="batch" | strMode=="singlecell"){
-      arr3DCountDataAll[, match(vecTimepointsCase, vecTimepointsAll), 1:(dim(arr3DCountData)[3])] <- 
-        arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),]
-      arr3DCountDataAll[, match(vecTimepointsCtrl, vecTimepointsAll), (dim(arr3DCountData)[3]+1):nThirdDim] <- 
-        arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),]
-      matNormConstAll <- array(NA,c(dim(arr3DCountDataAll)[2],dim(arr3DCountDataAll)[3]))
-      rownames(matNormConstAll) <- vecTimepointsAll
-      matNormConstAll[match(vecTimepointsCase, vecTimepointsAll),1:(dim(arr3DCountData)[3])] <- 
-        matNormConst[
-          (as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample))[
-            match(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Time,
-              vecTimepointsCase)],
-          ]
-      matNormConstAll[match(vecTimepointsCtrl, vecTimepointsAll),(dim(arr3DCountData)[3]+1):nThirdDim] <- 
-        matNormConst[
-          (as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample))[
-            match(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Time,
-              vecTimepointsCtrl)],
-          ]
-      # There might be slices in the third dimension now which are
-      # entirely empty if the max number of replicates per sample
-      # differed between case and control:
-      vecbool3rdDimSliceAllNA <- apply(arr3DCountDataAll,3,
-        function(slice){ all(is.na(slice)) } )
-      arr3DCountDataAll <- arr3DCountDataAll[,,!vecbool3rdDimSliceAllNA]
-      matNormConstAll <- matNormConstAll[,!vecbool3rdDimSliceAllNA]
-      # (II) Case: Count data of case
-      # (III) Control: Count data of control
-      arr3DCountDataCase <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),]
-      arr3DCountDataCtrl <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),]
-      matNormConstCase <- matNormConst[as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),]
-      matNormConstCtrl <- matNormConst[as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),]
-    } else if(strMode=="timecourses"){
-      arr3DCountDataAll[, match(vecTimepointsCase, vecTimepointsAll), 1:nTimecoursesCase] <- 
-        arr3DCountData[, dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample, vecTimecoursesCase]
-      arr3DCountDataAll[, match(vecTimepointsCtrl, vecTimepointsAll), (nTimecoursesCase+1):nThirdDim] <- 
-        arr3DCountData[, dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample, vecTimecoursesCtrl]
-      matNormConstAll <- array(NA,c(dim(arr3DCountDataAll)[2],dim(arr3DCountDataAll)[3]))
-      rownames(matNormConstAll) <- vecTimepointsAll
-      colnames(matNormConstAll) <- vecTimecourses
-      matNormConstAll[match(vecTimepointsCase, vecTimepointsAll),vecTimecoursesCase] <- 
-        matNormConst[
-          (as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample))[
-            match(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Time,vecTimepointsCase)],
-          vecTimecoursesCase]
-      matNormConstAll[match(vecTimepointsCtrl, vecTimepointsAll),vecTimecoursesCtrl] <- 
-        matNormConst[
-          (as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample))[
-            match(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Time,vecTimepointsCtrl)],
-          vecTimecoursesCtrl]
-      # (II) Case: Count data of case
-      # (III) Control: Count data of control
-      arr3DCountDataCase <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),vecTimecoursesCase]
-      arr3DCountDataCtrl <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),vecTimecoursesCtrl]
-      matNormConstCase <- matNormConst[as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),vecTimecoursesCase]
-      matNormConstCtrl <- matNormConst[as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),vecTimecoursesCtrl]
-    } else {
-      stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
-    }
-    
-    # Formatting into 3D breaks if single gene is selected:
-    # DAVID rework this, doesn work?
-    # If exactly one gene is tested:
-    if(nGenes==1){ 
-      arr3DCountDataAll_temp <- array(NA,c(1,dim(arr3DCountData)[2],dim(arr3DCountData)[3]))
-      for(z in 1:dim(arr3DCountData)[3]){
-        arr3DCountDataAll_temp[1,,z] <- arr3DCountDataAll[,z]
-        arr3DCountDataCase_temp[1,,z] <- arr3DCountDataCase[,z]
-        arr3DCountDataCtrl_temp[1,,z] <- arr3DCountDataCtrl[,z]
-      }
-      arr3DCountDataAll <- arr3DCountDataAll_temp
-      arr3DCountDataCase <- arr3DCountDataCase_temp
-      arr3DCountDataCtrl <- arr3DCountDataCtrl_temp
-      rownames(arr3DCountDataAll) <- rownames(arr3DCountData)
-      colnames(arr3DCountDataAll) <- colnames(arr3DCountData[,,])
-      rownames(arr3DCountDataCase) <- rownames(arr3DCountData)
-      colnames(arr3DCountDataCase) <- colnames(arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),])
-      rownames(arr3DCountDataCtrl) <- rownames(arr3DCountData)
-      colnames(arr3DCountDataCtrl) <- colnames(arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),])
-    }
-    lsarr3DCountData <- list(arr3DCountDataAll, arr3DCountDataCase, arr3DCountDataCtrl)
-    names(lsarr3DCountData) <- c("combined","case","control")
-    lsmatNormConst <- list(matNormConstAll,matNormConstCase,matNormConstCtrl)
-    names(lsmatNormConst) <- c("combined","case","control")
-    vecTimepoints <- as.numeric(vecTimepointsAll)
-    
+    lsReplicatesByCond <- list(
+      dfAnnotationFull$Replicate,
+      dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate,
+      dfAnnotationFull[dfAnnotationFull$Condition %in% strControlName,]$Replicate )
+    names(lsReplicatesByCond) <- c("combined","case","control")   
   } else {
-    arr3DCountDataAll = arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]
-    # Formatting into 3D breaks if only single gene is selected:
-    # If exactly one gene is tested:
-    if(dim(arr3DCountDataAll)[1]==1){ 
-      arr3DCountDataAll_temp <- array(NA,c(1,dim(arr3DCountData)[2],dim(arr3DCountData)[3]))
-      for(z in 1:dim(arr3DCountData)[3]){
-        arr3DCountDataAll_temp[1,,z] <- arr3DCountDataAll[,z]
-      }
-      arr3DCountDataAll <- arr3DCountDataAll_temp
-      rownames(arr3DCountDataAll) <- rownames(arr3DCountData)
-      colnames(arr3DCountDataAll) <- colnames(arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),])
-    }
-    lsarr3DCountData <- list(arr3DCountDataAll)
-    names(lsarr3DCountData) <- c("case")
-    lsmatNormConst <- list(matNormConst)
-    names(lsmatNormConst) <- c("case")
-    vecTimepoints <- sort(as.numeric(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Time )))
+    lsReplicatesByCond <- list(
+      dfAnnotationFull$Replicate )
+    names(lsReplicatesByCond) <- c("combined")
+  }
+  if(strMode=="timecourses"){
+    vecTimepointAssign <- dfAnnotationFull[match(colnames(arr2DCountData[,lsReplicatesByCond[[label]]]),dfAnnotationFull$Replicate),]$Timecourse
+  } else {
+    vecTimepointAssign <- NULL
   }
   
   # Fitting for different runs
   for (label in lsLabels){
     lsFitResults_run <- fitImpulse_matrix(
-      arr3DCountDataCondition=lsarr3DCountData[[label]],
-      matNormConst=lsmatNormConst[[label]],
+      arr2DCountDataCondition=arr2DCountData[,lsReplicatesByCond[[label]]],
+      vecNormConst=vecNormConst[lsReplicatesByCond[[label]]],
       vecDispersions=vecDispersions,
-      vecTimepoints=vecTimepoints,
+      vecTimepointAssign=dfAnnotationFull[match(colnames(arr2DCountData[,lsReplicatesByCond[[label]]]),dfAnnotationFull$Replicate),]$Time,
+      vecTimecourseAssign=vecTimecourseAssign,
+      dfAnnotationFull=dfAnnotationFull,
       strCaseName=strCaseName,
       strControlName=strControlName,
       strMode=strMode,

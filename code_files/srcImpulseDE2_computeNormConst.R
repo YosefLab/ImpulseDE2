@@ -17,36 +17,40 @@
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
-#' @param arr3DCountData (3D array genes x samples x replicates)
-#'    Count data: \code{arr2DCountData} reshaped into a 3D array. 
-#'    For internal use.
+#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
+#'    version of \code{matCountData}. For internal use.
+#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
+#'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' 
-#' @return matNormConst: (matrix samples x replicates) Normalisation
-#'    constants for each replicate. Missing samples are set NA.
+#' @return vecSizeFactors: (numeric vector number of replicates) 
+#'    Normalisation constants for counts for each replicate. 
 #' @export
 
-computeNormConst <- function(arr3DCountData){
+computeNormConst <- function(arr2DCountData, dfAnnotationFull){
   
   # Compute geometric count mean over replicates
-  # for each gene:
-  vecGeomMean <- apply(arr3DCountData, 1, 
+  # for each gene: Set zero counts to one
+  arr2DCountDataNoZeros <- arr2DCountData
+  arr2DCountDataNoZeros[arr2DCountDataNoZeros==0] <- 1
+  vecGeomMean <- apply(arr2DCountDataNoZeros, 1, 
     function(gene){
-      ( prod(gene[gene!=0], na.rm=TRUE) )^( 1/(sum(!is.na(gene[gene!=0]))) )
+      ( prod(gene, na.rm=TRUE) )^( 1/(sum(!is.na(gene))) )
     })
-  arr3DGeomMeans <- array(NA, dim(arr3DCountData))
-  for(gene in 1:dim(arr3DGeomMeans)[1]){ arr3DGeomMeans[gene,,] <- vecGeomMean[gene] }
+  matGeomMeans <- matrix(vecGeomMean, 
+    nrow=dim(arr2DCountData)[1], 
+    ncol=dim(arr2DCountData)[2], 
+    byrow=FALSE)
   
   # Compute ratio of each observation to geometric
   # mean.
-  matSizeRatios <- arr3DCountData / arr3DGeomMeans
+  matSizeRatios <- arr2DCountData / matGeomMeans
   
   # Chose median of ratios over genes as size factor
-  matSizeFactors <- apply(matSizeRatios, c(2,3),
-        function(rep){
-          median(rep, na.rm=TRUE)
-        })
-  rownames(matSizeFactors) <- colnames(arr3DCountData)
-  colnames(matSizeFactors) <- dimnames(arr3DCountData)[[3]]
+  vecSizeFactors <- apply(matSizeRatios, 2,
+    function(replicate){
+      median(replicate, na.rm=TRUE)
+    })
+  names(vecSizeFactors) <- colnames(arr2DCountData)
   
-  return(matSizeFactors)
+  return(vecSizeFactors)
 }
