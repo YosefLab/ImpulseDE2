@@ -120,7 +120,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     }
     
     ### Summarise which conditions, samples, lsReplicates were found and mode
-    print(paste0("Found conditions: ",lsConditions))
+    print(paste0("Found conditions: ",paste0(lsConditions,collapse=",")))
     print(paste0("Case condition: ", strCaseName))
     if(!is.null(strControlName)){
       print(paste0("Control condition: ", strControlName))
@@ -128,7 +128,13 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     print(paste0( "Found time points: ",
       paste( vecTimepoints,collapse=",") ))
     for(tp in vecTimepoints){
-      print(paste0( "Case: Found the following replicates for time point: ", tp,
+      print(paste0( "Case: Found the following replicates for sample ",
+          unique(dfAnnotationFull[
+            dfAnnotationFull$Time %in% tp &
+              dfAnnotationFull$Condition %in% strCaseName &
+              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
+            ]$Sample),
+        " at time point ", tp,
         ": ", paste0(dfAnnotationFull[
           (dfAnnotationFull$Time %in% tp) &
             (dfAnnotationFull$Condition %in% strCaseName) &
@@ -137,7 +143,13 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     }
     if(!is.null(strControlName)){
       for(tp in vecTimepoints){
-        print(paste0( "Control: Found the following replicates for time points: ", tp,
+        print(paste0( "Control: Found the following replicates for sample ", 
+          unique(dfAnnotationFull[
+            dfAnnotationFull$Time %in% tp &
+              dfAnnotationFull$Condition %in% strControlName &
+              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
+            ]$Sample),
+          " at time point ", tp,
           ":", paste(dfAnnotationFull[
             dfAnnotationFull$Time %in% tp &
               dfAnnotationFull$Condition %in% strControlName &
@@ -170,7 +182,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
         dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate ))
      vecReplicateNames_Ctrl <- as.character(as.vector( 
         dfAnnotationFull[dfAnnotationFull$Condition %in% strControlName,]$Replicate ))
-      arr2DCountData <- arr2DCountData[,c(vecReplicateNames_Ctrl,lsReplicateNames_Ctrl)]
+      arr2DCountData <- arr2DCountData[,c(vecReplicateNames_Case,vecReplicateNames_Ctrl)]
     } else {
      vecReplicateNames_Case <- as.character(as.vector( 
         dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate ))
@@ -205,6 +217,10 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
       print(paste0("WARNING: Excluded ",sum(indx_NA)," genes because no real valued samples were given."))
     }
     arr2DCountData <- arr2DCountData[!(indx_NA),]
+    
+    # Sort 2D array by time
+    vecTimepoints <- as.character(sort(unique( as.numeric(as.vector(dfAnnotationFull$Time)) )))
+    arr2DCountData <- arr2DCountData[,dfAnnotationFull[match(dfAnnotationFull$Time, vecTimepoints)]$Sample]
     
     return(arr2DCountData)
   }
@@ -269,26 +285,40 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
         stop(paste0("ERROR: Unrecognised strMode in processData::reshapeCountData(): ",strMode))
       }
     }
+    # Sort 3D array by time
+    vecTimepoints <- as.character(sort(unique( as.numeric(as.vector(dfAnnotationFull$Time)) )))
+    arr2DCountData <- arr2DCountData[,dfAnnotationFull[match(dfAnnotationFull$Time, vecTimepoints)]$Replicate]
+    
     return(arr3DCountData)
   }
   
   # Create smaller annotation table with one entry per sample.
   # This is the annotation table for the 3D count data array which has
   # sample names as column names.
-  reduceAnnotation <- function(dfAnnotationFull=NULL){
+  reduceAnnotation <- function(dfAnnotationFull=NULL,strMode="batch"){
     # Find first occurrence of each sample in annotation table:
     # Note: Condition and time are the same for all replicates 
     # of a given sample.
-    indSamples <- match( unique(as.vector(dfAnnotationFull$Sample)), 
-      as.vector(dfAnnotationFull$Sample) )
+    if(strMode=="batch" | strMode=="singlecell"){
+      indSamples <- match( unique(as.vector(dfAnnotationFull$Sample)), 
+        as.vector(dfAnnotationFull$Sample) )
+    } else if(strMode=="timecourses"){
+      indSamples <- seq(1,dim(dfAnnotationFull)[1])
+    } else {
+      stop(paste0("ERROR: Unrecognised strMode in processData::reduceAnnotation(): ",strMode))
+    }
     # Take one row per sample and columns [Sample,Condition,Time]
     # From now on, the replicates are anonymous in the 3D array.
     dfAnnotationRed <- dfAnnotationFull[indSamples,
-      c("Sample","Condition","Time")]
+      c("Sample","Condition","Time","Timecourse")]
+    # Sort by time
+    dfAnnotationRed <- dfAnnotationRed[with(dfAnnotationRed, order(+Time,Condition,Sample)),]
   }
   
   ###############################################################
   # (II) Main body of function
+  
+  dfAnnotationFull <- dfAnnotationFull[with(dfAnnotationFull, order(+Time,Condition,Sample)),]
   
   checkData(
     dfAnnotationFull=dfAnnotationFull,
@@ -310,7 +340,8 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     strCaseName=strCaseName,
     strMode=strMode)
   
-  dfAnnotationRed <- reduceAnnotation(dfAnnotationFull)
+  dfAnnotationRed <- reduceAnnotation(dfAnnotationFull,
+    strMode=strMode)
   
-  return( list(arr2DCountData,arr3DCountData,dfAnnotationRed) )
+  return( list(arr2DCountData,arr3DCountData,dfAnnotationRed,dfAnnotationFull) )
 }

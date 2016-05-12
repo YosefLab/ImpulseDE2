@@ -31,7 +31,7 @@ computeNormConst <- function(arr3DCountData){
   # for each gene:
   vecGeomMean <- apply(arr3DCountData, 1, 
     function(gene){
-      ( prod(gene, na.rm=TRUE) )^( 1/(sum(!is.na(gene))) )
+      ( prod(gene[gene!=0], na.rm=TRUE) )^( 1/(sum(!is.na(gene[gene!=0]))) )
     })
   arr3DGeomMeans <- array(NA, dim(arr3DCountData))
   for(gene in 1:dim(arr3DGeomMeans)[1]){ arr3DGeomMeans[gene,,] <- vecGeomMean[gene] }
@@ -45,6 +45,8 @@ computeNormConst <- function(arr3DCountData){
         function(rep){
           median(rep, na.rm=TRUE)
         })
+  rownames(matSizeFactors) <- colnames(arr3DCountData)
+  colnames(matSizeFactors) <- dimnames(arr3DCountData)[[3]]
   
   return(matSizeFactors)
 }

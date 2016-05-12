@@ -31,41 +31,73 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
   dfCountData <- arr2DCountData[,colnames(arr2DCountData) %in% dfAnnotationFull$Replicate]
   colnames(dfCountData) <- dfAnnotationFull$Sample[
     match(colnames(dfCountData),dfAnnotationFull$Replicate)]
-  # The covariate Timecourses, indicating the time series
-  # experiment a sample belongs to, is ignored in batch mode,
-  # in which replicates of one sample from different time series
-  # experimentes are assumed to be i.i.d. In batch mode,
-  # all samples should originate form the same series of 
-  # independent samples.
-  if(strMode=="batch" | strMode=="singlecell"){
+  if(is.null(strControlName)){
+    # Without control data
+    
+    # The covariate Timecourses, indicating the time series
+    # experiment a sample belongs to, is ignored in batch mode,
+    # in which replicates of one sample from different time series
+    # experimentes are assumed to be i.i.d. In batch mode,
+    # all samples should originate form the same series of 
+    # independent samples.
+    if(strMode=="batch" | strMode=="singlecell"){
+      # Create DESeq2 data object
+      dds <- DESeqDataSetFromMatrix(countData = dfCountData,
+        colData = dfAnnotationFull,
+        design = ~ Sample)
+      # Run DESeq2
+      ddsDESeqObject <- DESeq(dds, test = "LRT", 
+        full = ~ Sample, reduced = ~ 1,
+        parallel=TRUE)
+    } else if(strMode=="timecourses"){
+      # Create DESeq2 data object
+      dds <- DESeqDataSetFromMatrix(countData = dfCountData,
+        colData = dfAnnotationFull,
+        design = ~ Sample + Timecourse)
+      # Run DESeq2
+      ddsDESeqObject <- DESeq(dds, test = "LRT", 
+        full = ~ Sample + Timecourse, reduced = ~ Timecourse,
+        parallel=TRUE)
+    } else {
+      stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
+    }
+    # Get gene-wise dispersion estimates
+    # var = mean + alpha * mean^2, alpha is dispersion
+    # DESeq2 dispersion is 1/size used dnbinom (used in cost function
+    # for evaluation of likelihood)
+    dds_dispersions <- 1/dispersions(ddsDESeqObject) 
+    # DESeq results for comparison
+    dds_resultsTable <- results(ddsDESeqObject)
+  } else {
+    # With control data: 
+    # 1. Fit dispersion with full information, i.e. sample 
+    # names.  
+    # 2. Evaluate p-value for differential expression based 
+    # on comparison condition versus no-contition information. 
+    
     # Create DESeq2 data object
     dds <- DESeqDataSetFromMatrix(countData = dfCountData,
       colData = dfAnnotationFull,
       design = ~ Sample)
     # Run DESeq2
-    ddsDESeqObject <- DESeq(dds, test = "LRT", 
+    ddsDESeqObjectSample <- DESeq(dds, test = "LRT", 
       full = ~ Sample, reduced = ~ 1,
       parallel=TRUE)
-  } else if(strMode=="timecourses"){
-    # Create DESeq2 data object
+    # Get gene-wise dispersion estimates
+    # var = mean + alpha * mean^2, alpha is dispersion
+    # DESeq2 dispersion is 1/size used dnbinom (used in cost function
+    # for evaluation of likelihood)
+    dds_dispersions <- 1/dispersions(ddsDESeqObjectSample)
+    
     dds <- DESeqDataSetFromMatrix(countData = dfCountData,
       colData = dfAnnotationFull,
-      design = ~ Sample + Timecourse)
+      design = ~ Condition)
     # Run DESeq2
-    ddsDESeqObject <- DESeq(dds, test = "LRT", 
-      full = ~ Sample + Timecourse, reduced = ~ Timecourse,
+    ddsDESeqObjectCond <- DESeq(dds, test = "LRT", 
+      full = ~ Condition, reduced = ~ 1,
       parallel=TRUE)
-  } else {
-    stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
-  }
-  
-  # Get gene-wise dispersion estimates
-  # var = mean + alpha * mean^2, alpha is dispersion
-  # DESeq2 dispersion is 1/size used dnbinom (used in cost function
-  # for evaluation of likelihood)
-  dds_dispersions <- 1/dispersions(ddsDESeqObject) 
-  # DESeq results for comparison
-  dds_resultsTable <- results(ddsDESeqObject)
-  
+    # DESeq results for comparison
+    dds_resultsTable <- results(ddsDESeqObjectCond)
+  }      
   return(list(dds_dispersions,dds_resultsTable))
 }

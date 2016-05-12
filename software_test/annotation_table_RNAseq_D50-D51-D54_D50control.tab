@@ -1,10 +1,10 @@
 Replicate	Sample	Condition	Time	Timecourse
-D50_0h		D_0h	case		0	D50
-D50_2h		D_2h	case		2	D50
-D50_4h		D_4h	case		4	D50
-D50_6h		D_6h	case		6	D50
-D50_12h		D_12h	case		12	D50
-D50_24h		D_24h	case		24	D50
+D50_0h		Dc_0h	ctrl		0	D50
+D50_2h		Dc_2h	ctrl		2	D50
+D50_4h		Dc_4h	ctrl		4	D50
+D50_6h		Dc_6h	ctrl		6	D50
+D50_12h		Dc_12h	ctrl		12	D50
+D50_24h		Dc_24h	ctrl		24	D50
 D51_0h		D_0h	case		0	D51
 D51_2h		D_2h	case		2	D51
 D51_4h		D_4h	case		4	D51

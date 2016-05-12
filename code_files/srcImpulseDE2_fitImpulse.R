@@ -116,7 +116,7 @@ fitImpulse_gene <- function(matCounts, scaDispersionEstimate,
   vecParamGuess <- c(1,log(vecExpressionMeans[1]+1),log(scaMaxMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
     (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2)
-  
+
   if("optim" %in% optim_method){
     if(strMode=="batch"){
       lsFitPeak <- unlist( optim(
@@ -510,11 +510,11 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
   lsFitResults_all = list()
   
   if(!is.null(strControlName)){
-    nRuns = 3
-    lsLabels = c("combined","case","control")
+    lsLabels <- c("combined","case","control")
+    names(lsLabels) <- c("combined","case","control")
   } else {
-    nRuns = 1
-    lsLabels = "case"
+    lsLabels <- c("case")
+    names(lsLabels) <- c("case")
   }
   
   # DAVID: outsource array formatting into function?
@@ -527,12 +527,13 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
     # (I) Combined: Count data of both case and control
     # Bind case and control as replicates in 3rd dimension of array
     # Find samples corresponding in time first:
-    lsTimepointsCase <- as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,"Time"] )
-    lsTimepointsCtrl <- as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,"Time"] )
-    lsTimepointsAll <- unique(c(lsTimepointsCase,lsTimepointsCtrl))
+    # Sort as numeric but keep as character
+    vecTimepointsCase <- unique(as.character( sort(as.numeric(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Time ))) ))
+    vecTimepointsCtrl <- unique(as.character( sort(as.numeric(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Time ))) ))
+    vecTimepointsAll <- unique(as.character( sort(as.numeric( c(vecTimepointsCase,vecTimepointsCtrl) )) ))
     # Define new array dimensions
     nGenes <- dim(arr3DCountData)[1]
-    nTimepoints <- length(lsTimepointsAll)
+    nTimepoints <- length(vecTimepointsAll)
     if(strMode=="batch" | strMode=="singlecell"){
       # All replicates for both case and control
       nThirdDim <- dim(arr3DCountData)[3]*2
@@ -540,44 +541,78 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
       # Extract ordering of time courses in 3D array
       vecTimecourses <- dimnames(arr3DCountData)[[3]]
       # Find numer of time courses by condition
-      vecTimecoursesCase <- unique(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,"Timecourse"] ))
-      vecTimecoursesCtrl <- unique(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,"Timecourse"] ))
+      vecTimecoursesCase <- unique(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Timecourse ))
+      vecTimecoursesCtrl <- unique(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Timecourse ))
       nTimecoursesCase <- length(vecTimecoursesCase)
       nTimecoursesCtrl <- length(vecTimecoursesCtrl)
       nThirdDim <- nTimecoursesCase + nTimecoursesCtrl
-      #DAVID deprecate sanity check
-      print(paste0( "DAVID: Sanity check: Max TC:", length(vecTimecourses), " case ", nTimecoursesCase, " ctrl ", nTimecoursesCtrl ))
     } else {
       stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
     }
     
     # Pad with NA sample if one time point not present in one of the two conditions
     arr3DCountDataAll <- array(NA,c(nGenes,nTimepoints,nThirdDim))
+    rownames(arr3DCountDataAll) <- rownames(arr3DCountData)
+    colnames(arr3DCountDataAll) <- vecTimepointsAll
     if(strMode=="batch" | strMode=="singlecell"){
-      arr3DCountDataAll[, lsTimepointsCase %in% lsTimepointsAll, 1:(dim(arr3DCountData)[3])] <- 
-        arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]
-      arr3DCountDataAll[, lsTimepointsCtrl %in% lsTimepointsAll, (dim(arr3DCountData)[3]+1):nThirdDim] <- 
-        arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),]
+      arr3DCountDataAll[, match(vecTimepointsCase, vecTimepointsAll), 1:(dim(arr3DCountData)[3])] <- 
+        arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),]
+      arr3DCountDataAll[, match(vecTimepointsCtrl, vecTimepointsAll), (dim(arr3DCountData)[3]+1):nThirdDim] <- 
+        arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),]
+      matNormConstAll <- array(NA,c(dim(arr3DCountDataAll)[2],dim(arr3DCountDataAll)[3]))
+      rownames(matNormConstAll) <- vecTimepointsAll
+      matNormConstAll[match(vecTimepointsCase, vecTimepointsAll),1:(dim(arr3DCountData)[3])] <- 
+        matNormConst[
+          (as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample))[
+            match(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Time,
+              vecTimepointsCase)],
+          ]
+      matNormConstAll[match(vecTimepointsCtrl, vecTimepointsAll),(dim(arr3DCountData)[3]+1):nThirdDim] <- 
+        matNormConst[
+          (as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample))[
+            match(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Time,
+              vecTimepointsCtrl)],
+          ]
       # There might be slices in the third dimension now which are
       # entirely empty if the max number of replicates per sample
       # differed between case and control:
       vecbool3rdDimSliceAllNA <- apply(arr3DCountDataAll,3,
         function(slice){ all(is.na(slice)) } )
       arr3DCountDataAll <- arr3DCountDataAll[,,!vecbool3rdDimSliceAllNA]
+      matNormConstAll <- matNormConstAll[,!vecbool3rdDimSliceAllNA]
+      # (II) Case: Count data of case
+      # (III) Control: Count data of control
+      arr3DCountDataCase <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),]
+      arr3DCountDataCtrl <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),]
+      matNormConstCase <- matNormConst[as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),]
+      matNormConstCtrl <- matNormConst[as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),]
     } else if(strMode=="timecourses"){
-      arr3DCountDataAll[, lsTimepointsCase %in% lsTimepointsAll, 1:nTimecoursesCase] <- 
-        arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),vecTimecoursesCase]
-      arr3DCountDataAll[, lsTimepointsCtrl %in% lsTimepointsAll, (nTimecoursesCase+1):nThirdDim] <- 
-        arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),vecTimecoursesCtrl]
+      arr3DCountDataAll[, match(vecTimepointsCase, vecTimepointsAll), 1:nTimecoursesCase] <- 
+        arr3DCountData[, dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample, vecTimecoursesCase]
+      arr3DCountDataAll[, match(vecTimepointsCtrl, vecTimepointsAll), (nTimecoursesCase+1):nThirdDim] <- 
+        arr3DCountData[, dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample, vecTimecoursesCtrl]
+      matNormConstAll <- array(NA,c(dim(arr3DCountDataAll)[2],dim(arr3DCountDataAll)[3]))
+      rownames(matNormConstAll) <- vecTimepointsAll
+      colnames(matNormConstAll) <- vecTimecourses
+      matNormConstAll[match(vecTimepointsCase, vecTimepointsAll),vecTimecoursesCase] <- 
+        matNormConst[
+          (as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample))[
+            match(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Time,vecTimepointsCase)],
+          vecTimecoursesCase]
+      matNormConstAll[match(vecTimepointsCtrl, vecTimepointsAll),vecTimecoursesCtrl] <- 
+        matNormConst[
+          (as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample))[
+            match(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Time,vecTimepointsCtrl)],
+          vecTimecoursesCtrl]
+      # (II) Case: Count data of case
+      # (III) Control: Count data of control
+      arr3DCountDataCase <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),vecTimecoursesCase]
+      arr3DCountDataCtrl <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),vecTimecoursesCtrl]
+      matNormConstCase <- matNormConst[as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),vecTimecoursesCase]
+      matNormConstCtrl <- matNormConst[as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),vecTimecoursesCtrl]
     } else {
       stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
     }
-    
-    # (II) Case: Count data of case
-    arr3DCountDataCase = arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]
-    
-    # (III) Control: Count data of control
-    arr3DCountDataCtrl = arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),]
     
     # Formatting into 3D breaks if single gene is selected:
     # DAVID rework this, doesn work?
@@ -600,6 +635,10 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
       colnames(arr3DCountDataCtrl) <- colnames(arr3DCountData[,(dfAnnotationRed$Condition %in% strControlName),])
     }
     lsarr3DCountData <- list(arr3DCountDataAll, arr3DCountDataCase, arr3DCountDataCtrl)
+    names(lsarr3DCountData) <- c("combined","case","control")
+    lsmatNormConst <- list(matNormConstAll,matNormConstCase,matNormConstCtrl)
+    names(lsmatNormConst) <- c("combined","case","control")
+    vecTimepoints <- as.numeric(vecTimepointsAll)
     
   } else {
     arr3DCountDataAll = arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),]
@@ -615,16 +654,19 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
       colnames(arr3DCountDataAll) <- colnames(arr3DCountData[,(dfAnnotationRed$Condition %in% strCaseName),])
     }
     lsarr3DCountData <- list(arr3DCountDataAll)
+    names(lsarr3DCountData) <- c("case")
+    lsmatNormConst <- list(matNormConst)
+    names(lsmatNormConst) <- c("case")
+    vecTimepoints <- sort(as.numeric(as.vector( dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Time )))
   }
   
   # Fitting for different runs
-  for (iRuns in 1:nRuns){
+  for (label in lsLabels){
     lsFitResults_run <- fitImpulse_matrix(
-      arr3DCountDataCondition=lsarr3DCountData[[iRuns]],
-      matNormConst=matNormConst,
+      arr3DCountDataCondition=lsarr3DCountData[[label]],
+      matNormConst=lsmatNormConst[[label]],
       vecDispersions=vecDispersions,
-      vecTimepoints=as.numeric(as.character(
-        dfAnnotationRed[dfAnnotationRed$Sample %in% colnames(lsarr3DCountData[[iRuns]]),"Time"])),
+      vecTimepoints=vecTimepoints,
       strCaseName=strCaseName,
       strControlName=strControlName,
       strMode=strMode,
@@ -635,7 +677,7 @@ fitImpulse <- function(arr3DCountData, vecDispersions=NULL,
     #imp_res$impulse_parameters <- (imp_res$impulse_parameters)[g_names,]
     #imp_res$impulse_fits <- (imp_res$impulse_fits)[g_names,]
     
-    names(lsFitResults_run) <- paste(c("parameters","values"),lsLabels[iRuns],sep="_")
+    names(lsFitResults_run) <- paste(c("parameters","values"),lsLabels[label],sep="_")
     lsFitResults_all[[names(lsFitResults_run)[1]]] <- lsFitResults_run[[1]]
     lsFitResults_all[[names(lsFitResults_run)[2]]] <- lsFitResults_run[[2]]
   }

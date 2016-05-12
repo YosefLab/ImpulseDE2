@@ -67,7 +67,7 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, matNormConst,
   # count data and not the raw count data. However, 
   # fitting was still performed based on raw count data.
   for(gene in 1:dim(arr3DCountData)[1]){ arr3DCountData[gene,,] <- arr3DCountData[gene,,]/matNormConst }
-
+  
   # Name genes if not previously named (already done if this function is
   # called within the wrapper function).
   if(length(grep("[a-zA-Z]",rownames(arr3DCountData))) == 0 ){
@@ -76,19 +76,25 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, matNormConst,
   }
   
   if(!is.null(strControlName)){
-    arr3DCountData_Case <- arr3DCountData[,dfAnnotationRed$Condition %in% strCaseName,]
-    arr3DCountData_Ctrl <- arr3DCountData[,dfAnnotationRed$Condition %in% strControlName,]
-    lsTimepoints_Case <-  as.numeric(as.character(dfAnnotationRed[colnames(arr3DCountData_Case),"Time"]))
-    lsTimepoints_Ctrl <- as.numeric(as.character(dfAnnotationRed[colnames(arr3DCountData_Ctrl),"Time"]))
+    arr3DCountData_Case <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Sample),]
+    arr3DCountData_Ctrl <- arr3DCountData[,as.vector(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Sample),]
+    vecTimepoints_Case <- as.numeric(as.character(dfAnnotationRed[dfAnnotationRed$Condition %in% strCaseName,]$Time))
+    vecTimepoints_Ctrl <- as.numeric(as.character(dfAnnotationRed[dfAnnotationRed$Condition %in% strControlName,]$Time))
   }
-  lsTimepoints_All <- as.numeric(as.character(dfAnnotationRed[dfAnnotationRed$Sample %in% colnames(arr3DCountData),"Time"]))
+  vecTimepoints_Comb <- as.numeric(as.character(dfAnnotationRed[dfAnnotationRed$Sample %in% colnames(arr3DCountData),"Time"]))
   
-  # Expand lsTimepoints_All vector to size of expression array
+  # Expand vecTimepoints_Comb vector to size of expression array
   if(!is.null(strControlName)){
-    arrTimepoints_Case <- t(matrix(rep(lsTimepoints_Case,dim(arr3DCountData)[3]),length(lsTimepoints_Case),dim(arr3DCountData)[3]))
-    arrTimepoints_Ctrl <- t(matrix(rep(lsTimepoints_Ctrl,dim(arr3DCountData)[3]),length(lsTimepoints_Ctrl),dim(arr3DCountData)[3]))
+    arrTimepoints_Case <- t(matrix(
+      rep(vecTimepoints_Case,dim(arr3DCountData)[3]),
+      length(vecTimepoints_Case),
+      dim(arr3DCountData)[3] ))
+    arrTimepoints_Ctrl <- t(matrix(
+      rep(vecTimepoints_Ctrl,dim(arr3DCountData)[3]),
+      length(vecTimepoints_Ctrl),
+      dim(arr3DCountData)[3]))
   }
-  arrTimepoints_All <- t(matrix(rep(lsTimepoints_All,dim(arr3DCountData)[3]),length(lsTimepoints_All),dim(arr3DCountData)[3]))
+  arrTimepoints_Comb <- t(matrix(rep(vecTimepoints_Comb,dim(arr3DCountData)[3]),length(vecTimepoints_Comb),dim(arr3DCountData)[3]))
   
   # Open .pdf
   pdf(paste("ImpulseDE2_",strFileNameSuffix,".pdf",sep=""),height=6.0,width=9.0)
@@ -105,48 +111,49 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, matNormConst,
     scaLegendInset <- -0.3
   } else {
     par(mfrow=c(3,3), xpd=TRUE)
-    scaLegendInset <- -0.6
+    scaLegendInset <- -0.65
   }
   # Time points for plotting of impulse model
-  vecX <- seq(0,max(lsTimepoints_All),0.1)
+  vecX <- seq(0,max(vecTimepoints_Comb),0.1)
   # Find elements in vecX corresponding (closest) to observed time point
   indVecXObs <- unlist(lapply( 
-    lsTimepoints_All, function(t){match( min(abs(vecX-t)), abs(vecX-t) )} 
+    vecTimepoints_Comb, function(t){match( min(abs(vecX-t)), abs(vecX-t) )} 
   ))
   # Identify columns containing time course mean
   vecindMuByTimecourse <- grep("muByTimecourse",colnames(lsImpulseFits$parameters_case))
   for (geneID in lsGeneIDs){
-    # Without control  data 
     if(is.null(strControlName)){
+      # Without control  data 
+      
       # Convert h0,h1,h2 to log space again
       lsImpulseParamCaseLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
       lsImpulseParamCaseLog[c("h0","h1","h2")] <- log( lsImpulseParamCaseLog[c("h0","h1","h2")] )
-      lsCaseValues <- calcImpulse_comp(lsImpulseParamCaseLog,vecX)
+      vecCaseValues <- calcImpulse_comp(lsImpulseParamCaseLog,vecX)
       
       pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
       pval_Method2 <- round( log(vecMethod2Results[geneID])/log(10), 2 )
       
       if(strMode=="batch" | strMode=="singlecell"){
         # Plot observed points in blue - all time courses in same colour
-        scaYlim_lower <- min( min(arr3DCountData[geneID,,],na.rm=TRUE), min(lsCaseValues[indVecXObs]) )
-        scaYlim_upper <- max( max(arr3DCountData[geneID,,],na.rm=TRUE), max(lsCaseValues[indVecXObs]) )
-        plot(arrTimepoints_All,t(arr3DCountData[geneID,,]),col="blue",pch=3,
-          xlim=c(0,max(lsTimepoints_All,na.rm=TRUE)+PDF_WIDTH), ylim=c(scaYlim_lower,scaYlim_upper),
+        scaYlim_lower <- min( min(arr3DCountData[geneID,,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
+        scaYlim_upper <- max( max(arr3DCountData[geneID,,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
+        plot(arrTimepoints_Comb,t(arr3DCountData[geneID,,]),col="blue",pch=3,
+          xlim=c(0,max(vecTimepoints_Comb,na.rm=TRUE)+PDF_WIDTH), ylim=c(scaYlim_lower,scaYlim_upper),
           xlab="Time", ylab="Impulse fit and expression values",
           main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
             " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
         # Plot impulse within boundaries of observed points
-        lsCaseValuesToPlot <- lsCaseValues
-        indImpulseValToPlot <- lsCaseValuesToPlot >= scaYlim_lower & lsCaseValuesToPlot <= scaYlim_upper
-        lsCaseValuesToPlot[!indImpulseValToPlot] <- NA
-        points(vecX, lsCaseValuesToPlot,col="blue", type="l")
+        vecCaseValuesToPlot <- vecCaseValues
+        indImpulseValToPlot <- vecCaseValuesToPlot >= scaYlim_lower & vecCaseValuesToPlot <= scaYlim_upper
+        vecCaseValuesToPlot[!indImpulseValToPlot] <- NA
+        points(vecX, vecCaseValuesToPlot,col="blue", type="l")
         
         # Plot inferred negative binomial pdf at each time point in black (vertical)
         vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
         # Get means of negative binomial at each time point
-        vecCaseValueAtTP <- calcImpulse_comp(lsImpulseParamCaseLog,arrTimepoints_All[1,])
-        for(tp in arrTimepoints_All[1,]){
-          vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,arrTimepoints_All[1,])],
+        vecCaseValueAtTP <- calcImpulse_comp(lsImpulseParamCaseLog,arrTimepoints_Comb[1,])
+        for(tp in arrTimepoints_Comb[1,]){
+          vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,arrTimepoints_Comb[1,])],
             size=as.numeric(as.vector(dfImpulseResults[geneID,]$size)) )
           # Scale Y_coord to uniform peak heights of 1
           # This translates into width of one time unit in plot
@@ -155,100 +162,132 @@ plotDEGenes <- function(lsGeneIDs, arr3DCountData, matNormConst,
           lines(x=tp+vecYCoordPDF,y=vecXCoordPDF,col="black")
         }
       } else if(strMode=="timecourses"){
-        vecTranslationFactors <- lsImpulseFits$parameters_case[geneID,vecindMuByTimecourse]/lsImpulseFits$parameters_case[geneID,"mu"]
+        vecTranslationFactors <- lsImpulseFits$parameters_case[geneID,vecindMuByTimecourse]/
+          lsImpulseFits$parameters_case[geneID,"mu"]
         # Create colour vector
         vecCol <- rainbow(n=dim(arr3DCountData)[3])
         
         # Create plot and plot data of first time course
-        scaYlim_lower <- min( min(arr3DCountData[geneID,,],na.rm=TRUE), min(lsCaseValues[indVecXObs]*min(vecTranslationFactors)) )
-        scaYlim_upper <- max( max(arr3DCountData[geneID,,],na.rm=TRUE), max(lsCaseValues[indVecXObs]*max(vecTranslationFactors)) )
-        plot(arrTimepoints_All[1,],t(arr3DCountData[geneID,,1]),col=vecCol[1],pch=3,
-          xlim=c(0,max(lsTimepoints_All,na.rm=TRUE)+PDF_WIDTH), ylim=c(scaYlim_lower,scaYlim_upper),
+        scaYlim_lower <- min( min(arr3DCountData[geneID,,],na.rm=TRUE), min(vecCaseValues[indVecXObs]*min(vecTranslationFactors)) )
+        scaYlim_upper <- max( max(arr3DCountData[geneID,,],na.rm=TRUE), max(vecCaseValues[indVecXObs]*max(vecTranslationFactors)) )
+        plot(arrTimepoints_Comb[1,],t(arr3DCountData[geneID,,1]),col=vecCol[1],pch=3,
+          xlim=c(0,max(vecTimepoints_Comb,na.rm=TRUE)+PDF_WIDTH), ylim=c(scaYlim_lower,scaYlim_upper),
           xlab="Time", ylab="Impulse fit and expression values",
           main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
             " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
-        legend(x="bottomright",as.character(dfAnnotationRed[1,"Condition"]),fill=c("blue"), cex=0.6, inset=c(0,scaLegendInset))
         # Plot impulse fit to time course
-        lsCaseValuesToPlotTC <- lsCaseValues*vecTranslationFactors[1]
-        indImpulseValToPlot <- lsCaseValuesToPlotTC >= scaYlim_lower & lsCaseValuesToPlotTC <= scaYlim_upper
-        lsCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
-        points(vecX, lsCaseValuesToPlotTC,col=vecCol[1], type="l")
+        vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[1]
+        indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
+        vecCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
+        points(vecX, vecCaseValuesToPlotTC,col=vecCol[1], type="l")
         
         # Plot remaining time courses
         if(dim(arr3DCountData)[3]>1){
           for(timecourse in 2:dim(arr3DCountData)[3]){
             # Plot data of time course
-            points(x=arrTimepoints_All[1,],y=t(arr3DCountData[geneID,,timecourse]),col=vecCol[timecourse],pch=3)
+            points(x=arrTimepoints_Comb[1,],y=t(arr3DCountData[geneID,,timecourse]),col=vecCol[timecourse],pch=3)
             # Plot impulse within boundaries of observed points
-            lsCaseValuesToPlotTC <- lsCaseValues*vecTranslationFactors[timecourse]
-            indImpulseValToPlot <- lsCaseValuesToPlotTC >= scaYlim_lower & lsCaseValuesToPlotTC <= scaYlim_upper
-            lsCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
-            points(vecX, lsCaseValuesToPlotTC,col=vecCol[timecourse], type="l")
+            vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[timecourse]
+            indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
+            vecCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
+            points(vecX, vecCaseValuesToPlotTC,col=vecCol[timecourse], type="l")
           }
         }
       } else {
         stop(paste0("ERROR: Unrecognised strMode in plotDEGenes(): ",strMode))
       }
       
+      legend(x="bottomright",c(strCaseName),fill=c("blue"), cex=0.6, inset=c(0,scaLegendInset))
       # Plot mean of each time point
-      points(arrTimepoints_All[1,],(apply(arr3DCountData[geneID,,],1,function(x){mean(x,na.rm=TRUE)})),col="black",pch=1)
+      points(arrTimepoints_Comb[1,],(apply(arr3DCountData[geneID,,],1,function(x){mean(x,na.rm=TRUE)})),col="black",pch=1)
       
-      # With control data
     } else {
+      # With control data
       
-      if(TRUE %in% is.na(lsImpulseFits$parameters_case[geneID,])){
-        lsCaseValues = lsImpulseFits$values_case[geneID,1]
-        boolStatusCase = FALSE
+      # Convert h0,h1,h2 to log space again
+      lsImpulseParamCaseLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
+      lsImpulseParamCaseLog[c("h0","h1","h2")] <- log( lsImpulseParamCaseLog[c("h0","h1","h2")] )
+      vecCaseValues <- calcImpulse_comp(lsImpulseParamCaseLog,vecX)
+      
+      lsImpulseParamCtrlLog <- lsImpulseFits$parameters_control[geneID,1:NPARAM]
+      lsImpulseParamCtrlLog[c("h0","h1","h2")] <- log( lsImpulseParamCtrlLog[c("h0","h1","h2")] )
+      lsCtrlValues <- calcImpulse_comp(lsImpulseParamCtrlLog,vecX)
+      
+      lsImpulseParamCombLog <- lsImpulseFits$parameters_combined[geneID,1:NPARAM]
+      lsImpulseParamCombLog[c("h0","h1","h2")] <- log( lsImpulseParamCombLog[c("h0","h1","h2")] )
+      lsCombValues <- calcImpulse_comp(lsImpulseParamCombLog,vecX)
+      
+      pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
+      pval_Method2 <- round( log(vecMethod2Results[geneID])/log(10), 2 )
+      
+      if(strMode=="batch" | strMode=="singlecell"){
+        # Plot observed points: Case green, control red
+        scaYlim_lower <- min( min(arr3DCountData[geneID,,],na.rm=TRUE),
+          min(vecCaseValues[indVecXObs]),
+          min(lsCtrlValues[indVecXObs]),
+          min(lsCombValues[indVecXObs]) )
+        scaYlim_upper <- max( max(arr3DCountData[geneID,,],na.rm=TRUE),
+          max(vecCaseValues[indVecXObs]),
+          max(lsCtrlValues[indVecXObs]),
+          max(lsCombValues[indVecXObs]) )
+        # case
+        plot(arrTimepoints_Case,t(arr3DCountData_Case[geneID,,]),
+          col="green",pch=3,
+          xlim=c(0,max(vecTimepoints_Comb,na.rm=TRUE)+PDF_WIDTH),
+          ylim=c(scaYlim_lower,scaYlim_upper),
+          xlab="Time", ylab="Impulse fit and expression values",
+          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",
+            strNameMethod1," ",pval_Impulse," ",
+            strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
+        points(arrTimepoints_Ctrl,t(arr3DCountData_Ctrl[geneID,,]),
+          col="red",pch=3, type="p")
+        # Plot impulses within boundaries of observed points: case, control, combined
+        # case
+        vecCaseValuesToPlot <- vecCaseValues
+        indImpulseValToPlot <- vecCaseValuesToPlot >= scaYlim_lower & vecCaseValuesToPlot <= scaYlim_upper
+        vecCaseValuesToPlot[!indImpulseValToPlot] <- NA
+        points(vecX, vecCaseValuesToPlot,col="green", type="l")
+        # control
+        lsCtrlValuesToPlot <- lsCtrlValues
+        indImpulseValToPlot <- lsCtrlValuesToPlot >= scaYlim_lower & lsCtrlValuesToPlot <= scaYlim_upper
+        lsCtrlValuesToPlot[!indImpulseValToPlot] <- NA
+        points(vecX, lsCtrlValuesToPlot,col="red", type="l")
+        # combined
+        lsCombValuesToPlot <- lsCombValues
+        indImpulseValToPlot <- lsCombValuesToPlot >= scaYlim_lower & lsCombValuesToPlot <= scaYlim_upper
+        lsCombValuesToPlot[!indImpulseValToPlot] <- NA
+        points(vecX, lsCombValuesToPlot,col="black", type="l")
+        
+      } else if(strMode=="timecourses"){
+        vecTranslationFactors <- lsImpulseFits$parameters_case[geneID,vecindMuByTimecourse]/lsImpulseFits$parameters_case[geneID,"mu"]
+        # Create colour vector
+        vecCol <- rainbow(n=dim(arr3DCountData)[3])
+        
+        # Create plot and plot data of first time course
+        scaYlim_lower <- min( min(arr3DCountData[geneID,,],na.rm=TRUE), min(vecCaseValues[indVecXObs]*min(vecTranslationFactors)) )
+        scaYlim_upper <- max( max(arr3DCountData[geneID,,],na.rm=TRUE), max(vecCaseValues[indVecXObs]*max(vecTranslationFactors)) )
+        plot(arrTimepoints_Comb[1,],t(arr3DCountData[geneID,,1]),col=vecCol[1],pch=3,
+          xlim=c(0,max(vecTimepoints_Comb,na.rm=TRUE)+PDF_WIDTH), ylim=c(scaYlim_lower,scaYlim_upper),
+          xlab="Time", ylab="Impulse fit and expression values",
+          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
+            " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
+        # Plot impulse fit to time course
+        vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[1]
+        indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
+        vecCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
+        points(vecX, vecCaseValuesToPlotTC,col=vecCol[1], type="l")
+        
       } else {
-        lsImpulseParamCaseLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
-        lsImpulseParamCaseLog[c("h0","h1","h2")] <- log( lsImpulseParamCaseLog[c("h0","h1","h2")] )
-        lsCaseValues = calcImpulse_comp(lsImpulseParamCaseLog,vecX)
-        boolStatusCase = TRUE
-      }
-      if(TRUE %in% is.na(lsImpulseFits$parameters_control[geneID,])){
-        lsCtrlValues = lsImpulseFits$values_control[geneID,1]
-        boolStatusCtrl = FALSE
-      } else {
-        lsImpulseParamCtrlLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
-        lsImpulseParamCtrlLog[c("h0","h1","h2")] <- log( lsImpulseParamCtrlLog[c("h0","h1","h2")] )
-        lsCtrlValues = calcImpulse_comp(lsImpulseParamCtrlLog,vecX)
-        boolStatusCtrl = TRUE
-      }
-      if(TRUE %in% is.na(lsImpulseFits$parameters_combined[geneID,])){
-        lsCombValues = lsImpulseFits$values_combined[geneID,1]
-        boolStatusComb = FALSE
-      } else {
-        lsImpulseParamCombLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
-        lsImpulseParamCombLog[c("h0","h1","h2")] <- log( lsImpulseParamCombLog[c("h0","h1","h2")] )
-        lsCombValues = calcImpulse_comp(lsImpulseParamCombLog,vecX)
-        boolStatusComb = TRUE
+        stop(paste0("ERROR: Unrecognised strMode in plotDEGenes(): ",strMode))
       }
       
-      plot(arrTimepoints_Case,(t(arr3DCountData_Case[geneID,,])),col="blue",pch=3,xlim=c(0,max(lsTimepoints_All)),
-        ylim=c(min(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(lsCaseValues), as.numeric(lsCtrlValues), as.numeric(lsCombValues)),na.rm=TRUE),
-          max(c(as.numeric(arr3DCountData[geneID,,]),as.numeric(lsCaseValues), as.numeric(lsCtrlValues), as.numeric(lsCombValues)),na.rm=TRUE)),
-        xlab="Time", ylab="Impulse fit and expression values",
-        main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
-          " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
+      legend(x="bottomright",c(strCaseName,strControlName),fill=c("green","red"), cex=0.6, inset=c(0,scaLegendInset))
+      # Plot mean of each time point
       
-      points(lsTimepoints_Ctrl,arr3DCountData_Ctrl[geneID,],col="red",pch=4)
+      points(arrTimepoints_Comb[1,],sapply(arrTimepoints_Comb[1,],function(tp){
+        mean(arr3DCountData[geneID, as.vector(dfAnnotationRed[dfAnnotationRed$Time %in% tp,]$Sample),],na.rm=TRUE)}),
+        col="black",pch=1)
       
-      if(boolStatusCase == FALSE){
-        abline(h = lsCaseValues , col = "blue")
-      } else {
-        points(vecX,lsCaseValues, col = "blue", type="l")
-      }
-      if(boolStatusCtrl == FALSE){
-        abline(h = lsCtrlValues , col = "red")
-      } else {
-        points(vecX,lsCtrlValues, col = "red", type="l")
-      }
-      if(boolStatusComb == FALSE){
-        abline(h = lsCombValues , col = "grey")
-      } else {
-        points(vecX,lsCombValues, col = "grey", type="l")
-      }
-      legend(x="bottomright",c(as.character(dfAnnotationRed$Condition[dfAnnotationRed$Condition != control_name][1]),control_name,"combined"),fill=c("blue","red","grey"), cex=0.6)
     }
   }
   # Close .pdf

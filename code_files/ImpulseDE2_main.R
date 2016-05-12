@@ -165,6 +165,8 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'        Count data: Reduced version of \code{matCountData}. For internal use.
 #'    \item \code{ImpulseDE2_arr3DCountData.RData} (3D array genes x samples x replicates)
 #'        Count data: \code{arr2DCountData} reshaped into a 3D array. For internal use.
+#'    \item \code{ImpulseDE2_dfAnnotationFull.RData} (data frame) Full version of 
+#'        \code{dfAnnotationRed}. For internal use, e.g. by DESeq2.
 #'    \item \code{ImpulseDE2_dfAnnotationRed.RData} (data frame) Reduced version of 
 #'        \code{dfAnnotationFull}. For internal use.
 #'    \item \code{ImpulseDE2_matNormConst.RData} (matrix samples x replicates) Normalisation
@@ -238,9 +240,11 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     arr2DCountData <- lsProcessedData[[1]]
     arr3DCountData <- lsProcessedData[[2]]
     dfAnnotationRed <- lsProcessedData[[3]]
+    dfAnnotationFull <- lsProcessedData[[4]]
     save(arr2DCountData,file=file.path(getwd(),"ImpulseDE2_arr2DCountData.RData"))
     save(arr3DCountData,file=file.path(getwd(),"ImpulseDE2_arr3DCountData.RData"))
     save(dfAnnotationRed,file=file.path(getwd(),"ImpulseDE2_dfAnnotationRed.RData"))
+    save(dfAnnotationFull,file=file.path(getwd(),"ImpulseDE2_dfAnnotationFull.RData"))
     
     # 2. Compute normalisation constants
     print("2. Compute Normalisation constants")
