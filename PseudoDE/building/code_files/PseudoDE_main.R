@@ -3,7 +3,6 @@ library(compiler)
 library(parallel)
 library(DESeq2)
 library(BiocParallel)
-library(MASS)
 
 library(scone)
 
@@ -11,7 +10,6 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_f
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_runDESeq2.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/clusterCellsInPseudotime.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/formatDataClusters.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
 
 runPseudoDE <- function(matCounts,vecPseudotime ){
   
@@ -48,24 +46,35 @@ runPseudoDE <- function(matCounts,vecPseudotime ){
   tm_fitmm <- system.time({
     # Fit zero-inflated negative binomial model to each cluster
     MAXITER <- 10
+    # Imputed count data matrix
+    matCountsImputed <- array(0,c(dim(matCounts)[1],dim(matCounts)[2]))
+    # Genes which are all 0 in one cluster recive pi=1, i.e. they
+    # drop out of the cost function during fitting as their likelihood
+    # is defined by the hyperparameter pi=1 independently of the
+    # mean model.
+    matDropout <- array(1,c(dim(matCounts)[1],dim(matCounts)[2]))
+    # Negative binomial over-dispersion factor: 1 per gene per cluster
+    matDispersion <- array(NA,c(dim(matCounts)[1],lsResultsClustering$K))
     for(k in 1:lsResultsClustering$K){
       # Remove all zero genes: Mu is initialised
       # as log(sum counts)
-      matCountsCluster <- matCounts[1:500,lsResultsClustering$Assignments==k]
-      matCountsCluster <- matCountsCluster[apply(matCountsCluster,1,
-        function(gene){any(gene!=0)}),]
-      source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
-      lsZINBparam <- estimate_zinb_copy(
-        Y = matCountsCluster, 
+      vecidxCluster <- lsResultsClustering$Assignments==k
+      matCountsCluster <- matCounts[,vecidxCluster]
+      vecboolNonzeroGenes <- apply(matCountsCluster,1,
+        function(gene){any(gene!=0)})
+      matCountsCluster <- matCountsCluster[vecboolNonzeroGenes,]
+      # Fit zinb model
+      lsZINBparam <- estimate_zinb(
+        Y = matCountsCluster[vecboolNonzeroGenes,], 
         maxiter = 10, 
         verbose = TRUE)
-      lsSCONEout <- scone(matCountsCluster, 
-        imputation=identity, 
-        scaling=identity, 
-        k_ruv=0, 
-        k_qc=0,
-        evaluate=TRUE, 
-        run=TRUE)
+      # Record parameters
+      matDropout[vecboolNonzeroGenes,vecidxCluster] <- lsZINBparam$pi
+      matDispersion[vecboolNonzeroGenes,k] <- lsZINBparam$theta
+      # Impute count data matrix
+      w <- lsZINBparam$p_z
+      matCountsClusterImputed <- matCountsCluster * w + lsZINBparam$mu * (1 - w)
+      matCountsImputed[vecboolNonzeroGenes,vecidxCluster] <- matCountsClusterImputed
     }
   })
   print("DONE")
