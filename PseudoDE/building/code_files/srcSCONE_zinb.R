@@ -25,7 +25,7 @@
 #' \item{loglik}{the log-likelihood}
 #' \item{convergence}{0 if the algorithm converged and 1 if maxiter was reached}
 #' }
-estimate_zinb <- function(Y, maxiter=10, verbose=FALSE) {
+estimate_zinb_copy <- function(Y, maxiter=10, verbose=FALSE) {
 
   if(!all( .isWholeNumber(Y) )){
     stop("Expression matrix contains non-integer values.")
@@ -59,6 +59,10 @@ estimate_zinb <- function(Y, maxiter=10, verbose=FALSE) {
 
   ll_new <- loglik_small(c(coefs_mu, coefs_pi[1,], coefs_pi[2,], log(thetahat)), Y, Y>0, X, W, J, n*2, 0, 0, linkobj)
   ll_old <- 2 * ll_new
+  
+  if(verbose) {
+    print(ll_new)
+  }
 
   ## EM iteration
   iter <- 0
@@ -69,7 +73,6 @@ estimate_zinb <- function(Y, maxiter=10, verbose=FALSE) {
       return(list(coefs=coefficients(fit), theta=fit$theta))
     })
     coefs_mu <- sapply(fit_mu, function(x) x$coefs)
-    print(head(coefs_mu))
     muhat <- exp(coefs_mu)
     thetahat <- sapply(fit_mu, function(x) x$theta)
 
