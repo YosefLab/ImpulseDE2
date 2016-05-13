@@ -5,13 +5,9 @@ library(DESeq2)
 library(BiocParallel)
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_CostFunctionsFit.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_runDESeq2.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/PseudoDE/building/code_files/clusterCellsInPseudotime.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/PseudoDE/building/code_files/formatDataClusters.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/PseudoDE/building/code_files/fitHurdleModel.R")
-
-evalLogLikHurdleNB_comp <- cmpfun(evalLogLikHurdleNB)
-evalLogLikHurdleDrop_comp <- cmpfun(evalLogLikHurdleDrop)
-evalLogLikHurdle_comp <- cmpfun(evalLogLikHurdle)
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/clusterCellsInPseudotime.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/formatDataClusters.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
 
 runPseudoDE <- function(matCounts,vecPseudotime){
   
@@ -22,6 +18,9 @@ runPseudoDE <- function(matCounts,vecPseudotime){
     vecPseudotime <- vecPseudotime[!is.na(vecPseudotime)]
     # Adjust ording of cells in objects
     matCounts <- matCounts[,names(vecPseudotime)]
+    # Remove all zero genes: Mu is initialised
+    # as log(sum counts)
+    matCounts <- matCounts[apply(matCounts,1,function(gene){any(gene!=0)}),]
   })
   print("DONE")
   print(paste("Consumed time: ",round(tm_preproc["elapsed"]/60,2),
@@ -43,8 +42,20 @@ runPseudoDE <- function(matCounts,vecPseudotime){
   # 3. Fit mixture model
   print("3. Fit mixture model:")
   tm_fitmm <- system.time({
-    lsHurdleParamters <- fitHurdleModel(matCounts=matCounts, 
-      lsResultsClustering=lsResultsClustering, dfAnnotationClusters=dfAnnotationClusters)
+    # Fit zero-inflated negative binomial model to each cluster
+    MAXITER <- 10
+    for(k in 1:lsResultsClustering$K){
+      # Remove all zero genes: Mu is initialised
+      # as log(sum counts)
+      matCountsCluster <- matCounts[,lsResultsClustering$Assignments==k]
+      matCountsCluster <- matCountsCluster[apply(matCountsCluster,1,
+        function(gene){any(gene!=0)}),]
+      source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
+      lsZINBparam <- estimate_zinb(
+        Y = matCounts, 
+        maxiter = 10, 
+        verbose = FALSE)
+    }
   })
   print("DONE")
   print(paste("Consumed time: ",round(tm_fitmm["elapsed"]/60,2),
