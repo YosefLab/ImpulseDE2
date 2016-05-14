@@ -15,17 +15,31 @@
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
-#' @param matCountData (matrix genes x replicates) [Default NULL] Count data of all conditions, 
+#' @param matCountData: (matrix genes x replicates) [Default NULL] Count data of all conditions, 
 #'    unobserved entries are NA. Column labels are replicate names, row labels
 #'    gene names.
-#' @param dfAnnotationFull (Table) [Default NULL] Lists co-variables of replicates: 
+#' @param dfAnnotationFull: (Table) [Default NULL] Lists co-variables of replicates: 
 #'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param strCaseName (str) [Default NULL] Name of the case condition in \code{dfAnnotationFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationFull}.
+#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#'    Mode of model fitting.
 #'    
-#' @return arr2DCountData: (2D array genes x replicates) Count data: Reduced 
-#'    version of \code{matCountData}. For internal use.
+#' @return (list length 3) with the following elements:
+#' \itemize{
+#'  \item \code{arr2DCountData}: (count matrix  genes x replicates) 
+#'      Count data: Reduced version of \code{matCountData}. 
+#'  \item \code{arr2DCountDataImputed} (count matrix genes x replicates) 
+#'      Count data imputed based on zero inflated negative binomial model. 
+#'      If not operating in strMode=="singlecell", arr2DCountDataImputed 
+#'      is NULL.
+#'  \item \code{matProbNB} (probability matrix genes x replicates)
+#'      Probability of each observation to originate from the negative
+#'      binomial component in the zero inflated negative binomial
+#'      mixture model. All entries are 1 if not operating in 
+#'      strMode=="singlecell".
+#' }
 #'
 #' @export
 
@@ -37,7 +51,8 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   
   # Check format and presence of input data
   checkData <- function(dfAnnotationFull=NULL, arr2DCountData=NULL,
-    strCaseName=NULL, strControlName=NULL, strMode=NULL){
+    strCaseName=NULL, strControlName=NULL, strMode=NULL,
+    lsPseudoDE=lsPseudoDE){
     
     ### 1. Check that all necessary input was specified
     # dfAnnotationFull
@@ -116,6 +131,48 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
         paste0(as.character( colnames(arr2DCountData)[
           !(colnames(arr2DCountData) %in% dfAnnotationFull$Replicate)] ),collapse=","),
         " in the count data table do(es) not occur in annotation table and will be ignored."))
+    }
+    if(any(arr2DCountData %% 1 !=0)){
+      stop("ERROR: arr2DCountData contains non-integer elements. Requires count data.")
+    }
+    
+    ### 5. Check PseudoDE objects
+    if(strMode=="singlecell"){
+      # Check that PseudoDE object was supplied
+      if(is.null(lsPseudoDE)){
+        stop("ERROR: Did not supply lsPseudoDE in singlecell mode.")
+      }
+      ### a) Dropout rates
+      if(is.null(lsPseudoDE$matDropout)){
+        stop("ERROR: Did not supply lsPseudoDE$matDropout in singlecell mode.")
+      }
+      if(dim(lsPseudoDE$matDropout)!=dim(arr2DCountData)){
+        stop("ERROR: lsPseudoDE$matDropout does not have the dimensions of arr2DCountData.")
+      }
+      if(any(lsPseudoDE$matDropout < 0 | lsPseudoDE$matDropout > 1 | is.na(lsPseudoDE$matDropout))){
+        stop("ERROR: lsPseudoDE$matDropout contains elements outside of interval [0,1].")
+      }
+      ### b) Posterior of observation belonging to negative binomial
+      ### component in mixture model.
+      if(is.null(lsPseudoDE$matProbNB)){
+        stop("ERROR: Did not supply lsPseudoDE$matProbNB in singlecell mode.")
+      }
+      if(dim(lsPseudoDE$matProbNB)!=dim(arr2DCountData)){
+        stop("ERROR: lsPseudoDE$matProbNB does not have the dimensions of arr2DCountData.")
+      }
+      if(any(lsPseudoDE$matProbNB < 0 | lsPseudoDE$matProbNB > 1 | is.na(lsPseudoDE$matProbNB))){
+        stop("ERROR: lsPseudoDE$matProbNB contains elements outside of interval [0,1].")
+      }
+      ### c) Imputed counts
+      if(is.null(lsPseudoDE$arr2DCountDataImputed)){
+        stop("ERROR: Did not supply lsPseudoDE$arr2DCountDataImputed in singlecell mode.")
+      }
+      if(dim(lsPseudoDE$arr2DCountDataImputed)!=dim(arr2DCountDataImputed)){
+        stop("ERROR: lsPseudoDE$arr2DCountDataImputed does not have the dimensions of arr2DCountData.")
+      }
+      if(any(lsPseudoDE$arr2DCountDataImputed %% 1 != 0)){
+        stop("ERROR: lsPseudoDE$arr2DCountDataImputed contains non-integer elements. Requires count data.")
+      }
     }
     
     ### Summarise which mode, conditions, samples, replicates and
@@ -238,6 +295,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   ###############################################################
   # (II) Main body of function
   
+  # Check validity of input
   checkData(
     dfAnnotationFull=dfAnnotationFull,
     arr2DCountData=matCountData,
@@ -245,11 +303,22 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     strCaseName=strCaseName,
     strMode=strMode)
   
+  # Process raw counts
   arr2DCountData <- nameGenes(arr2DCountData=matCountData)
-  
   arr2DCountData <- reduceCountData(
     dfAnnotationFull=dfAnnotationFull, 
     arr2DCountData=arr2DCountData)
   
-  return( arr2DCountData )
+  # Process single cell hyperparameters
+  if(strMode=="singlecell"){
+    arr2DCountDataImputed <- lsPseudoDE$matCountsImputed
+    matProbNB <- lsPseudoDE$matProbNB
+  } else {
+    arr2DCountDataImputed <- NULL
+    matProbNB <- array(1,c(dim(arr2DCountData)[1],dim(arr2DCountData)[2]))
+  }
+  
+  lsProcessedData <- list(arr2DCountData, arr2DCountDataImputed, matProbNB)
+  names(lsProcessedData) <- c("arr2DCountData", "arr2DCountDataImputed", "matProbNB")
+  return( lsProcessedData )
 }

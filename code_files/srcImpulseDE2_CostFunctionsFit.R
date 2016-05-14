@@ -20,7 +20,7 @@
 #' 
 #' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
 #' @param vecX (vector number of timepoints) Time-points at which gene was sampled
-#' @param vecY (numeric vector replicates) Observed expression values for 
+#' @param vecY (count vector replicates) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
 #' @param vecNormConst: (numeric vector number of replicates) 
@@ -80,7 +80,7 @@ evalLogLikImpulseBatch <- function(vecTheta, vecX, vecY,
 #' @param vecY (numeric vector replicates) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' @param vecNormConst: (numeric vector number of replicates) 
+#' @param vecNormConst: (count vector number of replicates) 
 #'    Normalisation constants for each replicate.
 #' @param vecTranslationFactors: (numeric vector number of replicates)
 #'    Scaling factors for impulse model between different timecourses:
@@ -115,6 +115,8 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,vecY,
     size=scaDispEst, 
     log=TRUE))
   
+  #DAVID to do: take vecboolObserved out of these functions and reduce data at input to cost function
+  
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)
 }
@@ -139,10 +141,11 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,vecY,
 #' 
 #' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
 #' @param vecX (vector number of timepoints) Time-points at which gene was sampled
-#' @param vecY (numeric vector replicates) Observed expression values for 
+#' @param vecY (count vector replicates) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' @param scaDropoutEst: (scalar) Dropout rate estimate for given cell.
+#' @param vecDropoutRateEst: (probability vector number of replicates) 
+#'    Dropout rate estimate for each cell for given gene.
 #' @param vecNormConst: (numeric vector number of replicates) 
 #'    Normalisation constants for each replicate.
 #' @param vecindTimepointAssign (numeric vector number replicates) 
@@ -157,7 +160,8 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,vecY,
 #' @export
 
 evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
-  scaDispEst, scaDropoutEst, vecNormConst,
+  scaDispEst, vecDropoutRateEst, 
+  vecNormConst,
   vecindTimepointAssign, vecboolObserved, vecboolZero){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
@@ -174,17 +178,17 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
   # inside dnbinom.
   # Likelihood of zero counts:
   scaLogLikZeros <- sum(log(
-    (1-scaDropoutEst)*
+    (1-vecDropoutRateEst[vecboolZero & vecboolObserved])*
       dnbinom(
         vecY[vecboolZero & vecboolObserved], 
         mu=vecImpulseValue[vecboolZero & vecboolObserved], 
         size=scaDispEst, 
         log=FALSE) +
-      scaDropoutEst
+      vecDropoutRateEst[vecboolZero & vecboolObserved]
   ))
   # Likelihood of non-zero counts:
   scaLogLikNonzeros <- sum(log(
-    (1-scaDropoutEst)*
+    (1-vecDropoutRateEst[vecboolZero & vecboolObserved])*
       dnbinom(
         vecY[!vecboolZero & vecboolObserved], 
         mu=vecImpulseValue[!vecboolZero & vecboolObserved], 
@@ -212,7 +216,7 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
 #' 
 #' @seealso Called by \code{fitHurdleModel}.
 #' 
-#' @param lsThetaHurdle (list {vecDropoutEst, matMeanEst}) Parmeters
+#' @param lsThetaHurdle (list {vecDropoutRateEst, matMeanEst}) Parmeters
 #'    of hurdle model to be estimated:
 #'    vecDropoutRate: (vector cells) Dropout rate estimate for all cells.
 #'    matMuEst: (matrix genes x clusters) Negative binomial 
@@ -229,7 +233,7 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
 evalLogLikHurdle <- function(lsThetaHurdle,vecY,
   vecDispEst,lsResultsClustering){ 
   
-  vecDropoutEst <- lsThetaHurdle$vecDropoutEst
+  vecDropoutRateEst <- lsThetaHurdle$vecDropoutRateEst
   matMeanEst <- lsThetaHurdle$matMeanEst
   # Likelihood function of hurdle modle differs between
   # zero and non-zero counts: Add likelihood of both together.
@@ -252,13 +256,13 @@ evalLogLikHurdle <- function(lsThetaHurdle,vecY,
     
     # Evaluate on all zero count genes in cells
     scaLogLikZerosCluster <- sum(log(
-      (1-vecDropoutEst[vecCells]) * dnbinom(vecYZeros[,vecCells], 
+      (1-vecDropoutRateEst[vecCells]) * dnbinom(vecYZeros[,vecCells], 
         mu=matMeanEst[,cluster], size=vecDispEst, log=FALSE) +
-        vecDropoutEst[vecCells]
+        vecDropoutRateEst[vecCells]
     ), na.rm=TRUE)
     # Evaluate on all nonzero count genes in cells
     scaLogLikNonzerosCluster <- sum(log(
-      (1-vecDropoutEst[vecCells]) * dnbinom(vecYNonzeros[,vecCells], 
+      (1-vecDropoutRateEst[vecCells]) * dnbinom(vecYNonzeros[,vecCells], 
         mu=matMeanEst[,cluster], size=vecDispEst, log=FALSE)
     ), na.rm=TRUE)
     
@@ -297,7 +301,7 @@ evalLogLikHurdle <- function(lsThetaHurdle,vecY,
 #'    Overdispersion and one mean per cluster.
 #' @param vecY (vector cells) Observed expression values 
 #'    of gene in cells in cluster.
-#' @param vecDropoutEst: (vector cells) Dropout estimate of cell. 
+#' @param vecDropoutRateEst: (vector cells) Dropout estimate of cell. 
 #' @param lsResultsClustering:
 #' 
 #' @return scaLogLik: (scalar) Value of cost function (likelihood)
@@ -305,7 +309,7 @@ evalLogLikHurdle <- function(lsThetaHurdle,vecY,
 #' @export
 
 evalLogLikHurdleNB <- function(vecTheta,vecY,
-  vecDropoutEst,lsResultsClustering){ 
+  vecDropoutRateEst,lsResultsClustering){ 
   
   scaDispEst <- vecTheta[1]
   vecMeanEst <- vecTheta[2:length(vecTheta)]
@@ -321,14 +325,14 @@ evalLogLikHurdleNB <- function(vecTheta,vecY,
   
   # Evaluate on all zero count genes in cells
   scaLogLikZeros <- sum(log(
-    (1-vecDropoutEst[indZeros]) * dnbinom(vecY[indZeros],
+    (1-vecDropoutRateEst[indZeros]) * dnbinom(vecY[indZeros],
       mu=exp(vecMeanEst[lsResultsClustering$Assignments[indZeros]]), 
       size=scaDispEst[indZeros],
-      log=FALSE) + vecDropoutEst[indZeros]
+      log=FALSE) + vecDropoutRateEst[indZeros]
   ), na.rm=TRUE)
   # Evaluate on all nonzero count genes in cells
   scaLogLikNonzeros <- sum(log(
-    (1-vecDropoutEst[indNonzeros]) * dnbinom(vecY[indNonzeros],
+    (1-vecDropoutRateEst[indNonzeros]) * dnbinom(vecY[indNonzeros],
       mu=exp(vecMeanEst[lsResultsClustering$Assignments[indNonzeros]]),
       size=scaDispEst[indNonzeros],
       log=FALSE)

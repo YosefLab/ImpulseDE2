@@ -34,6 +34,8 @@
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationFullFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationFullFull}.
+#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#'    Mode of model fitting.
 #' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
 #' @param strFileNameSuffix (character string) [Default ""] File extention.
 #' @param title_string (character string) [Default ""] Title for each plot.

@@ -212,7 +212,8 @@ source("srcImpulseDE2_plotDEGenes.R")
 
 runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
   strCaseName = NULL, strControlName=NULL, strMode="batch",
-  nProc=3, Q_value=0.01, boolPlotting=TRUE){
+  nProc=3, Q_value=0.01, boolPlotting=TRUE,
+  lsPseudoDE=NULL){
   
   NPARAM=6
   
@@ -221,29 +222,43 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
   tm_runImpulseDE2 <- system.time({    
     # 1. Process input data 
     print("1. Prepare data")
-    arr2DCountData <- processData(
+    lsProcessedData <- processData(
       dfAnnotationFull=dfAnnotationFull,
       matCountData=matCountData,
       strControlName=strControlName, 
       strCaseName=strCaseName,
-      strMode=strMode)
+      strMode=strMode,
+      lsPseudoDE=lsPseudoDE)
+    arr2DCountData <- lsProcessedData$arr2DCountData
+    arr2DCountDataImputed  <- lsProcessedData$arr2DCountDataImputed
+    matProbNB <- lsProcessedData$matProbNB
     
     save(arr2DCountData,file=file.path(getwd(),"ImpulseDE2_arr2DCountData.RData"))
+    save(arr2DCountDataImputed,file=file.path(getwd(),"ImpulseDE2_arr2DCountDataImputed.RData"))
+    save(matProbNB,file=file.path(getwd(),"ImpulseDE2_matProbNB.RData"))
     save(dfAnnotationFull,file=file.path(getwd(),"ImpulseDE2_dfAnnotationFull.RData"))
     
     # 2. Compute normalisation constants
     print("2. Compute Normalisation constants")
     vecNormConst <- computeNormConst(
       arr2DCountData=arr2DCountData,
-      dfAnnotationFull=dfAnnotationFull )
+      dfAnnotationFull=dfAnnotationFull,
+      matProbNB=matProbNB,
+      strMode=strMode)
     save(vecNormConst,file=file.path(getwd(),"ImpulseDE2_vecNormConst.RData"))
     
     # 3. Run DESeq2
     print("3. Run DESeq2")
     tm_runDESeq2 <- system.time({
+      # Run DESeq2 on imputed data if using single cell data 
+      if(strMode=="batch" | strMode=="timecourses"){
+        arr2DCountDataForDESeq2 <- arr2DCountData
+      } else if(strMode=="singlecell"){
+        arr2DCountDataForDESeq2 <- arr2DCountDataImputed
+      } 
       lsDESeq2Results <- runDESeq2(
         dfAnnotationFull=dfAnnotationFull,
-        arr2DCountData=arr2DCountData, 
+        arr2DCountData=arr2DCountDataForDESeq2,
         nProcessesAssigned=nProc,
         strMode=strMode)
     })
@@ -259,7 +274,9 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     tm_fitImpulse <- system.time({
       lsImpulseFits <- fitImpulse(
         arr2DCountData=arr2DCountData, 
-        vecDispersions=vecDESeq2Dispersions, 
+        vecDispersions=vecDESeq2Dispersions,
+        matDropoutRate=matDropoutRate,
+        matProbNB=matProbNB,
         vecNormConst=vecNormConst,
         dfAnnotationFull=dfAnnotationFull, 
         strCaseName=strCaseName, 

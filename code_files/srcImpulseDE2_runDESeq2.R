@@ -13,6 +13,13 @@
 #'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
 #'    version of \code{matCountData}. For internal use.
+#' @param nProcessesAssigned: (scalar) [Default 1] Number of processes for parallelisation. The
+#'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
+#'    using the \code{detectCores} function from the package \code{parallel} to 
+#'    avoid overload.
+#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#'    Mode of model fitting.
+#'    
 #' @return (list length 2) with the following elements:
 #' \itemize{
 #'  \item \code{dds_dispersions} (vector number of genes) Inverse of gene-wise 
@@ -21,16 +28,13 @@
 #' }
 #' @export
 
-runDESeq2 <- function(dfAnnotationFull, arr2DCountData, 
+runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
   nProcessesAssigned=1, strMode="batch"){
   
   # Set number of processes to number of cores assigned if available
   nProcesses <- min(detectCores() - 1, nProcessesAssigned)
   register(MulticoreParam(nProcesses))
   
-  dfCountData <- arr2DCountData[,colnames(arr2DCountData) %in% dfAnnotationFull$Replicate]
-  colnames(dfCountData) <- dfAnnotationFull$Sample[
-    match(colnames(dfCountData),dfAnnotationFull$Replicate)]
   if(is.null(strControlName)){
     # Without control data
     

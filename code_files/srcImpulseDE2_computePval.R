@@ -31,6 +31,8 @@
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationRedFull}.
+#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#'    Mode of model fitting.
 #' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
 #' 
 #' @return dfDEAnalysis (data frame genes x fitting characteristics) 

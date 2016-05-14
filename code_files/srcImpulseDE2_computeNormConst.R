@@ -21,20 +21,31 @@
 #'    version of \code{matCountData}. For internal use.
 #' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
 #'    Replicate, Sample, Condition, Time. Time must be numeric.
+#' @param matProbNB: (probability vector genes x replicates) 
+#'    Probability of observations to come from negative binomial 
+#'    component of mixture model.
+#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#'    Mode of model fitting.
 #' 
 #' @return vecSizeFactors: (numeric vector number of replicates) 
 #'    Normalisation constants for counts for each replicate. 
 #' @export
 
-computeNormConst <- function(arr2DCountData, dfAnnotationFull){
+computeNormConst <- function(arr2DCountData, dfAnnotationFull,
+  matProbNB, strMode="batch"){
   
   # Compute geometric count mean over replicates
   # for each gene: Set zero counts to one
+  # In the case of strMode=singlecell, this becomes
+  # the weighted geometric count mean, weighted by
+  # by the probability of each observation to come
+  # from the negative binomial distribution.
   arr2DCountDataNoZeros <- arr2DCountData
   arr2DCountDataNoZeros[arr2DCountDataNoZeros==0] <- 1
-  vecGeomMean <- apply(arr2DCountDataNoZeros, 1, 
+  vecGeomMean <- sapply(c(1:dim(arr2DCountDataNoZeros)[1]), 
     function(gene){
-      ( prod(gene, na.rm=TRUE) )^( 1/(sum(!is.na(gene))) )
+      ( prod(arr2DCountDataNoZeros[gene,]^matProbNB[gene,], na.rm=TRUE) )^
+        ( 1/sum(matProbNB[gene,], na.rm=TRUE) )
     })
   matGeomMeans <- matrix(vecGeomMean, 
     nrow=dim(arr2DCountData)[1], 

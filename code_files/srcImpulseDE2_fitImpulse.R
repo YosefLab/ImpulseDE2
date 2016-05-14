@@ -13,9 +13,15 @@
 #' @seealso Called by \code{fitImpulse_matrix}. Calls \code{evalLogLikImpulse},
 #'    and \code{calcImpulse_comp}.
 #' 
-#' @param matCounts (numeric 2D array vecTimepoints x replicates) Count data.
+#' @param vecCounts (count vector number of replicates) Count data.
 #' @param scaDispersionEstimate (scalar) Inverse of negative binomial 
 #'    dispersion coefficients computed by DESeq2 for given gene.
+#' @param vecDropoutRate: (probability vector number of replicates) 
+#'    [Default NULL] Dropout rate/mixing probability of zero inflated 
+#'    negative binomial mixturemodel for each gene and cell.
+#' @param vecProbNB: (probability vector number of replicates) 
+#'    Probability of observations to come from negative binomial 
+#'    component of mixture model.
 #' @param vecNormConst: (numeric vector number of replicates) 
 #'    Normalisation constants for each replicate.
 #' @param vecTimepointAssign (numeric vector number replicates) Timepoints 
@@ -38,7 +44,9 @@
 #'    counts predicted by the impulse model at the observed time points.)
 #' @export
 
-fitImpulse_gene <- function(vecCounts, scaDispersionEstimate, 
+fitImpulse_gene <- function(vecCounts, 
+  scaDispersionEstimate,
+  vecDropoutRate=NULL, vecProbNB=NULL,
   vecNormConst,
   vecTimepointAssign, vecTimecourseAssign, dfAnnotationFull,
   strMode="batch", NPARAM=6, MAXIT=1000){
@@ -71,27 +79,68 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
   
   # DAVID: todo export this into extra function and handle entire matrix at once
   # (II) Fit mean model
-  # Fit mean to normalised counts. Count normalisation 
-  # corresponds to model normalisation in impulse model 
-  # fitting.
-  scaMu <- mean(vecCounts, na.rm=TRUE)
-  if(strMode=="batch" | strMode=="singlecell"){
+  if(strMode=="batch"){
     # Null model (no longitudinal sampling): 
     # Fit one mean for all replicates.
     
-    # Fitting is done above: scaMu is used in different parts
-    # of code, too. 
-    # Evaluate likelihood of null model
+    # Fitting null model:
+    # Fit mean to normalised counts. Count normalisation 
+    # corresponds to model normalisation in impulse model 
+    # fitting.
+    scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
+
+    # Evaluate likelihood of null model:
+    # Scale null model according to normalisation factors.
     scaLoglikNull <- sum(dnbinom(
       vecCounts[vecboolObserved], 
-      mu=scaMu, 
+      mu=scaMu*vecNormConst[vecboolObserved], 
       size=scaDispersionEstimate, 
       log=TRUE))
-  }else if(strMode=="timecourses"){
+  } else if(strMode=="singlecell"){
+    # Null model (no longitudinal sampling):
+    # Single cells are independent observations
+    # of the time series.
+    # Fit one mean for all replicates, with mixture model.
+    # Note on data scaling: Normalisation factors were
+    # computed based on raw data.
+    
+    # Fit null model:
+    # Fit weighted mean to count data: Weight observations
+    # by their probability to belong to the negative
+    # binomial component of the mixture model.
+    scaMu <- sum(vecCounts/vecNormConst*vecProbNB, na.rm=TRUE)/sum(vecProbNB)
+    
+    # Evaluate likelihood of null model
+    # Likelihood of zero counts:
+    scaLogLikNullZeros <- sum(log(
+      (1-vecDropoutRateEst[vecboolZero & vecboolObserved])*
+        dnbinom(
+          vecY[vecboolZero & vecboolObserved], 
+          mu=scaMu, 
+          size=scaDispEst, 
+          log=FALSE) +
+        vecDropoutRateEst[vecboolZero & vecboolObserved]
+    ))
+    # Likelihood of non-zero counts:
+    scaLogLikNullNonzeros <- sum(log(
+      (1-vecDropoutRateEst[vecboolZero & vecboolObserved])*
+        dnbinom(
+          vecY[!vecboolZero & vecboolObserved], 
+          mu=scaMu, 
+          size=scaDispEst, 
+          log=FALSE)
+    ))
+    # Compute likelihood of all data:
+    scaLogLikNull <- scaLogLikNullZeros + scaLogLikNullNonzeros
+  } else if(strMode=="timecourses"){
     # Null model (longitudinal sampling): 
     # Fit one mean for each time course (longitudinal series).
     
     # Fit null model.
+    # Fit mean to normalised counts. Count normalisation 
+    # corresponds to model normalisation in impulse model 
+    # fitting.
+    scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
     vecMuTimecourses <- sapply(vecTimecourses,
       function(tc){mean(vecCounts[vecTimecourseAssign==tc], na.rm=TRUE)})
     names(vecMuTimecourses) <- vecTimecourses
@@ -99,7 +148,7 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
     # Evaluate likelihood of null model
     scaLoglikNull <- sum(dnbinom(
       vecCounts[vecboolObserved], 
-      mu=(vecMuTimecourses[as.vector(vecTimecourseAssign)])[vecboolObserved], 
+      mu=(vecMuTimecourses[as.vector(vecTimecourseAssign)])[vecboolObserved]*vecNormConst[vecboolObserved], 
       size=scaDispersionEstimate, 
       log=TRUE))
   } else {
@@ -113,14 +162,15 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
     # Note: Translation factor is the same for all replicates
     # in a time course.
     # Reference: Overall scaled mean
-    scaMuScaled <- mean(vecCounts/vecNormConst, na.rm=TRUE)
+    #scaMuScaled <- mean(vecCounts/vecNormConst, na.rm=TRUE)
     # Scaled means by timecourse
-    vecMuTimecoursesScaled <- sapply(vecTimecourses, function(tc){
-      mean(vecCounts[vecTimecourseAssign==tc]/vecNormConst[vecTimecourseAssign==tc], na.rm=TRUE)
-    })
-    names(vecMuTimecoursesScaled) <- vecTimecourses
+    #vecMuTimecoursesScaled <- sapply(vecTimecourses, function(tc){
+    #  mean(vecCounts[vecTimecourseAssign==tc]/vecNormConst[vecTimecourseAssign==tc], na.rm=TRUE)
+    #})
+    #names(vecMuTimecoursesScaled) <- vecTimecourses
     # Scaled mean ratio per replicate
-    vecTranslationFactors <- vecMuTimecoursesScaled[as.vector(vecTimecourseAssign)]/scaMuScaled
+    #vecTranslationFactors <- vecMuTimecoursesScaled[as.vector(vecTimecourseAssign)]/scaMuScaled
+    vecTranslationFactors <- vecMuTimecourses[as.vector(vecTimecourseAssign)]/scaMu
     # Note: If all replicates are zero, scaMuScaled is zero and
     # vecTranslationFactors are NA. Genes only with zero counts
     # are removed in processData(). The input data to this function
@@ -138,8 +188,16 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
   }
   # Compute statistics for initialisation:
   # Expression means by timepoint
-  vecExpressionMeans <- sapply(vecTimepoints,
-    function(tp){mean(vecCounts[vecTimepointAssign==tp], na.rm=TRUE)})  
+  # DAVID: these are equivalent if vecProbNB supplied as c(1,1,..), keep for speed atm
+  if(strMode=="batch" | strMode=="timecourses"){
+    vecExpressionMeans <- sapply(vecTimepoints,
+      function(tp){mean(vecCountsImputed[vecTimepointAssign==tp], na.rm=TRUE)})
+  } else if(strMode=="singlecell"){
+    vecExpressionMeans <- sapply(vecTimepoints,
+      function(tp){(sum(vecCounts/vecNormConst*vecProbNB, na.rm=TRUE)/(sum(vecProbNB)))[vecTimepointAssign==tp]})
+  } else {
+    stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
+  }
   scaMaxMiddleMean <- max(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
   scaMinMiddleMean <- min(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
   # +1 to push indicices up from middle stretch to entire window (first is omitted here)
@@ -193,7 +251,7 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
         vecX=vecTimepoints,
         vecY=vecCounts, 
         scaDispEst=scaDispersionEstimate,
-        scaDropoutEst=scaDropoutEstimate,
+        vecDropoutRateEst=vecDropoutRate,
         vecNormConst=vecNormConst,
         vecindTimepointAssign=vecindTimepointAssign,
         vecboolObserved=vecboolObserved, 
@@ -255,7 +313,7 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
         vecX=vecTimepoints,
         vecY=vecCounts, 
         scaDispEst=scaDispersionEstimate, 
-        scaDropoutEst=scaDropoutEstimate,
+        vecDropoutRateEst=vecDropoutRate,
         vecNormConst=vecNormConst,
         vecindTimepointAssign=vecindTimepointAssign,
         vecboolObserved=vecboolObserved,
@@ -336,26 +394,31 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
 #' 
 #' @seealso Called by \code{fitImpulse}. Calls \code{fitImpulse_gene}.
 #'   
-#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
-#'    version of \code{matCountData}. For internal use.
-#' @param vecDispersions (vector number of genes) Inverse of gene-wise 
+#' @param arr2DCountData: (count matrix genes x replicates) Count data.
+#' @param vecDispersions: (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
+#' @param matDropoutRate: (probability matrix genes x replicates) Dropout 
+#'    rate/mixing probability of zero inflated negative binomial mixture 
+#'    model for each gene and cell.
+#' @param matProbNB: (probability vector genes x replicates) 
+#'    Probability of observations to come from negative binomial 
+#'    component of mixture model.
 #' @param vecNormConst: (numeric vector number of replicates) 
 #'    Normalisation constants for each replicate.
-#' @param vecTimepointAssign (numeric vector number replicates) Timepoints 
+#' @param vecTimepointAssign: (numeric vector number replicates) Timepoints 
 #'    assigned to replicates.
-#' @param vecTimecourseAssign (numeric vector number replicates) Time courses 
+#' @param vecTimecourseAssign: (numeric vector number replicates) Time courses 
 #'    assigned to replicates. NULL if not operating in strMode="timecourses".
-#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
+#' @param dfAnnotationFull: (Table) Lists co-variables of individual replicates:
 #'    Replicate, Sample, Condition, Time. Time must be numeric.
-#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
+#' @param strCaseName: (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationRedFull}.
-#' @param nProcessesAssigned (scalar) [Default 3] Number of processes for parallelisation. The
+#' @param nProcessesAssigned: (scalar) [Default 3] Number of processes for parallelisation. The
 #'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
 #'    using the \code{detectCores} function from the package \code{parallel} to 
 #'    avoid overload.
-#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
+#' @param NPARAM: (scalar) [Default 6] Number of parameters of impulse model.
 #' 
 #' @return lsFitResults_matrix (list length 2) List of two matrices which
 #'    contain parameter fits and model values for given time course for the
@@ -373,7 +436,9 @@ fitImpulse_gene <- function(vecCounts, scaDispersionEstimate,
 #' }
 #' @export
 
-fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions, 
+fitImpulse_matrix <- function(arr2DCountDataCondition, 
+  vecDispersions, 
+  matDropoutRate, matProbNB,
   vecNormConst, 
   vecTimepointAssign, vecTimecourseAssign, dfAnnotationFull,
   strCaseName, strControlName=NULL, strMode="batch", 
@@ -405,6 +470,8 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
     # Variables
     assign("arr2DCountDataCondition", arr2DCountDataCondition, envir = my.env)
     assign("vecDispersions", vecDispersions, envir = my.env)
+    assign("matDropoutRate", matDropoutRate, envir = my.env)
+    assign("matProbNB", matProbNB, envir = my.env)
     assign("vecNormConst", vecNormConst, envir = my.env)
     assign("vecTimepointAssign", vecTimepointAssign, envir = my.env)
     assign("vecTimecourseAssign", vecTimecourseAssign, envir = my.env)
@@ -423,7 +490,9 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
     
     clusterExport(cl=cl, varlist=c(
       "arr2DCountDataCondition",
-      "vecDispersions", 
+      "vecDispersions",
+      "matDropoutRate",
+      "matProbNB",
       "vecNormConst",
       "vecTimepointAssign",
       "vecTimecourseAssign",
@@ -448,6 +517,8 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
         function(x){fitImpulse_gene(
           vecCounts=arr2DCountDataCondition[x,],
           scaDispersionEstimate=vecDispersions[x],
+          vecDropoutRate=matDropoutRate[x,],
+          vecProbNB=matProbNB[x,],
           vecNormConst=vecNormConst,
           vecTimepointAssign=vecTimepointAssign,
           vecTimecourseAssign=vecTimecourseAssign,
@@ -474,6 +545,8 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
       fitImpulse_gene(
         vecCounts=arr2DCountDataCondition[x,],
         scaDispersionEstimate=vecDispersions[x],
+        vecDropoutRate=matDropoutRate[x,],
+        vecProbNB=matProbNB[x,],
         vecNormConst=vecNormConst,
         vecTimepointAssign=vecTimepointAssign,
         vecTimecourseAssign=vecTimecourseAssign,
@@ -481,26 +554,9 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
         strMode=strMode,
         NPARAM=NPARAM,
         MAXIT=MAXIT )})
-    #matFits_temp <- array(NA,c(length(matFits),length(matFits[[1]])))
-    #for (i in 1:length(matFits)){
-    #  matFits_temp[i,] <- matFits[[i]]
-    #}
-    #matFits <- matFits_temp
     matFits <- do.call(rbind,matFits)
     rownames(matFits) <- rownames(arr2DCountDataCondition)
   }
-  
-  # Name output columns
-  #if(strMode=="batch"){
-  #  colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
-  #    "converge_H1","mu","logL_H0")
-  #} else {
-  #  nTimecourses <- length(unique( vecTimecourseAssign ))
-  #  vecColnamesMubyTimecourse <- paste0(rep("mu_",nTimecourses),c(1:nTimecourses))
-  #  colnames(matFits) <- c("beta","h0","h1","h2","t1","t2","logL_H1",
-  #    "converge_H1","mu","logL_H0",vecColnamesMubyTimecourse)
-  #}
-  #rownames(matFits) <- rownames(arr2DCountDataCondition)
   
   ### DAVID: can reduce this if clause?
   # Use obtained impulse parameters to calculate impulse fit values
@@ -539,10 +595,15 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
 #'  
 #' @seealso Called by \code{runImpulseDE2}. Calls \code{fitImpulse_matrix}.
 #'  
-#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
-#'    version of \code{matCountData}. For internal use.
-#' @param vecDispersions (vector number of genes) Inverse of gene-wise 
+#' @param arr2DCountData: (count matrix genes x replicates) Count data.
+#' @param vecDispersions: (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
+#' @param matDropoutRate: (probability matrix genes x replicates) Dropout 
+#'    rate/mixing probability of zero inflated negative binomial mixture 
+#'    model for each gene and cell.
+#' @param matProbNB: (probability vector genes x replicates) 
+#'    Probability of observations to come from negative binomial 
+#'    component of mixture model.
 #' @param vecNormConst: (numeric vector number of replicates) 
 #'    Normalisation constants for each replicate.
 #' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
@@ -550,11 +611,13 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationRedFull}.
-#' @param nProcessesAssigned (scalar) [Default 3] Number of processes for parallelisation. The
+#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#'    Mode of model fitting.
+#' @param nProcessesAssigned: (scalar) [Default 1] Number of processes for parallelisation. The
 #'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
 #'    using the \code{detectCores} function from the package \code{parallel} to 
 #'    avoid overload.
-#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
+#' @param NPARAM: (scalar) [Default 6] Number of parameters of impulse model.
 #' 
 #' @return lsFitResults_all (list length 2 or 6) List of matrices which
 #'    contain parameter fits and model values for given time course for the
@@ -570,9 +633,11 @@ fitImpulse_matrix <- function(arr2DCountDataCondition, vecDispersions,
 #'    counts predicted by the impulse model at the observed time points.
 #' @export
 
-fitImpulse <- function(arr2DCountData, vecDispersions=NULL, 
+fitImpulse <- function(arr2DCountData, 
+  vecDispersions, 
+  matDropoutRate, matProbNB,
   vecNormConst, dfAnnotationFull,
-  strCaseName=NULL, strControlName=NULL, strMode="batch",
+  strCaseName, strControlName=NULL, strMode="batch",
   nProcessesAssigned=3, NPARAM=6){
   
   #g_names = rownames(arr3DCountData)
@@ -617,6 +682,7 @@ fitImpulse <- function(arr2DCountData, vecDispersions=NULL,
       arr2DCountDataCondition=arr2DCountData[,lsReplicatesByCond[[label]]],
       vecNormConst=vecNormConst[lsReplicatesByCond[[label]]],
       vecDispersions=vecDispersions,
+      matDropoutRate=matDropoutRate[lsReplicatesByCond[[label]]],
       vecTimepointAssign=vecTimepointAssign[lsReplicatesByCond[[label]]],
       vecTimecourseAssign=vecTimecourseAssign[lsReplicatesByCond[[label]]],
       dfAnnotationFull=dfAnnotationFull,
