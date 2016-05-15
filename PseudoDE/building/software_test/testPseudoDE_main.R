@@ -16,10 +16,23 @@ print(paste0("p63PT1: Total cells: ",length(lsPTpointsAll_p63PT1),", Non NA: ",l
 
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/PseudoDE_main.R")
 matCounts <- data.matrix(dfCountsE4)
-matCounts <- matCounts[1:200,]
+#matCounts <- matCounts[1:20,]
 #matCounts <- round(counts)
 nProc=2
 vecPseudotime <- lsPTpoints_p63PT1
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 lsDEresults <- runPseudoDE(matCounts=matCounts,vecPseudotime=vecPseudotime)
 print(lsDEresults)
+
+if(FALSE){
+      vecboolNonzeroGenes <- apply(matCounts,1,
+        function(gene){mean(gene)>10})
+      matCounts <- matCounts[vecboolNonzeroGenes,]
+      MAXITER <- 3
+      
+      # Fit zinb model
+      lsZINBparam <- estimate_zinb(
+        Y = matCounts, 
+        maxiter = MAXITER, 
+        verbose = TRUE)
+}

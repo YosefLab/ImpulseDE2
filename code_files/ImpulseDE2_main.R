@@ -64,7 +64,7 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' The mean fit models no differential behaviour over time. With two 
 #' conditions, the alternative model is separate impulse fits to case and
 #' control data and the null model is an impulse fit to the combined data.
-#' Here, the impuls fit to the combined data models no differential expression
+#' Here, the impulse fit to the combined data models no differential expression
 #' between the conditions.
 #' 
 #' @details \code{ImpulseDE2} is based on the impulse model proposed by

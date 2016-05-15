@@ -48,7 +48,8 @@ fitImpulse_gene <- function(vecCounts,
   scaDispersionEstimate,
   vecDropoutRate=NULL, vecProbNB=NULL,
   vecNormConst,
-  vecTimepointAssign, vecTimecourseAssign, dfAnnotationFull,
+  vecTimepointAssign, vecTimecourseAssign, 
+  dfAnnotationFull,
   strMode="batch", NPARAM=6, MAXIT=1000){
   
   optim_method <- "optim"
@@ -88,7 +89,7 @@ fitImpulse_gene <- function(vecCounts,
     # corresponds to model normalisation in impulse model 
     # fitting.
     scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
-
+    
     # Evaluate likelihood of null model:
     # Scale null model according to normalisation factors.
     scaLoglikNull <- sum(dnbinom(
@@ -188,10 +189,9 @@ fitImpulse_gene <- function(vecCounts,
   }
   # Compute statistics for initialisation:
   # Expression means by timepoint
-  # DAVID: these are equivalent if vecProbNB supplied as c(1,1,..), keep for speed atm
   if(strMode=="batch" | strMode=="timecourses"){
     vecExpressionMeans <- sapply(vecTimepoints,
-      function(tp){mean(vecCountsImputed[vecTimepointAssign==tp], na.rm=TRUE)})
+      function(tp){mean(vecCounts[vecTimepointAssign==tp], na.rm=TRUE)})
   } else if(strMode=="singlecell"){
     vecExpressionMeans <- sapply(vecTimepoints,
       function(tp){(sum(vecCounts/vecNormConst*vecProbNB, na.rm=TRUE)/(sum(vecProbNB)))[vecTimepointAssign==tp]})
@@ -206,7 +206,7 @@ fitImpulse_gene <- function(vecCounts,
   # Gradients between neighbouring points
   vecGradients <- unlist( lapply(c(1:(nTimepts-1)),function(x){
     (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepoints[x+1]-vecTimepoints[x])}) )
-
+  
   # (III) Fit Impulse model
   # 1. Initialisation: Peak
   # Beta: Has to be negative, Theta1: Low, Theta2: High, Theta3: Low
@@ -277,7 +277,7 @@ fitImpulse_gene <- function(vecCounts,
   vecParamGuess <- c(1,log(vecExpressionMeans[1]+1),log(scaMinMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
     (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2 )
-
+  
   if("optim" %in% optim_method){
     if(strMode=="batch"){
       lsFitValley <- unlist( optim(
@@ -376,7 +376,7 @@ fitImpulse_gene <- function(vecCounts,
   }
   # Remove log scale from count parameters of impulse model
   lsBestFitSummary[c("h0","h1","h2")] <- exp(lsBestFitSummary[c("h0","h1","h2")])
-
+  
   return(lsBestFitSummary)
 }
 
@@ -438,9 +438,10 @@ fitImpulse_gene <- function(vecCounts,
 
 fitImpulse_matrix <- function(arr2DCountDataCondition, 
   vecDispersions, 
-  matDropoutRate, matProbNB,
+  matDropoutRate=NULL, matProbNB=NULL,
   vecNormConst, 
-  vecTimepointAssign, vecTimecourseAssign, dfAnnotationFull,
+  vecTimepointAssign, vecTimecourseAssign, 
+  dfAnnotationFull,
   strCaseName, strControlName=NULL, strMode="batch", 
   nProcessesAssigned=3, NPARAM=6){
   
@@ -512,21 +513,39 @@ fitImpulse_matrix <- function(arr2DCountDataCondition,
     # Fit impulse model to each gene of matrix and get impulse parameters:
     # clusterApply runs the function impulse_fit_gene_wise
     # The input data are distributed to nodes by lsGeneIndexByCore partitioning
-    lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore),
-      function(z){ t(sapply( lsGeneIndexByCore[[z]],
-        function(x){fitImpulse_gene(
-          vecCounts=arr2DCountDataCondition[x,],
-          scaDispersionEstimate=vecDispersions[x],
-          vecDropoutRate=matDropoutRate[x,],
-          vecProbNB=matProbNB[x,],
-          vecNormConst=vecNormConst,
-          vecTimepointAssign=vecTimepointAssign,
-          vecTimecourseAssign=vecTimecourseAssign,
-          dfAnnotationFull=dfAnnotationFull,
-          strMode=strMode,
-          NPARAM=NPARAM,
-          MAXIT=MAXIT )}
-      ))})
+    if(strMode=="singlecell"){
+      # Call fitting with single cell parameters
+      lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore),
+        function(z){ t(sapply( lsGeneIndexByCore[[z]],
+          function(x){fitImpulse_gene(
+            vecCounts=arr2DCountDataCondition[x,],
+            scaDispersionEstimate=vecDispersions[x],
+            vecDropoutRate=matDropoutRate[x,],
+            vecProbNB=matProbNB[x,],
+            vecNormConst=vecNormConst,
+            vecTimepointAssign=vecTimepointAssign,
+            vecTimecourseAssign=vecTimecourseAssign,
+            dfAnnotationFull=dfAnnotationFull,
+            strMode=strMode,
+            NPARAM=NPARAM,
+            MAXIT=MAXIT )}
+        ))})
+    } else {
+      # Call fitting without single cell parameters
+      lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore),
+        function(z){ t(sapply( lsGeneIndexByCore[[z]],
+          function(x){fitImpulse_gene(
+            vecCounts=arr2DCountDataCondition[x,],
+            scaDispersionEstimate=vecDispersions[x],
+            vecNormConst=vecNormConst,
+            vecTimepointAssign=vecTimepointAssign,
+            vecTimecourseAssign=vecTimecourseAssign,
+            dfAnnotationFull=dfAnnotationFull,
+            strMode=strMode,
+            NPARAM=NPARAM,
+            MAXIT=MAXIT )}
+        ))})
+    }
     # Give output rownames again, which are lost above
     for(i in 1:length(lsGeneIndexByCore)){
       rownames(lsmatFits[[i]]) <- rownames(arr2DCountDataCondition[lsGeneIndexByCore[[i]],])
@@ -541,19 +560,36 @@ fitImpulse_matrix <- function(arr2DCountDataCondition,
     
     # Fit impulse model to each gene of matrix and get impulse parameters
     lsGeneIndexByCore_all <- 1:nrow(arr2DCountDataCondition)
-    matFits <- lapply(lsGeneIndexByCore_all,function(x){
-      fitImpulse_gene(
-        vecCounts=arr2DCountDataCondition[x,],
-        scaDispersionEstimate=vecDispersions[x],
-        vecDropoutRate=matDropoutRate[x,],
-        vecProbNB=matProbNB[x,],
-        vecNormConst=vecNormConst,
-        vecTimepointAssign=vecTimepointAssign,
-        vecTimecourseAssign=vecTimecourseAssign,
-        dfAnnotationFull=dfAnnotationFull,
-        strMode=strMode,
-        NPARAM=NPARAM,
-        MAXIT=MAXIT )})
+    if(strMode=="singlecell"){
+      # Call fitting with single cell parameters
+      matFits <- lapply(lsGeneIndexByCore_all,function(x){
+        fitImpulse_gene(
+          vecCounts=arr2DCountDataCondition[x,],
+          scaDispersionEstimate=vecDispersions[x],
+          vecDropoutRate=matDropoutRate[x,],
+          vecProbNB=matProbNB[x,],
+          vecNormConst=vecNormConst,
+          vecTimepointAssign=vecTimepointAssign,
+          vecTimecourseAssign=vecTimecourseAssign,
+          dfAnnotationFull=dfAnnotationFull,
+          strMode=strMode,
+          NPARAM=NPARAM,
+          MAXIT=MAXIT )})
+    } else {
+      # Call fitting without single cell parameters
+      matFits <- lapply(lsGeneIndexByCore_all,function(x){
+        fitImpulse_gene(
+          vecCounts=arr2DCountDataCondition[x,],
+          scaDispersionEstimate=vecDispersions[x],
+          vecNormConst=vecNormConst,
+          vecTimepointAssign=vecTimepointAssign,
+          vecTimecourseAssign=vecTimecourseAssign,
+          dfAnnotationFull=dfAnnotationFull,
+          strMode=strMode,
+          NPARAM=NPARAM,
+          MAXIT=MAXIT )})
+    }
+    # Call fitting without single cell parameters
     matFits <- do.call(rbind,matFits)
     rownames(matFits) <- rownames(arr2DCountDataCondition)
   }
@@ -678,19 +714,37 @@ fitImpulse <- function(arr2DCountData,
   
   # Fitting for different runs
   for (label in lsLabels){
-    lsFitResults_run <- fitImpulse_matrix(
-      arr2DCountDataCondition=arr2DCountData[,lsReplicatesByCond[[label]]],
-      vecNormConst=vecNormConst[lsReplicatesByCond[[label]]],
-      vecDispersions=vecDispersions,
-      matDropoutRate=matDropoutRate[lsReplicatesByCond[[label]]],
-      vecTimepointAssign=vecTimepointAssign[lsReplicatesByCond[[label]]],
-      vecTimecourseAssign=vecTimecourseAssign[lsReplicatesByCond[[label]]],
-      dfAnnotationFull=dfAnnotationFull,
-      strCaseName=strCaseName,
-      strControlName=strControlName,
-      strMode=strMode,
-      nProcessesAssigned=nProcessesAssigned,
-      NPARAM=NPARAM )
+    if(strMode=="singlecell"){
+      # Call fitting with single cell parameters
+      lsFitResults_run <- fitImpulse_matrix(
+        arr2DCountDataCondition=arr2DCountData[,lsReplicatesByCond[[label]]],
+        vecNormConst=vecNormConst[lsReplicatesByCond[[label]]],
+        vecDispersions=vecDispersions,
+        matDropoutRate=matDropoutRate[,lsReplicatesByCond[[label]]],
+        matProbNB=matProbNB[,lsReplicatesByCond[[label]]],
+        vecTimepointAssign=vecTimepointAssign[lsReplicatesByCond[[label]]],
+        vecTimecourseAssign=vecTimecourseAssign[lsReplicatesByCond[[label]]],
+        dfAnnotationFull=dfAnnotationFull,
+        strCaseName=strCaseName,
+        strControlName=strControlName,
+        strMode=strMode,
+        nProcessesAssigned=nProcessesAssigned,
+        NPARAM=NPARAM )
+    } else {
+      # Call fitting without singlecell parameters
+      lsFitResults_run <- fitImpulse_matrix(
+        arr2DCountDataCondition=arr2DCountData[,lsReplicatesByCond[[label]]],
+        vecNormConst=vecNormConst[lsReplicatesByCond[[label]]],
+        vecDispersions=vecDispersions,
+        vecTimepointAssign=vecTimepointAssign[lsReplicatesByCond[[label]]],
+        vecTimecourseAssign=vecTimecourseAssign[lsReplicatesByCond[[label]]],
+        dfAnnotationFull=dfAnnotationFull,
+        strCaseName=strCaseName,
+        strControlName=strControlName,
+        strMode=strMode,
+        nProcessesAssigned=nProcessesAssigned,
+        NPARAM=NPARAM )
+    }
     
     # DAVID: do i still need this?
     #imp_res$impulse_parameters <- (imp_res$impulse_parameters)[g_names,]

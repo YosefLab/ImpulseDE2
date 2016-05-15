@@ -46,7 +46,7 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
     # independent samples.
     if(strMode=="batch" | strMode=="singlecell"){
       # Create DESeq2 data object
-      dds <- DESeqDataSetFromMatrix(countData = dfCountData,
+      dds <- DESeqDataSetFromMatrix(countData = arr2DCountData,
         colData = dfAnnotationFull,
         design = ~ Sample)
       # Run DESeq2
@@ -55,7 +55,7 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
         parallel=TRUE)
     } else if(strMode=="timecourses"){
       # Create DESeq2 data object
-      dds <- DESeqDataSetFromMatrix(countData = dfCountData,
+      dds <- DESeqDataSetFromMatrix(countData = arr2DCountData,
         colData = dfAnnotationFull,
         design = ~ Sample + Timecourse)
       # Run DESeq2
@@ -80,7 +80,7 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
     # on comparison condition versus no-contition information. 
     
     # Create DESeq2 data object
-    dds <- DESeqDataSetFromMatrix(countData = dfCountData,
+    dds <- DESeqDataSetFromMatrix(countData = arr2DCountData,
       colData = dfAnnotationFull,
       design = ~ Sample)
     # Run DESeq2
@@ -93,7 +93,7 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
     # for evaluation of likelihood)
     dds_dispersions <- 1/dispersions(ddsDESeqObjectSample)
     
-    dds2 <- DESeqDataSetFromMatrix(countData = dfCountData,
+    dds2 <- DESeqDataSetFromMatrix(countData = arr2DCountData,
       colData = dfAnnotationFull,
       design = ~ Condition)
     # Run DESeq2

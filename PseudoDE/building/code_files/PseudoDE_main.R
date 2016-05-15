@@ -27,7 +27,7 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       stop("ERROR: Non positive counts (NA/Inf/-Inf/negative).")
     }
     # 2. vecPseudotime
-    if(!all(names(vecPseudotime) %in% colnames(matCounts)) | !all(colnames(matCounts) %in% names(vecPseudotime))){
+    if(!all(names(vecPseudotime) %in% colnames(matCounts))){
       stop("ERROR: Cell names in vecPseudotime and matCounts do not match.")
     }
     
@@ -68,8 +68,8 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     # Set number of processes to be used in this step:
     # register(MulticoreParam()) controls the number of processes used for 
     # BiocParallel, used in zinb().
-    nProcesses <- min(detectCores() - 1, nProc)
-    register(MulticoreParam(nProcesses))
+    #nProcesses <- min(detectCores() - 1, nProc)
+    #register(MulticoreParam(nProcesses))
     
     # Fit zero-inflated negative binomial model to each cluster
     # Imputed count data matrix
@@ -90,8 +90,10 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       # as log(sum counts)
       vecidxCluster <- lsResultsClustering$Assignments==k
       matCountsCluster <- matCounts[,vecidxCluster]
+      #vecboolNonzeroGenes <- apply(matCountsCluster,1,
+      #  function(gene){any(gene!=0)})
       vecboolNonzeroGenes <- apply(matCountsCluster,1,
-        function(gene){any(gene!=0)})
+        function(gene){mean(gene)>10})
       matCountsCluster <- matCountsCluster[vecboolNonzeroGenes,]
       
       # Fit zinb model
@@ -107,9 +109,9 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       matDispersion[vecboolNonzeroGenes,k] <- lsZINBparam$theta
     
       # Impute count data matrix
-      w <- lsZINBparam$p_z
-      matCountsClusterImputed <- matCountsCluster * w + lsZINBparam$mu * (1 - w)
-      matCountsImputed[vecboolNonzeroGenes,vecidxCluster] <- matCountsClusterImputed
+      matCountsImputed[vecboolNonzeroGenes,vecidxCluster] <- 
+        matCountsCluster * lsZINBparam$p_z + 
+        lsZINBparam$mu * (1 - lsZINBparam$p_z)
     }
     # Put objects together
     lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed)
@@ -122,6 +124,7 @@ runPseudoDE <- function(matCounts, vecPseudotime,
   
   # 4. Differential expression analysis: Run ImpulseDE2
   print("4. Differential expression analysis: Run ImpulseDE2:")
+  print("### Begin ImpulseDE2 output ################################")
   tm_deanalysis <- system.time({
     lsImpulseDE2results <- runImpulseDE2(
       matCountData = matCounts, 
@@ -134,6 +137,7 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       boolPlotting = TRUE,
       lsPseudo = lsInputToImpulseDE2)
   })
+  print("### End ImpulseDE2 output ##################################")
   save(lsImpulseDE2results,file=file.path(getwd(),"PseudoDE_lsImpulseDE2results.RData"))
   print(paste("Consumed time: ",round(tm_deanalysis["elapsed"]/60,2),
     " min",sep=""))

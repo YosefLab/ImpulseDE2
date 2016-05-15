@@ -9,8 +9,9 @@ rm(list = ls())
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/R_data/fullrun_timecourses")
 strMode="timecourses"
 #setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-load("ImpulseDE2_arr3DCountData.RData")
-load("ImpulseDE2_dfAnnotationRed.RData")
+load("ImpulseDE2_arr2DCountData.RData")
+load("ImpulseDE2_dfAnnotationFull.RData")
+load("ImpulseDE2_vecNormConst.RData")
 # Load Impulse output
 load("ImpulseDE2_dfImpulseResults.RData")
 load("ImpulseDE2_lsDEGenes.RData")
@@ -33,9 +34,9 @@ dfDESeq_Impulse$Impulse <- as.numeric(dfDESeq_Impulse$Impulse)
 
 # Compare inferred means
 lsIndToCompare <- 1:10
-apply(arr3DCountData[lsIndToCompare,,],1,mean)
-dfDESeq2Results[rownames(arr3DCountData[lsIndToCompare,,]),]$baseMean
-dfImpulseResults[rownames(arr3DCountData[lsIndToCompare,,]),]$mean
+apply(arr2DCountData[lsIndToCompare,],1,mean)
+dfDESeq2Results[rownames(arr2DCountData[lsIndToCompare,]),]$baseMean
+dfImpulseResults[rownames(arr2DCountData[lsIndToCompare,]),]$mean
 
 # Find gene where ImpulseDE2 has lower p value
 ImpulseLower <- dfDESeq_Impulse[dfDESeq_Impulse$Impulse < dfDESeq_Impulse$DESeq,]
@@ -101,7 +102,7 @@ source("ImpulseDE2_main.R")
 source("srcImpulseDE2_plotDEGenes.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 
-Q = 10^(-3)
+Q = 10^(-5)
 NPARAM=6
 DEgenes_both <- dfDESeq_Impulse[(dfDESeq_Impulse[,"DESeq"] < Q & dfDESeq_Impulse[,"Impulse"] < Q),"Gene"]
 DEgenes_DESeq_only <- dfDESeq_Impulse[(dfDESeq_Impulse[,"DESeq"] < Q & dfDESeq_Impulse[,"Impulse"] >= Q),"Gene"]
@@ -112,32 +113,56 @@ print(paste0("ImpulseDE only ",length(DEgenes_Impulse_only)))
 print(paste0("DESeq2 only ",length(DEgenes_DESeq_only)))
 print(paste0("Both ",length(DEgenes_both)))
 
-vecDeSeq2Results <- dfDESeq_Impulse$DESeq
-names(vecDeSeq2Results) <- dfDESeq_Impulse$Gene
+vecDESeq2Results <- dfDESeq_Impulse$DESeq
+names(vecDESeq2Results) <- dfDESeq_Impulse$Gene
+strControlName <- NULL
+strCaseName <- "case"
+NPARAM <- 6
 
 plotDEGenes(lsGeneIDs=DEgenes_both,
-  arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
-  lsImpulseFits=lsImpulseFits,
-  strCaseName="case", strControlName=NULL, 
-  strFileNameSuffix="DE_DESeqAndImpulse", strPlotTitleSuffix="", strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDeSeq2Results,strMode=strMode,
-  NPARAM=NPARAM)
+          arr2DCountData=arr2DCountData,
+          vecNormConst=vecNormConst,
+          dfAnnotationFull=dfAnnotationFull, 
+          lsImpulseFits=lsImpulseFits,
+          strCaseName=strCaseName, 
+          strControlName=strControlName, 
+          strFileNameSuffix="DE_ImpulseDE2andDESeq2", 
+          strPlotTitleSuffix="", 
+          strPlotSubtitle="",
+          dfImpulseResults=dfImpulseResults,
+          vecMethod2Results=vecDESeq2Results,
+          strMode=strMode, 
+          NPARAM=NPARAM)
 
 # sort DESeq2 only genes by padj of DESeq2
 dfDESeq_ImpulseDESeqOnly <- dfDESeq_Impulse[DEgenes_DESeq_only,]
 DEgenes_DESeq_onlySorted <- dfDESeq_ImpulseDESeqOnly[order(dfDESeq_ImpulseDESeqOnly$DESeq),]$Gene
 plotDEGenes(lsGeneIDs=DEgenes_DESeq_onlySorted,
-  arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
-  lsImpulseFits=lsImpulseFits,
-  strCaseName="case", strControlName=NULL, 
-  strFileNameSuffix="DE_DESeq_only", strPlotTitleSuffix="", strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDeSeq2Results,strMode=strMode,
-  NPARAM=NPARAM)
+          arr2DCountData=arr2DCountData,
+          vecNormConst=vecNormConst,
+          dfAnnotationFull=dfAnnotationFull, 
+          lsImpulseFits=lsImpulseFits,
+          strCaseName=strCaseName, 
+          strControlName=strControlName, 
+          strFileNameSuffix="DE_DESeq2_only", 
+          strPlotTitleSuffix="", 
+          strPlotSubtitle="",
+          dfImpulseResults=dfImpulseResults,
+          vecMethod2Results=vecDESeq2Results,
+          strMode=strMode, 
+          NPARAM=NPARAM)
 
 plotDEGenes(lsGeneIDs=DEgenes_Impulse_only,
-  arr3DCountData=arr3DCountData, dfAnnotationRed=dfAnnotationRed, 
-  lsImpulseFits=lsImpulseFits,
-  strCaseName="case", strControlName=NULL, 
-  strFileNameSuffix="DE_Impulse_only", strPlotTitleSuffix="", strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,vecMethod2Results=vecDeSeq2Results,strMode=strMode,
-  NPARAM=NPARAM)
+          arr2DCountData=arr2DCountData,
+          vecNormConst=vecNormConst,
+          dfAnnotationFull=dfAnnotationFull, 
+          lsImpulseFits=lsImpulseFits,
+          strCaseName=strCaseName, 
+          strControlName=strControlName, 
+          strFileNameSuffix="DE_ImpulseDE2_only", 
+          strPlotTitleSuffix="", 
+          strPlotSubtitle="",
+          dfImpulseResults=dfImpulseResults,
+          vecMethod2Results=vecDESeq2Results,
+          strMode=strMode, 
+          NPARAM=NPARAM)

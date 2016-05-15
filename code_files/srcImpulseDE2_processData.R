@@ -44,7 +44,8 @@
 #' @export
 
 processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
-  strCaseName=NULL, strControlName=NULL, strMode=NULL){
+  strCaseName=NULL, strControlName=NULL, strMode=NULL,
+  lsPseudoDE=NULL){
   
   ###############################################################
   # (I) Helper functions
@@ -273,7 +274,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     }
     # DAVID to be deprecated
     # Shorten expression table
-    if(TRUE){
+    if(FALSE){
       ind_toKeep <- 100
       print(paste0("Working on subset of data: ",min(ind_toKeep,dim(arr2DCountData)[1])," genes."))
       arr2DCountData <- arr2DCountData[1:min(ind_toKeep,dim(arr2DCountData)[1]),]
