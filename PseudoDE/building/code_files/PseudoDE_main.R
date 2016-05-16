@@ -3,6 +3,8 @@ library(parallel)
 library(DESeq2)
 library(BiocParallel)
 library(scone)
+#source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
+#library(MASS)
 
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_CostFunctionsFit.R")
@@ -90,8 +92,10 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       # as log(sum counts)
       vecidxCluster <- lsResultsClustering$Assignments==k
       matCountsCluster <- matCounts[,vecidxCluster]
+      # this doesnt work for 20 genes:
       #vecboolNonzeroGenes <- apply(matCountsCluster,1,
       #  function(gene){any(gene!=0)})
+      # this works for 20 genes:
       vecboolNonzeroGenes <- apply(matCountsCluster,1,
         function(gene){mean(gene)>10})
       matCountsCluster <- matCountsCluster[vecboolNonzeroGenes,]
@@ -114,6 +118,7 @@ runPseudoDE <- function(matCounts, vecPseudotime,
         lsZINBparam$mu * (1 - lsZINBparam$p_z)
     }
     # Put objects together
+    matCountsImputed <- round(matCountsImputed)
     lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed)
     names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed")
   })

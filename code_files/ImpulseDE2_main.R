@@ -2,13 +2,8 @@
 ########################     ImpulseDE2 package     ############################
 ################################################################################
 
-### Version:  1.3
-### Date:     2016
-### Author v1.0:  Jil Sanders
-### Author v1.1:  David Sebastian Fischer --Divide file into src files, annotation
-### Author v1.2:  David Sebastian Fischer --Support replicate samples, WLS fitting and residual scaling
-### Author v1.3.1:  David Sebastian Fischer --WLS fitting with CV weights
-### Author v1.3.2:  David Sebastian Fischer --NB fitting
+### Date laste change:     May 15th 2016
+### Author David Sebastian Fischer
 
 ################################################################################
 ### Libraries and source code
@@ -260,6 +255,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
         dfAnnotationFull=dfAnnotationFull,
         arr2DCountData=arr2DCountDataForDESeq2,
         nProcessesAssigned=nProc,
+        strControlName=strControlName,
         strMode=strMode)
     })
     vecDESeq2Dispersions <- lsDESeq2Results[[1]]

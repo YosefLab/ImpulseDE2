@@ -53,7 +53,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   # Check format and presence of input data
   checkData <- function(dfAnnotationFull=NULL, arr2DCountData=NULL,
     strCaseName=NULL, strControlName=NULL, strMode=NULL,
-    lsPseudoDE=lsPseudoDE){
+    lsPseudoDE=NULL){
     
     ### 1. Check that all necessary input was specified
     # dfAnnotationFull
@@ -147,7 +147,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
       if(is.null(lsPseudoDE$matDropout)){
         stop("ERROR: Did not supply lsPseudoDE$matDropout in singlecell mode.")
       }
-      if(dim(lsPseudoDE$matDropout)!=dim(arr2DCountData)){
+      if(all(dim(lsPseudoDE$matDropout)!=dim(arr2DCountData))){
         stop("ERROR: lsPseudoDE$matDropout does not have the dimensions of arr2DCountData.")
       }
       if(any(lsPseudoDE$matDropout < 0 | lsPseudoDE$matDropout > 1 | is.na(lsPseudoDE$matDropout))){
@@ -158,21 +158,21 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
       if(is.null(lsPseudoDE$matProbNB)){
         stop("ERROR: Did not supply lsPseudoDE$matProbNB in singlecell mode.")
       }
-      if(dim(lsPseudoDE$matProbNB)!=dim(arr2DCountData)){
+      if(all(dim(lsPseudoDE$matProbNB)!=dim(arr2DCountData))){
         stop("ERROR: lsPseudoDE$matProbNB does not have the dimensions of arr2DCountData.")
       }
       if(any(lsPseudoDE$matProbNB < 0 | lsPseudoDE$matProbNB > 1 | is.na(lsPseudoDE$matProbNB))){
         stop("ERROR: lsPseudoDE$matProbNB contains elements outside of interval [0,1].")
       }
       ### c) Imputed counts
-      if(is.null(lsPseudoDE$arr2DCountDataImputed)){
-        stop("ERROR: Did not supply lsPseudoDE$arr2DCountDataImputed in singlecell mode.")
+      if(is.null(lsPseudoDE$matCountsImputed)){
+        stop("ERROR: Did not supply lsPseudoDE$matCountsImputed in singlecell mode.")
       }
-      if(dim(lsPseudoDE$arr2DCountDataImputed)!=dim(arr2DCountDataImputed)){
-        stop("ERROR: lsPseudoDE$arr2DCountDataImputed does not have the dimensions of arr2DCountData.")
+      if(all(dim(lsPseudoDE$matCountsImputed)!=dim(arr2DCountData))){
+        stop("ERROR: lsPseudoDE$matCountsImputed does not have the dimensions of arr2DCountData.")
       }
-      if(any(lsPseudoDE$arr2DCountDataImputed %% 1 != 0)){
-        stop("ERROR: lsPseudoDE$arr2DCountDataImputed contains non-integer elements. Requires count data.")
+      if(any(lsPseudoDE$matCountsImputed %% 1 != 0)){
+        stop("ERROR: lsPseudoDE$matCountsImputed contains non-integer elements. Requires count data.")
       }
     }
     
@@ -302,7 +302,8 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     arr2DCountData=matCountData,
     strControlName=strControlName,
     strCaseName=strCaseName,
-    strMode=strMode)
+    strMode=strMode,
+    lsPseudoDE=lsPseudoDE )
   
   # Process raw counts
   arr2DCountData <- nameGenes(arr2DCountData=matCountData)

@@ -29,7 +29,7 @@
 #' @export
 
 runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
-  nProcessesAssigned=1, strMode="batch"){
+  nProcessesAssigned=1, strControlName=NULL, strMode="batch"){
   
   # Set number of processes to number of cores assigned if available
   nProcesses <- min(detectCores() - 1, nProcessesAssigned)
