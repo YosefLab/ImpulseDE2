@@ -71,7 +71,7 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
   
   ## EM iteration
   iter <- 0
-  while (abs((ll_old - ll_new)/ll_old) > 1e-4 & iter<maxiter) {
+  while (abs((ll_old - ll_new)/ll_old) > 1e-4 & iter<maxiter | iter==0) {
     print(paste0("Iteration ", iter+1))
     ll_old <- ll_new
     print("Fitting means")

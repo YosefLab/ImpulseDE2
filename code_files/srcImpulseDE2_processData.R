@@ -45,32 +45,67 @@
 
 processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   strCaseName=NULL, strControlName=NULL, strMode=NULL,
-  lsPseudoDE=NULL){
+  lsPseudoDE=NULL, vecDispersionsExternal=NULL, boolRunDESeq2=NULL){
   
   ###############################################################
   # (I) Helper functions
   
+  # Check whether object was supplied (is not NULL).
+  checkNull <- function(objectInput){
+    if(is.null(objectInput)){
+      stop(paste0( "ERROR: ", objectInput," was not given as input." ))
+    }
+  }
+  # Checks whether dimensions of matrices agree.
+  checkDimMatch <-function(matInput1, matInput2){
+    if(any(dim(matInput1)!=dim(matInput2))){
+      stop(paste0( "ERROR: ", matInput1, " does not have the dimensions as ", matInput2 , "." ))
+    }
+  }
+  # Checks whether vectors are identical.
+  checkElementMatch <- function(vec1, vec2){
+    if(!any(vec1==vec2)){
+      stop(paste0( "ERROR: ",vec1 ," do not agree with ", vec2, "." ))
+    }
+  }
+  # Checks whether elements are numeric
+  checkNumeric <- function(matInput){
+    if(any(!is.numeric(matInput))){
+      stop(paste0( "ERROR: ", matInput, " contains non-numeric elements. Requires count data." ))
+    }
+  }
+  # Checks whether elements are probabilities (in [0,1]).
+  checkProbability <- function(matInput){
+    checkNumeric(matInput)
+    if(any(matInput < 0 | matInput > 1 | is.na(matInput))){
+      stop(paste0( "ERROR: ", matInput, " contains elements outside of interval [0,1]." ))
+    }
+  }
+  # Checks whether elements are count data: non-negative integer finite numeric elements.
+  # Note that NA are allowed.
+  checkCounts <- function(matInput){
+    checkNumeric(matInput)
+    if(any(matInput %% 1 != 0)){
+      stop(paste0( "ERROR: ", matInput, " contains non-integer elements. Requires count data." ))
+    }
+    if(any(!is.finite(matInput))){
+      stop(paste0( "ERROR: ", matInput, " contains infinite elements. Requires count data." ))
+    }
+    if(any(matInput<0)){
+      stop(paste0( "ERROR: ", matInput, " contains negative elements. Requires count data." ))
+    }
+  }
+  
   # Check format and presence of input data
   checkData <- function(dfAnnotationFull=NULL, arr2DCountData=NULL,
     strCaseName=NULL, strControlName=NULL, strMode=NULL,
-    lsPseudoDE=NULL){
+    lsPseudoDE=NULL, vecDispersionsExternal=NULL){
     
     ### 1. Check that all necessary input was specified
-    # dfAnnotationFull
-    if(is.null(dfAnnotationFull)){
-      stop("ERROR: Annotation table was not given as input: dfAnnotationFull")
-    }
-    # arr2DCountData
-    if(is.null(arr2DCountData)){
-      stop("ERROR: List of count tables was not given as input: arr2DCountData")
-    }
-    # strCaseName
-    if(is.null(strCaseName)){
-      stop("ERROR: No name for case condition given.")
-    }
-    if(is.null(strMode)){
-      stop("ERROR: ImpulseDE2 mode (strMode) was not given as input.")
-    }
+    checkNull(dfAnnotationFull)
+    checkNull(arr2DCountData)
+    checkNull(strCaseName)
+    checkNull(strMode)
     
     ### 2. Check mode
     lsAllowedModes <- c("batch", "timecourses", "singlecell")
@@ -103,9 +138,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     ### c) Time points
     vecTimepoints <- unique(as.vector( dfAnnotationFull$Time ))
     # Check that time points are numeric
-    if(is.numeric(dfAnnotationFull$Time) == FALSE){
-      stop("ERROR: Time variable in annotation table must be numeric.")
-    }
+    checkNumeric(dfAnnotationFull$Time)
     ### d) Conditions
     lsConditions <- unique( dfAnnotationFull$Condition )
     # Check that given conditions exisit in annotation table
@@ -133,47 +166,60 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
           !(colnames(arr2DCountData) %in% dfAnnotationFull$Replicate)] ),collapse=","),
         " in the count data table do(es) not occur in annotation table and will be ignored."))
     }
-    if(any(arr2DCountData %% 1 !=0)){
-      stop("ERROR: arr2DCountData contains non-integer elements. Requires count data.")
-    }
+    checkNull(rownames(arr2DCountData))
+    checkCounts(arr2DCountData)
     
     ### 5. Check PseudoDE objects
     if(strMode=="singlecell"){
       # Check that PseudoDE object was supplied
-      if(is.null(lsPseudoDE)){
-        stop("ERROR: Did not supply lsPseudoDE in singlecell mode.")
-      }
+      checkNull(lsPseudoDE)
       ### a) Dropout rates
-      if(is.null(lsPseudoDE$matDropout)){
-        stop("ERROR: Did not supply lsPseudoDE$matDropout in singlecell mode.")
-      }
-      if(all(dim(lsPseudoDE$matDropout)!=dim(arr2DCountData))){
-        stop("ERROR: lsPseudoDE$matDropout does not have the dimensions of arr2DCountData.")
-      }
-      if(any(lsPseudoDE$matDropout < 0 | lsPseudoDE$matDropout > 1 | is.na(lsPseudoDE$matDropout))){
-        stop("ERROR: lsPseudoDE$matDropout contains elements outside of interval [0,1].")
-      }
+      checkNull(lsPseudoDE$matDropout)
+      checkDimMatch(lsPseudoDE$matDropout,arr2DCountData)
+      checkElementMatch(rownames(arr2DCountData), rownames(lsPseudoDE$matDropout))
+      checkElementMatch(colnames(arr2DCountData), colnames(lsPseudoDE$matDropout))
+      checkProbability(lsPseudoDE$matDropout)
+
       ### b) Posterior of observation belonging to negative binomial
       ### component in mixture model.
-      if(is.null(lsPseudoDE$matProbNB)){
-        stop("ERROR: Did not supply lsPseudoDE$matProbNB in singlecell mode.")
-      }
-      if(all(dim(lsPseudoDE$matProbNB)!=dim(arr2DCountData))){
-        stop("ERROR: lsPseudoDE$matProbNB does not have the dimensions of arr2DCountData.")
-      }
-      if(any(lsPseudoDE$matProbNB < 0 | lsPseudoDE$matProbNB > 1 | is.na(lsPseudoDE$matProbNB))){
-        stop("ERROR: lsPseudoDE$matProbNB contains elements outside of interval [0,1].")
-      }
+      checkNull(lsPseudoDE$matProbNB)
+      checkDimMatch(lsPseudoDE$matProbNB,arr2DCountData)
+      checkElementMatch(rownames(arr2DCountData), rownames(lsPseudoDE$matProbNB))
+      checkElementMatch(colnames(arr2DCountData), colnames(lsPseudoDE$matProbNB))
+      checkProbability(lsPseudoDE$matProbNB)
+      
       ### c) Imputed counts
-      if(is.null(lsPseudoDE$matCountsImputed)){
-        stop("ERROR: Did not supply lsPseudoDE$matCountsImputed in singlecell mode.")
+      checkNull(lsPseudoDE$matCountsImputed)
+      checkDimMatch(lsPseudoDE$matCountsImputed,arr2DCountData)
+      checkElementMatch(rownames(arr2DCountData), rownames(lsPseudoDE$matCountsImputed))
+      checkElementMatch(colnames(arr2DCountData), colnames(lsPseudoDE$matCountsImputed))
+      checkCounts(lsPseudoDE$matCountsImputed)
+    }
+    
+    ### 6. Check supplied dispersion vector
+    if(!is.null(vecDispersionsExternal)){
+      # Check that dispersions were named
+      if(is.null(names(vecDispersionsExternal))){
+        stop("ERROR: vecDispersionsExternal was not named. Name according to rownames of matCountData.")
       }
-      if(all(dim(lsPseudoDE$matCountsImputed)!=dim(arr2DCountData))){
-        stop("ERROR: lsPseudoDE$matCountsImputed does not have the dimensions of arr2DCountData.")
+      # Check that one dispersion was supplied per gene
+      if(any( !(names(vecDispersionsExternal) %in% rownames(matCountData)) ) |
+          any( !(rownames(matCountData) %in% names(vecDispersionsExternal)) ) ){
+        stop("ERROR: vecDispersionsExternal supplied but names do not agree with rownames of matCountData.")
       }
-      if(any(lsPseudoDE$matCountsImputed %% 1 != 0)){
-        stop("ERROR: lsPseudoDE$matCountsImputed contains non-integer elements. Requires count data.")
+      # Check that dispersion vector is numeric
+      checkNumeric(vecDispersionsExternal)
+      # Check that dispersions are positive (should not have sub-poissonian noise in count data)
+      if(any(vecDispersionsExternal < 0)){
+        warning(paste0( "WARNING: vecDispersionsExternal contains negative elements which corresponds to sub-poissonian noise.",
+          "These elements are kept as they are in the following." ))
       }
+    }
+    
+    ### 7. Check DESeq2 settings
+    if(is.null(vecDispersionsExternal) & !boolRunDESeq2){
+      stop(paste0( "ERROR: vecDispersionsExternal not supplied and boolRunDESeq2 is FALSE.",
+        "Dispersions have to be computed by DESeq2 or provided externally." ))
     }
     
     ### Summarise which mode, conditions, samples, replicates and
@@ -183,39 +229,56 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     if(!is.null(strControlName)){
       print(paste0("Control condition: ", strControlName))
     }
-    print(paste0( "Found time points: ",
-      paste( vecTimepoints,collapse=",") ))
-    for(tp in vecTimepoints){
-      print(paste0( "Case: Found the following replicates for sample ",
+    print(paste0( "ImpulseDE2 runs in mode: ", strMode ))
+    if(strMode=="batch" | strMode=="timecourses"){
+      print(paste0( "Found time points: ",
+        paste( vecTimepoints, collapse=",") ))
+      for(tp in vecTimepoints){
+        print(paste0( "Case: Found the following replicates for sample ",
           unique(dfAnnotationFull[
             dfAnnotationFull$Time %in% tp &
               dfAnnotationFull$Condition %in% strCaseName &
               dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
             ]$Sample),
-        " at time point ", tp,
-        ": ", paste0(dfAnnotationFull[
-          (dfAnnotationFull$Time %in% tp) &
-            (dfAnnotationFull$Condition %in% strCaseName) &
-            (dfAnnotationFull$Replicate %in% colnames(arr2DCountData)),
-          ]$Replicate,collapse=","),collapse="," ))
-    }
-    if(!is.null(strControlName)){
-      for(tp in vecTimepoints){
-        print(paste0( "Control: Found the following replicates for sample ", 
-          unique(dfAnnotationFull[
-            dfAnnotationFull$Time %in% tp &
-              dfAnnotationFull$Condition %in% strControlName &
-              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
-            ]$Sample),
           " at time point ", tp,
-          ":", paste(dfAnnotationFull[
-            dfAnnotationFull$Time %in% tp &
-              dfAnnotationFull$Condition %in% strControlName &
-              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
-            ]$Replicate,collapse=",") ))
+          ": ", paste0(dfAnnotationFull[
+            (dfAnnotationFull$Time %in% tp) &
+              (dfAnnotationFull$Condition %in% strCaseName) &
+              (dfAnnotationFull$Replicate %in% colnames(arr2DCountData)),
+            ]$Replicate,collapse=","),collapse="," ))
       }
+      if(!is.null(strControlName)){
+        for(tp in vecTimepoints){
+          print(paste0( "Control: Found the following replicates for sample ", 
+            unique(dfAnnotationFull[
+              dfAnnotationFull$Time %in% tp &
+                dfAnnotationFull$Condition %in% strControlName &
+                dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
+              ]$Sample),
+            " at time point ", tp,
+            ":", paste(dfAnnotationFull[
+              dfAnnotationFull$Time %in% tp &
+                dfAnnotationFull$Condition %in% strControlName &
+                dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
+              ]$Replicate,collapse=",") ))
+        }
+      }
+    } else if(strMode=="singlecell"){
+      # Shorten output as there are potentially many single cells
+      print(paste0( "Case: Number of cells found is ",
+        ": ", length( dfAnnotationFull[
+          (dfAnnotationFull$Condition %in% strCaseName) &
+            (dfAnnotationFull$Replicate %in% colnames(arr2DCountData)),
+          ]$Replicate) ))
+      if(!is.null(strControlName)){
+        print(paste0( "Control: Number of cells found is ",
+          ":", length( dfAnnotationFull[
+            dfAnnotationFull$Condition %in% strControlName &
+              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
+            ]$Replicate),collapse="," ))
+      }
+      print(paste0( "Found ", length(vecTimepoints), " time points."))
     }
-    print(paste0( "ImpulseDE2 runs in mode: ", strMode ))
     if(strMode=="timecourses"){
       for(tc in unique( dfAnnotationFull$Timecourse )){
         print(paste0( "Found the following replicates for timecourse ",
@@ -303,7 +366,9 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     strControlName=strControlName,
     strCaseName=strCaseName,
     strMode=strMode,
-    lsPseudoDE=lsPseudoDE )
+    lsPseudoDE=lsPseudoDE,
+    vecDispersionsExternal=vecDispersionsExternal,
+    boolRunDESeq2=boolRunDESeq2 )
   
   # Process raw counts
   arr2DCountData <- nameGenes(arr2DCountData=matCountData)
@@ -313,18 +378,14 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   
   # Process single cell hyperparameters
   if(strMode=="singlecell"){
-    arr2DCountDataImputed <- lsPseudoDE$matCountsImputed
-    # For DESeq2: Take out zero-counts
-    arr2DCountDataImputed[arr2DCountDataImputed==0] <- 1
     matProbNB <- lsPseudoDE$matProbNB
     matDropout <- lsPseudoDE$matDropout
   } else {
-    arr2DCountDataImputed <- NULL
     matProbNB <- NULL
     matDropout <- NULL
   }
   
-  lsProcessedData <- list(arr2DCountData, arr2DCountDataImputed, matProbNB, matDropout)
-  names(lsProcessedData) <- c("arr2DCountData", "arr2DCountDataImputed", "matProbNB", "matDropout")
+  lsProcessedData <- list(arr2DCountData, matProbNB, matDropout)
+  names(lsProcessedData) <- c("arr2DCountData", "matProbNB", "matDropout")
   return( lsProcessedData )
 }

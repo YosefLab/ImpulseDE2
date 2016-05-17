@@ -15,7 +15,7 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 runPseudoDE <- function(matCounts, vecPseudotime,
   nProc=1){
   
-  MAXITER <- 3
+  MAXITER <- 10
   
   # 1. Data preprocessing
   print("1. Data preprocessing:")
@@ -157,6 +157,7 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     matCountsImputed <- round(matCountsImputed)
     lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed)
     names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed")
+    names(vecDispersions) <- rownames(matCountsClean)
   })
   save(lsInputToImpulseDE2,file=file.path(getwd(),"PseudoDE_lsInputToImpulseDE2.RData"))
   save(lsZINBparam,file=file.path(getwd(),"PseudoDE_lsZINBparam.RData"))
@@ -187,7 +188,8 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       Q_value = 0.01,
       boolPlotting = TRUE,
       lsPseudo = lsInputToImpulseDE2,
-      vecDispersionsExternal=vecDispersions )
+      vecDispersionsExternal=vecDispersions,
+      boolRunDESeq2=FALSE )
   })
   print("### End ImpulseDE2 output ##################################")
   save(lsImpulseDE2results,file=file.path(getwd(),"PseudoDE_lsImpulseDE2results.RData"))

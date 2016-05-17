@@ -18,9 +18,9 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 matCounts <- data.matrix(dfCountsE4)
 lsPTpoints_p63PT1 <- lsPTpoints_p63PT1[!is.na(lsPTpoints_p63PT1)]
 matCounts <- matCounts[,colnames(matCounts) %in% names(lsPTpoints_p63PT1)]
-matCounts <- matCounts[1:20,1:60]
+matCounts <- matCounts[1:200,]
 #matCounts <- round(counts)
-nProc=2
+nProc=3
 vecPseudotime <- lsPTpoints_p63PT1[colnames(matCounts)]
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 lsDEresults <- runPseudoDE(matCounts=matCounts,vecPseudotime=vecPseudotime)
@@ -76,6 +76,7 @@ if(FALSE){
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsInputToImpulseDE2.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsResultsClustering.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matCountsClean.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsZINBparam.RData")
   matDropout <- lsInputToImpulseDE2$matDropout
   matProbNB <- lsInputToImpulseDE2$matProbNB
   matCountsImputed <- lsInputToImpulseDE2$matCountsImputed
