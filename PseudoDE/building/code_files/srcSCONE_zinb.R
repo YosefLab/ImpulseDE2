@@ -76,7 +76,6 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     ll_old <- ll_new
     print("Fitting means")
     fit_mu <- bplapply(seq_len(J), function(i) {
-      print(i)
       fit <- glm.nb(Y[i,] ~ vecClusterAssign, weights = (1 - zhat[i,]), init.theta = thetahat[i], start=coefs_mu[i,])
       return(list(coefs=coefficients(fit), theta=fit$theta))
     })
@@ -95,7 +94,6 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     
     print("Fitting dropout rates")
     fit_pi <- bplapply(seq_len(n), function(i) {
-      print(i)
       fit <- suppressWarnings(glm(zhat[,i]~log(muhat[,vecindClusterAssing[i]]), family = binomial(link = logit), start=coefs_pi[,i]))
       return(list(coefs=coefficients(fit), fitted=fitted.values(fit)))
     })

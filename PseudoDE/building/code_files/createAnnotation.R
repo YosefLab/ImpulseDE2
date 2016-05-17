@@ -18,11 +18,16 @@ createAnnotationByCluster <- function(matCounts,vecPseudotime,lsResultsClusterin
 createAnnotationByCell <- function(matCounts, vecPseudotime){
   
   # Create annotataion table treating a cell as a sample
-  # with only one replicate (itself)
-  vecTimepoints <- as.vector(vecPseudotime)
-  vecSamples <- paste0(rep("Cell_"),seq(1:length(vecPseudotime)))
+  # with only one replicate (itself), unless multiple cells
+  # map to exactly the same pseudotime point.
+  vecTimepointsUnique <- sort(unique( as.vector(vecPseudotime) ))
+  vecSamplesUnique <- paste0(rep("Sample_",length(vecTimepointsUnique)),vecTimepointsUnique)
+  vecReplicates <- names(vecPseudotime)
+  vecindTimepoints <- match(vecPseudotime,vecTimepointsUnique)
+  vecTimepoints <- vecTimepointsUnique[vecindTimepoints]
+  vecSamples <- vecSamplesUnique[vecindTimepoints]
   dfAnnotationImpulseDE2 <- as.data.frame(cbind(
-    Replicate=names(vecPseudotime),
+    Replicate=vecReplicates,
     Sample=vecSamples,
     Condition="case",
     Time=vecTimepoints ))
