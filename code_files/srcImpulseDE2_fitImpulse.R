@@ -124,7 +124,7 @@ fitImpulse_gene <- function(vecCounts,
     ))
     # Likelihood of non-zero counts:
     scaLoglikNullNonzeros <- sum(log(
-      (1-vecDropoutRate[vecboolZero & vecboolObserved])*
+      (1-vecDropoutRate[!vecboolZero & vecboolObserved])*
         dnbinom(
           vecCounts[!vecboolZero & vecboolObserved], 
           mu=scaMu, 

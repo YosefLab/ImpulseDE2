@@ -188,7 +188,7 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
   ))
   # Likelihood of non-zero counts:
   scaLogLikNonzeros <- sum(log(
-    (1-vecDropoutRateEst[vecboolZero & vecboolObserved])*
+    (1-vecDropoutRateEst[!vecboolZero & vecboolObserved])*
       dnbinom(
         vecY[!vecboolZero & vecboolObserved], 
         mu=vecImpulseValue[!vecboolZero & vecboolObserved], 

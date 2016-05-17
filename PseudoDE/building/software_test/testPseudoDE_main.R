@@ -38,7 +38,7 @@ if(FALSE){
     verbose = TRUE)
 }
 
-if(TRUE){
+if(FALSE){
   # Load files from interior of ImpulseDE
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
   load("ImpulseDE2_arr2DCountData.RData")
@@ -55,7 +55,7 @@ if(TRUE){
   source("srcImpulseDE2_plotDEGenes.R")
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
   plotDEGenes(
-    lsGeneIDs=rownames(matCounts),
+    lsGeneIDs=rownames(matCountsClean),
     arr2DCountData=arr2DCountData,
     vecNormConst=vecNormConst,
     dfAnnotationFull=dfAnnotationFull, 
@@ -72,8 +72,10 @@ if(TRUE){
 }
 if(FALSE){
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_dfAnnotation.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_vecDispersions.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsInputToImpulseDE2.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsResultsClustering.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matCountsClean.RData")
   matDropout <- lsInputToImpulseDE2$matDropout
   matProbNB <- lsInputToImpulseDE2$matProbNB
   matCountsImputed <- lsInputToImpulseDE2$matCountsImputed

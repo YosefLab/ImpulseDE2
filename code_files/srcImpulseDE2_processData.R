@@ -317,12 +317,14 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     # For DESeq2: Take out zero-counts
     arr2DCountDataImputed[arr2DCountDataImputed==0] <- 1
     matProbNB <- lsPseudoDE$matProbNB
+    matDropout <- lsPseudoDE$matDropout
   } else {
     arr2DCountDataImputed <- NULL
     matProbNB <- NULL
+    matDropout <- NULL
   }
   
-  lsProcessedData <- list(arr2DCountData, arr2DCountDataImputed, matProbNB)
-  names(lsProcessedData) <- c("arr2DCountData", "arr2DCountDataImputed", "matProbNB")
+  lsProcessedData <- list(arr2DCountData, arr2DCountDataImputed, matProbNB, matDropout)
+  names(lsProcessedData) <- c("arr2DCountData", "arr2DCountDataImputed", "matProbNB", "matDropout")
   return( lsProcessedData )
 }

@@ -250,8 +250,11 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
       if(strMode=="batch" | strMode=="timecourses"){
         arr2DCountDataForDESeq2 <- arr2DCountData
       } else if(strMode=="singlecell"){
-        arr2DCountDataForDESeq2 <- arr2DCountDataImputed
-      } 
+        arr2DCountDataForDESeq2 <- arr2DCountData
+        arr2DCountDataForDESeq2[arr2DCountDataForDESeq2==0] <- 1
+      } else {
+        stop(paste0("ERROR: Unrecognised strMode in runImpulseDE2(): ",strMode))
+      }
       lsDESeq2Results <- runDESeq2(
         dfAnnotationFull=dfAnnotationFull,
         arr2DCountData=arr2DCountDataForDESeq2,
