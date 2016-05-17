@@ -41,7 +41,7 @@ computeNormConst <- function(arr2DCountData, dfAnnotationFull,
   # by the probability of each observation to come
   # from the negative binomial distribution.
   arr2DCountDataNoZeros <- arr2DCountData
-  arr2DCountDataNoZeros[arr2DCountDataNoZeros==0] <- 1
+  arr2DCountDataNoZeros[arr2DCountDataNoZeros==0] <- 0.1
   vecGeomMean <- sapply(c(1:dim(arr2DCountDataNoZeros)[1]), 
     function(gene){
       ( prod(arr2DCountDataNoZeros[gene,]^matProbNB[gene,], na.rm=TRUE) )^

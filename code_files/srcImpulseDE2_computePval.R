@@ -53,7 +53,7 @@ computePval <- function(arr2DCountData,vecDispersions,
     vecLogLikRed <- lsImpulseFits$parameters_case[,"logL_H0"]
     # Mean inferred expression:
     vecMu <- lsImpulseFits$parameters_case[,"mu"]
-    if(strMode=="batch"){
+    if(strMode=="batch" | strMode=="singlecell"){
       # Parameters and 1 dispersion estimate
       scaDegFreedomFull <- NPARAM + 1
       # 1 dispersion estimate and overall mean estimate
@@ -75,7 +75,7 @@ computePval <- function(arr2DCountData,vecDispersions,
     vecLogLikRed <- lsImpulseFits$parameters_combined[,"logL_H1"]
     # Mean inferred expression: On combined data
     vecMu <- lsImpulseFits$parameters_combined[,"mu"]
-    if(strMode=="batch"){
+    if(strMode=="batch" | strMode=="singlecell"){
       # Parameters of both models (case and control) and 1 dispersion estimate
       scaDegFreedomFull <- NPARAM*2 + 1
       # Parameters of one model (combined) and 1 dispersion estimate

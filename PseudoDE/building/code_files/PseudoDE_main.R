@@ -2,9 +2,9 @@ library(compiler)
 library(parallel)
 library(DESeq2)
 library(BiocParallel)
-library(scone)
-#source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
-#library(MASS)
+#library(scone)
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
+library(MASS)
 
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_CostFunctionsFit.R")
@@ -15,7 +15,7 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 runPseudoDE <- function(matCounts, vecPseudotime,
   nProc=1){
   
-  MAXITER <- 3
+  MAXITER <- 1
   
   # 1. Data preprocessing
   print("1. Data preprocessing:")
@@ -44,8 +44,8 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     # Remove all zero genes: Mu is initialised
     # as log(sum counts)
     matCounts <- matCounts[apply(matCounts,1,function(gene){any(gene!=0)}),]
-    
   })
+  save(matCounts,file=file.path(getwd(),"PseudoDE_matCounts.RData"))
   
   # 2. Cluster cells in pseudo-time
   print("2. Clustering:")
@@ -82,55 +82,99 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     # mean model.
     matDropout <- array(1,c(dim(matCounts)[1],dim(matCounts)[2]))
     matProbNB <- array(1,c(dim(matCounts)[1],dim(matCounts)[2]))
-    # Negative binomial over-dispersion factor: 1 per gene per cluster
-    matDispersion <- array(NA,c(dim(matCounts)[1],lsResultsClustering$K))
-    lsZinbOutputByCluster <- list()
-    for(k in 1:lsResultsClustering$K){
-      print(paste0("Fitting cluster ",k))
+    if(FALSE){
+      # Fit to clusters seperately, use original verision of fitting function
       
-      # Remove all zero genes: Mu is initialised
-      # as log(sum counts)
-      vecidxCluster <- lsResultsClustering$Assignments==k
-      matCountsCluster <- matCounts[,vecidxCluster]
-      # this doesnt work for 20 genes:
-      #vecboolNonzeroGenes <- apply(matCountsCluster,1,
-      #  function(gene){any(gene!=0)})
+      # Negative binomial over-dispersion factor: 1 per gene per cluster
+      matDispersion <- array(NA,c(dim(matCounts)[1],lsResultsClustering$K))
+      lsZinbOutputByCluster <- list()
+      for(k in 1:lsResultsClustering$K){
+        print(paste0("Fitting cluster ",k))
+        
+        # Remove all zero genes: Mu is initialised
+        # as log(sum counts)
+        vecidxCluster <- lsResultsClustering$Assignments==k
+        matCountsCluster <- matCounts[,vecidxCluster]
+        # this doesnt work for 20 genes:
+        #vecboolNonzeroGenes <- apply(matCountsCluster,1,
+        #  function(gene){any(gene!=0)})
+        # this works for 20 genes:
+        vecboolNonzeroGenes <- apply(matCountsCluster,1,
+          function(gene){mean(gene)>10})
+        matCountsCluster <- matCountsCluster[vecboolNonzeroGenes,]
+        
+        # Fit zinb model
+        lsZINBparam <- estimate_zinb(
+          Y = matCountsCluster, 
+          maxiter = MAXITER, 
+          verbose = TRUE)
+        lsZinbOutputByCluster[[k]] <- lsZINBparam
+        
+        # Record parameters
+        matDropout[vecboolNonzeroGenes,vecidxCluster] <- lsZINBparam$pi
+        matProbNB[vecboolNonzeroGenes,vecidxCluster] <- lsZINBparam$p_z
+        matDispersion[vecboolNonzeroGenes,k] <- lsZINBparam$theta
+        
+        # Impute count data matrix
+        matCountsImputed[vecboolNonzeroGenes,vecidxCluster] <- 
+          matCountsCluster * lsZINBparam$p_z + 
+          lsZINBparam$mu * (1 - lsZINBparam$p_z)
+      }
+    } else {
+      vecDispersions <- array(NA,c(dim(matCounts)[1],1))
       # this works for 20 genes:
-      vecboolNonzeroGenes <- apply(matCountsCluster,1,
+      vecboolNonzeroGenes <- apply(matCounts,1,
         function(gene){mean(gene)>10})
-      matCountsCluster <- matCountsCluster[vecboolNonzeroGenes,]
-      
+      matCountsClean <- matCounts[vecboolNonzeroGenes,]
       # Fit zinb model
+      vecClusterAssign <- paste0(rep("cluster_",length(lsResultsClustering$Assignments)),lsResultsClustering$Assignments)
       lsZINBparam <- estimate_zinb(
-        Y = matCountsCluster, 
+        Y = matCountsClean,
+        vecClusterAssign = vecClusterAssign,
         maxiter = MAXITER, 
         verbose = TRUE)
-      lsZinbOutputByCluster[[k]] <- lsZINBparam
+      lsZinbOutput <- lsZINBparam
       
       # Record parameters
-      matDropout[vecboolNonzeroGenes,vecidxCluster] <- lsZINBparam$pi
-      matProbNB[vecboolNonzeroGenes,vecidxCluster] <- lsZINBparam$p_z
-      matDispersion[vecboolNonzeroGenes,k] <- lsZINBparam$theta
-    
+      matDropout[vecboolNonzeroGenes,] <- lsZINBparam$pi
+      matProbNB[vecboolNonzeroGenes,] <- lsZINBparam$p_z
+      vecDispersions[vecboolNonzeroGenes] <- lsZINBparam$theta
+      
       # Impute count data matrix
-      matCountsImputed[vecboolNonzeroGenes,vecidxCluster] <- 
-        matCountsCluster * lsZINBparam$p_z + 
-        lsZINBparam$mu * (1 - lsZINBparam$p_z)
+      vecClusters <- unique(vecClusterAssign)
+      vecindClusterAssing <- match(vecClusterAssign, vecClusters)
+      matCountsImputed[vecboolNonzeroGenes,] <- 
+        matCountsClean * lsZINBparam$p_z + 
+        lsZINBparam$mu[,vecindClusterAssing] * (1 - lsZINBparam$p_z)
     }
     # Put objects together
+    rownames(matDropout) <- rownames(matCounts)
+    colnames(matDropout) <- colnames(matCounts)
+    rownames(matProbNB) <- rownames(matCounts)
+    colnames(matProbNB) <- colnames(matCounts)
+    rownames(matCountsImputed) <- rownames(matCounts)
+    colnames(matCountsImputed) <- colnames(matCounts)
     matCountsImputed <- round(matCountsImputed)
     lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed)
     names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed")
   })
-  save(lsZinbOutputByCluster,file=file.path(getwd(),"PseudoDE_lsZinbOutputByCluster.RData"))
   save(lsInputToImpulseDE2,file=file.path(getwd(),"PseudoDE_lsInputToImpulseDE2.RData"))
+  save(vecDispersions,file=file.path(getwd(),"PseudoDE_vecDispersions.RData"))
   print(paste("Consumed time: ",round(tm_fitmm["elapsed"]/60,2),
     " min",sep=""))
+  
+  if(any(is.na(vecDispersions) | !is.finite(vecDispersions))){
+    vecDispersions[is.na(vecDispersions) | !is.finite(vecDispersions)] <- 1
+    print("WARNING: Found NA/inf dispersions")
+    print(vecDispersions)
+  }
   
   # 4. Differential expression analysis: Run ImpulseDE2
   print("4. Differential expression analysis: Run ImpulseDE2:")
   print("### Begin ImpulseDE2 output ################################")
   tm_deanalysis <- system.time({
+    source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
+    setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
     lsImpulseDE2results <- runImpulseDE2(
       matCountData = matCounts, 
       dfAnnotationFull = dfAnnotation,
@@ -140,7 +184,8 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       nProc = nProc, 
       Q_value = 0.01,
       boolPlotting = TRUE,
-      lsPseudo = lsInputToImpulseDE2)
+      lsPseudo = lsInputToImpulseDE2,
+      vecDispersionsExternal=vecDispersions)
   })
   print("### End ImpulseDE2 output ##################################")
   save(lsImpulseDE2results,file=file.path(getwd(),"PseudoDE_lsImpulseDE2results.RData"))

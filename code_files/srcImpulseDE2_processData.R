@@ -314,10 +314,12 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   # Process single cell hyperparameters
   if(strMode=="singlecell"){
     arr2DCountDataImputed <- lsPseudoDE$matCountsImputed
+    # For DESeq2: Take out zero-counts
+    arr2DCountDataImputed[arr2DCountDataImputed==0] <- 1
     matProbNB <- lsPseudoDE$matProbNB
   } else {
     arr2DCountDataImputed <- NULL
-    matProbNB <- array(1,c(dim(arr2DCountData)[1],dim(arr2DCountData)[2]))
+    matProbNB <- NULL
   }
   
   lsProcessedData <- list(arr2DCountData, arr2DCountDataImputed, matProbNB)

@@ -157,7 +157,7 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'    \item \code{ImpulseDE2_dfAnnotationFull.RData} (data frame) Annotation table.
 #'    \item \code{ImpulseDE2_vecNormConst.RData} (matrix samples x replicates) Normalisation
 #'    constants for each replicate. Missing samples are set NA.
-#'    \item \code{ImpulseDE2_vecDESeq2Dispersions.RData} (vector number of genes) Inverse 
+#'    \item \code{ImpulseDE2_vecDispersions.RData} (vector number of genes) Inverse 
 #'        of gene-wise negative binomial dispersion coefficients computed by DESeq2.
 #'    \item \code{ImpulseDE2_dfDESeq2Results.RData} (data frame) DESeq2 results.
 #'    \item \code{ImpulseDE2_lsImpulseFits.RData} (list) List of matrices which
@@ -208,7 +208,7 @@ source("srcImpulseDE2_plotDEGenes.R")
 runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
   strCaseName = NULL, strControlName=NULL, strMode="batch",
   nProc=3, Q_value=0.01, boolPlotting=TRUE,
-  lsPseudoDE=NULL){
+  lsPseudoDE=NULL, vecDispersionsExternal=NULL){
   
   NPARAM=6
   
@@ -227,6 +227,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     arr2DCountData <- lsProcessedData$arr2DCountData
     arr2DCountDataImputed  <- lsProcessedData$arr2DCountDataImputed
     matProbNB <- lsProcessedData$matProbNB
+    matDropoutRate <- lsProcessedData$matDropout
     
     save(arr2DCountData,file=file.path(getwd(),"ImpulseDE2_arr2DCountData.RData"))
     save(arr2DCountDataImputed,file=file.path(getwd(),"ImpulseDE2_arr2DCountDataImputed.RData"))
@@ -258,9 +259,13 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
         strControlName=strControlName,
         strMode=strMode)
     })
-    vecDESeq2Dispersions <- lsDESeq2Results[[1]]
+    if(is.null(vecDispersions)){
+      vecDispersions <- lsDESeq2Results[[1]]
+    } else {
+      vecDispersions <- vecDispersionsExternal
+    }
     dfDESeq2Results <- lsDESeq2Results[[2]]
-    save(vecDESeq2Dispersions,file=file.path(getwd(),"ImpulseDE2_vecDESeq2Dispersions.RData"))
+    save(vecDispersions,file=file.path(getwd(),"ImpulseDE2_vecDispersions.RData"))
     save(dfDESeq2Results,file=file.path(getwd(),"ImpulseDE2_dfDESeq2Results.RData"))
     print(paste("Consumed time: ",round(tm_runDESeq2["elapsed"]/60,2),
       " min",sep=""))
@@ -270,7 +275,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     tm_fitImpulse <- system.time({
       lsImpulseFits <- fitImpulse(
         arr2DCountData=arr2DCountData, 
-        vecDispersions=vecDESeq2Dispersions,
+        vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate,
         matProbNB=matProbNB,
         vecNormConst=vecNormConst,
@@ -289,7 +294,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     print("5. DE analysis")
     dfImpulseResults <- computePval(
       arr2DCountData=arr2DCountData,
-      vecDispersions=vecDESeq2Dispersions,
+      vecDispersions=vecDispersions,
       dfAnnotationFull=dfAnnotationFull,
       lsImpulseFits=lsImpulseFits,
       strCaseName=strCaseName, 

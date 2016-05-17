@@ -113,26 +113,26 @@ fitImpulse_gene <- function(vecCounts,
     
     # Evaluate likelihood of null model
     # Likelihood of zero counts:
-    scaLogLikNullZeros <- sum(log(
-      (1-vecDropoutRateEst[vecboolZero & vecboolObserved])*
+    scaLoglikNullZeros <- sum(log(
+      (1-vecDropoutRate[vecboolZero & vecboolObserved])*
         dnbinom(
-          vecY[vecboolZero & vecboolObserved], 
+          vecCounts[vecboolZero & vecboolObserved], 
           mu=scaMu, 
-          size=scaDispEst, 
+          size=scaDispersionEstimate, 
           log=FALSE) +
-        vecDropoutRateEst[vecboolZero & vecboolObserved]
+        vecDropoutRate[vecboolZero & vecboolObserved]
     ))
     # Likelihood of non-zero counts:
-    scaLogLikNullNonzeros <- sum(log(
-      (1-vecDropoutRateEst[vecboolZero & vecboolObserved])*
+    scaLoglikNullNonzeros <- sum(log(
+      (1-vecDropoutRate[vecboolZero & vecboolObserved])*
         dnbinom(
-          vecY[!vecboolZero & vecboolObserved], 
+          vecCounts[!vecboolZero & vecboolObserved], 
           mu=scaMu, 
-          size=scaDispEst, 
+          size=scaDispersionEstimate, 
           log=FALSE)
     ))
     # Compute likelihood of all data:
-    scaLogLikNull <- scaLogLikNullZeros + scaLogLikNullNonzeros
+    scaLoglikNull <- scaLoglikNullZeros + scaLoglikNullNonzeros
   } else if(strMode=="timecourses"){
     # Null model (longitudinal sampling): 
     # Fit one mean for each time course (longitudinal series).
@@ -193,8 +193,8 @@ fitImpulse_gene <- function(vecCounts,
     vecExpressionMeans <- sapply(vecTimepoints,
       function(tp){mean(vecCounts[vecTimepointAssign==tp], na.rm=TRUE)})
   } else if(strMode=="singlecell"){
-    vecExpressionMeans <- sapply(vecTimepoints,
-      function(tp){(sum(vecCounts/vecNormConst*vecProbNB, na.rm=TRUE)/(sum(vecProbNB)))[vecTimepointAssign==tp]})
+    vecExpressionMeans <- unlist(sapply( vecTimepoints,
+      function(tp){sum((vecCounts/vecNormConst*vecProbNB)[vecTimepointAssign==tp], na.rm=TRUE)/sum(vecProbNB[vecTimepointAssign==tp])} ))
   } else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }

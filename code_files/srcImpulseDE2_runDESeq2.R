@@ -44,6 +44,7 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
     # experimentes are assumed to be i.i.d. In batch mode,
     # all samples should originate form the same series of 
     # independent samples.
+    
     if(strMode=="batch" | strMode=="singlecell"){
       # Create DESeq2 data object
       dds <- DESeqDataSetFromMatrix(countData = arr2DCountData,
