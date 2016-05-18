@@ -201,7 +201,6 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
       sum(vecLikNonzeros==0)*log(.Machine$double.eps) )
   # Compute likelihood of all data:
   scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
-  
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)
 }

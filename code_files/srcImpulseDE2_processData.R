@@ -381,12 +381,14 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   if(strMode=="singlecell"){
     matProbNB <- lsPseudoDE$matProbNB
     matDropout <- lsPseudoDE$matDropout
+    matClusterMeansFitted <- lsPseudoDE$matClusterMeansFitted
   } else {
     matProbNB <- NULL
     matDropout <- NULL
+    matClusterMeansFitted <- NULL
   }
   
-  lsProcessedData <- list(arr2DCountData, matProbNB, matDropout)
-  names(lsProcessedData) <- c("arr2DCountData", "matProbNB", "matDropout")
+  lsProcessedData <- list(arr2DCountData, matProbNB, matDropout, matClusterMeansFitted)
+  names(lsProcessedData) <- c("arr2DCountData", "matProbNB", "matDropout", "matClusterMeansFitted")
   return( lsProcessedData )
 }

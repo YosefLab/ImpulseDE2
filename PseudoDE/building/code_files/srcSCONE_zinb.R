@@ -103,9 +103,6 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     #muhat <- exp(coefs_mu)
     muhat <- lapply(fit_mu, function(x) x$fitted)
     muhat <- do.call(rbind, muhat)
-    #print(unique(muhat[1,]))
-    #print(unique(muhat[2,]))
-    #print(head(exp(coefs_mu)))
     
     thetahat <- sapply(fit_mu, function(x) x$theta)
     matthetahat <- matrix(thetahat, nrow=dim(muhat)[1], ncol=dim(muhat)[2], byrow=FALSE)

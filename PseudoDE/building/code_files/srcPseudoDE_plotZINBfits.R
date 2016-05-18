@@ -14,7 +14,7 @@
 #'    version of \code{matCountData}. For internal use.
 #' @param vecNormConst: (numeric vector number of replicates) 
 #'    Normalisation constants for each replicate.
-#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
+#' @param dfAnnotation (Table) Lists co-variables of individual replicates:
 #'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param lsImpulseFits (list length 2 or 6) List of matrices which
 #'    contain parameter fits and model values for given time course for the
@@ -31,9 +31,9 @@
 #' @param dfDEAnalysis (data frame genes x fitting characteristics) 
 #'    Summary of fitting procedure for each gene.
 #' @param vecRefPval (vec length genes) Method 2 (DESeq2) adjusted p-values
-#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationFullFull}.
+#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
-#'    \code{dfAnnotationFullFull}.
+#'    \code{dfAnnotationFull}.
 #' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
 #'    Mode of model fitting.
 #' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
@@ -46,8 +46,9 @@
 #' @export
 
 plotZINBfits <- function(lsGeneIDs, arr2DCountData,
-  matClusterMeans, vecDispersions, vecClusterAssignments,
-  dfAnnotationFull, strPDFname="PseudoDE_ZINBfits.pdf"){
+  matClusterMeans, vecDispersions, 
+  vecClusterAssignments, lsResultsClustering,
+  dfAnnotation, strPDFname="PseudoDE_ZINBfits.pdf"){
   
   # Only for batch/singlecell plotting:
   # Width of negative binomial pdf (ylim) in time units for plotting
@@ -56,7 +57,7 @@ plotZINBfits <- function(lsGeneIDs, arr2DCountData,
   # and plotted at sample x time units vertically in the interval
   # [x,x+1] time units, with the y axis (the counts) being the
   # horizontal axis of the pdf.
-  PDF_WIDTH <- 1
+  #PDF_WIDTH <- 1
   
   # Scale count data by size factors for plotting:
   # The impulse models are fit based on normalised means.
@@ -78,54 +79,63 @@ plotZINBfits <- function(lsGeneIDs, arr2DCountData,
   vecClusters <- sort(unique(vecClusterAssignments))
   vecindClusterAssignments <- match(vecClusterAssignments,vecClusters)
   
-  # Open .pdf
-  pdf(strPDFname,height=6.0,width=9.0)
-  
   # Define grid for printing plots
-  if (length(lsGeneIDs) == 1){
-    par(mfrow=c(1,1), xpd=TRUE)
-    scaLegendInset <- -0.15
-  } else if (length(lsGeneIDs) <= 4){
-    par(mfrow=c(2,2), xpd=TRUE)
-    scaLegendInset <- -0.35
-  } else if (length(lsGeneIDs) <= 6){
-    par(mfrow=c(2,3), xpd=TRUE)
-    scaLegendInset <- -0.3
-  } else {
-    par(mfrow=c(3,3), xpd=TRUE)
-    scaLegendInset <- -0.65
-  }
+  par(mfrow=c(3,3), xpd=TRUE)
+  scaLegendInset <- -0.65
   
+  lsPlots <- list()
   for (geneID in lsGeneIDs){
     # Plot observed points in blue - all time courses in same colour
-    scaYlim_lower <- min( min(arr2DCountData[geneID,],na.rm=TRUE) )
-    scaYlim_upper <- max( max(arr2DCountData[geneID,],na.rm=TRUE) )
-    plot(vecindClusterAssignments,
-      arr2DCountData[geneID,],
-      col="blue",pch=3,
-      xlim=c(0,max(vecindClusterAssignments,na.rm=TRUE)+PDF_WIDTH), 
-      ylim=c(scaYlim_lower,scaYlim_upper),
-      xlab="Cluster", ylab="Counts",
-      main=geneID )
-    
-    # Plot inferred negative binomial pdf at each time point in black (vertical)
-    vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
-    for(cl in vecClusters){
-      vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matClusterMeans[geneID,match(cl,vecClusters)],
-        size=vecDispersions[geneID])
-      # Scale Y_coord to uniform peak heights of 1
-      # This translates into width of one time unit in plot
-      vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
-      # Plot pdf vertically at time point
-      lines(x=match(cl,vecClusters)+vecYCoordPDF,y=vecXCoordPDF,col="black")
+    if(FALSE){
+      scaYlim_lower <- min(arr2DCountData[geneID,],na.rm=TRUE)
+      scaYlim_upper <- max(arr2DCountData[geneID,],na.rm=TRUE)
+      plot(vecindClusterAssignments,
+        arr2DCountData[geneID,],
+        col="blue",pch=3,
+        xlim=c(0,max(vecindClusterAssignments,na.rm=TRUE)+PDF_WIDTH), 
+        ylim=c(scaYlim_lower,scaYlim_upper),
+        xlab="Cluster", ylab="Counts",
+        main=geneID )
+      
+      # Plot inferred negative binomial pdf at each time point in black (vertical)
+      vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
+      for(cl in vecClusters){
+        vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matClusterMeans[geneID,match(cl,vecClusters)],
+          size=vecDispersions[geneID])
+        # Scale Y_coord to uniform peak heights of 1
+        # This translates into width of one time unit in plot
+        vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
+        # Plot pdf vertically at time point
+        lines(x=match(cl,vecClusters)+vecYCoordPDF,y=vecXCoordPDF,col="black")
+      }
+      
+      # Plot mean of each cluster
+      points(seq(1,length(vecClusters)),
+        matClusterMeans[geneID,],
+        col="black",pch=1)
+    } else{
+      for(cl in vecClusters){
+        vecXCoordPDF <- seq(0,max(arr2DCountData[geneID,vecindClusterAssignments==match(cl,vecClusters)],na.rm=TRUE))
+        vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matClusterMeans[geneID,match(cl,vecClusters)],
+          size=vecDispersions[geneID])
+        # Plot both
+        dfData <- data.frame( counts=as.vector(arr2DCountData[geneID,vecindClusterAssignments==match(cl,vecClusters)] ) )
+        dfDensity <- data.frame( counts=vecXCoordPDF, density=vecYCoordPDF)
+        lsPlots[[length(lsPlots)+1]] <- ggplot( ) +
+          geom_histogram( data=dfData, aes(x=counts, y=..density..), alpha = 0.5, position = 'identity') +
+          geom_line( data=dfDensity, aes(x=counts, y=density), col = "red") +
+          labs(title=paste0(geneID," Cluster ", cl, " Observed cells: ",length(dfData$counts),
+            "\n Non-zero counts: ", sum(dfData$counts!=0), " Inferred mean: ", round(matClusterMeans[geneID,match(cl,vecClusters)]))) +
+          xlab("Counts") +
+          ylab("Density")
+      }
     }
-    
-    # Plot mean of each cluster
-    print(seq(1,length(vecClusters)))
-    print(matClusterMeans[geneID,])
-    points(seq(1,length(vecClusters)),
-      matClusterMeans[geneID,],
-      col="black",pch=1)
+  }
+  
+  # Open .pdf
+  pdf(strPDFname,height=6.0,width=9.0)
+  for(plotTF in lsPlots){
+    print(plotTF)
   }
   # Close .pdf
   dev.off()

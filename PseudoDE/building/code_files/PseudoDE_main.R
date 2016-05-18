@@ -2,6 +2,7 @@ library(compiler)
 library(parallel)
 library(DESeq2)
 library(BiocParallel)
+library(ggplot2)
 #library(scone)
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
 library(MASS)
@@ -12,11 +13,12 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_f
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/clusterCellsInPseudotime.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/createAnnotation.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotPseudotimeClustering.R")
 
 runPseudoDE <- function(matCounts, vecPseudotime,
   nProc=1){
   
-  MAXITER <- 3
+  MAXITER <- 5
   
   # 1. Data preprocessing
   print("1. Data preprocessing:")
@@ -53,15 +55,17 @@ runPseudoDE <- function(matCounts, vecPseudotime,
   tm_clustering <- system.time({
     lsResultsClustering <- clusterCellsInPseudotime(vecPseudotime=vecPseudotime)
     # Fit by cluster
-    #dfAnnotation <- createAnnotationByCluster(matCounts=matCounts,
-    #  vecPseudotime=vecPseudotime,
-    #  lsResultsClustering=lsResultsClustering)
+    dfAnnotation <- createAnnotationByCluster(matCounts=matCounts,
+      vecPseudotime=vecPseudotime,
+      lsResultsClustering=lsResultsClustering)
     # Fit by cell
-    dfAnnotation <- createAnnotationByCell(matCounts=matCounts,
-      vecPseudotime=vecPseudotime)
+    #dfAnnotation <- createAnnotationByCell(matCounts=matCounts,
+    #  vecPseudotime=vecPseudotime)
   })
   save(lsResultsClustering,file=file.path(getwd(),"PseudoDE_lsResultsClustering.RData"))
   save(dfAnnotation,file=file.path(getwd(),"PseudoDE_dfAnnotation.RData"))
+  plotPseudotimeClustering(vecPseudotime=vecPseudotime, 
+    lsResultsClustering=lsResultsClustering)
   print(paste("Time elapsed during clustering: ",round(tm_clustering["elapsed"]/60,2),
     " min",sep=""))
   
@@ -159,16 +163,17 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     rownames(matCountsImputed) <- rownames(matCountsClean)
     colnames(matCountsImputed) <- colnames(matCountsClean)
     matCountsImputed <- round(matCountsImputed)
-    lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed)
-    names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed")
     names(vecDispersions) <- rownames(matCountsClean)
     matClusterMeansFitted <- (lsZINBparam$mu)[,match(seq(1,length(vecClusters)),lsResultsClustering$Assignments)]
     rownames(matClusterMeansFitted) <- rownames(matCountsClean)
+    lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed, matClusterMeansFitted)
+    names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed", "matClusterMeansFitted")
   })
   save(lsInputToImpulseDE2,file=file.path(getwd(),"PseudoDE_lsInputToImpulseDE2.RData"))
   save(lsZINBparam,file=file.path(getwd(),"PseudoDE_lsZINBparam.RData"))
   save(vecDispersions,file=file.path(getwd(),"PseudoDE_vecDispersions.RData"))
   save(matCountsClean,file=file.path(getwd(),"PseudoDE_matCountsClean.RData"))
+  save(matClusterMeansFitted,file=file.path(getwd(),"PseudoDE_matClusterMeansFitted.RData"))
   print(paste("Time elapsed during ZINB fitting: ",round(tm_fitmm["elapsed"]/60,2),
     " min",sep=""))
   
@@ -177,13 +182,15 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     print("WARNING: Found NA/inf dispersions")
     print(vecDispersions)
   }
+  graphics.off()
   source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
   plotZINBfits(lsGeneIDs=rownames(matCountsClean), 
     arr2DCountData=matCountsClean,
     matClusterMeans=matClusterMeansFitted, 
     vecDispersions=vecDispersions, 
     vecClusterAssignments=lsResultsClustering$Assignments,
-    dfAnnotationFull=dfAnnotation, 
+    lsResultsClustering=lsResultsClustering,
+    dfAnnotation=dfAnnotation, 
     strPDFname="PseudoDE_ZINBfits.pdf" )
   
   # 4. Differential expression analysis: Run ImpulseDE2
@@ -203,7 +210,9 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       boolPlotting = TRUE,
       lsPseudo = lsInputToImpulseDE2,
       vecDispersionsExternal=vecDispersions,
-      boolRunDESeq2=FALSE )
+      boolRunDESeq2=FALSE,
+      boolSimplePlot=TRUE, boolLogPlot=TRUE
+      )
   })
   print("### End ImpulseDE2 output ##################################")
   save(lsImpulseDE2results,file=file.path(getwd(),"PseudoDE_lsImpulseDE2results.RData"))

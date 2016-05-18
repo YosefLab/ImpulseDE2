@@ -209,7 +209,8 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
   strCaseName = NULL, strControlName=NULL, strMode="batch",
   nProc=3, Q_value=0.01, boolPlotting=TRUE,
   lsPseudoDE=NULL, 
-  vecDispersionsExternal=NULL, boolRunDESeq2=TRUE ){
+  vecDispersionsExternal=NULL, boolRunDESeq2=TRUE,
+  boolSimplePlot=FALSE, boolLogPlot=FALSE ){
   
   NPARAM=6
   
@@ -230,6 +231,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     arr2DCountData <- lsProcessedData$arr2DCountData
     matProbNB <- lsProcessedData$matProbNB
     matDropoutRate <- lsProcessedData$matDropout
+    matClusterMeansFitted <- lsProcessedData$matClusterMeansFitted
     
     save(arr2DCountData,file=file.path(getwd(),"ImpulseDE2_arr2DCountData.RData"))
     save(matProbNB,file=file.path(getwd(),"ImpulseDE2_matProbNB.RData"))
@@ -263,6 +265,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
       names(vecRefPval) <- rownames(dfDESeq2Results)
       strRefMethod <- "DESeq2"
     } else { 
+      print("3. Not running DESeq2")
       vecRefPval <- NULL
       strRefMethod <- NULL
     }
@@ -328,15 +331,18 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
           vecNormConst=vecNormConst,
           dfAnnotationFull=dfAnnotationFull, 
           lsImpulseFits=lsImpulseFits,
+          matClusterMeansFitted=matClusterMeansFitted,
+          dfImpulseResults=dfImpulseResults,
+          vecRefPval=vecRefPval,
+          strMode=strMode,
           strCaseName=strCaseName, 
           strControlName=strControlName, 
           strFileNameSuffix="DE", 
           strPlotTitleSuffix="", 
           strPlotSubtitle="",
-          dfImpulseResults=dfImpulseResults,
-          vecRefPval=vecRefPval,
-          strMode=strMode,
           strNameMethod2=strRefMethod,
+          boolSimplePlot=boolSimplePlot,
+          boolLogPlot=boolLogPlot,
           NPARAM=NPARAM)
       })
       print(paste("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2),

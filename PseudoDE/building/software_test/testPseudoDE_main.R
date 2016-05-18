@@ -77,6 +77,8 @@ if(FALSE){
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsResultsClustering.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matCountsClean.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsZINBparam.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matCountsClean.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matClusterMeansFitted.RData")
   matDropout <- lsInputToImpulseDE2$matDropout
   matProbNB <- lsInputToImpulseDE2$matProbNB
   matCountsImputed <- lsInputToImpulseDE2$matCountsImputed
