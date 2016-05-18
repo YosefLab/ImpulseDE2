@@ -162,7 +162,7 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,vecY,
 evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
   scaDispEst, vecDropoutRateEst, 
   vecNormConst,
-  vecindTimepointAssign, vecboolObserved, vecboolZero){  
+  vecindTimepointAssign, vecboolNotZeroObserved, vecboolZero){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each replicate.
@@ -177,24 +177,28 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
   # components of the likelihood model and accordingly log=FALSE
   # inside dnbinom.
   # Likelihood of zero counts:
-  scaLogLikZeros <- sum(log(
-    (1-vecDropoutRateEst[vecboolZero & vecboolObserved])*
-      dnbinom(
-        vecY[vecboolZero & vecboolObserved], 
-        mu=vecImpulseValue[vecboolZero & vecboolObserved], 
-        size=scaDispEst, 
-        log=FALSE) +
-      vecDropoutRateEst[vecboolZero & vecboolObserved]
-  ))
+  vecLikZeros <- (1-vecDropoutRateEst[vecboolZero])*
+    dnbinom(
+      vecY[vecboolZero], 
+      mu=vecImpulseValue[vecboolZero], 
+      size=scaDispEst, 
+      log=FALSE) +
+    vecDropoutRateEst[vecboolZero]
+  # Replace zero likelihood observation with machine precision
+  # for taking log.
+  scaLogLikZeros <- sum( log(vecLikZeros[vecLikZeros!=0]) +
+      sum(vecLikZeros==0)*log(.Machine$double.eps) )
   # Likelihood of non-zero counts:
-  scaLogLikNonzeros <- sum(log(
-    (1-vecDropoutRateEst[!vecboolZero & vecboolObserved])*
-      dnbinom(
-        vecY[!vecboolZero & vecboolObserved], 
-        mu=vecImpulseValue[!vecboolZero & vecboolObserved], 
-        size=scaDispEst, 
-        log=FALSE)
-  ))
+  vecLikNonzeros <- (1-vecDropoutRateEst[vecboolNotZeroObserved])*
+    dnbinom(
+      vecY[vecboolNotZeroObserved], 
+      mu=vecImpulseValue[vecboolNotZeroObserved], 
+      size=scaDispEst, 
+      log=FALSE)
+  # Replace zero likelihood observation with machine precision
+  # for taking log.
+  scaLogLikNonzeros <- sum( log(vecLikNonzeros[vecLikNonzeros!=0]) +
+      sum(vecLikNonzeros==0)*log(.Machine$double.eps) )
   # Compute likelihood of all data:
   scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
   

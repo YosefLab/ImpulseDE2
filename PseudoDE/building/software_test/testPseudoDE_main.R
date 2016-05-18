@@ -18,7 +18,7 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 matCounts <- data.matrix(dfCountsE4)
 lsPTpoints_p63PT1 <- lsPTpoints_p63PT1[!is.na(lsPTpoints_p63PT1)]
 matCounts <- matCounts[,colnames(matCounts) %in% names(lsPTpoints_p63PT1)]
-matCounts <- matCounts[1:200,]
+matCounts <- matCounts[1:10,]
 #matCounts <- round(counts)
 nProc=3
 vecPseudotime <- lsPTpoints_p63PT1[colnames(matCounts)]

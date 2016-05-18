@@ -41,6 +41,8 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
   vecindClusterAssing <- match(vecClusterAssign, vecClusters)
   mu0 <- lapply(vecClusters ,function(cluster){rowMeans(Y[,vecClusterAssign==cluster]+1)})
   mu0 <- do.call(cbind, mu0)
+  muhat0 <- mu0[,vecindClusterAssing]
+  coefs_mu <- cbind(log(rowMeans(Y)),array(0,c(J,length(vecClusters)-1)))
   
   pi0 <- sapply(seq_len(n), function(i) {
     y <- as.numeric(Y[,i]<=0)
@@ -52,21 +54,29 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
   zhat[Y>0] <- 0
   thetahat <- rep(1, J)
   
-  coefs_mu <- log(mu0)
-  coefs_pi <- sapply(seq_len(n), function(i) {
-    fit <- suppressWarnings(glm(zhat[,i]~log(mu0[,vecindClusterAssing[i]]), family = binomial(link = logit)))
-    return(coefficients(fit))
+  #coefs_mu <- log(mu0)
+  fit_pi <- bplapply(seq_len(n), function(i) {
+    fit <- suppressWarnings(glm(zhat[,i]~muhat0[,i], family = binomial(link = logit)))
+    return(list(coefs=coefficients(fit), fitted=fitted.values(fit)))
   })
+  coefs_pi <- sapply(fit_pi, function(x) x$coefs)
+  pihat <- lapply(fit_pi, function(x) x$fitted)
+  pihat <- do.call(cbind, pihat)
   
   X <- matrix(1, nrow=n, ncol=dim(zhat)[1]+1)
   W <- model.matrix(~log(mu0))
   linkobj <- binomial()
   
-  ll_new <- loglik_small(c(coefs_mu, coefs_pi[1,], coefs_pi[2,], log(thetahat)), Y, Y>0, X, W, kx=dim(X)[2], kw=dim(W)[2], 0, 0, linkobj)
+  ll_new_ref <- loglik_small(c(coefs_mu, coefs_pi[1,], coefs_pi[2,], log(thetahat)), Y, Y>0, X, W, kx=dim(X)[2], kw=dim(W)[2], 0, 0, linkobj)
+  matthetahat0 <- array(1,c(J,n))
+  loglik0 <- sum(log( pihat + (1 - pihat) * dnbinom(Y[Y==0], mu=muhat0[Y==0], size=matthetahat0[Y==0], log=FALSE) ))
+  loglik1 <- sum(log( (1 - pihat) * dnbinom(Y[Y>0], mu=muhat0[Y>0], size=matthetahat0[Y>0], log=FALSE) ))
+  ll_new <- loglik0 + loglik1
   ll_old <- 2 * ll_new
   
   if(verbose) {
     print(ll_new)
+    print(ll_new_ref)
   }
   
   ## EM iteration
@@ -77,40 +87,55 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     print("Fitting means")
     fit_mu <- bplapply(seq_len(J), function(i) {
       fit <- glm.nb(Y[i,] ~ vecClusterAssign, weights = (1 - zhat[i,]), init.theta = thetahat[i], start=coefs_mu[i,])
-      return(list(coefs=coefficients(fit), theta=fit$theta))
+      return(list(fitted=fit$fitted.values, coefs=fit$coefficients, theta=fit$theta))
+      #return(list(coefs=coefficients(fit), theta=fit$theta))
     })
     
     coefs_mu <- lapply(fit_mu, function(x) x$coefs)
     coefs_mu <- do.call(rbind, coefs_mu)
     
-    save(coefs_mu,file=file.path(getwd(),"PseudoDE_coefs_mu.RData"))
-    save(fit_mu,file=file.path(getwd(),"PseudoDE_fit_mu.RData"))
-    save(Y,file=file.path(getwd(),"PseudoDE_Y.RData"))
-    save(zhat,file=file.path(getwd(),"PseudoDE_zhat.RData"))
-    save(thetahat,file=file.path(getwd(),"PseudoDE_thetahat.RData"))
+    #save(coefs_mu,file=file.path(getwd(),"PseudoDE_coefs_mu.RData"))
+    #save(fit_mu,file=file.path(getwd(),"PseudoDE_fit_mu.RData"))
+    #save(Y,file=file.path(getwd(),"PseudoDE_Y.RData"))
+    #save(zhat,file=file.path(getwd(),"PseudoDE_zhat.RData"))
+    #save(thetahat,file=file.path(getwd(),"PseudoDE_thetahat.RData"))
     
-    muhat <- exp(coefs_mu)
+    #muhat <- exp(coefs_mu)
+    muhat <- lapply(fit_mu, function(x) x$fitted)
+    muhat <- do.call(rbind, muhat)
+    #print(unique(muhat[1,]))
+    #print(unique(muhat[2,]))
+    #print(head(exp(coefs_mu)))
+    
     thetahat <- sapply(fit_mu, function(x) x$theta)
+    matthetahat <- matrix(thetahat, nrow=dim(muhat)[1], ncol=dim(muhat)[2], byrow=FALSE)
     
     print("Fitting dropout rates")
     fit_pi <- bplapply(seq_len(n), function(i) {
-      fit <- suppressWarnings(glm(zhat[,i]~log(muhat[,vecindClusterAssing[i]]), family = binomial(link = logit), start=coefs_pi[,i]))
+      #fit <- suppressWarnings(glm(zhat[,i]~log(muhat[,vecindClusterAssing[i]]), family = binomial(link = logit), start=coefs_pi[,i]))
+      fit <- suppressWarnings(glm(zhat[,i]~muhat[,i], family = binomial(link = logit), start=coefs_pi[,i]))
       return(list(coefs=coefficients(fit), fitted=fitted.values(fit)))
     })
-    save(fit_pi,file=file.path(getwd(),"PseudoDE_fit_pi.RData"))
+    #save(fit_pi,file=file.path(getwd(),"PseudoDE_fit_pi.RData"))
     coefs_pi <- sapply(fit_pi, function(x) x$coefs)
     pihat <- lapply(fit_pi, function(x) x$fitted)
     pihat <- do.call(cbind, pihat)
     
-    zhat <- pihat/(pihat + (1 - pihat) * dnbinom(0, size = matrix(thetahat, nrow=J, ncol=n), mu = muhat[,vecindClusterAssing]))
+    #zhat <- pihat/(pihat + (1 - pihat) * dnbinom(0, size = matrix(thetahat, nrow=J, ncol=n), mu = muhat[,vecindClusterAssing]))
+    zhat <- pihat/(pihat + (1 - pihat) * dnbinom(0, size = matthetahat, mu = muhat))
     zhat[Y>0] <- 0
     
     print("Compute Loglik")
-    W <- model.matrix(~log(muhat))
-    ll_new <- loglik_small(c(coefs_mu, coefs_pi[1,], coefs_pi[2,], log(thetahat)), Y, Y>0, X, W, kx=dim(X)[2], kw=dim(W)[2], 0, 0, linkobj)
+    #W <- model.matrix(~log(coefs_mu))
+    W <- model.matrix(~coefs_mu)
+    ll_new_ref <- loglik_small(c(coefs_mu, coefs_pi[1,], coefs_pi[2,], log(thetahat)), Y, Y>0, X, W, kx=dim(X)[2], kw=dim(W)[2], 0, 0, linkobj)
+    loglik0 <- sum(log( pihat + (1 - pihat) * dnbinom(Y[Y==0], mu=muhat[Y==0], size=matthetahat[Y==0], log=FALSE) ))
+    loglik1 <- sum(log( (1 - pihat) * dnbinom(Y[Y>0], mu=muhat[Y>0], size=matthetahat[Y>0], log=FALSE) ))
+    ll_new <- loglik0 + loglik1
     
     if(verbose) {
       print(ll_new)
+      print(ll_new_ref)
     }
     
     iter <- iter + 1
@@ -121,10 +146,12 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     convergence <- 1
   }
   
-  matthetahat <- matrix(thetahat, nrow=dim(muhat)[1], ncol=dim(muhat)[2], byrow=FALSE)
-  p_z <- 1 - (Y == 0) * pihat / (pihat + (1 - pihat) * (1 + muhat[,vecindClusterAssing] / matthetahat[,vecindClusterAssing])^(-matthetahat[,vecindClusterAssing]))
-  eval <- (1 - pihat) * muhat[,vecindClusterAssing]
-  variance <- (1 - pihat) * muhat[,vecindClusterAssing] * (1 + muhat[,vecindClusterAssing] * (1/matthetahat[,vecindClusterAssing] + pihat))
+  #p_z <- 1 - (Y == 0) * pihat / (pihat + (1 - pihat) * (1 + muhat[,vecindClusterAssing] / matthetahat[,vecindClusterAssing])^(-matthetahat[,vecindClusterAssing]))
+  #eval <- (1 - pihat) * muhat[,vecindClusterAssing]
+  #variance <- (1 - pihat) * muhat[,vecindClusterAssing] * (1 + muhat[,vecindClusterAssing] * (1/matthetahat[,vecindClusterAssing] + pihat))
+  p_z <- 1 - (Y == 0) * pihat / (pihat + (1 - pihat) * (1 + muhat / matthetahat)^(-matthetahat))
+  eval <- (1 - pihat) * muhat
+  variance <- (1 - pihat) * muhat * (1 + muhat * (1/matthetahat + pihat))
   
   return(list(mu=muhat, theta=thetahat, pi=pihat, coefs=coefs_pi,
     p_z=p_z, expected_value=eval, variance=variance,

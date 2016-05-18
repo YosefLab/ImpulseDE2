@@ -2,6 +2,12 @@
 #++++++++++++++++++++++     Impulse model fit    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+#findInflextionPoints()
+#estimateParamPeak()
+#estimateParamValley()
+#computeLogLikNull()
+#computeTranslationFactors()
+
 #' Fit an impulse model to a single gene
 #' 
 #' Fits an impulse model and a mean model to a single gene.
@@ -51,7 +57,7 @@ fitImpulse_gene <- function(vecCounts,
   vecTimepointAssign, vecTimecourseAssign, 
   dfAnnotationFull,
   strMode="batch", NPARAM=6, MAXIT=1000){
-  
+
   optim_method <- "optim"
   #optim_method <- "nlminb"
   #optim_method <- c("optim","nlminb")
@@ -59,6 +65,7 @@ fitImpulse_gene <- function(vecCounts,
   # Get boolean observation vectors:
   vecboolObserved <- !is.na(vecCounts)
   vecboolZero <- vecCounts==0
+  vecboolNotZeroObserved <- !is.na(vecCounts) & (vecCounts!=0)
   
   # The vectors vecTimepoints and vecTimecourses are shared
   # between all genes of a condition if no observations
@@ -92,7 +99,7 @@ fitImpulse_gene <- function(vecCounts,
     
     # Evaluate likelihood of null model:
     # Scale null model according to normalisation factors.
-    scaLoglikNull <- sum(dnbinom(
+    scaLogLikNull <- sum(dnbinom(
       vecCounts[vecboolObserved], 
       mu=scaMu*vecNormConst[vecboolObserved], 
       size=scaDispersionEstimate, 
@@ -113,26 +120,29 @@ fitImpulse_gene <- function(vecCounts,
     
     # Evaluate likelihood of null model
     # Likelihood of zero counts:
-    scaLoglikNullZeros <- sum(log(
-      (1-vecDropoutRate[vecboolZero & vecboolObserved])*
-        dnbinom(
-          vecCounts[vecboolZero & vecboolObserved], 
+    vecLikNullZeros <- (1-vecDropoutRate[vecboolZero])*
+        dnbinom( vecCounts[vecboolZero], 
           mu=scaMu, 
           size=scaDispersionEstimate, 
           log=FALSE) +
-        vecDropoutRate[vecboolZero & vecboolObserved]
-    ))
+      vecDropoutRate[vecboolZero]
+    # Replace zero likelihood observation with machine precision
+    # for taking log.
+    scaLogLikNullZeros <- sum( log(vecLikNullZeros[vecLikNullZeros!=0]) +
+        sum(vecLikNullZeros==0)*log(.Machine$double.eps) )
     # Likelihood of non-zero counts:
-    scaLoglikNullNonzeros <- sum(log(
-      (1-vecDropoutRate[!vecboolZero & vecboolObserved])*
-        dnbinom(
-          vecCounts[!vecboolZero & vecboolObserved], 
-          mu=scaMu, 
-          size=scaDispersionEstimate, 
-          log=FALSE)
-    ))
+    vecLikNullNonzeros <- (1-vecDropoutRate[vecboolNotZeroObserved])*
+      dnbinom(vecCounts[vecboolNotZeroObserved], 
+        mu=scaMu, 
+        size=scaDispersionEstimate, 
+        log=FALSE)
+    # Replace zero likelihood observation with machine precision
+    # for taking log.
+    scaLogLikNullNonzeros <- sum( log(vecLikNullNonzeros[vecLikNullNonzeros!=0]) +
+        sum(vecLikNullNonzeros==0)*log(.Machine$double.eps) )
+    
     # Compute likelihood of all data:
-    scaLoglikNull <- scaLoglikNullZeros + scaLoglikNullNonzeros
+    scaLogLikNull <- scaLogLikNullZeros + scaLogLikNullNonzeros
   } else if(strMode=="timecourses"){
     # Null model (longitudinal sampling): 
     # Fit one mean for each time course (longitudinal series).
@@ -147,7 +157,7 @@ fitImpulse_gene <- function(vecCounts,
     names(vecMuTimecourses) <- vecTimecourses
     
     # Evaluate likelihood of null model
-    scaLoglikNull <- sum(dnbinom(
+    scaLogLikNull <- sum(dnbinom(
       vecCounts[vecboolObserved], 
       mu=(vecMuTimecourses[as.vector(vecTimecourseAssign)])[vecboolObserved]*vecNormConst[vecboolObserved], 
       size=scaDispersionEstimate, 
@@ -162,17 +172,10 @@ fitImpulse_gene <- function(vecCounts,
     # to scale impulse model to indivindual time courses.
     # Note: Translation factor is the same for all replicates
     # in a time course.
-    # Reference: Overall scaled mean
-    #scaMuScaled <- mean(vecCounts/vecNormConst, na.rm=TRUE)
-    # Scaled means by timecourse
-    #vecMuTimecoursesScaled <- sapply(vecTimecourses, function(tc){
-    #  mean(vecCounts[vecTimecourseAssign==tc]/vecNormConst[vecTimecourseAssign==tc], na.rm=TRUE)
-    #})
-    #names(vecMuTimecoursesScaled) <- vecTimecourses
+    
     # Scaled mean ratio per replicate
-    #vecTranslationFactors <- vecMuTimecoursesScaled[as.vector(vecTimecourseAssign)]/scaMuScaled
     vecTranslationFactors <- vecMuTimecourses[as.vector(vecTimecourseAssign)]/scaMu
-    # Note: If all replicates are zero, scaMuScaled is zero and
+    # Note: If all replicates are zero, scaMu is zero and
     # vecTranslationFactors are NA. Genes only with zero counts
     # are removed in processData(). The input data to this function
     # ma still consist entirely of zeros if this function is called
@@ -254,7 +257,7 @@ fitImpulse_gene <- function(vecCounts,
         vecDropoutRateEst=vecDropoutRate,
         vecNormConst=vecNormConst,
         vecindTimepointAssign=vecindTimepointAssign,
-        vecboolObserved=vecboolObserved, 
+        vecboolNotZeroObserved=vecboolNotZeroObserved, 
         vecboolZero=vecboolZero,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
@@ -277,7 +280,7 @@ fitImpulse_gene <- function(vecCounts,
   vecParamGuess <- c(1,log(vecExpressionMeans[1]+1),log(scaMinMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
     (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2 )
-  
+    
   if("optim" %in% optim_method){
     if(strMode=="batch"){
       lsFitValley <- unlist( optim(
@@ -316,7 +319,7 @@ fitImpulse_gene <- function(vecCounts,
         vecDropoutRateEst=vecDropoutRate,
         vecNormConst=vecNormConst,
         vecindTimepointAssign=vecindTimepointAssign,
-        vecboolObserved=vecboolObserved,
+        vecboolNotZeroObserved=vecboolNotZeroObserved,
         vecboolZero=vecboolZero,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
@@ -353,14 +356,14 @@ fitImpulse_gene <- function(vecCounts,
   # match() selects first hit if maximum occurs multiple times
   indBestFit <- match(max(dfFitsByInitialisation["value",]),dfFitsByInitialisation["value",])
   if(strMode=="batch" | strMode=="singlecell"){
-    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLoglikNull)
+    lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],scaMu,scaLogLikNull)
     names(lsBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1","mu","logL_H0")
   } else if(strMode=="timecourses") {
     vecTranslationFactorsUnique <- vecTranslationFactors[as.vector(vecTimecourses)]
     lsBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],
       scaMu,
-      scaLoglikNull,
+      scaLogLikNull,
       vecMuTimecourses,
       vecTranslationFactorsUnique)
     vecColnamesMubyTimecourse <- paste0(rep("mu_",length(vecMuTimecourses)), names(vecMuTimecourses))

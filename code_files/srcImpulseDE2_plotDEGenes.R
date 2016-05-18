@@ -30,7 +30,7 @@
 #'    counts predicted by the impulse model at the observed time points.
 #' @param dfDEAnalysis (data frame genes x fitting characteristics) 
 #'    Summary of fitting procedure for each gene.
-#' @param vecMethod2Results (vec length genes) Method 2 (DESeq2) adjusted p-values
+#' @param vecRefPval (vec length genes) Method 2 (DESeq2) adjusted p-values
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationFullFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationFullFull}.
@@ -47,10 +47,10 @@
 
 plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
   dfAnnotationFull, lsImpulseFits, 
-  dfImpulseResults, vecMethod2Results, 
+  dfImpulseResults, vecRefPval=NULL, 
   strCaseName, strControlName=NULL, strMode="batch",
   strFileNameSuffix = "", strPlotTitleSuffix = "", strPlotSubtitle = "",
-  strNameMethod1="ImpulseDE2", strNameMethod2="DESeq2",
+  strNameMethod1="ImpulseDE2", strNameMethod2=NULL,
   NPARAM=6){
   
   # Only for batch/singlecell plotting:
@@ -125,20 +125,28 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
       vecCaseValues <- calcImpulse_comp(lsImpulseParamCaseLog,vecX)
       
       pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
-      pval_Method2 <- round( log(vecMethod2Results[geneID])/log(10), 2 )
+      if(!is.null(vecRefPval)){
+        pval_Method2 <- round( log(vecRefPval[geneID])/log(10), 2 )
+      }
       
       if(strMode=="batch" | strMode=="singlecell"){
         # Plot observed points in blue - all time courses in same colour
         scaYlim_lower <- min( min(arr2DCountData[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
         scaYlim_upper <- max( max(arr2DCountData[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
+        strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
+        if(!is.null(vecRefPval)){
+          strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
+        } else {
+          strPvalMethod2 <- NULL
+        }
         plot(vecTimepointAssign,
           arr2DCountData[geneID,],
           col="blue",pch=3,
           xlim=c(0,max(vecTimepoints,na.rm=TRUE)+PDF_WIDTH), 
           ylim=c(scaYlim_lower,scaYlim_upper),
           xlab="Time", ylab="Impulse fit and expression values",
-          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
-            " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
+          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strPvalImpulse,
+            strPvalMethod2 ),sub=strPlotSubtitle)
         # Plot impulse model within boundaries of observed points
         vecCaseValuesToPlot <- vecCaseValues
         indImpulseValToPlot <- vecCaseValuesToPlot >= scaYlim_lower & vecCaseValuesToPlot <= scaYlim_upper
@@ -190,14 +198,20 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
           min(vecCaseValues[indVecXObs]*min(vecTranslationFactors)) )
         scaYlim_upper <- max( max(arr2DCountData[geneID,],na.rm=TRUE), 
           max(vecCaseValues[indVecXObs]*max(vecTranslationFactors)) )
+        strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
+        if(!is.null(vecRefPval)){
+          strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
+        } else {
+          strPvalMethod2 <- NULL
+        }
         plot(vecTimepointAssign[vecindTimecourseAssign==1],
           arr2DCountData[geneID, vecindTimecourseAssign==1],
           col=vecCol[1],pch=3,
           xlim=c(0,max(vecTimepoints,na.rm=TRUE)), 
           ylim=c(scaYlim_lower,scaYlim_upper),
           xlab="Time", ylab="Impulse fit and expression values",
-          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strNameMethod1," ",pval_Impulse,
-            " ",strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
+          main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",strPvalImpulse,
+            strPvalMethod2 ),sub=strPlotSubtitle)
         # Plot impulse fit to time course
         vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[1]
         indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
@@ -255,7 +269,9 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
       lsCombValues <- calcImpulse_comp(lsImpulseParamCombLog,vecX)
       
       pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
-      pval_Method2 <- round( log(vecMethod2Results[geneID])/log(10), 2 )
+      if(!is.null(vecRefPval)){
+        pval_Method2 <- round( log(vecRefPval[geneID])/log(10), 2 )
+      }
       
       # Plot observed points: Case green, control red
       scaYlim_lower <- min( min(arr2DCountData[geneID,],na.rm=TRUE),
@@ -266,6 +282,12 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
         max(vecCaseValues[indVecXObs]),
         max(lsCtrlValues[indVecXObs]),
         max(lsCombValues[indVecXObs]) )
+      strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
+      if(!is.null(vecRefPval)){
+        strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
+      } else {
+        strPvalMethod2 <- NULL
+      }
       # Plot points case
       plot(vecTimepointAssign[vecidxReplicatesCase],
         (arr2DCountData[geneID,])[vecidxReplicatesCase],
@@ -275,8 +297,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
         xlab="Time", 
         ylab="Impulse fit and expression values",
         main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",
-          strNameMethod1," ",pval_Impulse," ",
-          strNameMethod2," ",pval_Method2),sub=strPlotSubtitle)
+          strPvalImpulse," ",strPvalMethod2),sub=strPlotSubtitle)
       # Plot points control
       points(vecTimepointAssign[vecidxReplicatesCtrl],
         (arr2DCountData[geneID,])[vecidxReplicatesCtrl],

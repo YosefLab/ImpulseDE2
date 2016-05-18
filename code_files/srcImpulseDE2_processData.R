@@ -99,7 +99,8 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   # Check format and presence of input data
   checkData <- function(dfAnnotationFull=NULL, arr2DCountData=NULL,
     strCaseName=NULL, strControlName=NULL, strMode=NULL,
-    lsPseudoDE=NULL, vecDispersionsExternal=NULL){
+    lsPseudoDE=NULL, vecDispersionsExternal=NULL,
+    boolRunDESeq2=NULL ){
     
     ### 1. Check that all necessary input was specified
     checkNull(dfAnnotationFull)
@@ -225,9 +226,9 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     ### Summarise which mode, conditions, samples, replicates and
     ### timecourses were found
     print(paste0("Found conditions: ",paste0(lsConditions,collapse=",")))
-    print(paste0("Case condition: ", strCaseName))
+    print(paste0("Case condition: '", strCaseName, "'"))
     if(!is.null(strControlName)){
-      print(paste0("Control condition: ", strControlName))
+      print(paste0("Control condition: '", strControlName, "'"))
     }
     print(paste0( "ImpulseDE2 runs in mode: ", strMode ))
     if(strMode=="batch" | strMode=="timecourses"){

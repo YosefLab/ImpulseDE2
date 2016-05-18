@@ -42,11 +42,22 @@ computeNormConst <- function(arr2DCountData, dfAnnotationFull,
   # from the negative binomial distribution.
   arr2DCountDataNoZeros <- arr2DCountData
   arr2DCountDataNoZeros[arr2DCountDataNoZeros==0] <- 0.1
-  vecGeomMean <- sapply(c(1:dim(arr2DCountDataNoZeros)[1]), 
-    function(gene){
-      ( prod(arr2DCountDataNoZeros[gene,]^matProbNB[gene,], na.rm=TRUE) )^
-        ( 1/sum(matProbNB[gene,], na.rm=TRUE) )
-    })
+  boolObserved <- !is.na(arr2DCountData)
+  if(strMode=="batch" | strMode=="timecourses"){
+    # Take geometric mean
+    vecGeomMean <- sapply(c(1:dim(arr2DCountDataNoZeros)[1]), 
+      function(gene){
+        ( prod(arr2DCountDataNoZeros[gene,boolObserved[gene,]]) )^
+          ( 1/sum(boolObserved[gene,]) )
+      })
+  } else if(strMode=="singlecell"){
+    # Take weighted geometric mean
+    vecGeomMean <- sapply(c(1:dim(arr2DCountDataNoZeros)[1]), 
+      function(gene){
+        ( prod(arr2DCountDataNoZeros[gene,boolObserved[gene,]]^matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )^
+          ( 1/sum(matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )
+      })
+  }
   matGeomMeans <- matrix(vecGeomMean, 
     nrow=dim(arr2DCountData)[1], 
     ncol=dim(arr2DCountData)[2], 
@@ -64,7 +75,7 @@ computeNormConst <- function(arr2DCountData, dfAnnotationFull,
   names(vecSizeFactors) <- colnames(arr2DCountData)
   
   if(any(vecSizeFactors==0)){
-    warning("ERROR: One of the normalisation constants is zero. Will be set to 1.")
+    warning("WARNING: Found size factors==0, setting these to 1.")
     vecSizeFactors[vecSizeFactors==0] <- 1
   }
   

@@ -11,11 +11,12 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_f
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_runDESeq2.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/clusterCellsInPseudotime.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/createAnnotation.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
 
 runPseudoDE <- function(matCounts, vecPseudotime,
   nProc=1){
   
-  MAXITER <- 10
+  MAXITER <- 3
   
   # 1. Data preprocessing
   print("1. Data preprocessing:")
@@ -61,7 +62,7 @@ runPseudoDE <- function(matCounts, vecPseudotime,
   })
   save(lsResultsClustering,file=file.path(getwd(),"PseudoDE_lsResultsClustering.RData"))
   save(dfAnnotation,file=file.path(getwd(),"PseudoDE_dfAnnotation.RData"))
-  print(paste("Consumed time: ",round(tm_clustering["elapsed"]/60,2),
+  print(paste("Time elapsed during clustering: ",round(tm_clustering["elapsed"]/60,2),
     " min",sep=""))
   
   # 3. Fit mixture model
@@ -122,9 +123,12 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       }
     } else {
       #vecDispersions <- array(NA,c(dim(matCounts)[1],1))
-      # this works for 20 genes:
+      # this doesnt work for 20 genes:
       vecboolNonzeroGenes <- apply(matCounts,1,
-        function(gene){mean(gene)>10})
+        function(gene){!all(gene==0)})
+      # this works for 20 genes:
+      #vecboolNonzeroGenes <- apply(matCounts,1,
+      #  function(gene){mean(gene)>10})
       matCountsClean <- matCounts[vecboolNonzeroGenes,]
       # Fit zinb model
       vecClusterAssign <- paste0(rep("cluster_",length(lsResultsClustering$Assignments)),lsResultsClustering$Assignments)
@@ -158,12 +162,14 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed)
     names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed")
     names(vecDispersions) <- rownames(matCountsClean)
+    matClusterMeansFitted <- (lsZINBparam$mu)[,match(seq(1,length(vecClusters)),lsResultsClustering$Assignments)]
+    rownames(matClusterMeansFitted) <- rownames(matCountsClean)
   })
   save(lsInputToImpulseDE2,file=file.path(getwd(),"PseudoDE_lsInputToImpulseDE2.RData"))
   save(lsZINBparam,file=file.path(getwd(),"PseudoDE_lsZINBparam.RData"))
   save(vecDispersions,file=file.path(getwd(),"PseudoDE_vecDispersions.RData"))
   save(matCountsClean,file=file.path(getwd(),"PseudoDE_matCountsClean.RData"))
-  print(paste("Consumed time: ",round(tm_fitmm["elapsed"]/60,2),
+  print(paste("Time elapsed during ZINB fitting: ",round(tm_fitmm["elapsed"]/60,2),
     " min",sep=""))
   
   if(any(is.na(vecDispersions) | !is.finite(vecDispersions))){
@@ -171,6 +177,14 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     print("WARNING: Found NA/inf dispersions")
     print(vecDispersions)
   }
+  source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
+  plotZINBfits(lsGeneIDs=rownames(matCountsClean), 
+    arr2DCountData=matCountsClean,
+    matClusterMeans=matClusterMeansFitted, 
+    vecDispersions=vecDispersions, 
+    vecClusterAssignments=lsResultsClustering$Assignments,
+    dfAnnotationFull=dfAnnotation, 
+    strPDFname="PseudoDE_ZINBfits.pdf" )
   
   # 4. Differential expression analysis: Run ImpulseDE2
   print("4. Differential expression analysis: Run ImpulseDE2:")
@@ -193,7 +207,7 @@ runPseudoDE <- function(matCounts, vecPseudotime,
   })
   print("### End ImpulseDE2 output ##################################")
   save(lsImpulseDE2results,file=file.path(getwd(),"PseudoDE_lsImpulseDE2results.RData"))
-  print(paste("Consumed time: ",round(tm_deanalysis["elapsed"]/60,2),
+  print(paste("Time elapsed during ImpulseDE2 step: ",round(tm_deanalysis["elapsed"]/60,2),
     " min",sep=""))
   
   print("Completed PseudoDE.")
