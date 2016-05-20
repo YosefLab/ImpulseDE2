@@ -46,7 +46,7 @@
 #' @export
 
 plotZINBfits <- function(lsGeneIDs, arr2DCountData,
-  matClusterMeans, vecDispersions, 
+  matClusterMeans, vecDispersions, matProbNB,
   vecClusterAssignments, lsResultsClustering,
   dfAnnotation, strPDFname="PseudoDE_ZINBfits.pdf"){
   
@@ -119,15 +119,17 @@ plotZINBfits <- function(lsGeneIDs, arr2DCountData,
         vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matClusterMeans[geneID,match(cl,vecClusters)],
           size=vecDispersions[geneID])
         # Plot both
-        dfData <- data.frame( counts=as.vector(arr2DCountData[geneID,vecindClusterAssignments==match(cl,vecClusters)] ) )
-        dfDensity <- data.frame( counts=vecXCoordPDF, density=vecYCoordPDF)
-        lsPlots[[length(lsPlots)+1]] <- ggplot( ) +
-          geom_histogram( data=dfData, aes(x=counts, y=..density..), alpha = 0.5, position = 'identity') +
-          geom_line( data=dfDensity, aes(x=counts, y=density), col = "red") +
+        vecMixtures <- c("Negative binomial","Dropout")
+        dfData <- data.frame( counts=as.vector(arr2DCountData[geneID,vecindClusterAssignments==match(cl,vecClusters)] ),
+          mixture=vecMixtures[as.numeric(matProbNB[geneID,vecindClusterAssignments==match(cl,vecClusters)] < 0.5)+1]  )
+        dfDensity <- data.frame( counts=vecXCoordPDF, density=vecYCoordPDF*(dim(dfData)[1]))
+        lsPlots[[length(lsPlots)+1]] <- suppressMessages( ggplot( ) +
+          geom_histogram( data=dfData, aes(x=counts, y=..count.., fill=mixture), alpha=0.5 ) +
+          geom_line( data=dfDensity, aes(x=counts, y=density), col = "blue") +
           labs(title=paste0(geneID," Cluster ", cl, " Observed cells: ",length(dfData$counts),
             "\n Non-zero counts: ", sum(dfData$counts!=0), " Inferred mean: ", round(matClusterMeans[geneID,match(cl,vecClusters)]))) +
           xlab("Counts") +
-          ylab("Density")
+          ylab("Density") )
       }
     }
   }
@@ -135,7 +137,7 @@ plotZINBfits <- function(lsGeneIDs, arr2DCountData,
   # Open .pdf
   pdf(strPDFname,height=6.0,width=9.0)
   for(plotTF in lsPlots){
-    print(plotTF)
+    suppressMessages( print(plotTF) )
   }
   # Close .pdf
   dev.off()

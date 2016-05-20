@@ -30,6 +30,7 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
   if(!all( .isWholeNumber(Y) )){
     stop("Expression matrix contains non-integer values.")
   }
+  boolOnePiPerCell <- FALSE
   
   n <- ncol(Y)
   J <- nrow(Y)
@@ -39,14 +40,30 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
   print("Initialise")
   vecClusters <- unique(vecClusterAssign)
   vecindClusterAssing <- match(vecClusterAssign, vecClusters)
-  mu0 <- lapply(vecClusters ,function(cluster){rowMeans(Y[,vecClusterAssign==cluster]+1)})
-  mu0 <- do.call(cbind, mu0)
+  if(length(vecClusters)>1){
+    mu0 <- lapply(vecClusters ,function(cluster){rowMeans(Y[,vecClusterAssign==cluster]+1)})
+    mu0 <- do.call(cbind, mu0)
+  } else {
+    mu0 <- rowMeans(Y)
+    mu0 <- matrix(mu0,nrow=length(mu0),ncol=1)
+  }
   muhat0 <- mu0[,vecindClusterAssing]
-  coefs_mu <- cbind(log(rowMeans(Y)),array(0,c(J,length(vecClusters)-1)))
+  
+  if(dim(mu0)[2]>1){
+    mu0_nonintersection <- log(mu0[,2:dim(mu0)[2]]) - log(mu0[,1])
+    coefs_mu <- cbind( log(mu0[,1]), mu0_nonintersection )
+  } else {
+    coefs_mu <- log(mu0[,1])
+  }
   
   pi0 <- sapply(seq_len(n), function(i) {
     y <- as.numeric(Y[,i]<=0)
-    fit <- glm(y~log(mu0[,vecindClusterAssing[i]]), family = binomial)
+    if(boolOnePiPerCell){
+      fit <- suppressWarnings( glm(y~1, family = binomial, control = list(maxit = 100)) )
+    } else {
+      fit <- suppressWarnings( glm(y~log(mu0[,vecindClusterAssing[i]]), family = binomial, control = list(maxit = 100)) )
+    }
+    if(!fit$converged){print("Not converged in glm pi0")}
     return(fitted.values(fit))
   })
   
@@ -56,27 +73,40 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
   
   #coefs_mu <- log(mu0)
   fit_pi <- bplapply(seq_len(n), function(i) {
-    fit <- suppressWarnings(glm(zhat[,i]~muhat0[,i], family = binomial(link = logit)))
+    if(boolOnePiPerCell){
+      fit <- suppressWarnings( glm(zhat[,i]~1, family = binomial(link = logit), control = list(maxit = 100)) )
+    } else {
+      fit <- suppressWarnings( glm(zhat[,i]~muhat0[,i], family = binomial(link = logit), control = list(maxit = 100)) )
+    }
+    if(!fit$converged){print("Not converged in glm fit_pi")}
     return(list(coefs=coefficients(fit), fitted=fitted.values(fit)))
   })
   coefs_pi <- sapply(fit_pi, function(x) x$coefs)
-  pihat <- lapply(fit_pi, function(x) x$fitted)
-  pihat <- do.call(cbind, pihat)
+  if(boolOnePiPerCell){
+    pihat <- sapply(fit_pi, function(x) x$fitted)
+  } else {
+    pihat <- lapply(fit_pi, function(x) x$fitted)
+    pihat <- do.call(cbind, pihat)
+  }
   
-  X <- matrix(1, nrow=n, ncol=dim(zhat)[1]+1)
-  W <- model.matrix(~log(mu0))
+  #X <- array(0,c(dim(coefs_mu)[2],n))
+  #X[1,] <- 1
+  #if(dim(coefs_mu)[2] > 1){
+  #  for(i in seq(1,dim(coefs_mu)[2])){ X[i,vecindClusterAssing==i] <- 1 }
+  #} 
+  #W <- array(1,c(J,dim(coefs_pi)[1]))
+  
   linkobj <- binomial()
   
-  ll_new_ref <- loglik_small(c(coefs_mu, coefs_pi[1,], coefs_pi[2,], log(thetahat)), Y, Y>0, X, W, kx=dim(X)[2], kw=dim(W)[2], 0, 0, linkobj)
-  matthetahat0 <- array(1,c(J,n))
-  loglik0 <- sum(log( pihat + (1 - pihat) * dnbinom(Y[Y==0], mu=muhat0[Y==0], size=matthetahat0[Y==0], log=FALSE) ))
-  loglik1 <- sum(log( (1 - pihat) * dnbinom(Y[Y>0], mu=muhat0[Y>0], size=matthetahat0[Y>0], log=FALSE) ))
+  #ll_new_ref <- loglik_small( beta=coefs_mu, alpha=coefs_pi, theta=thetahat, Y, Y>0, X, W, 0, 0, linkobj)
+  matthetahat <- array(1,c(J,n))
+  loglik0 <- sum(log( pihat[Y==0] + (1 - pihat[Y==0]) * dnbinom(0, mu=muhat0[Y==0], size=matthetahat[Y==0], log=FALSE) ))
+  loglik1 <- sum( log(1 - pihat[Y>0]) + dnbinom(Y[Y>0], mu=muhat0[Y>0], size=matthetahat[Y>0], log=TRUE) )
   ll_new <- loglik0 + loglik1
-  ll_old <- 2 * ll_new
+  ll_old <- ll_new
   
   if(verbose) {
     print(ll_new)
-    print(ll_new_ref)
   }
   
   ## EM iteration
@@ -86,7 +116,10 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     ll_old <- ll_new
     print("Fitting means")
     fit_mu <- bplapply(seq_len(J), function(i) {
-      fit <- glm.nb(Y[i,] ~ vecClusterAssign, weights = (1 - zhat[i,]), init.theta = thetahat[i], start=coefs_mu[i,])
+      fit <- suppressWarnings( glm.nb(Y[i,] ~ vecClusterAssign, weights = (1 - zhat[i,]), init.theta = thetahat[i], start=coefs_mu[i,]) )
+      if(!fit$converged){
+        print(paste0("Not converged in glm mu: ",i))
+      }
       return(list(fitted=fit$fitted.values, coefs=fit$coefficients, theta=fit$theta))
       #return(list(coefs=coefficients(fit), theta=fit$theta))
     })
@@ -110,13 +143,35 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     print("Fitting dropout rates")
     fit_pi <- bplapply(seq_len(n), function(i) {
       #fit <- suppressWarnings(glm(zhat[,i]~log(muhat[,vecindClusterAssing[i]]), family = binomial(link = logit), start=coefs_pi[,i]))
-      fit <- suppressWarnings(glm(zhat[,i]~muhat[,i], family = binomial(link = logit), start=coefs_pi[,i]))
+      if(boolOnePiPerCell){
+        fit <- suppressWarnings( glm(zhat[,i]~1, family = binomial(link = logit), start=coefs_pi[i],
+          control = list(maxit = 100)) )
+        if(!fit$converged){
+          print(paste0("Not converged in glm pi: ",i))
+          fit <- suppressWarnings( glm(zhat[,i]~1, family = binomial(link = logit), start=coefs_pi[i],
+            control = list(maxit = 10000)) )
+          if(!fit$converged){ print("Still Not converged in glm pi") }
+        }
+      } else {
+        fit <- suppressWarnings( glm(zhat[,i]~log(muhat[,i]), family = binomial(link = logit), start=coefs_pi[,i],
+          control = list(maxit = 100)) )
+        if(!fit$converged){
+          print(paste0("Not converged in glm pi: ",i))
+          fit <- suppressWarnings( glm(zhat[,i]~log(muhat[,i]), family = binomial(link = logit), start=coefs_pi[,i],
+            control = list(maxit = 10000)) )
+          if(!fit$converged){ print("Still Not converged in glm pi") }
+        }
+      }
       return(list(coefs=coefficients(fit), fitted=fitted.values(fit)))
     })
     #save(fit_pi,file=file.path(getwd(),"PseudoDE_fit_pi.RData"))
     coefs_pi <- sapply(fit_pi, function(x) x$coefs)
-    pihat <- lapply(fit_pi, function(x) x$fitted)
-    pihat <- do.call(cbind, pihat)
+    if(boolOnePiPerCell){
+      pihat <- sapply(fit_pi, function(x) x$fitted)
+    } else {
+      pihat <- lapply(fit_pi, function(x) x$fitted)
+      pihat <- do.call(cbind, pihat)
+    }
     
     #zhat <- pihat/(pihat + (1 - pihat) * dnbinom(0, size = matrix(thetahat, nrow=J, ncol=n), mu = muhat[,vecindClusterAssing]))
     zhat <- pihat/(pihat + (1 - pihat) * dnbinom(0, size = matthetahat, mu = muhat))
@@ -125,14 +180,13 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     print("Compute Loglik")
     #W <- model.matrix(~log(coefs_mu))
     W <- model.matrix(~coefs_mu)
-    ll_new_ref <- loglik_small(c(coefs_mu, coefs_pi[1,], coefs_pi[2,], log(thetahat)), Y, Y>0, X, W, kx=dim(X)[2], kw=dim(W)[2], 0, 0, linkobj)
-    loglik0 <- sum(log( pihat + (1 - pihat) * dnbinom(Y[Y==0], mu=muhat[Y==0], size=matthetahat[Y==0], log=FALSE) ))
-    loglik1 <- sum(log( (1 - pihat) * dnbinom(Y[Y>0], mu=muhat[Y>0], size=matthetahat[Y>0], log=FALSE) ))
+    #ll_new_ref <- loglik_small(c(coefs_mu, coefs_pi[1,], coefs_pi[2,], log(thetahat)), Y, Y>0, X, W, J, n*2, 0, 0, linkobj)
+    loglik0 <- sum(log( pihat[Y==0] + (1 - pihat[Y==0]) * dnbinom(Y[Y==0], mu=muhat[Y==0], size=matthetahat[Y==0], log=FALSE) ))
+    loglik1 <- sum(log( (1 - pihat[Y>0]) * dnbinom(Y[Y>0], mu=muhat[Y>0], size=matthetahat[Y>0], log=FALSE) ))
     ll_new <- loglik0 + loglik1
     
     if(verbose) {
       print(ll_new)
-      print(ll_new_ref)
     }
     
     iter <- iter + 1
@@ -175,19 +229,17 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
 #' @param offsetx the offset for the regression on X
 #' @param offsetw the offset for the regression on W
 #' @param linkobj the link function object for the regression on pi (typically the result of binomial())
-loglik_small <- function(parms, Y, Y1, X, W, kx, kw, offsetx, offsetw, linkobj) {
+loglik_small <- function(beta, alpha, theta, Y, Y1, X, W, offsetx, offsetw, linkobj) {
   
   J <- nrow(Y)
   n <- ncol(Y)
   
-  beta <- matrix(parms[1:kx], ncol=J, nrow=ncol(X))
-  mu <- t(exp(X %*% beta + offsetx))
+  mu <- exp(beta %*% X + offsetx)
   
-  alpha <- matrix(parms[(kx + 1):(kw+kx)], nrow=ncol(W), ncol=n, byrow=TRUE)
   eta <- W %*% alpha + offsetw
   pi <- logistic(eta)
   
-  theta <- matrix(exp(parms[(kw + kx + 1):(kw + kx + J)]), nrow=J, ncol=n)
+  theta <- matrix(exp(theta), nrow=J, ncol=n, byrow=FALSE)
   
   loglik0 <- log(pi + exp(log(1 - pi) + suppressWarnings(dnbinom(0, size = theta, mu = mu, log = TRUE))))
   loglik1 <- log(1 - pi) + suppressWarnings(dnbinom(Y, size = theta, mu = mu, log = TRUE))

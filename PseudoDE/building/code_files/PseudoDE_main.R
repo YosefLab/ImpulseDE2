@@ -187,7 +187,8 @@ runPseudoDE <- function(matCounts, vecPseudotime,
   plotZINBfits(lsGeneIDs=rownames(matCountsClean), 
     arr2DCountData=matCountsClean,
     matClusterMeans=matClusterMeansFitted, 
-    vecDispersions=vecDispersions, 
+    vecDispersions=vecDispersions,
+    matProbNB=matProbNB,
     vecClusterAssignments=lsResultsClustering$Assignments,
     lsResultsClustering=lsResultsClustering,
     dfAnnotation=dfAnnotation, 
@@ -211,7 +212,7 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       lsPseudo = lsInputToImpulseDE2,
       vecDispersionsExternal=vecDispersions,
       boolRunDESeq2=FALSE,
-      boolSimplePlot=TRUE, boolLogPlot=TRUE
+      boolSimplePlot=TRUE, boolLogPlot=FALSE
       )
   })
   print("### End ImpulseDE2 output ##################################")
