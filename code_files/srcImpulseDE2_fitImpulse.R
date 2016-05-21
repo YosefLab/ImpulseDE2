@@ -83,6 +83,37 @@ fitImpulse_gene <- function(vecCounts,
   if(strMode=="timecourses"){
     vecTimecourses <- unique( vecTimecourseAssign )
     nTimecourses <- length(vecTimecourses)
+    
+    # Compute translation factors for fitting:
+    # Fit mean to normalised counts. Count normalisation 
+    # corresponds to model normalisation in impulse model 
+    # fitting.
+    scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
+    vecMuTimecourses <- sapply(vecTimecourses,
+      function(tc){mean((vecCounts/vecNormConst)[vecTimecourseAssign==tc], na.rm=TRUE)})
+    names(vecMuTimecourses) <- vecTimecourses
+
+    # Compute translation factors: Normalisation factor
+    # to scale impulse model to indivindual time courses.
+    # Note: Translation factor is the same for all replicates
+    # in a time course.
+    
+    # Scaled mean ratio per replicate
+    vecTranslationFactors <- vecMuTimecourses[as.vector(vecTimecourseAssign)]/scaMu
+    # Note: If all replicates are zero, scaMu is zero and
+    # vecTranslationFactors are NA. Genes only with zero counts
+    # are removed in processData(). The input data to this function
+    # ma still consist entirely of zeros if this function is called
+    # on the subset of case or control data (if control condition
+    # is given). Those subsets may be only zeros. This exception
+    # is caught here and vecTranslationFactors set to 1 from NA.
+    # This removes the effect of vecTranslationFactors on fitting.
+    # The negative binomial density can still be
+    # evaluated as it is initialised with values from an impulse model
+    # padded with zero counts.s 
+    if(scaMu==0){
+      vecTranslationFactors <- array(1,length(vecTranslationFactors))
+    }
   }
   
   # DAVID: todo export this into extra function and handle entire matrix at once
@@ -153,7 +184,7 @@ fitImpulse_gene <- function(vecCounts,
     # fitting.
     scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
     vecMuTimecourses <- sapply(vecTimecourses,
-      function(tc){mean(vecCounts[vecTimecourseAssign==tc], na.rm=TRUE)})
+      function(tc){mean((vecCounts/vecNormConst)[vecTimecourseAssign==tc], na.rm=TRUE)})
     names(vecMuTimecourses) <- vecTimecourses
     
     # Evaluate likelihood of null model
@@ -166,30 +197,6 @@ fitImpulse_gene <- function(vecCounts,
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
   
-  # Compute translation factors for fitting:
-  if(strMode=="timecourses"){
-    # Compute translation factors: Normalisation factor
-    # to scale impulse model to indivindual time courses.
-    # Note: Translation factor is the same for all replicates
-    # in a time course.
-    
-    # Scaled mean ratio per replicate
-    vecTranslationFactors <- vecMuTimecourses[as.vector(vecTimecourseAssign)]/scaMu
-    # Note: If all replicates are zero, scaMu is zero and
-    # vecTranslationFactors are NA. Genes only with zero counts
-    # are removed in processData(). The input data to this function
-    # ma still consist entirely of zeros if this function is called
-    # on the subset of case or control data (if control condition
-    # is given). Those subsets may be only zeros. This exception
-    # is caught here and vecTranslationFactors set to 1 from NA.
-    # This removes the effect of vecTranslationFactors on fitting.
-    # The negative binomial density can still be
-    # evaluated as it is initialised with values from an impulse model
-    # padded with zero counts.s 
-    if(scaMu==0){
-      vecTranslationFactors <- array(1,length(vecTranslationFactors))
-    }
-  }
   # Compute statistics for initialisation:
   # Expression means by timepoint
   if(strMode=="batch" | strMode=="timecourses"){

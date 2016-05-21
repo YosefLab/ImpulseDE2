@@ -14,7 +14,6 @@ names(lsPTpointsAll_p63PT1) <- as.vector(metadata$sample)
 lsPTpoints_p63PT1 <- lsPTpointsAll_p63PT1[!is.na(lsPTpointsAll_p63PT1)]
 print(paste0("p63PT1: Total cells: ",length(lsPTpointsAll_p63PT1),", Non NA: ",length(lsPTpoints_p63PT1)))
 
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/PseudoDE_main.R")
 matCounts <- data.matrix(dfCountsE4)
 lsPTpoints_p63PT1 <- lsPTpoints_p63PT1[!is.na(lsPTpoints_p63PT1)]
 matCounts <- matCounts[,colnames(matCounts) %in% names(lsPTpoints_p63PT1)]
@@ -22,6 +21,7 @@ matCounts <- matCounts[1:100,]
 #matCounts <- round(counts)
 nProc=3
 vecPseudotime <- lsPTpoints_p63PT1[colnames(matCounts)]
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/PseudoDE_main.R")
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 lsDEresults <- runPseudoDE(matCounts=matCounts,vecPseudotime=vecPseudotime)
 

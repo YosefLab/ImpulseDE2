@@ -376,36 +376,41 @@ evalLogLikHurdleNB <- function(vecTheta,vecY,
 #'    of hurdle model for gene
 #' @export
 
-evalLogLikHurdleDrop <- function(scaTheta,vecY,
-  vecMeanEst,vecDispEst){ 
+evalLogLikHurdleDrop <- function(scaTheta, vecY,
+  vecMeanEst, vecDispEst,
+  vecboolNotZeroObserved, vecboolZero){ 
   
-  scaDropoutEst <- scaTheta
+  scaDropoutRateEst <- scaTheta
   # Likelihood function of hurdle modle differs between
   # zero and non-zero counts: Add likelihood of both together.
   # Note that the log is taken over the sum of mixture model 
   # components of the likelihood model and accordingly log=FALSE
   # inside dnbinom.
   
-  # Get indices of zero and non-zero counts.
-  indZeros <- which(vecY==0)
-  indNonzeros <- which(vecY > 0 & !is.na(vecY) & is.finite(vecY))
-  
-  # Evaluate on all zero count genes in cells
-  scaLogLikZeros <- sum(log(
-    (1-scaDropoutEst) * dnbinom(vecY[indZeros],
-      mu=exp(vecMeanEst[indZeros]), 
-      size=vecDispEst[indZeros],
-      log=FALSE) + scaDropoutEst
-  ), na.rm=TRUE)
-  # Evaluate on all nonzero count genes in cells
-  scaLogLikNonzeros <- sum(log(
-    (1-scaDropoutEst) * dnbinom(vecY[indNonzeros], 
-      mu=exp(vecMeanEst[indNonzeros]),
-      size=vecDispEst[indNonzeros],
+  # Likelihood of zero counts:
+  vecLikZeros <- (1-scaDropoutRateEst)*
+    dnbinom(
+      vecY[vecboolZero], 
+      mu=vecMeanEst[vecboolZero], 
+      size=vecDispEst[vecboolZero], 
+      log=FALSE) +
+    scaDropoutRateEst
+  # Replace zero likelihood observation with machine precision
+  # for taking log.
+  scaLogLikZeros <- sum( log(vecLikZeros[vecLikZeros!=0]) +
+      sum(vecLikZeros==0)*log(.Machine$double.eps) )
+  # Likelihood of non-zero counts:
+  vecLikNonzeros <- (1-scaDropoutRateEst)*
+    dnbinom(
+      vecY[vecboolNotZeroObserved], 
+      mu=vecMeanEst[vecboolNotZeroObserved], 
+      size=vecDispEst[vecboolNotZeroObserved], 
       log=FALSE)
-  ), na.rm=TRUE)
-  
-  # Get likelihood of all data in cluster
+  # Replace zero likelihood observation with machine precision
+  # for taking log.
+  scaLogLikNonzeros <- sum( log(vecLikNonzeros[vecLikNonzeros!=0]) +
+      sum(vecLikNonzeros==0)*log(.Machine$double.eps) )
+  # Compute likelihood of all data:
   scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine

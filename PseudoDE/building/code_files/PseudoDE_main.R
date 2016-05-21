@@ -15,10 +15,12 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotPseudotimeClustering.R")
 
+evalLogLikHurdleDrop_comp <- cmpfun(evalLogLikHurdleDrop)
+
 runPseudoDE <- function(matCounts, vecPseudotime,
   nProc=1){
   
-  MAXITER <- 5
+  MAXITER <- 3
   
   # 1. Data preprocessing
   print("1. Data preprocessing:")
@@ -76,6 +78,8 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     # register(MulticoreParam()) controls the number of processes used for 
     # BiocParallel, used in zinb().
     nProcesses <- min(detectCores() - 1, nProc)
+    nProcesses <- 3
+    print(paste0("Number of processes: ", nProcesses))
     register(MulticoreParam(nProcesses))
     
     # Fit zero-inflated negative binomial model to each cluster
@@ -125,14 +129,49 @@ runPseudoDE <- function(matCounts, vecPseudotime,
           matCountsCluster * lsZINBparam$p_z + 
           lsZINBparam$mu * (1 - lsZINBparam$p_z)
       }
-    } else {
-      #vecDispersions <- array(NA,c(dim(matCounts)[1],1))
+    } else if(FALSE){
+      # Fit once to all data, one mean
+      
+      # Negative binomial over-dispersion factor: 1 per gene per cluster
+      matDispersion <- array(NA,c(dim(matCounts)[1],1))
+
       # this doesnt work for 20 genes:
-      vecboolNonzeroGenes <- apply(matCounts,1,
-        function(gene){!all(gene==0)})
+      vecboolNonzeroGenes <- apply(matCountsCluster,1,
+        function(gene){any(gene!=0)})
       # this works for 20 genes:
       #vecboolNonzeroGenes <- apply(matCounts,1,
       #  function(gene){mean(gene)>10})
+      matCountsClean <- matCounts[vecboolNonzeroGenes,]
+      
+        # Fit zinb model
+        lsZINBparam <- estimate_zinb(
+          Y = matCountsCluster, 
+          maxiter = MAXITER, 
+          verbose = TRUE)
+      
+      # Record parameters
+      matDropout <- lsZINBparam$pi
+      matProbNB <- lsZINBparam$p_z
+      vecDispersions <- lsZINBparam$theta
+      
+      # Impute count data matrix
+      vecClusters <- unique(vecClusterAssign)
+      vecindClusterAssing <- match(vecClusterAssign, vecClusters)
+      matCountsImputed <- 
+        matCountsClean * lsZINBparam$p_z + 
+        lsZINBparam$mu[,vecindClusterAssing] * (1 - lsZINBparam$p_z)
+    } else {
+      #vecDispersions <- array(NA,c(dim(matCounts)[1],1))
+      # this doesnt work for 20 genes:
+      #vecboolNonzeroGenes <- apply(matCounts,1,
+      #  function(gene){ all(unlist(sapply( seq(1,lsResultsClustering$K), 
+      #    function(cl){any(gene[lsResultsClustering$Assignments==cl]>0)} 
+      #  ))) } )
+      # this works for 20 genes:
+      vecboolNonzeroGenes <- apply(matCounts,1,
+        function(gene){ all(unlist(sapply( seq(1,lsResultsClustering$K), 
+          function(cl){any(gene[lsResultsClustering$Assignments==cl]>20)} 
+        ))) } )
       matCountsClean <- matCounts[vecboolNonzeroGenes,]
       # Fit zinb model
       vecClusterAssign <- paste0(rep("cluster_",length(lsResultsClustering$Assignments)),lsResultsClustering$Assignments)
@@ -212,8 +251,8 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       lsPseudo = lsInputToImpulseDE2,
       vecDispersionsExternal=vecDispersions,
       boolRunDESeq2=FALSE,
-      boolSimplePlot=TRUE, boolLogPlot=FALSE
-      )
+      boolSimplePlot=TRUE, boolLogPlot=TRUE
+    )
   })
   print("### End ImpulseDE2 output ##################################")
   save(lsImpulseDE2results,file=file.path(getwd(),"PseudoDE_lsImpulseDE2results.RData"))

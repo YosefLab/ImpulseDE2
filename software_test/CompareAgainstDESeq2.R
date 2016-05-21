@@ -130,7 +130,7 @@ plotDEGenes(lsGeneIDs=DEgenes_both,
           strPlotTitleSuffix="", 
           strPlotSubtitle="",
           dfImpulseResults=dfImpulseResults,
-          vecMethod2Results=vecDESeq2Results,
+          vecRefPval=vecDESeq2Results,
           strMode=strMode, 
           NPARAM=NPARAM)
 
@@ -148,7 +148,7 @@ plotDEGenes(lsGeneIDs=DEgenes_DESeq_onlySorted,
           strPlotTitleSuffix="", 
           strPlotSubtitle="",
           dfImpulseResults=dfImpulseResults,
-          vecMethod2Results=vecDESeq2Results,
+          vecRefPval=vecDESeq2Results,
           strMode=strMode, 
           NPARAM=NPARAM)
 
@@ -163,6 +163,6 @@ plotDEGenes(lsGeneIDs=DEgenes_Impulse_only,
           strPlotTitleSuffix="", 
           strPlotSubtitle="",
           dfImpulseResults=dfImpulseResults,
-          vecMethod2Results=vecDESeq2Results,
+          vecRefPval=vecDESeq2Results,
           strMode=strMode, 
           NPARAM=NPARAM)
