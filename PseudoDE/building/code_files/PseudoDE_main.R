@@ -20,7 +20,7 @@ evalLogLikHurdleDrop_comp <- cmpfun(evalLogLikHurdleDrop)
 runPseudoDE <- function(matCounts, vecPseudotime,
   nProc=1){
   
-  MAXITER <- 3
+  MAXITER <- 20
   
   # 1. Data preprocessing
   print("1. Data preprocessing:")
@@ -143,11 +143,11 @@ runPseudoDE <- function(matCounts, vecPseudotime,
       #  function(gene){mean(gene)>10})
       matCountsClean <- matCounts[vecboolNonzeroGenes,]
       
-        # Fit zinb model
-        lsZINBparam <- estimate_zinb(
-          Y = matCountsCluster, 
-          maxiter = MAXITER, 
-          verbose = TRUE)
+      # Fit zinb model
+      lsZINBparam <- estimate_zinb(
+        Y = matCountsCluster, 
+        maxiter = MAXITER, 
+        verbose = TRUE)
       
       # Record parameters
       matDropout <- lsZINBparam$pi
@@ -163,15 +163,15 @@ runPseudoDE <- function(matCounts, vecPseudotime,
     } else {
       #vecDispersions <- array(NA,c(dim(matCounts)[1],1))
       # this doesnt work for 20 genes:
-      #vecboolNonzeroGenes <- apply(matCounts,1,
-      #  function(gene){ all(unlist(sapply( seq(1,lsResultsClustering$K), 
-      #    function(cl){any(gene[lsResultsClustering$Assignments==cl]>0)} 
-      #  ))) } )
-      # this works for 20 genes:
       vecboolNonzeroGenes <- apply(matCounts,1,
         function(gene){ all(unlist(sapply( seq(1,lsResultsClustering$K), 
-          function(cl){any(gene[lsResultsClustering$Assignments==cl]>20)} 
+          function(cl){any(gene[lsResultsClustering$Assignments==cl]>10)} 
         ))) } )
+      # this works for 20 genes:
+      #vecboolNonzeroGenes <- apply(matCounts,1,
+      #  function(gene){ all(unlist(sapply( seq(1,lsResultsClustering$K), 
+      #    function(cl){any(gene[lsResultsClustering$Assignments==cl]>20)} 
+      #  ))) } )
       matCountsClean <- matCounts[vecboolNonzeroGenes,]
       # Fit zinb model
       vecClusterAssign <- paste0(rep("cluster_",length(lsResultsClustering$Assignments)),lsResultsClustering$Assignments)
