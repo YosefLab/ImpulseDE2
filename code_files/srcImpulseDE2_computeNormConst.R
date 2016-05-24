@@ -32,7 +32,7 @@
 #' @export
 
 computeNormConst <- function(arr2DCountData, dfAnnotationFull,
-  matProbNB, strMode="batch"){
+  matProbNB=NULL, strMode="batch"){
   
   # Compute geometric count mean over replicates
   # for each gene: Set zero counts to one

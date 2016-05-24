@@ -223,7 +223,7 @@ runPseudoDE <- function(matCounts, vecPseudotime,
   }
   graphics.off()
   source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
-  plotZINBfits(lsGeneIDs=rownames(matCountsClean), 
+  plotZINBfits(lsGeneIDs=rownames(matCountsClean)[1:10], 
     arr2DCountData=matCountsClean,
     matClusterMeans=matClusterMeansFitted, 
     vecDispersions=vecDispersions,

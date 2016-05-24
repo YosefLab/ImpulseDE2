@@ -31,6 +31,7 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     stop("Expression matrix contains non-integer values.")
   }
   boolOnePiPerCell <- TRUE
+  boolPiByCell <- TRUE
   
   n <- ncol(Y)
   J <- nrow(Y)
@@ -42,6 +43,9 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
   vecindClusterAssing <- match(vecClusterAssign, vecClusters)
   if(length(vecClusters)>1){
     mu0 <- lapply(vecClusters ,function(cluster){rowMeans(Y[,vecClusterAssign==cluster]+1)})
+    mu0 <- lapply(vecClusters ,function(cluster){apply(Y[,vecClusterAssign==cluster],1,
+      function(gene){mean(gene[gene>0])}
+    )})
     mu0 <- do.call(cbind, mu0)
   } else {
     mu0 <- rowMeans(Y)
@@ -86,8 +90,6 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
       return(list(fitted=fit[[1]]))
     })
     pihat <- matrix( sapply(fit_pi, function(x) x$fitted), nrow=J, ncol=n, byrow=TRUE)
-    zhat <- pihat/(pihat + (1 - pihat) * dnbinom(0, size = 1, mu = muhat0))
-    zhat[Y>0] <- 0
   } else {
     pi0 <- sapply(seq_len(n), function(i) {
       y <- as.numeric(Y[,i]<=0)
@@ -98,11 +100,7 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     
     #coefs_mu <- log(mu0)
     fit_pi <- bplapply(seq_len(n), function(i) {
-      if(boolOnePiPerCell){
-        fit <- suppressWarnings( glm(zhat[,i]~1, family = binomial(link = logit), control = list(maxit = 100)) )
-      } else {
-        fit <- suppressWarnings( glm(zhat[,i]~muhat0[,i], family = binomial(link = logit), control = list(maxit = 100)) )
-      }
+      fit <- suppressWarnings( glm(zhat[,i]~muhat0[,i], family = binomial(link = logit), control = list(maxit = 100)) )
       if(!fit$converged){print("Not converged in glm fit_pi")}
       return(list(coefs=coefficients(fit), fitted=fitted.values(fit)))
     })
@@ -111,6 +109,8 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     pihat <- lapply(fit_pi, function(x) x$fitted)
     pihat <- do.call(cbind, pihat)
   }
+  zhat <- pihat/(pihat + (1 - pihat) * dnbinom(0, size = 1, mu = muhat0))
+  zhat[Y>0] <- 0
   
   #X <- array(0,c(dim(coefs_mu)[2],n))
   #X[1,] <- 1
@@ -138,7 +138,7 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     ll_old <- ll_new
     print("Fitting means")
     fit_mu <- bplapply(seq_len(J), function(i) {
-      fit <- suppressWarnings( glm.nb(Y[i,] ~ vecClusterAssign, weights = (1 - zhat[i,]), init.theta = thetahat[i], start=coefs_mu[i,]) )
+      fit <- glm.nb(Y[i,] ~ vecClusterAssign, weights = (1 - zhat[i,]), init.theta = thetahat[i], start=coefs_mu[i,])
       if(!fit$converged){
         print(paste0("Not converged in glm mu: ",i))
       }
@@ -159,52 +159,79 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     muhat <- lapply(fit_mu, function(x) x$fitted)
     muhat <- do.call(rbind, muhat)
     
-    thetahat <- sapply(fit_mu, function(x) x$theta)
+    thetahat <- unlist(lapply(fit_mu, function(x) x$theta))
     matthetahat <- matrix(thetahat, nrow=J, ncol=n, byrow=FALSE)
     
     # for MLE
     vecParamGuess <- pihat[1,]
     
+    # Only estimate on highly expressed genes
+    vecboolHighMean <- rowMeans(Y)>=20 
+    
     print("Fitting dropout rates")
-    fit_pi <- bplapply(seq(1,n), function(i) {
-      #fit <- suppressWarnings(glm(zhat[,i]~log(muhat[,vecindClusterAssing[i]]), family = binomial(link = logit), start=coefs_pi[,i]))
-      if(boolOnePiPerCell){
-        # Find MLE through numerical optimisation
-        fit <- unlist( optim(
-          par=vecParamGuess[i],
-          fn=evalLogLikHurdleDrop_comp,
-          vecY=Y[,i],
-          vecMeanEst=muhat[,i],
-          vecDispEst=thetahat,
-          vecboolNotZeroObserved=matboolNotZeroObserved[,i], 
-          vecboolZero=matboolZero[,i],
-          method="Brent",
-          lower=0,upper=1,
-          control=list(maxit=1000,fnscale=-1)
-        )[c("par","value","convergence")] )
-        if(fit[[3]]){
-          print(paste0("Not converged MLE pi: ",i))
-        }
-        return(list(fitted=fit[[1]]))
-      } else {
-        fit <- suppressWarnings( glm(zhat[,i]~log(muhat[,i]), family = binomial(link = logit), start=coefs_pi[,i],
-          control = list(maxit = 100)) )
-        if(!fit$converged){
-          print(paste0("Not converged in glm pi: ",i))
-          fit <- suppressWarnings( glm(zhat[,i]~log(muhat[,i]), family = binomial(link = logit), start=coefs_pi[,i],
-            control = list(maxit = 10000)) )
-          if(!fit$converged){ print("Still Not converged in glm pi") }
-        }
-        return(list(coefs=coefficients(fit), fitted=fitted.values(fit)))
+    if(!boolPiByCell){
+      # Find MLE through numerical optimisation
+      fit_pi <- unlist( optim(
+        par=vecParamGuess,
+        fn=evalLogLikHurdleDrop_comp,
+        vecY=Y[vecboolHighMean,],
+        vecMeanEst=muhat[vecboolHighMean,],
+        vecDispEst=thetahat[vecboolHighMean],
+        vecboolNotZeroObserved=matboolNotZeroObserved[vecboolHighMean,], 
+        vecboolZero=matboolZero[vecboolHighMean,],
+        method="Brent",
+        lower=0,upper=1,
+        control=list(maxit=1000,fnscale=-1)
+      )[c("par","value","convergence")] )
+      if(fit[[3]]){
+        print(paste0("Not converged MLE pi: ",i))
       }
-    })
-    #save(fit_pi,file=file.path(getwd(),"PseudoDE_fit_pi.RData"))
-    if(boolOnePiPerCell){
-      pihat <- matrix( sapply(fit_pi, function(x) x$fitted), nrow=J, ncol=n, byrow=TRUE)
     } else {
-      coefs_pi <- sapply(fit_pi, function(x) x$par)
-      pihat <- lapply(fit_pi, function(x) x$fitted)
-      pihat <- do.call(cbind, pihat)
+      fit_pi <- bplapply(seq(1,n), function(i) {
+        #fit <- suppressWarnings(glm(zhat[,i]~log(muhat[,vecindClusterAssing[i]]), family = binomial(link = logit), start=coefs_pi[,i]))
+        if(boolOnePiPerCell){
+          # Find MLE through numerical optimisation
+          vecParamGuessesLocal <- list(0,vecParamGuess[i],1)
+          fits <- lapply(vecParamGuessesLocal, function(x){unlist( 
+            optim(
+              par=x,
+              fn=evalLogLikHurdleDrop_comp,
+              vecY=Y[vecboolHighMean,i],
+              vecMeanEst=muhat[vecboolHighMean,i],
+              vecDispEst=thetahat[vecboolHighMean],
+              vecboolNotZeroObserved=matboolNotZeroObserved[vecboolHighMean,i], 
+              vecboolZero=matboolZero[vecboolHighMean,i],
+              method="Brent",
+              lower=0,upper=1,
+              control=list(maxit=1000,fnscale=-1)
+            )[c("par","value","convergence")] ) 
+          })
+          vecFitValues <- unlist(lapply(fits, function(x) x["value"]))
+          fit <- fits[[match(min(vecFitValues),vecFitValues)]]
+          if(fit[[3]]){
+            print(paste0("Not converged MLE pi: ",i))
+          }
+          return(list(fitted=fit[[1]]))
+        } else {
+          fit <- suppressWarnings( glm(zhat[,i]~log(muhat[,i]), family = binomial(link = logit), start=coefs_pi[,i],
+            control = list(maxit = 100)) )
+          if(!fit$converged){
+            print(paste0("Not converged in glm pi: ",i))
+            fit <- suppressWarnings( glm(zhat[,i]~log(muhat[,i]), family = binomial(link = logit), start=coefs_pi[,i],
+              control = list(maxit = 10000)) )
+            if(!fit$converged){ print("Still Not converged in glm pi") }
+          }
+          return(list(coefs=coefficients(fit), fitted=fitted.values(fit)))
+        }
+      })
+      #save(fit_pi,file=file.path(getwd(),"PseudoDE_fit_pi.RData"))
+      if(boolOnePiPerCell){
+        pihat <- matrix( sapply(fit_pi, function(x) x$fitted), nrow=J, ncol=n, byrow=TRUE)
+      } else {
+        coefs_pi <- sapply(fit_pi, function(x) x$par)
+        pihat <- lapply(fit_pi, function(x) x$fitted)
+        pihat <- do.call(cbind, pihat)
+      }
     }
     
     #zhat <- pihat/(pihat + (1 - pihat) * dnbinom(0, size = matrix(thetahat, nrow=J, ncol=n), mu = muhat[,vecindClusterAssing]))
@@ -213,13 +240,23 @@ estimate_zinb <- function(Y, vecClusterAssign, maxiter=10, verbose=FALSE) {
     
     print("Compute Loglik")
     #W <- model.matrix(~log(coefs_mu))
-    W <- model.matrix(~coefs_mu)
+    #W <- model.matrix(~coefs_mu)
     #ll_new_ref <- loglik_small(c(coefs_mu, coefs_pi[1,], coefs_pi[2,], log(thetahat)), Y, Y>0, X, W, J, n*2, 0, 0, linkobj)
     loglik0 <- sum(log( pihat[Y==0] + (1 - pihat[Y==0]) * dnbinom(Y[Y==0], mu=muhat[Y==0], size=matthetahat[Y==0], log=FALSE) ))
     loglik1 <- sum(log( (1 - pihat[Y>0]) * dnbinom(Y[Y>0], mu=muhat[Y>0], size=matthetahat[Y>0], log=FALSE) ))
     ll_new <- loglik0 + loglik1
     
     if(verbose) {
+      if(FALSE){
+        print(cbind( zeros=unlist(sapply(seq(1,J),function(i){
+          sum(log( pihat[i,Y[i,]==0] + (1 - pihat[i,Y[i,]==0]) * dnbinom(Y[i,Y[i,]==0], mu=muhat[i,Y[i,]==0], size=matthetahat[i,Y[i,]==0], log=FALSE) ))
+        })),
+          nonzeros=unlist(sapply(seq(1,J),function(i){
+            sum(log( (1 - pihat[i,Y[i,]>0]) * dnbinom(Y[i,Y[i,]>0], mu=muhat[i,Y[i,]>0], size=matthetahat[i,Y[i,]>0], log=FALSE) ))
+          })),
+          mean=rowMeans(Y)
+        ))
+      }
       print(ll_new)
     }
     
