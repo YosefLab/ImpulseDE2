@@ -73,6 +73,13 @@ runDESeq2 <- function(dfAnnotationProc, matCountDataProc,
     } else {
       stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
     }
+    # Get gene-wise dispersion estimates
+    # var = mean + alpha * mean^2, alpha is dispersion
+    # DESeq2 dispersion is 1/size used dnbinom (used in cost function
+    # for evaluation of likelihood)
+    dds_dispersions <- 1/dispersions(ddsDESeqObject) 
+    # DESeq results for comparison
+    dds_resultsTable <- results(ddsDESeqObject)
   } else {
     # With control data:
     

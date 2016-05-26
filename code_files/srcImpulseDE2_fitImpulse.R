@@ -13,6 +13,8 @@
 #' @param vecCounts: (count vector number of samples) Count data.
 #' @param vecNormConst: (numeric vector number of samples) 
 #'    Normalisation constants for each sample.
+#' @param vecTimecourses: (string vector number of time courses) 
+#'    Time coureses observed.
 #' @param vecTimecourseAssign: (numeric vector number samples) 
 #'    Time courses assigned to samples. 
 #'    NULL if not operating in strMode="timecourses".
@@ -23,7 +25,7 @@
 #' @export
 
 computeTranslationFactors <- function(vecCounts,vecNormConst,
-  vecTimecourseAssign){
+  vecTimecourses, vecTimecourseAssign){
   # Fit mean to normalised counts. Count normalisation 
   # corresponds to model normalisation in impulse model 
   # fitting.
@@ -202,6 +204,7 @@ estimateImpulseParam <- function(vecTimepoints, vecCounts,
   } else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
+  nTimepts <- length(vecTimepoints)
   scaMaxMiddleMean <- max(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
   scaMinMiddleMean <- min(vecExpressionMeans[2:(nTimepts-1)], na.rm=TRUE)
   # +1 to push indicices up from middle stretch to entire window (first is omitted here)
@@ -230,7 +233,7 @@ estimateImpulseParam <- function(vecTimepoints, vecCounts,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2 )
   
   lsParamGuesses <- list(peak=vecParamGuessPeak, valley=vecParamGuessValley)
-  return(vecParamGuessPeak)
+  return(lsParamGuesses)
 }
 
 #' Fit an impulse model to data of a gene
@@ -277,7 +280,7 @@ estimateImpulseParam <- function(vecTimepoints, vecCounts,
 #' @export
 
 optimiseImpulseModelFit <- function(
-  vecParamGuessPeak,
+  vecParamGuess,
   vecTimepoints, 
   vecCounts,
   scaDispersionEstimate,
@@ -291,7 +294,7 @@ optimiseImpulseModelFit <- function(
   
   if(strMode=="batch"){
     vecFit <- unlist( optim(
-      par=vecParamGuessPeak,
+      par=vecParamGuess,
       fn=evalLogLikImpulseBatch_comp,
       vecX=vecTimepoints,
       vecY=vecCounts,
@@ -317,7 +320,8 @@ optimiseImpulseModelFit <- function(
       control=list(maxit=MAXIT,fnscale=-1)
     )[c("par","value","convergence")] )
   }else if(strMode=="singlecell"){
-    vecFit <- unlist( optim(par=vecParamGuess, 
+    vecFit <- unlist( optim(
+      par=vecParamGuess, 
       fn=evalLogLikImpulseSC_comp, 
       vecX=vecTimepoints,
       vecY=vecCounts, 
@@ -402,7 +406,6 @@ fitImpulse_gene <- function(vecCounts,
   
   # Compute time point specifc parameters
   vecTimepoints <- sort(unique( vecTimepointAssign ))
-  nTimepts <- length(vecTimepoints)
   # Get vector of numeric time point assignment indices:
   vecindTimepointAssign <- match(vecTimepointAssign, vecTimepoints)
   
@@ -414,6 +417,7 @@ fitImpulse_gene <- function(vecCounts,
     vecTranslationFactors <- computeTranslationFactors(
       vecCounts=vecCounts,
       vecNormConst=vecNormConst,
+      vecTimecourses=vecTimecourses,
       vecTimecourseAssign=vecTimecourseAssign)
   }
   
@@ -430,9 +434,9 @@ fitImpulse_gene <- function(vecCounts,
     vecboolZero=vecboolZero,
     strMode=strMode)
   
-  scaMu <- lsNullModel$scaMu
-  vecMuTimecourses <- lsNullModel$vecMuTimecourses
-  scaLogLikNull <- lsNullModel$scaLogLikNull
+  scaMu <- lsNullModel["scaMu"]
+  vecMuTimecourses <- lsNullModel["vecMuTimecourses"]
+  scaLogLikNull <- lsNullModel["scaLogLikNull"]
   
   # (III) Fit Impulse model
   # Compute initialisations
@@ -443,8 +447,8 @@ fitImpulse_gene <- function(vecCounts,
     vecNormConst=vecNormConst,
     strMode=strMode, 
     vecProbNB=vecProbNB)
-  vecParamGuessPeak <- lsParamGuesses$peak
-  vecParamGuessValley <- lsParamGuesses$valley
+  vecParamGuessPeak <- lsParamGuesses["peak"]
+  vecParamGuessValley <- lsParamGuesses["valley"]
   
   # 1. Initialisation: Peak
   vecFitPeak <- optimiseImpulseModelFit(
@@ -920,4 +924,3 @@ fitImpulse <- function(matCountDataProc,
   
   return(lsFitResults_all)
 }
-
