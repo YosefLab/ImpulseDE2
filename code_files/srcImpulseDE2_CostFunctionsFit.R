@@ -36,9 +36,14 @@
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
-evalLogLikImpulseBatch <- function(vecTheta, vecX, vecY,
-  scaDispEst, vecNormConst, 
-  vecindTimepointAssign, vecboolObserved){
+evalLogLikImpulseBatch <- function(vecTheta, 
+  vecX, 
+  vecY,
+  scaDispEst, 
+  vecNormConst, 
+  vecindTimepointAssign, 
+  vecboolObserved){
+
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each sample.
@@ -97,10 +102,14 @@ evalLogLikImpulseBatch <- function(vecTheta, vecX, vecY,
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
-evalLogLikImpulseByTC <- function(vecTheta,vecX,vecY,
-  scaDispEst, vecNormConst,
+evalLogLikImpulseByTC <- function(vecTheta,
+  vecX,
+  vecY,
+  scaDispEst, 
+  vecNormConst,
   vecTranslationFactors, 
-  vecindTimepointAssign, vecboolObserved){  
+  vecindTimepointAssign, 
+  vecboolObserved){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each sample
@@ -163,10 +172,15 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,vecY,
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
-evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
-  scaDispEst, vecDropoutRateEst, 
+evalLogLikImpulseSC <- function(vecTheta,
+  vecX,
+  vecY,
+  scaDispEst, 
+  vecDropoutRateEst, 
   vecNormConst,
-  vecindTimepointAssign, vecboolNotZeroObserved, vecboolZero){  
+  vecindTimepointAssign, 
+  vecboolNotZeroObserved, 
+  vecboolZero){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each sample.

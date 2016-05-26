@@ -243,7 +243,10 @@ estimateImpulseParam <- function(vecTimepoints, vecCounts,
 #' likelihood function given the impulse model and returns
 #' the fitted (maximum likelihood) model.
 #' 
-#' @seealso Called by \code{fitImpulse_gene}.
+#' @seealso Called by \code{fitImpulse_gene}. This function
+#' calls the cost function \code{evalLogLikImpulseBatch_comp},
+#' \code{evalLogLikImpulseTC_comp} or 
+#' \code{evalLogLikImpulseSC_comp} depending on the mode.
 #' 
 #' @param vecParamGuessPeak (vector number of parameters [6]) 
 #'    Impulse model parameters.
@@ -292,6 +295,9 @@ optimiseImpulseModelFit <- function(
   vecboolNotZeroObserved=NULL,
   strMode="batch", MAXIT){
   
+  # Chose the cost function for optimisation according
+  # to the mode strMode.
+  # David: call these as one, assign the extra param as dummies?
   if(strMode=="batch"){
     vecFit <- unlist( optim(
       par=vecParamGuess,
@@ -343,13 +349,19 @@ optimiseImpulseModelFit <- function(
 #' Fit an impulse model to a single gene
 #' 
 #' Fits an impulse model and a mean model to a single gene.
-#' The optimisation method is set within this function (\code{optim}:
-#' BFGS). This method is divided into four parts: (I) Prepare data,
-#' (II) Fit mean model, (III) Fit impulse model, (IV) Process Fits.
-#' Internal function of \code{fitImpulse}.
+#' The optimisation method is set within \code{optimiseImpulseModelFit} 
+#' (\code{optim}: BFGS). This function is divided into four parts: 
+#' (I) Prepare data,
+#' (II) Fit mean model, 
+#' (III) Fit impulse model, 
+#' (IV) Process Fits.
+#' The body of this function is broken up into 4 helper functions, 
+#' which are exclusively called by this function.
 #' 
-#' @seealso Called by \code{fitImpulse_matrix}. Calls \code{evalLogLikImpulse},
-#'    and \code{calcImpulse_comp}.
+#' @seealso Called by \code{fitImpulse_matrix}. This function
+#' calls \code{computeTranslationFactors}, 
+#' \code{computeLogLikNull}, \code{estimateImpulseParam} and
+#' \code{optimiseImpulseModelFit}.
 #' 
 #' @param vecCounts: (count vector number of samples) Count data.
 #' @param scaDispersionEstimate: (scalar) Inverse of negative binomial 
@@ -357,7 +369,7 @@ optimiseImpulseModelFit <- function(
 #' @param vecDropoutRate: (probability vector number of samples) 
 #'    [Default NULL] Dropout rate/mixing probability of zero inflated 
 #'    negative binomial mixturemodel for each gene and cell.
-#' @param vecProbNB: (probability vector number of samples) 
+#' @param vecProbNB: (probability vector number of samples) [Default NULL]
 #'    Probability of observations to come from negative binomial 
 #'    component of mixture model.
 #' @param vecNormConst: (numeric vector number of samples) 
@@ -410,6 +422,8 @@ fitImpulse_gene <- function(vecCounts,
   vecindTimepointAssign <- match(vecTimepointAssign, vecTimepoints)
   
   # Compute time course specifc parameters
+  # Set default:
+  vecTranslationFactors <- NULL
   if(strMode=="timecourses"){
     vecTimecourses <- unique( vecTimecourseAssign )
     nTimecourses <- length(vecTimecourses)
@@ -434,9 +448,9 @@ fitImpulse_gene <- function(vecCounts,
     vecboolZero=vecboolZero,
     strMode=strMode)
   
-  scaMu <- lsNullModel["scaMu"]
-  vecMuTimecourses <- lsNullModel["vecMuTimecourses"]
-  scaLogLikNull <- lsNullModel["scaLogLikNull"]
+  scaMu <- lsNullModel$scaMu
+  vecMuTimecourses <- lsNullModel$vecMuTimecourses
+  scaLogLikNull <- lsNullModel$scaLogLikNull
   
   # (III) Fit Impulse model
   # Compute initialisations
@@ -447,8 +461,8 @@ fitImpulse_gene <- function(vecCounts,
     vecNormConst=vecNormConst,
     strMode=strMode, 
     vecProbNB=vecProbNB)
-  vecParamGuessPeak <- lsParamGuesses["peak"]
-  vecParamGuessValley <- lsParamGuesses["valley"]
+  vecParamGuessPeak <- lsParamGuesses$peak
+  vecParamGuessValley <- lsParamGuesses$valley
   
   # 1. Initialisation: Peak
   vecFitPeak <- optimiseImpulseModelFit(
@@ -483,8 +497,7 @@ fitImpulse_gene <- function(vecCounts,
   dfFitsByInitialisation <- cbind(vecFitPeak, vecFitValley)
   
   # Name row containing value of objective as value 
-  # This name differs between optimisation functions
-  # DAVID: take out when take out nlminb
+  # Need this if optimisation routine is not optim::BFGS
   #rownames(dfFitsByInitialisation) <- c(rownames(dfFitsByInitialisation[1:(nrow(dfFitsByInitialisation)-1),]),"value")
   
   # Select best fit and report fit type
@@ -772,14 +785,12 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
 
 #' Fits impulse model to a timecourse dataset
 #' 
-#' This function coordinates helper functions for fitting:
-#'  1. [Helper \code{fitImpulse_gene}] Fit impulse model to a single gene.
-#'      Calls cost functions (\code{evalLogLikImpulseBatch_comp},
-#'      \code{evalLogLikImpulseByTC_comp} and \code{evalLogLikImpulseSC_comp})
-#'      and \code{calcImpulse_comp}.
-#'  2. [Helper \code{fitImpulse_matrix}] Fit impulse model to matrix of genes.
-#'      Calls \code{fitImpulse_gene}.
-#'  3. [This function] Prepare data and fit model. Calls \code{impulse_fit_matrix}.
+#' This function processes the input matrix and
+#' coordinates impulse model fitting through
+#' \code{impulse_fit_matrix}.
+#' [Helper \code{fitImpulse_matrix}] Fit impulse model to matrix of genes.
+#' Calls \code{fitImpulse_gene}. \code{fitImpulse_matrix} fits impulse
+#' models to a matrix of samples from one condition.
 #'  
 #' @seealso Called by \code{runImpulseDE2}. Calls \code{fitImpulse_matrix}.
 #'  

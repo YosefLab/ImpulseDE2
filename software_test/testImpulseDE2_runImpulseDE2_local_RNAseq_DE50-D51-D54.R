@@ -27,12 +27,12 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_f
 
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 strCaseName = "case"
-strControlName = NULL
+strControlName = "ctrl"
 if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 }else{dfAnnotation=dfAnnotationCase}
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "timecourses"
+strMode <- "batch"
 boolPlotting <- TRUE
 lsImpulseDE_results <- runImpulseDE2(
   matCountData=matCountData, 
