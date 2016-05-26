@@ -1,21 +1,21 @@
-Replicate	Sample	Condition	Time	Timecourse
-E70_0h		S_0h	case		0	E70
-E70_30min	S_05h	case		0.5	E70
-E70_2h		S_2h	case		2	E70
-E70_4h		S_4h	case		4	E70
-E70_24h		S_24h	case		24	E70
-E72_0h		S_0h	case		0	E72
-E72_30min	S_05h	case		0.5	E72
-E72_2h		S_2h	case		2	E72
-E72_4h		S_4h	case		4	E72
-E72_24h		S_24h	case		24	E72
-E81_2nd_0h	Sc_0h	ctrl		0	E81_2nd
-E81_2nd_30min	Sc_05h	ctrl		0.5	E81_2nd
-E81_2nd_2h	Sc_2h	ctrl		2	E81_2nd
-E81_2nd_4h	Sc_4h	ctrl		4	E81_2nd
-E81_2nd_24h	Sc_24h	ctrl		24	E81_2nd
-E91_0h		Sc_0h	ctrl		0	E91
-E91_30min	Sc_05h	ctrl		0.5	E91
-E91_2h		Sc_2h	ctrl		2	E91
-E91_4h		Sc_4h	ctrl		4	E91
-E91_24h		Sc_24h	ctrl		24	E91
+Sample	Condition	Time	Timecourse
+E70_0h	case	0	E70
+E70_30min	case	0.5	E70
+E70_2h	case	2	E70
+E70_4h	case	4	E70
+E70_24h	case	24	E70
+E72_0h	case	0	E72
+E72_30min	case	0.5	E72
+E72_2h	case	2	E72
+E72_4h	case	4	E72
+E72_24h	case	24	E72
+E81_2nd_0h	ctrl	0	E81_2nd
+E81_2nd_30min	ctrl	0.5	E81_2nd
+E81_2nd_2h	ctrl	2	E81_2nd
+E81_2nd_4h	ctrl	4	E81_2nd
+E81_2nd_24h	ctrl	24	E81_2nd
+E91_0h	ctrl	0	E91
+E91_30min	ctrl	0.5	E91
+E91_2h	ctrl	2	E91
+E91_4h	ctrl	4	E91
+E91_24h	ctrl	24	E91

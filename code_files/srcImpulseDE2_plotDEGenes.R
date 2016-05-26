@@ -8,14 +8,17 @@
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
-#' @param lsGeneIDs (character vector) of gene names to be plotted; must be
-#     trownames of arr3DCountData.
-#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
-#'    version of \code{matCountData}. For internal use.
-#' @param vecNormConst: (numeric vector number of replicates) 
-#'    Normalisation constants for each replicate.
-#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
-#'    Replicate, Sample, Condition, Time. Time must be numeric.
+#' @param vecGeneIDs (string vector) Gene names to be plotted,
+#      must be rownames of matCountDataProc
+#' @param matCountDataProc: (matrix genes x samples)
+#'    Count data: Reduced version of \code{matCountData}. 
+#'    For internal use.
+#' @param dfAnnotationProc: (Table) Processed annotation table. 
+#'    Lists co-variables of samples: 
+#'    Sample, Condition, Time (numeric), TimeCateg (str)
+#'    (and Timecourse). For internal use.
+#' @param vecNormConst: (numeric vector number of samples) 
+#'    Normalisation constants for each sample.
 #' @param lsImpulseFits (list length 2 or 6) List of matrices which
 #'    contain parameter fits and model values for given time course for the
 #'    case condition (and control and combined if control is present).
@@ -31,9 +34,9 @@
 #' @param dfDEAnalysis (data frame genes x fitting characteristics) 
 #'    Summary of fitting procedure for each gene.
 #' @param vecRefPval (vec length genes) Method 2 (DESeq2) adjusted p-values
-#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationFullFull}.
+#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationProcFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
-#'    \code{dfAnnotationFullFull}.
+#'    \code{dfAnnotationProcFull}.
 #' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
 #'    Mode of model fitting.
 #' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
@@ -45,8 +48,9 @@
 #' @return NULL
 #' @export
 
-plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
-  dfAnnotationFull, lsImpulseFits, matClusterMeansFitted=NULL,
+plotDEGenes <- function(vecGeneIDs, 
+  matCountDataProc, vecNormConst,
+  dfAnnotationProc, lsImpulseFits, matClusterMeansFitted=NULL,
   dfImpulseResults, vecRefPval=NULL, 
   strCaseName, strControlName=NULL, strMode="batch",
   strFileNameSuffix = "", strPlotTitleSuffix = "", strPlotSubtitle = "",
@@ -59,13 +63,13 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
   # Therefore, the model curves follow the normalised
   # count data and not the raw count data. However, 
   # fitting was still performed based on raw count data.
-  arr2DCountData <- arr2DCountData / matrix(vecNormConst, 
-    nrow=dim(arr2DCountData)[1], 
-    ncol=dim(arr2DCountData)[2], 
+  matCountDataProc <- matCountDataProc / matrix(vecNormConst, 
+    nrow=dim(matCountDataProc)[1], 
+    ncol=dim(matCountDataProc)[2], 
     byrow=TRUE)
   if(boolLogPlot){
     # Add Pseudocount for plotting convenience
-    arr2DCountData <- log(arr2DCountData+1)/log(10)
+    matCountDataProc <- log(matCountDataProc+1)/log(10)
     matClusterMeansFitted <- log(matClusterMeansFitted)/log(10)
     strLogPlot <- "log_10"
   } else {
@@ -74,20 +78,29 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
   
   # Name genes if not previously named (already done if this function is
   # called within the wrapper function).
-  if(length(grep("[a-zA-Z]",rownames(arr2DCountData))) == 0 ){
-    rownames(arr2DCountData) <- paste(rownames(arr2DCountData),"G", sep = "_")
-    lsGeneIDs <- paste(lsGeneIDs, "G", sep = "_")
+  if(length(grep("[a-zA-Z]",rownames(matCountDataProc))) == 0 ){
+    rownames(matCountDataProc) <- paste(rownames(matCountDataProc),"G", sep = "_")
+    vecGeneIDs <- paste(vecGeneIDs, "G", sep = "_")
   }
   
-  vecConditions <- as.vector( dfAnnotationFull[match(colnames(arr2DCountData),dfAnnotationFull$Replicate),]$Condition )
-  vecTimepointAssign <- as.vector( dfAnnotationFull[match(colnames(arr2DCountData),dfAnnotationFull$Replicate),]$Time )
+  vecConditions <- as.vector( dfAnnotationProc[match(
+    colnames(matCountDataProc),
+    dfAnnotationProc$Sample),
+    ]$Condition )
+  vecTimepointAssign <- as.vector( dfAnnotationProc[match(
+    colnames(matCountDataProc),
+    dfAnnotationProc$Sample),
+    ]$Time )
   vecTimepoints <- sort(unique(vecTimepointAssign))
   if(!is.null(strControlName)){
-    vecidxReplicatesCase <- vecConditions %in% strCaseName
-    vecidxReplicatesCtrl <- vecConditions %in% strControlName
+    vecidxSamplesCase <- vecConditions %in% strCaseName
+    vecidxSamplesCtrl <- vecConditions %in% strControlName
   }
   if(strMode=="timecourses"){
-    vecTimecourseAssign <- dfAnnotationFull[match(colnames(arr2DCountData),dfAnnotationFull$Replicate),]$Timecourse
+    vecTimecourseAssign <- dfAnnotationProc[match(
+      colnames(matCountDataProc),
+      dfAnnotationProc$Sample),
+      ]$Timecourse
     vecTimecourses <- unique(vecTimecourseAssign)
     vecindTimecourseAssign <- match(vecTimecourseAssign, vecTimecourses)
   }
@@ -105,13 +118,13 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
   pdf(paste("ImpulseDE2_",strFileNameSuffix,".pdf",sep=""),height=6.0,width=9.0)
   
   # Define grid for printing plots
-  if (length(lsGeneIDs) == 1){
+  if (length(vecGeneIDs) == 1){
     par(mfrow=c(1,1), xpd=TRUE)
     scaLegendInset <- -0.15
-  } else if (length(lsGeneIDs) <= 4){
+  } else if (length(vecGeneIDs) <= 4){
     par(mfrow=c(2,2), xpd=TRUE)
     scaLegendInset <- -0.35
-  } else if (length(lsGeneIDs) <= 6){
+  } else if (length(vecGeneIDs) <= 6){
     par(mfrow=c(2,3), xpd=TRUE)
     scaLegendInset <- -0.3
   } else {
@@ -124,7 +137,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
   indVecXObs <- unlist(lapply( 
     vecTimepoints, function(t){match( min(abs(vecX-t)), abs(vecX-t) )} 
   ))
-  for (geneID in lsGeneIDs){
+  for (geneID in vecGeneIDs){
     if(is.null(strControlName)){
       # Without control  data 
       
@@ -142,8 +155,8 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
       if(boolSimplePlot){
         # Only plot points and impulse trace
         # Plot observed points in blue - all time courses in same colour
-        scaYlim_lower <- min( min(arr2DCountData[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
-        scaYlim_upper <- max( max(arr2DCountData[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
+        scaYlim_lower <- min( min(matCountDataProc[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
+        scaYlim_upper <- max( max(matCountDataProc[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
         strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
         if(!is.null(vecRefPval)){
           strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
@@ -151,7 +164,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
           strPvalMethod2 <- NULL
         }
         plot(vecTimepointAssign,
-          arr2DCountData[geneID,],
+          matCountDataProc[geneID,],
           col="blue",pch=3,
           xlim=c(0,max(vecTimepoints,na.rm=TRUE)+PDF_WIDTH), 
           ylim=c(scaYlim_lower,scaYlim_upper),
@@ -166,7 +179,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
         
         # Plot mean of each time point
         points(vecTimepoints,
-          sapply(vecTimepoints,function(tp){mean(arr2DCountData[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
+          sapply(vecTimepoints,function(tp){mean(matCountDataProc[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
           col="black",pch=1)
         if(strMode=="singlecell"){
           # Plot inferred mean of each time point
@@ -181,8 +194,8 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
         
         if(strMode=="batch" | strMode=="singlecell"){
           # Plot observed points in blue - all time courses in same colour
-          scaYlim_lower <- min( min(arr2DCountData[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
-          scaYlim_upper <- max( max(arr2DCountData[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
+          scaYlim_lower <- min( min(matCountDataProc[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
+          scaYlim_upper <- max( max(matCountDataProc[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
           strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
           if(!is.null(vecRefPval)){
             strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
@@ -190,7 +203,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
             strPvalMethod2 <- NULL
           }
           plot(vecTimepointAssign,
-            arr2DCountData[geneID,],
+            matCountDataProc[geneID,],
             col="blue",pch=3,
             xlim=c(0,max(vecTimepoints,na.rm=TRUE)+PDF_WIDTH), 
             ylim=c(scaYlim_lower,scaYlim_upper),
@@ -219,7 +232,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
           
           # Plot mean of each time point
           points(vecTimepoints,
-            sapply(vecTimepoints,function(tp){mean(arr2DCountData[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
+            sapply(vecTimepoints,function(tp){mean(matCountDataProc[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
             col="black",pch=1)
           
           legend(x="bottomright",
@@ -244,9 +257,9 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
           vecCol <- rainbow(n=length(vecTimecourses))
           
           # Create plot and plot data of first time course
-          scaYlim_lower <- min( min(arr2DCountData[geneID,],na.rm=TRUE), 
+          scaYlim_lower <- min( min(matCountDataProc[geneID,],na.rm=TRUE), 
             min(vecCaseValues[indVecXObs]*min(vecTranslationFactors)) )
-          scaYlim_upper <- max( max(arr2DCountData[geneID,],na.rm=TRUE), 
+          scaYlim_upper <- max( max(matCountDataProc[geneID,],na.rm=TRUE), 
             max(vecCaseValues[indVecXObs]*max(vecTranslationFactors)) )
           strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
           if(!is.null(vecRefPval)){
@@ -255,7 +268,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
             strPvalMethod2 <- NULL
           }
           plot(vecTimepointAssign[vecindTimecourseAssign==1],
-            arr2DCountData[geneID, vecindTimecourseAssign==1],
+            matCountDataProc[geneID, vecindTimecourseAssign==1],
             col=vecCol[1],pch=3,
             xlim=c(0,max(vecTimepoints,na.rm=TRUE)), 
             ylim=c(scaYlim_lower,scaYlim_upper),
@@ -273,7 +286,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
             for(tc in 2:length(vecTimecourses)){
               # Plot data of time course
               points(x=vecTimepointAssign[vecindTimecourseAssign==tc],
-                y=arr2DCountData[geneID, vecindTimecourseAssign==tc],
+                y=matCountDataProc[geneID, vecindTimecourseAssign==tc],
                 col=vecCol[tc],pch=3)
               # Plot impulse within boundaries of observed points
               vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[tc]
@@ -287,7 +300,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
           
           # Plot mean of each time point
           points(vecTimepoints,
-            sapply(vecTimepoints,function(tp){mean(arr2DCountData[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
+            sapply(vecTimepoints,function(tp){mean(matCountDataProc[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
             col="black",pch=1)
           
           legend(x="bottomright",
@@ -325,11 +338,11 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
       }
       
       # Plot observed points: Case green, control red
-      scaYlim_lower <- min( min(arr2DCountData[geneID,],na.rm=TRUE),
+      scaYlim_lower <- min( min(matCountDataProc[geneID,],na.rm=TRUE),
         min(vecCaseValues[indVecXObs]),
         min(lsCtrlValues[indVecXObs]),
         min(lsCombValues[indVecXObs]) )
-      scaYlim_upper <- max( max(arr2DCountData[geneID,],na.rm=TRUE),
+      scaYlim_upper <- max( max(matCountDataProc[geneID,],na.rm=TRUE),
         max(vecCaseValues[indVecXObs]),
         max(lsCtrlValues[indVecXObs]),
         max(lsCombValues[indVecXObs]) )
@@ -340,8 +353,8 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
         strPvalMethod2 <- NULL
       }
       # Plot points case
-      plot(vecTimepointAssign[vecidxReplicatesCase],
-        (arr2DCountData[geneID,])[vecidxReplicatesCase],
+      plot(vecTimepointAssign[vecidxSamplesCase],
+        (matCountDataProc[geneID,])[vecidxSamplesCase],
         col="green",pch=3,
         xlim=c(0,max(vecTimepoints,na.rm=TRUE)+PDF_WIDTH),
         ylim=c(scaYlim_lower,scaYlim_upper),
@@ -349,8 +362,8 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
         main=paste0(geneID," ",strPlotTitleSuffix," log(Pval):\n ",
           strPvalImpulse," ",strPvalMethod2),sub=strPlotSubtitle)
       # Plot points control
-      points(vecTimepointAssign[vecidxReplicatesCtrl],
-        (arr2DCountData[geneID,])[vecidxReplicatesCtrl],
+      points(vecTimepointAssign[vecidxSamplesCtrl],
+        (matCountDataProc[geneID,])[vecidxSamplesCtrl],
         col="red",pch=3, type="p")
       # Plot impulse models within boundaries of observed points for 
       # case, control and combined.
@@ -372,7 +385,7 @@ plotDEGenes <- function(lsGeneIDs, arr2DCountData, vecNormConst,
       
       # Plot mean of each time point
       points(vecTimepoints,
-        sapply(vecTimepoints,function(tp){mean(arr2DCountData[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
+        sapply(vecTimepoints,function(tp){mean(matCountDataProc[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
         col="black",pch=1)
       
       legend(x="bottomright",

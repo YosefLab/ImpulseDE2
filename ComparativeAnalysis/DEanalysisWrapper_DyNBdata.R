@@ -148,7 +148,7 @@ print("Finished ImpulseDE2")
 ################################################################################
 # ImpulseDE
 print("Run ImpulseDE")
-source("/Users/davidsebastianfischer/MasterThesis/ImpulseDE_original/Impulse_DE_fin_noPlotting.R")
+source("/Users/davidsebastianfischer/MasterThesis/software/ImpulseDE/repo/Impulse_DE_fin.R")
 
 # Create input data set
 # Only retain non zero
@@ -232,7 +232,7 @@ matDataA_DESeq2 <- matDataA[vecboolNonzeroA,]
 matDataB_DESeq2 <- matDataB[vecboolNonzeroB,]
 matDataAB_DESeq2 <- matDataAB[vecboolNonzeroAB,]
 
-tm_ImpulseDE2A <- system.time({
+tm_DESeq2A <- system.time({
   # Create DESeq2 data object
   dds <- DESeqDataSetFromMatrix(countData = matDataA_DESeq2,
     colData = dfAnnotationA,
@@ -248,7 +248,7 @@ tm_ImpulseDE2A <- system.time({
   pvals_A <- dds_resultsTableA$pvalue
 })
 
-tm_ImpulseDE2B <- system.time({
+tm_DESeq2B <- system.time({
   # Create DESeq2 data object
   dds <- DESeqDataSetFromMatrix(countData = matDataB_DESeq2,
     colData = dfAnnotationB,
@@ -414,5 +414,5 @@ lsResDEcomparison_DyNBdata <- list("matQval_DyNBData"=matQval_DyNBData,
   "matPval_DyNBData"=matPval_DyNBData, 
   "matRunTime_DyNBData"=matRunTime_DyNBData)
 
-save(lsResDEcomparison_DyNBdata,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/lsResDEcomparison_DyNBdata.RData"))
+save(lsResDEcomparison_DyNBdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/lsResDEcomparison_DyNBdata.RData"))
 print("Finished edge.")

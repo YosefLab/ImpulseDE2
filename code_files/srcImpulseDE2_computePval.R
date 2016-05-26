@@ -9,12 +9,15 @@
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
-#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
-#'    version of \code{matCountData}. For internal use.
+#' @param matCountDataProc: (matrix genes x samples)
+#'    Count data: Reduced version of \code{matCountData}. 
+#'    For internal use.
+#' @param dfAnnotationProc: (Table) Processed annotation table. 
+#'    Lists co-variables of samples: 
+#'    Sample, Condition, Time (numeric), TimeCateg (categorial)
+#'    (and Timecourse). For internal use.
 #' @param vecDispersions (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
-#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
-#'    Replicate, Sample, Condition, Time. Time must be numeric.
 #' @param lsImpulseFits (list length 2 or 6) List of matrices which
 #'    contain parameter fits and model values for given time course for the
 #'    case condition (and control and combined if control is present).
@@ -39,8 +42,8 @@
 #'    Summary of fitting procedure for each gene.
 #' @export
 
-computePval <- function(arr2DCountData,vecDispersions,
-  dfAnnotationFull, lsImpulseFits,
+computePval <- function(matCountDataProc,vecDispersions,
+  dfAnnotationProc, lsImpulseFits,
   strCaseName=NULL, strControlName=NULL, strMode="batch",
   NPARAM=6){
   
@@ -61,9 +64,9 @@ computePval <- function(arr2DCountData,vecDispersions,
     } else if(strMode=="timecourses"){
       # Parameters, 1 dispersion estimate and 
       # scaling factor for each time course
-      scaDegFreedomFull <- NPARAM + 1 + length(unique(dfAnnotationFull$Timecourse))
+      scaDegFreedomFull <- NPARAM + 1 + length(unique(dfAnnotationProc$Timecourse))
       # 1 dispersion estimate and 1 mean estimate for each time course
-      scaDegFreedomRed <- 1 + length(unique(dfAnnotationFull$Timecourse))
+      scaDegFreedomRed <- 1 + length(unique(dfAnnotationProc$Timecourse))
     }
   } else {
     # With control data:
@@ -83,10 +86,10 @@ computePval <- function(arr2DCountData,vecDispersions,
     } else if(strMode=="timecourses"){
       # Parameters of both models (case and control), 1 dispersion estimate and 
       # scaling factor for each time course
-      scaDegFreedomFull <- NPARAM*2 + 1 + length(unique(dfAnnotationFull$Timecourse))
+      scaDegFreedomFull <- NPARAM*2 + 1 + length(unique(dfAnnotationProc$Timecourse))
       # Parameters of one model (combined), 1 dispersion estimate 
       # and 1 mean estimate for each time course
-      scaDegFreedomRed <- 1 + length(unique(dfAnnotationFull$Timecourse))
+      scaDegFreedomRed <- 1 + length(unique(dfAnnotationProc$Timecourse))
     }
   }
   
@@ -102,7 +105,7 @@ computePval <- function(arr2DCountData,vecDispersions,
   if(is.null(strControlName)){
     # Without control data:
     dfDEAnalysis =   as.data.frame(cbind(
-      "Gene" = row.names(arr2DCountData),
+      "Gene" = row.names(matCountDataProc),
       "p"=as.numeric(vecPvalue),
       "adj.p"=as.numeric(vecPvalueBH),
       "loglik_full"=vecLogLikFull,
@@ -115,7 +118,7 @@ computePval <- function(arr2DCountData,vecDispersions,
   } else {
     # With control data:
     dfDEAnalysis =   as.data.frame(cbind(
-      "Gene" = row.names(arr2DCountData),
+      "Gene" = row.names(matCountDataProc),
       "p"=as.numeric(vecPvalue),
       "adj.p"=as.numeric(vecPvalueBH),
       "loglik_full"=vecLogLikFull,

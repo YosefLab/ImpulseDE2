@@ -18,18 +18,20 @@
 #' Calls \code{calcImpulse}. \code{evalLogLikImpulseByTC} for
 #' dependent residuals (i.e. time course experiments)
 #' 
-#' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
-#' @param vecX (vector number of timepoints) Time-points at which gene was sampled
-#' @param vecY (count vector replicates) Observed expression values for 
-#     given gene.
+#' @param vecTheta (vector number of parameters [6]) 
+#'    Impulse model parameters.
+#' @param vecX (numeric vector number of timepoints) 
+#'    Time-points at which gene was sampled.
+#' @param vecY (count vector samples) 
+#'    Observed expression values for given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' @param vecNormConst: (numeric vector number of replicates) 
-#'    Normalisation constants for each replicate.
-#' @param vecindTimepointAssign (numeric vector number replicates) 
-#'    Index of time point assigned to replicate in list of sorted
+#' @param vecNormConst: (numeric vector number of samples) 
+#'    Normalisation constants for each sample.
+#' @param vecindTimepointAssign (numeric vector number samples) 
+#'    Index of time point assigned to sample in list of sorted
 #'    time points (vecX).
-#' @param vecboolObserved: (bool vector number of replicates)
-#'    Stores bool of replicate being not NA (observed).
+#' @param vecboolObserved: (bool vector number of samples)
+#'    Stores bool of sample being not NA (observed).
 #'     
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
@@ -39,7 +41,7 @@ evalLogLikImpulseBatch <- function(vecTheta, vecX, vecY,
   vecindTimepointAssign, vecboolObserved){
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
-  # scaled by normalisation factor of each replicate.
+  # scaled by normalisation factor of each sample.
   vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
     vecNormConst
   
@@ -60,7 +62,7 @@ evalLogLikImpulseBatch <- function(vecTheta, vecX, vecY,
 #' Cost function impulse model fit - Time course mode
 #' 
 #' Log likelihood cost function for impulse model fit based on negative 
-#' binomial model. Time course means that replicates of samples can be
+#' binomial model. Time course means that samples of samples can be
 #' grouped into time course experiments, i.e. residuals are dependent
 #' within a time course. The impulse model is scaled to the
 #' mean of each time course.
@@ -76,20 +78,21 @@ evalLogLikImpulseBatch <- function(vecTheta, vecX, vecY,
 #' independent residuals.
 #' 
 #' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
-#' @param vecX (vector number of timepoints) Time-points at which gene was sampled
-#' @param vecY (numeric vector replicates) Observed expression values for 
+#' @param vecX (numeric vector number of timepoints) 
+#'    Time-points at which gene was sampled.
+#' @param vecY (numeric vector samples) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' @param vecNormConst: (count vector number of replicates) 
-#'    Normalisation constants for each replicate.
-#' @param vecTranslationFactors: (numeric vector number of replicates)
+#' @param vecNormConst: (count vector number of samples) 
+#'    Normalisation constants for each sample.
+#' @param vecTranslationFactors: (numeric vector number of samples)
 #'    Scaling factors for impulse model between different timecourses:
 #'    Mean timecourse/overall mean, each scaled by size factors.
-#' @param vecindTimepointAssign (numeric vector number replicates) 
-#'    Index of time point assigned to replicate in list of sorted
+#' @param vecindTimepointAssign (numeric vector number samples) 
+#'    Index of time point assigned to sample in list of sorted
 #'    time points (vecX).
-#' @param vecboolObserved: (bool vector number of replicates)
-#'    Stores bool of replicate being not NA (observed).
+#' @param vecboolObserved: (bool vector number of samples)
+#'    Stores bool of sample being not NA (observed).
 #'    
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
@@ -100,7 +103,7 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,vecY,
   vecindTimepointAssign, vecboolObserved){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
-  # scaled by normalisation factor of each replicate
+  # scaled by normalisation factor of each sample
   # and scaled by translation factor (one for each
   # timecourse).
   vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
@@ -140,21 +143,22 @@ evalLogLikImpulseByTC <- function(vecTheta,vecX,vecY,
 #' Calls \code{calcImpulse}.
 #' 
 #' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
-#' @param vecX (vector number of timepoints) Time-points at which gene was sampled
-#' @param vecY (count vector replicates) Observed expression values for 
+#' @param vecX (numeric vector number of timepoints) 
+#'    Time-points at which gene was sampled.
+#' @param vecY (count vector samples) Observed expression values for 
 #     given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' @param vecDropoutRateEst: (probability vector number of replicates) 
+#' @param vecDropoutRateEst: (probability vector number of samples) 
 #'    Dropout rate estimate for each cell for given gene.
-#' @param vecNormConst: (numeric vector number of replicates) 
-#'    Normalisation constants for each replicate.
-#' @param vecindTimepointAssign (numeric vector number replicates) 
-#'    Index of time point assigned to replicate in list of sorted
+#' @param vecNormConst: (numeric vector number of samples) 
+#'    Normalisation constants for each sample.
+#' @param vecindTimepointAssign (numeric vector number samples) 
+#'    Index of time point assigned to sample in list of sorted
 #'    time points (vecX).
-#' @param vecboolObserved: (bool vector number of replicates)
-#'    Stores bool of replicate being not NA (observed).
-#' @param vecboolZero: (bool vector number of replicates)
-#'    Stores bool of replicate having a count of 0.
+#' @param vecboolObserved: (bool vector number of samples)
+#'    Stores bool of sample being not NA (observed).
+#' @param vecboolZero: (bool vector number of samples)
+#'    Stores bool of sample having a count of 0.
 #'    
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
@@ -165,7 +169,7 @@ evalLogLikImpulseSC <- function(vecTheta,vecX,vecY,
   vecindTimepointAssign, vecboolNotZeroObserved, vecboolZero){  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
-  # scaled by normalisation factor of each replicate.
+  # scaled by normalisation factor of each sample.
   vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
     vecNormConst
   

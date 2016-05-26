@@ -17,21 +17,21 @@
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
-#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
-#'    version of \code{matCountData}. For internal use.
-#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
-#'    Replicate, Sample, Condition, Time. Time must be numeric.
-#' @param matProbNB: (probability vector genes x replicates) 
+#' @param matCountDataProc: (matrix genes x samples)
+#'    Count data: Reduced version of \code{matCountData}. 
+#'    For internal use.
+#' @param matProbNB: (probability vector genes x samples) 
 #'    Probability of observations to come from negative binomial 
 #'    component of mixture model.
-#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#' @param strMode: (str) [Default "batch"] 
+#'    {"batch","timecourses","singlecell"}
 #'    Mode of model fitting.
 #' 
-#' @return vecSizeFactors: (numeric vector number of replicates) 
-#'    Normalisation constants for counts for each replicate. 
+#' @return vecSizeFactors: (numeric vector number of samples) 
+#'    Normalisation constants for counts for each sample. 
 #' @export
 
-computeNormConst <- function(arr2DCountData, dfAnnotationFull,
+computeNormConst <- function(matCountDataProc,
   matProbNB=NULL, strMode="batch"){
   
   # Compute geometric count mean over replicates
@@ -40,39 +40,39 @@ computeNormConst <- function(arr2DCountData, dfAnnotationFull,
   # the weighted geometric count mean, weighted by
   # by the probability of each observation to come
   # from the negative binomial distribution.
-  arr2DCountDataNoZeros <- arr2DCountData
-  arr2DCountDataNoZeros[arr2DCountDataNoZeros==0] <- 0.1
-  boolObserved <- !is.na(arr2DCountData)
+  matCountDataProcNoZeros <- matCountDataProc
+  matCountDataProcNoZeros[matCountDataProcNoZeros==0] <- 0.1
+  boolObserved <- !is.na(matCountDataProc)
   if(strMode=="batch" | strMode=="timecourses"){
     # Take geometric mean
-    vecGeomMean <- sapply(c(1:dim(arr2DCountDataNoZeros)[1]), 
+    vecGeomMean <- sapply(c(1:dim(matCountDataProcNoZeros)[1]), 
       function(gene){
-        ( prod(arr2DCountDataNoZeros[gene,boolObserved[gene,]]) )^
+        ( prod(matCountDataProcNoZeros[gene,boolObserved[gene,]]) )^
           ( 1/sum(boolObserved[gene,]) )
       })
   } else if(strMode=="singlecell"){
     # Take weighted geometric mean
-    vecGeomMean <- sapply(c(1:dim(arr2DCountDataNoZeros)[1]), 
+    vecGeomMean <- sapply(c(1:dim(matCountDataProcNoZeros)[1]), 
       function(gene){
-        ( prod(arr2DCountDataNoZeros[gene,boolObserved[gene,]]^matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )^
+        ( prod(matCountDataProcNoZeros[gene,boolObserved[gene,]]^matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )^
           ( 1/sum(matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )
       })
   }
   matGeomMeans <- matrix(vecGeomMean, 
-    nrow=dim(arr2DCountData)[1], 
-    ncol=dim(arr2DCountData)[2], 
+    nrow=dim(matCountDataProc)[1], 
+    ncol=dim(matCountDataProc)[2], 
     byrow=FALSE)
   
   # Compute ratio of each observation to geometric
   # mean.
-  matSizeRatios <- arr2DCountData / matGeomMeans
+  matSizeRatios <- matCountDataProc / matGeomMeans
   
   # Chose median of ratios over genes as size factor
   vecSizeFactors <- apply(matSizeRatios, 2,
     function(replicate){
       median(replicate, na.rm=TRUE)
     })
-  names(vecSizeFactors) <- colnames(arr2DCountData)
+  names(vecSizeFactors) <- colnames(matCountDataProc)
   
   if(any(vecSizeFactors==0)){
     warning("WARNING: Found size factors==0, setting these to 1.")

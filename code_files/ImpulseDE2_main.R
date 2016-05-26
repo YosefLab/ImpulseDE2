@@ -115,24 +115,29 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' 
 #' @aliases ImpulseDE2
 #' 
-#' @param matCountData (matrix genes x replicates) [Default NULL] Count data of all conditions, 
-#'    unobserved entries are NA. Column labels are replicate names, row labels
-#'    gene names.
-#' @param dfAnnotationFull (Table) [Default NULL] Lists co-variables of individual replicates: 
-#'    Replicate, Sample, Condition, Time. Time must be numeric.
-#' @param strCaseName (str) [Default NULL] Name of the case condition in \code{dfAnnotationFull}.
-#' @param strControlName: (str) [Default NULL] Name of the control condition in 
-#'    \code{dfAnnotationFull}.
-#' @param nProc (scalar) [Default 3] Number of processes for parallelisation. The
-#'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
-#'    using the \code{detectCores} function from the package \code{parallel} to avoid overload.
-#' @param Q_value (scalar) [Default 0.01] FDR-corrected p-value cutoff for significance.
-#' @param boolPlotting (bool) [TRUE] Whether to plot significant DE genes into output pdf.
+#' @param matCountData (matrix genes x replicates) [Default NULL] 
+#'    Count data of all conditions, unobserved entries are NA.
+#' @param dfAnnotation (Table) [Default NULL] 
+#'    Lists co-variables of samples: 
+#'    Sample, Condition, Time (numeric), (and Timecourse).
+#' @param strCaseName (str) [Default NULL] 
+#'    Name of the case condition in \code{dfAnnotation}.
+#' @param strControlName: (str) [Default NULL] 
+#'    Name of the control condition in \code{dfAnnotation}.
+#' @param nProc (scalar) [Default 3] Number of processes for 
+#'    parallelisation. The specified value is internally changed 
+#'    to \code{min(detectCores() - 1, nProc)} using the 
+#'    \code{detectCores} function from the package \code{parallel} 
+#'    to avoid overload.
+#' @param Q_value (scalar) [Default 0.01] 
+#'    FDR-corrected p-value cutoff for significance.
+#' @param boolPlotting (bool) [TRUE] 
+#'    Whether to plot significant DE genes into output pdf.
 #'    Consider setting FALSE for large data sets with many hits.
 #' 
 #' @return (list length 4) with the following elements:
 #' \itemize{
-#'    \item \code{lsDEGenes} (list number of genes) Genes IDs identified
+#'    \item \code{vecDEGenes} (list number of genes) Genes IDs identified
 #'        as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
 #'    \item \code{dfImpulseResults} (data frame) ImpulseDE2 results.
 #'    \item \code{lsImpulseFits} (list) List of matrices which
@@ -152,9 +157,9 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' Additionally, \code{ImpulseDE2} saves the following objects and tables into
 #' the working directory:
 #' \itemize{
-#'    \item \code{ImpulseDE2_arr2DCountData.RData} (2D array genes x replicates) 
+#'    \item \code{ImpulseDE2_matCountDataProc.RData} (2D array genes x replicates) 
 #'        Count data: Reduced version of \code{matCountData}. For internal use.
-#'    \item \code{ImpulseDE2_dfAnnotationFull.RData} (data frame) Annotation table.
+#'    \item \code{ImpulseDE2_dfAnnotationProc.RData} (data frame) Annotation table.
 #'    \item \code{ImpulseDE2_vecNormConst.RData} (matrix samples x replicates) Normalisation
 #'    constants for each replicate. Missing samples are set NA.
 #'    \item \code{ImpulseDE2_vecDispersions.RData} (vector number of genes) Inverse 
@@ -173,7 +178,7 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'        value_'condition' and has the form (genes x time points) and contains the
 #'        counts predicted by the impulse model at the observed time points.
 #'    \item \code{ImpulseDE2_dfImpulseResults.RData} (data frame) ImpulseDE2 results.
-#'    \item \code{ImpulseDE2_lsDEGenes.RData} (list number of genes) Genes IDs identified
+#'    \item \code{ImpulseDE2_vecDEGenes.RData} (list number of genes) Genes IDs identified
 #'        as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
 #'    \item \code{ImpulseDE2_ClusterOut.txt} Text-file with stdout and stderr from
 #'        cluster created in \code{fitImpulse}.
@@ -205,7 +210,7 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' TH17 cell differentiation. Nature, 496, 461-468.
 #' @export
 
-runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
+runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
   strCaseName = NULL, strControlName=NULL, strMode="batch",
   nProc=3, Q_value=0.01, boolPlotting=TRUE,
   lsPseudoDE=NULL, 
@@ -220,7 +225,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     # 1. Process input data 
     print("1. Prepare data")
     lsProcessedData <- processData(
-      dfAnnotationFull=dfAnnotationFull,
+      dfAnnotation=dfAnnotation,
       matCountData=matCountData,
       strControlName=strControlName, 
       strCaseName=strCaseName,
@@ -228,21 +233,22 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
       lsPseudoDE=lsPseudoDE,
       vecDispersionsExternal=vecDispersionsExternal,
       boolRunDESeq2=boolRunDESeq2 )
-    arr2DCountData <- lsProcessedData$arr2DCountData
+    matCountDataProc <- lsProcessedData$matCountDataProc
+    dfAnnotationProc <- lsProcessedData$dfAnnotationProc
     matProbNB <- lsProcessedData$matProbNB
     matDropoutRate <- lsProcessedData$matDropout
     matClusterMeansFitted <- lsProcessedData$matClusterMeansFitted
     
-    save(arr2DCountData,file=file.path(getwd(),"ImpulseDE2_arr2DCountData.RData"))
+    save(matCountDataProc,file=file.path(getwd(),"ImpulseDE2_matCountDataProc.RData"))
+    save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_dfAnnotationProc.RData"))
     save(matProbNB,file=file.path(getwd(),"ImpulseDE2_matProbNB.RData"))
     save(matDropoutRate,file=file.path(getwd(),"ImpulseDE2_matDropoutRate.RData"))
-    save(dfAnnotationFull,file=file.path(getwd(),"ImpulseDE2_dfAnnotationFull.RData"))
+    save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_dfAnnotationProc.RData"))
     
     # 2. Compute normalisation constants
     print("2. Compute Normalisation constants")
     vecNormConst <- computeNormConst(
-      arr2DCountData=arr2DCountData,
-      dfAnnotationFull=dfAnnotationFull,
+      matCountDataProc=matCountDataProc,
       matProbNB=matProbNB,
       strMode=strMode)
     save(vecNormConst,file=file.path(getwd(),"ImpulseDE2_vecNormConst.RData"))
@@ -252,8 +258,8 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
       print("3. Run DESeq2")
       tm_runDESeq2 <- system.time({
         lsDESeq2Results <- runDESeq2(
-          dfAnnotationFull=dfAnnotationFull,
-          arr2DCountData=arr2DCountData,
+          dfAnnotationProc=dfAnnotationProc,
+          matCountDataProc=matCountDataProc,
           nProcessesAssigned=nProc,
           strControlName=strControlName,
           strMode=strMode)
@@ -277,7 +283,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
       # is caught in processData()
     } else {
       # Use externally provided dispersions and reorder
-      vecDispersions <- vecDispersionsExternal[rownames(arr2DCountData)]
+      vecDispersions <- vecDispersionsExternal[rownames(matCountDataProc)]
       dfDESeq2Results <- NULL
     }
     save(vecDispersions,file=file.path(getwd(),"ImpulseDE2_vecDispersions.RData"))
@@ -287,12 +293,12 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     print("4. Fitting Impulse model to the genes")
     tm_fitImpulse <- system.time({
       lsImpulseFits <- fitImpulse(
-        arr2DCountData=arr2DCountData, 
+        matCountDataProc=matCountDataProc, 
         vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate,
         matProbNB=matProbNB,
         vecNormConst=vecNormConst,
-        dfAnnotationFull=dfAnnotationFull, 
+        dfAnnotationProc=dfAnnotationProc, 
         strCaseName=strCaseName, 
         strControlName=strControlName,
         strMode=strMode,
@@ -306,30 +312,30 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     ### 5. Detect differentially expressed genes
     print("5. DE analysis")
     dfImpulseResults <- computePval(
-      arr2DCountData=arr2DCountData,
+      matCountDataProc=matCountDataProc,
       vecDispersions=vecDispersions,
-      dfAnnotationFull=dfAnnotationFull,
+      dfAnnotationProc=dfAnnotationProc,
       lsImpulseFits=lsImpulseFits,
       strCaseName=strCaseName, 
       strControlName=strControlName,
       strMode=strMode, 
       NPARAM=NPARAM)
     
-    lsDEGenes <- as.character(as.vector( 
+    vecDEGenes <- as.character(as.vector( 
       dfImpulseResults[as.numeric(dfImpulseResults$adj.p) <= Q_value,"Gene"] ))
     save(dfImpulseResults,file=file.path(getwd(),"ImpulseDE2_dfImpulseResults.RData"))
-    save(lsDEGenes,file=file.path(getwd(),"ImpulseDE2_lsDEGenes.RData"))
-    print(paste("Found ", length(lsDEGenes)," DE genes",sep=""))
+    save(vecDEGenes,file=file.path(getwd(),"ImpulseDE2_vecDEGenes.RData"))
+    print(paste("Found ", length(vecDEGenes)," DE genes",sep=""))
     
     ### 6. Plot the top DE genes
     if(boolPlotting){
       print("6. Plot top DE genes")
       tm_plotDEGenes <- system.time({
         plotDEGenes(
-          lsGeneIDs=lsDEGenes,
-          arr2DCountData=arr2DCountData,
+          vecGeneIDs=vecDEGenes,
+          matCountDataProc=matCountDataProc,
           vecNormConst=vecNormConst,
-          dfAnnotationFull=dfAnnotationFull, 
+          dfAnnotationProc=dfAnnotationProc, 
           lsImpulseFits=lsImpulseFits,
           matClusterMeansFitted=matClusterMeansFitted,
           dfImpulseResults=dfImpulseResults,
@@ -354,7 +360,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotationFull=NULL,
     " min",sep=""))
   
   return(list(
-    "lsDEGenes"=lsDEGenes,
+    "vecDEGenes"=vecDEGenes,
     "dfImpulseResults"=dfImpulseResults,
     "lsImpulseFits"=lsImpulseFits,
     "dfDESeq2Results"=dfDESeq2Results))

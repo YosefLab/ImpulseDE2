@@ -9,15 +9,20 @@
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
-#' @param dfAnnotationFull (Table) Lists co-variables of individual replicates:
-#'    Replicate, Sample, Condition, Time. Time must be numeric.
-#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
-#'    version of \code{matCountData}. For internal use.
-#' @param nProcessesAssigned: (scalar) [Default 1] Number of processes for parallelisation. The
-#'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
-#'    using the \code{detectCores} function from the package \code{parallel} to 
-#'    avoid overload.
-#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#' @param matCountDataProc: (matrix genes x samples)
+#'    Count data: Reduced version of \code{matCountData}. 
+#'    For internal use.
+#' @param dfAnnotationProc: (Table) Processed annotation table. 
+#'    Lists co-variables of samples: 
+#'    Sample, Condition, Time (numeric), TimeCateg (str)
+#'    (and Timecourse). For internal use.
+#' @param nProcessesAssigned: (scalar) [Default 1] 
+#'    Number of processes for parallelisation. The specified 
+#'    value is internally changed to \code{min(detectCores() - 1, nProc)} 
+#'    using the \code{detectCores} function from the package 
+#'    \code{parallel} to avoid overload.
+#' @param strMode: (str) [Default "batch"] 
+#'    {"batch","timecourses","singlecell"}
 #'    Mode of model fitting.
 #'    
 #' @return (list length 2) with the following elements:
@@ -28,7 +33,7 @@
 #' }
 #' @export
 
-runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
+runDESeq2 <- function(dfAnnotationProc, matCountDataProc,
   nProcessesAssigned=1, strControlName=NULL, strMode="batch"){
   
   # Set number of processes to number of cores assigned if available
@@ -36,7 +41,7 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
   register(MulticoreParam(nProcesses))
   
   if(is.null(strControlName)){
-    # Without control data
+    # Without control data:
     
     # The covariate Timecourses, indicating the time series
     # experiment a sample belongs to, is ignored in batch mode,
@@ -47,62 +52,87 @@ runDESeq2 <- function(dfAnnotationFull, arr2DCountData,
     
     if(strMode=="batch" | strMode=="singlecell"){
       # Create DESeq2 data object
-      dds <- DESeqDataSetFromMatrix(countData = arr2DCountData,
-        colData = dfAnnotationFull,
-        design = ~ Sample)
+      dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+        colData = dfAnnotationProc,
+        design = ~ TimeCateg) )
       # Run DESeq2
       ddsDESeqObject <- DESeq(dds, test = "LRT", 
-        full = ~ Sample, reduced = ~ 1,
+        full = ~ TimeCateg, reduced = ~ 1,
         parallel=TRUE)
+      
     } else if(strMode=="timecourses"){
       # Create DESeq2 data object
-      dds <- DESeqDataSetFromMatrix(countData = arr2DCountData,
-        colData = dfAnnotationFull,
-        design = ~ Sample + Timecourse)
+      dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+        colData = dfAnnotationProc,
+        design = ~ TimeCateg + Timecourse) )
       # Run DESeq2
       ddsDESeqObject <- DESeq(dds, test = "LRT", 
-        full = ~ Sample + Timecourse, reduced = ~ Timecourse,
+        full = ~ TimeCateg + Timecourse, reduced = ~ Timecourse,
         parallel=TRUE)
+      
     } else {
       stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
     }
-    # Get gene-wise dispersion estimates
-    # var = mean + alpha * mean^2, alpha is dispersion
-    # DESeq2 dispersion is 1/size used dnbinom (used in cost function
-    # for evaluation of likelihood)
-    dds_dispersions <- 1/dispersions(ddsDESeqObject) 
-    # DESeq results for comparison
-    dds_resultsTable <- results(ddsDESeqObject)
   } else {
-    # With control data: 
-    # 1. Fit dispersion with full information, i.e. sample 
-    # names.  
-    # 2. Evaluate p-value for differential expression based 
-    # on comparison condition versus no-contition information. 
+    # With control data:
     
-    # Create DESeq2 data object
-    dds <- DESeqDataSetFromMatrix(countData = arr2DCountData,
-      colData = dfAnnotationFull,
-      design = ~ Sample)
-    # Run DESeq2
-    ddsDESeqObjectSample <- DESeq(dds, test = "LRT", 
-      full = ~ Sample, reduced = ~ 1,
-      parallel=TRUE)
-    # Get gene-wise dispersion estimates
-    # var = mean + alpha * mean^2, alpha is dispersion
-    # DESeq2 dispersion is 1/size used dnbinom (used in cost function
-    # for evaluation of likelihood)
-    dds_dispersions <- 1/dispersions(ddsDESeqObjectSample)
+    # Hypothesis testing operates under the same model
+    # for batch, singlecell and timecourses: Condition
+    # is a predictor included in timecourses and therefore
+    # not allowed by DESeq2. Note that that the dispersions
+    # are fit on the more exact full model for timecourses.
     
-    dds2 <- DESeqDataSetFromMatrix(countData = arr2DCountData,
-      colData = dfAnnotationFull,
-      design = ~ Condition)
-    # Run DESeq2
-    ddsDESeqObjectCond <- DESeq(dds2, test = "LRT", 
-      full = ~ Condition, reduced = ~ 1,
-      parallel=TRUE)
-    # DESeq results for comparison
-    dds_resultsTable <- results(ddsDESeqObjectCond)
-  }      
+    if(strMode=="batch" | strMode=="singlecell"){
+      # Create DESeq2 data object
+      dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+        colData = dfAnnotationProc,
+        design = ~ TimeCateg + Condition) )
+      # Run DESeq2
+      ddsDESeqObject <- DESeq(dds, test = "LRT", 
+        full = ~ TimeCateg + Condition, reduced = ~ TimeCateg,
+        parallel=TRUE)
+      
+      # Get gene-wise dispersion estimates
+      # var = mean + alpha * mean^2, alpha is dispersion
+      # DESeq2 dispersion is 1/size used dnbinom (used in cost function
+      # for evaluation of likelihood)
+      dds_dispersions <- 1/dispersions(ddsDESeqObject) 
+      # DESeq results for comparison
+      dds_resultsTable <- results(ddsDESeqObject)
+      
+    } else if(strMode=="timecourses"){
+      # Create DESeq2 data object
+      # Define linear model suited to hypothesis testing
+      dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+        colData = dfAnnotationProc,
+        design = ~ TimeCateg + Condition) )
+      # Run DESeq2
+      ddsDESeqObjectTest <- DESeq(dds, test = "LRT", 
+        full = ~ TimeCateg + Condition, reduced = ~ TimeCateg,
+        parallel=TRUE)
+      # DESeq results for comparison
+      dds_resultsTable <- results(ddsDESeqObjectTest)
+      
+      # Define linear model suited to overdispersion fitting
+      # Only need dispersions now, but the run time of the rest
+      # of DESeq2 is negligible.
+      dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+        colData = dfAnnotationProc,
+        design = ~ TimeCateg + Timecourse) )
+      # Run DESeq2
+      ddsDESeqObjectFit <- DESeq(dds, test = "LRT", 
+        full = ~ TimeCateg + Timecourse, reduced = ~ TimeCateg,
+        parallel=TRUE)
+      # Get gene-wise dispersion estimates
+      # var = mean + alpha * mean^2, alpha is dispersion
+      # DESeq2 dispersion is 1/size used dnbinom (used in cost function
+      # for evaluation of likelihood)
+      dds_dispersions <- 1/dispersions(ddsDESeqObjectFit) 
+      
+    } else {
+      stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
+    }
+  }
+  
   return(list(dds_dispersions,dds_resultsTable))
 }

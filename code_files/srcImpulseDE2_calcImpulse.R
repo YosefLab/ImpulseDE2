@@ -11,10 +11,11 @@
 #' 
 #' @param vecTheta (vector number of parameters) Numerical vector of impulse 
 #'    parameters with the order beta, h0, h1, h2, t1, t2.
-#' @param vecTimepoints (vector number vecTimepoints) Observed vecTimepoints, numeric.
+#' @param vecTimepoints (vector number vecTimepoints) 
+#'    Observed vecTimepoints, numeric.
 #' 
-#' @return vecY (vec number of vecTimepoints) Model expression values of given gene 
-#'    for time points
+#' @return vecY (vec number of vecTimepoints) 
+#'    Model expression values of given gene for time points
 #' @export
 
 calcImpulse <- function(vecTheta,vecTimepoints){

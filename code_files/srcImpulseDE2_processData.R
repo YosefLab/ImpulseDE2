@@ -15,26 +15,25 @@
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
-#' @param matCountData: (matrix genes x replicates) [Default NULL] Count data of all conditions, 
-#'    unobserved entries are NA. Column labels are replicate names, row labels
-#'    gene names.
-#' @param dfAnnotationFull: (Table) [Default NULL] Lists co-variables of replicates: 
-#'    Replicate, Sample, Condition, Time. Time must be numeric.
-#' @param strCaseName (str) [Default NULL] Name of the case condition in \code{dfAnnotationFull}.
-#' @param strControlName: (str) [Default NULL] Name of the control condition in 
-#'    \code{dfAnnotationFull}.
-#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#' @param matCountData: (matrix genes x samples) [Default NULL] 
+#'    Count data of all conditions, unobserved entries are NA. 
+#' @param dfAnnotation: (Table) [Default NULL] 
+#'    Annotation table. Lists co-variables of samples: 
+#'    Sample, Condition, Time (and Timecourse). 
+#'    Time must be numeric.
+#' @param strCaseName (str) [Default NULL] 
+#'    Name of the case condition in \code{dfAnnotation}.
+#' @param strControlName: (str) [Default NULL] 
+#'    Name of the control condition in \code{dfAnnotation}.
+#' @param strMode: (str) [Default "batch"] 
+#'    {"batch","timecourses","singlecell"}
 #'    Mode of model fitting.
 #'    
 #' @return (list length 3) with the following elements:
 #' \itemize{
-#'  \item \code{arr2DCountData}: (count matrix  genes x replicates) 
+#'  \item \code{matCountDataProc}: (count matrix  genes x samples) 
 #'      Count data: Reduced version of \code{matCountData}. 
-#'  \item \code{arr2DCountDataImputed} (count matrix genes x replicates) 
-#'      Count data imputed based on zero inflated negative binomial model. 
-#'      If not operating in strMode=="singlecell", arr2DCountDataImputed 
-#'      is NULL.
-#'  \item \code{matProbNB} (probability matrix genes x replicates)
+#'  \item \code{matProbNB} (probability matrix genes x samples)
 #'      Probability of each observation to originate from the negative
 #'      binomial component in the zero inflated negative binomial
 #'      mixture model. All entries are 1 if not operating in 
@@ -43,7 +42,7 @@
 #'
 #' @export
 
-processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
+processData <- function(dfAnnotation=NULL, matCountData=NULL,
   strCaseName=NULL, strControlName=NULL, strMode=NULL,
   lsPseudoDE=NULL, vecDispersionsExternal=NULL, boolRunDESeq2=NULL){
   
@@ -97,14 +96,14 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
   }
   
   # Check format and presence of input data
-  checkData <- function(dfAnnotationFull=NULL, arr2DCountData=NULL,
+  checkData <- function(dfAnnotation=NULL, matCountData=NULL,
     strCaseName=NULL, strControlName=NULL, strMode=NULL,
     lsPseudoDE=NULL, vecDispersionsExternal=NULL,
     boolRunDESeq2=NULL ){
     
     ### 1. Check that all necessary input was specified
-    checkNull(dfAnnotationFull)
-    checkNull(arr2DCountData)
+    checkNull(dfAnnotation)
+    checkNull(matCountData)
     checkNull(strCaseName)
     checkNull(strMode)
     
@@ -118,30 +117,30 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     ### 3. Check annotation table content
     ### a) Check column names
     if(strMode=="batch" | strMode=="singlecell"){
-      vecColNamesRequired <- c("Replicate","Sample","Condition","Time")
+      vecColNamesRequired <- c("Sample","Condition","Time")
     } else if(strMode=="timecourses"){
-      vecColNamesRequired <- c("Replicate","Sample","Condition","Time","Timecourse")
+      vecColNamesRequired <- c("Sample","Condition","Time","Timecourse")
     } else {
       stop(paste0("ERROR: Unrecognised strMode in processData::checkData(): ",strMode))
     }
-    if( !all(vecColNamesRequired %in% colnames(dfAnnotationFull)) ){
+    if( !all(vecColNamesRequired %in% colnames(dfAnnotation)) ){
       stop(paste0("Could not find column ",
-        vecColNamesRequired[!(vecColNamesRequired %in% colnames(dfAnnotationFull))],
+        vecColNamesRequired[!(vecColNamesRequired %in% colnames(dfAnnotation))],
         " in annotation table."))
     }
-    ### b) Replicates
-    # Check that replicate name do not occur twice
-    if(length(unique(dfAnnotationFull$Replicate)) != length(dfAnnotationFull$Replicate)){
-      stop(paste0("ERROR: [Annotation table]",
-        "Number of replicates different to number of unique replicate names.",
-        "Replicate names must be unique."))
+    ### b) Samples
+    # Check that sample name do not occur twice
+    if(length(unique(dfAnnotation$Sample)) != length(dfAnnotation$Sample)){
+      stop(paste0("ERROR: [Annotation table] ",
+        "Number of samples different to number of unique sample names. ",
+        "Sample names must be unique."))
     }
     ### c) Time points
-    vecTimepoints <- unique(as.vector( dfAnnotationFull$Time ))
+    vecTimepoints <- unique(as.vector( dfAnnotation$Time ))
     # Check that time points are numeric
-    checkNumeric(dfAnnotationFull$Time)
+    checkNumeric(dfAnnotation$Time)
     ### d) Conditions
-    lsConditions <- unique( dfAnnotationFull$Condition )
+    lsConditions <- unique( dfAnnotation$Condition )
     # Check that given conditions exisit in annotation table
     if(!(strCaseName %in% lsConditions)){
       stop("ERROR: Condition given for case does not occur in annotation table condition column.")
@@ -154,21 +153,21 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     ### e) Timecourses
     if(strMode=="timecourses"){
       # Check that number of time courses given is > 1
-      if(length(unique( dfAnnotationFull$Timecourse ))==1){
+      if(length(unique( dfAnnotation$Timecourse ))==1){
         stop("ERROR: Only one time course given in annotation table in mode timecourses. Use batch mode.")
       }
     }
     
     ### 4. Check expression table content
     # Check that all entries in count data table occur in annotation table
-    if( any(!(colnames(arr2DCountData) %in% dfAnnotationFull$Replicate)) ){
+    if( any(!(colnames(matCountData) %in% dfAnnotation$Sample)) ){
       print(paste0("WARNING: The column(s) ",
-        paste0(as.character( colnames(arr2DCountData)[
-          !(colnames(arr2DCountData) %in% dfAnnotationFull$Replicate)] ),collapse=","),
+        paste0(as.character( colnames(matCountData)[
+          !(colnames(matCountData) %in% dfAnnotation$Sample)] ),collapse=","),
         " in the count data table do(es) not occur in annotation table and will be ignored."))
     }
-    checkNull(rownames(arr2DCountData))
-    checkCounts(arr2DCountData)
+    checkNull(rownames(matCountData))
+    checkCounts(matCountData)
     
     ### 5. Check PseudoDE objects
     if(strMode=="singlecell"){
@@ -176,24 +175,24 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
       checkNull(lsPseudoDE)
       ### a) Dropout rates
       checkNull(lsPseudoDE$matDropout)
-      checkDimMatch(lsPseudoDE$matDropout,arr2DCountData)
-      checkElementMatch(rownames(arr2DCountData), rownames(lsPseudoDE$matDropout))
-      checkElementMatch(colnames(arr2DCountData), colnames(lsPseudoDE$matDropout))
+      checkDimMatch(lsPseudoDE$matDropout,matCountData)
+      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matDropout))
+      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matDropout))
       checkProbability(lsPseudoDE$matDropout)
-
+      
       ### b) Posterior of observation belonging to negative binomial
       ### component in mixture model.
       checkNull(lsPseudoDE$matProbNB)
-      checkDimMatch(lsPseudoDE$matProbNB,arr2DCountData)
-      checkElementMatch(rownames(arr2DCountData), rownames(lsPseudoDE$matProbNB))
-      checkElementMatch(colnames(arr2DCountData), colnames(lsPseudoDE$matProbNB))
+      checkDimMatch(lsPseudoDE$matProbNB,matCountData)
+      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matProbNB))
+      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matProbNB))
       checkProbability(lsPseudoDE$matProbNB)
       
       ### c) Imputed counts
       checkNull(lsPseudoDE$matCountsImputed)
-      checkDimMatch(lsPseudoDE$matCountsImputed,arr2DCountData)
-      checkElementMatch(rownames(arr2DCountData), rownames(lsPseudoDE$matCountsImputed))
-      checkElementMatch(colnames(arr2DCountData), colnames(lsPseudoDE$matCountsImputed))
+      checkDimMatch(lsPseudoDE$matCountsImputed,matCountData)
+      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matCountsImputed))
+      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matCountsImputed))
       checkCounts(lsPseudoDE$matCountsImputed)
     }
     
@@ -223,7 +222,7 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
         "Dispersions have to be computed by DESeq2 or provided externally." ))
     }
     
-    ### Summarise which mode, conditions, samples, replicates and
+    ### Summarise which mode, conditions, samples and
     ### timecourses were found
     print(paste0("Found conditions: ",paste0(lsConditions,collapse=",")))
     print(paste0("Case condition: '", strCaseName, "'"))
@@ -235,135 +234,135 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
       print(paste0( "Found time points: ",
         paste( vecTimepoints, collapse=",") ))
       for(tp in vecTimepoints){
-        print(paste0( "Case: Found the following replicates for sample ",
-          unique(dfAnnotationFull[
-            dfAnnotationFull$Time %in% tp &
-              dfAnnotationFull$Condition %in% strCaseName &
-              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
-            ]$Sample),
-          " at time point ", tp,
-          ": ", paste0(dfAnnotationFull[
-            (dfAnnotationFull$Time %in% tp) &
-              (dfAnnotationFull$Condition %in% strCaseName) &
-              (dfAnnotationFull$Replicate %in% colnames(arr2DCountData)),
-            ]$Replicate,collapse=","),collapse="," ))
+        print(paste0( "Case: Found the samples at time point ", 
+          tp,": ", 
+          paste0(dfAnnotation[
+            (dfAnnotation$Time %in% tp) &
+              (dfAnnotation$Condition %in% strCaseName) &
+              (dfAnnotation$Sample %in% colnames(matCountData)),
+            ]$Sample,collapse=","),collapse="," ))
       }
       if(!is.null(strControlName)){
         for(tp in vecTimepoints){
-          print(paste0( "Control: Found the following replicates for sample ", 
-            unique(dfAnnotationFull[
-              dfAnnotationFull$Time %in% tp &
-                dfAnnotationFull$Condition %in% strControlName &
-                dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
-              ]$Sample),
-            " at time point ", tp,
-            ":", paste(dfAnnotationFull[
-              dfAnnotationFull$Time %in% tp &
-                dfAnnotationFull$Condition %in% strControlName &
-                dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
-              ]$Replicate,collapse=",") ))
+          print(paste0( "Control: Found the following samples at time point ", 
+            tp, ":", 
+            paste0(dfAnnotation[
+              dfAnnotation$Time %in% tp &
+                dfAnnotation$Condition %in% strControlName &
+                dfAnnotation$Sample %in% colnames(matCountData),
+              ]$Sample,collapse=","),collapse="," ))
         }
       }
     } else if(strMode=="singlecell"){
       # Shorten output as there are potentially many single cells
       print(paste0( "Case: Number of cells found is ",
-        ": ", length( dfAnnotationFull[
-          (dfAnnotationFull$Condition %in% strCaseName) &
-            (dfAnnotationFull$Replicate %in% colnames(arr2DCountData)),
-          ]$Replicate) ))
+        length( dfAnnotation[
+          dfAnnotation$Condition %in% strCaseName &
+            dfAnnotation$Sample %in% colnames(matCountData),
+          ]$Sample),collapse="," ))
       if(!is.null(strControlName)){
         print(paste0( "Control: Number of cells found is ",
-          ":", length( dfAnnotationFull[
-            dfAnnotationFull$Condition %in% strControlName &
-              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
-            ]$Replicate),collapse="," ))
+          length( dfAnnotation[
+            dfAnnotation$Condition %in% strControlName &
+              dfAnnotation$Sample %in% colnames(matCountData),
+            ]$Sample),collapse="," ))
       }
       print(paste0( "Found ", length(vecTimepoints), " time points."))
     }
     if(strMode=="timecourses"){
-      for(tc in unique( dfAnnotationFull$Timecourse )){
-        print(paste0( "Found the following replicates for timecourse ",
+      for(tc in unique( dfAnnotation$Timecourse )){
+        print(paste0( "Found the following samples for timecourse ",
           tc, ": ",
-          paste0( dfAnnotationFull[
-            dfAnnotationFull$Timecourse %in% tc &
-              dfAnnotationFull$Replicate %in% colnames(arr2DCountData),
-            ]$Replicate,collapse=",") ))
+          paste0( dfAnnotation[
+            dfAnnotation$Timecourse %in% tc &
+              dfAnnotation$Sample %in% colnames(matCountData),
+            ]$Sample,collapse=",") ))
       }
     }
     
     return(NULL)
   }
   
+  # Add categorial time variable:
+  # Add column with time scalars with underscore prefix
+  procAnnotation <- function(dfAnnotation=NULL){
+    dfAnnotationProc <- dfAnnotation
+    dfAnnotationProc$TimeCateg <- paste0(
+      rep("_",length(dfAnnotation$Time)), 
+      dfAnnotation$Time )
+    return(dfAnnotationProc)
+  }
+  
   # Name genes if names are not given
-  nameGenes <- function(arr2DCountData=NULL){
-    if(is.null(rownames(arr2DCountData))){
-      rownames(arr2DCountData) <- paste("G", 1:nrow(arr2DCountData),
+  nameGenes <- function(matCountDataProc=NULL){
+    if(is.null(rownames(matCountDataProc))){
+      rownames(matCountDataProc) <- paste("G", 1:nrow(matCountDataProc),
         sep = "_")
     }
     
-    return(arr2DCountData)
+    return(matCountDataProc)
   }
   
   # Reduce count data to data which are utilised later
-  reduceCountData <- function(dfAnnotationFull=NULL, arr2DCountData=NULL){
+  reduceCountData <- function(dfAnnotation=NULL, matCountDataProc=NULL){
     
     ### 1. Columns (Conditions):
     # Reduce expression table to columns of considered conditions
     if(!is.null(strControlName)){
-     vecReplicateNames_Case <- as.character(as.vector( 
-        dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate ))
-     vecReplicateNames_Ctrl <- as.character(as.vector( 
-        dfAnnotationFull[dfAnnotationFull$Condition %in% strControlName,]$Replicate ))
-      arr2DCountData <- arr2DCountData[,c(vecReplicateNames_Case,vecReplicateNames_Ctrl)]
+      vecSampleNames_Case <- as.character(as.vector( 
+        dfAnnotation[dfAnnotation$Condition %in% strCaseName,]$Sample ))
+      vecSampleNames_Ctrl <- as.character(as.vector( 
+        dfAnnotation[dfAnnotation$Condition %in% strControlName,]$Sample ))
+      matCountDataProc <- matCountDataProc[,c(vecSampleNames_Case,vecSampleNames_Ctrl)]
     } else {
-     vecReplicateNames_Case <- as.character(as.vector( 
-        dfAnnotationFull[dfAnnotationFull$Condition %in% strCaseName,]$Replicate ))
-      arr2DCountData <- arr2DCountData[,vecReplicateNames_Case]
+      vecSampleNames_Case <- as.character(as.vector( 
+        dfAnnotation[dfAnnotation$Condition %in% strCaseName,]$Sample ))
+      matCountDataProc <- matCountDataProc[,vecSampleNames_Case]
     }
-    # Check that every replicate contains at least one observed value (not NA)
-    lsNARep <- any(apply(arr2DCountData,2,function(rep){all(is.na(rep))}))
-    if(any(lsNARep)){
-      print(paste0("WARNING: Replicate(s) ",paste0(colnames(arr2DCountData[lsNARep,]),collapse=","),
+    # Check that every sample contains at least one observed value (not NA)
+    vecNARep <- any(apply(matCountDataProc,2,function(rep){all(is.na(rep))}))
+    if(any(vecNARep)){
+      print(paste0( "WARNING: Sample(s) ",
+        paste0(colnames(matCountDataProc[vecNARep,]), collapse=","),
         " only contain(s) NA values and will be removed from the analysis."))
-      arr2DCountData <- arr2DCountData[,!lsNARep]
+      matCountDataProc <- matCountDataProc[,!vecNARep]
     }
     ### 2. Rows (Genes):
     # Reduce expression table to rows containing at least one non-zero count
-    rowIdx_lowCounts <- apply(arr2DCountData,1,function(x){all(x==0)})
+    rowIdx_lowCounts <- apply(matCountDataProc,1,function(x){all(x==0)})
     if(sum(rowIdx_lowCounts) > 0){
       print(paste0("WARNING: ",sum(rowIdx_lowCounts), " out of ",
-        dim(arr2DCountData)[1]," genes had only zero counts in all considered samples."))
+        dim(matCountDataProc)[1]," genes had only zero counts in all considered samples."))
       print("These genes are omitted in the analysis.")
-      arr2DCountData <- arr2DCountData[!rowIdx_lowCounts,]
+      matCountDataProc <- matCountDataProc[!rowIdx_lowCounts,]
     }
     # DAVID to be deprecated
     # Shorten expression table
-    if(FALSE){
+    if(TRUE){
       ind_toKeep <- 100
-      print(paste0("Working on subset of data: ",min(ind_toKeep,dim(arr2DCountData)[1])," genes."))
-      arr2DCountData <- arr2DCountData[1:min(ind_toKeep,dim(arr2DCountData)[1]),]
+      print(paste0("Working on subset of data: ",min(ind_toKeep,dim(matCountDataProc)[1])," genes."))
+      matCountDataProc <- matCountDataProc[1:min(ind_toKeep,dim(matCountDataProc)[1]),]
     }
     # Exclude genes with only missing values (NAs)
-    indx_NA <- apply(arr2DCountData,1,function(x){all(is.na(x))})
+    indx_NA <- apply(matCountDataProc,1,function(x){all(is.na(x))})
     if(any(indx_NA)){
       print(paste0("WARNING: Excluded ",sum(indx_NA)," genes because no real valued samples were given."))
     }
-    arr2DCountData <- arr2DCountData[!(indx_NA),]
+    matCountDataProc <- matCountDataProc[!(indx_NA),]
     
-    # Sort 2D array by annotation table
-    vecTimepoints <- as.character(sort(unique( as.numeric(as.vector(dfAnnotationFull$Time)) )))
-    arr2DCountData <- arr2DCountData[,match(colnames(arr2DCountData),as.vector(dfAnnotationFull$Replicate))]
+    # Sort copunt matrix column by annotation table
+    matCountDataProc <- matCountDataProc[,match(as.vector(dfAnnotation$Sample),colnames(matCountDataProc))]
     
-    return(arr2DCountData)
+    return(matCountDataProc)
   }
-    
+  
   ###############################################################
   # (II) Main body of function
   
   # Check validity of input
   checkData(
-    dfAnnotationFull=dfAnnotationFull,
-    arr2DCountData=matCountData,
+    dfAnnotation=dfAnnotation,
+    matCountData=matCountData,
     strControlName=strControlName,
     strCaseName=strCaseName,
     strMode=strMode,
@@ -371,12 +370,15 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     vecDispersionsExternal=vecDispersionsExternal,
     boolRunDESeq2=boolRunDESeq2 )
   
-  # Process raw counts
-  arr2DCountData <- nameGenes(arr2DCountData=matCountData)
-  arr2DCountData <- reduceCountData(
-    dfAnnotationFull=dfAnnotationFull, 
-    arr2DCountData=arr2DCountData)
+  # Process annotation table
+  dfAnnotationProc <- procAnnotation(dfAnnotation=dfAnnotation)
   
+  # Process raw counts
+  matCountDataProc <- nameGenes(matCountDataProc=matCountData)
+  matCountDataProc <- reduceCountData(
+    dfAnnotation=dfAnnotation, 
+    matCountDataProc=matCountDataProc)
+
   # Process single cell hyperparameters
   if(strMode=="singlecell"){
     matProbNB <- lsPseudoDE$matProbNB
@@ -388,7 +390,15 @@ processData <- function(dfAnnotationFull=NULL, matCountData=NULL,
     matClusterMeansFitted <- NULL
   }
   
-  lsProcessedData <- list(arr2DCountData, matProbNB, matDropout, matClusterMeansFitted)
-  names(lsProcessedData) <- c("arr2DCountData", "matProbNB", "matDropout", "matClusterMeansFitted")
+  lsProcessedData <- list(matCountDataProc, 
+    dfAnnotationProc,
+    matProbNB, 
+    matDropout, 
+    matClusterMeansFitted)
+  names(lsProcessedData) <- c("matCountDataProc",
+    "dfAnnotationProc",
+    "matProbNB", 
+    "matDropout", 
+    "matClusterMeansFitted")
   return( lsProcessedData )
 }
