@@ -2,11 +2,93 @@
 #++++++++++++++++++     Compute normalisation constants    ++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Compute translation factors for a gene and a longitudinal series
+#' Compute size factors for a dataset
 #' 
-#' Translation factors are scaling factors to normalise the 
-#' expression strength of a longitudinal series by gene. This
-#' function is only callde if strMode="longitudinal".
+#' This function computes size factors for each sample
+#' in the dataset and expands them to a matrix of the size
+#' of the dataset.
+#' Size factors scale the negative binomial likelihood
+#' model of a gene to the sequencing depth of each sample.
+#' 
+#' @seealso Called by \code{computeNormConst}.
+#' 
+#' @param matCountDataProc: (matrix genes x samples)
+#'    Count data: Reduced version of \code{matCountData}. 
+#'    For internal use.
+#' @param strMode: (str) [Default "batch"] 
+#'    {"batch","longitudinal","singlecell"}
+#'    Mode of model fitting.
+#' 
+#' @return matSizeFactors: (numeric matrix genes x samples) 
+#'    Model scaling factors for each observation which take
+#'    sequencing depth into account (size factors).
+#' @export
+
+computeSizeFactors <- function(matCountDataProc,
+  strMode){
+  
+  # Compute geometric count mean over replicates
+  # for each gene: Set zero counts to one
+  # In the case of strMode=singlecell, this becomes
+  # the weighted geometric count mean, weighted by
+  # by the probability of each observation to come
+  # from the negative binomial distribution.
+  matCountDataProcNoZeros <- matCountDataProc
+  matCountDataProcNoZeros[matCountDataProcNoZeros==0] <- 0.1
+  boolObserved <- !is.na(matCountDataProc)
+  if(strMode=="batch" | strMode=="longitudinal"){
+    # Take geometric mean
+    vecGeomMean <- sapply(c(1:dim(matCountDataProcNoZeros)[1]), 
+      function(gene){
+        ( prod(matCountDataProcNoZeros[gene,boolObserved[gene,]]) )^
+          ( 1/sum(boolObserved[gene,]) )
+      })
+  } else if(strMode=="singlecell"){
+    # Take weighted geometric mean
+    vecGeomMean <- sapply(c(1:dim(matCountDataProcNoZeros)[1]), 
+      function(gene){
+        ( prod(matCountDataProcNoZeros[gene,boolObserved[gene,]]^matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )^
+          ( 1/sum(matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )
+      })
+  }
+  matGeomMeans <- matrix(vecGeomMean, 
+    nrow=dim(matCountDataProc)[1], 
+    ncol=dim(matCountDataProc)[2], 
+    byrow=FALSE)
+  
+  # Compute ratio of each observation to geometric
+  # mean.
+  matSizeRatios <- matCountDataProc / matGeomMeans
+  
+  # Chose median of ratios over genes as size factor
+  vecSizeFactors <- apply(matSizeRatios, 2,
+    function(replicate){
+      median(replicate, na.rm=TRUE)
+    })
+  
+  if(any(vecSizeFactors==0)){
+    warning("WARNING: Found size factors==0, setting these to 1.")
+    vecSizeFactors[vecSizeFactors==0] <- 1
+  }
+  
+  matSizeFactors <- matrix(vecSizeFactors,
+    nrow=dim(matCountDataProc)[1],
+    ncol=dim(matCountDataProc)[2],
+    byrow=TRUE)
+  colnames(matSizeFactors) <- colnames(matCountDataProc)
+  rownames(matSizeFactors) <- rownames(matCountDataProc)
+  
+  return(matSizeFactors)
+}
+
+#' Compute translation factors for a dataset
+#' 
+#' This function computes translation factors for each sample
+#' per gene in the dataset.
+#' Translation factors scale the negative binomial likelihood
+#' model of a gene to the mean of a longitudinal series of 
+#' samples of this gene. This function is only callde if 
+#' strMode="longitudinal".
 #' 
 #' @seealso Called by \code{computeNormConst}.
 #' 
@@ -127,57 +209,8 @@ computeNormConst <- function(matCountDataProc,
   
   # 1. Compute size factors
   # Size factors account for differential sequencing depth.
-  
-  # Compute geometric count mean over replicates
-  # for each gene: Set zero counts to one
-  # In the case of strMode=singlecell, this becomes
-  # the weighted geometric count mean, weighted by
-  # by the probability of each observation to come
-  # from the negative binomial distribution.
-  matCountDataProcNoZeros <- matCountDataProc
-  matCountDataProcNoZeros[matCountDataProcNoZeros==0] <- 0.1
-  boolObserved <- !is.na(matCountDataProc)
-  if(strMode=="batch" | strMode=="longitudinal"){
-    # Take geometric mean
-    vecGeomMean <- sapply(c(1:dim(matCountDataProcNoZeros)[1]), 
-      function(gene){
-        ( prod(matCountDataProcNoZeros[gene,boolObserved[gene,]]) )^
-          ( 1/sum(boolObserved[gene,]) )
-      })
-  } else if(strMode=="singlecell"){
-    # Take weighted geometric mean
-    vecGeomMean <- sapply(c(1:dim(matCountDataProcNoZeros)[1]), 
-      function(gene){
-        ( prod(matCountDataProcNoZeros[gene,boolObserved[gene,]]^matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )^
-          ( 1/sum(matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )
-      })
-  }
-  matGeomMeans <- matrix(vecGeomMean, 
-    nrow=dim(matCountDataProc)[1], 
-    ncol=dim(matCountDataProc)[2], 
-    byrow=FALSE)
-  
-  # Compute ratio of each observation to geometric
-  # mean.
-  matSizeRatios <- matCountDataProc / matGeomMeans
-  
-  # Chose median of ratios over genes as size factor
-  vecSizeFactors <- apply(matSizeRatios, 2,
-    function(replicate){
-      median(replicate, na.rm=TRUE)
-    })
-  
-  if(any(vecSizeFactors==0)){
-    warning("WARNING: Found size factors==0, setting these to 1.")
-    vecSizeFactors[vecSizeFactors==0] <- 1
-  }
-  
-  matSizeFactors <- matrix(vecSizeFactors,
-    nrow=dim(matCountDataProc)[1],
-    ncol=dim(matCountDataProc)[2],
-    byrow=TRUE)
-  colnames(matSizeFactors) <- colnames(matCountDataProc)
-  rownames(matSizeFactors) <- rownames(matCountDataProc)
+  matSizeFactors <- computeSizeFactors(matCountDataProc,
+    strMode)
   
   # 2. Compute translation factors:
   # Translation factors account for different mean expression levels of a
@@ -186,9 +219,13 @@ computeNormConst <- function(matCountDataProc,
     matTranslationFactors <- computeTranslationFactors(matCountDataProc=matCountDataProc,
       matSizeFactors=matSizeFactors,
       dfAnnotationProc=dfAnnotationProc )
+  }
+  
+  # 3. Compute composite normalisation constants
+  if(strMode=="longitudinal"){
     matNormConst <- matSizeFactors*matTranslationFactors
   } else {
-    matNormConst <- matSizeFactors
+    matNormConst <- matSizeFactors 
   }
   colnames(matNormConst) <- colnames(matCountDataProc)
   rownames(matNormConst) <- rownames(matCountDataProc)
