@@ -84,7 +84,13 @@ computeSizeFactors <- function(matCountDataProc,
 #' Compute translation factors for a dataset
 #' 
 #' This function computes translation factors for each sample
-#' per gene in the dataset.
+#' per gene in the dataset. Note that the translation factors
+#' are computed with respect to the overall mean, and with 
+#' respect to the condition-wise means if control samples
+#' are given. The rescaling of translation factors for case and
+#' control conditions is not necessary for differential 
+#' expression analysis but gives impulse models which directly
+#' represent the data of their conditions, without scaling.
 #' Translation factors scale the negative binomial likelihood
 #' model of a gene to the mean of a longitudinal series of 
 #' samples of this gene. This function is only callde if 
@@ -102,58 +108,112 @@ computeSizeFactors <- function(matCountDataProc,
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and LongitudinalSeries). For internal use.
+#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
+#' @param strControlName: (str) [Default NULL] Name of the control condition in 
+#'    \code{dfAnnotationRedFull}.
 #' 
-#' @return matTranslationFactors: (numeric matrix genes x samples) 
+#' @return (list {case} or {case, ctrl, combined}) List of
+#'    translation factor matrices.
+#'    \itemize{
+#'      \item matTranslationFactorsAll: (numeric matrix genes x samples) 
 #'    Model scaling factors for each observation which take
 #'    longitudinal time series mean within a gene into account 
-#'    (translation factors).
+#'    (translation factors). Computed based based on all samples.
+#'      \item matTranslationFactorsCase: As matTranslationFactorsAll
+#'      for case samples only, non-case samples set NA.
+#'      \item matTranslationFactorsCtrl: As matTranslationFactorsAll
+#'      for control samples only, non-control samples set NA.
+#'      }
 #' @export
 
 computeTranslationFactors <- function(matCountDataProc,matSizeFactors,
-  dfAnnotationProc){
+  dfAnnotationProc,strCaseName,strControlName=NULL){
+  
+  # Compute size factor normalised count data
+  matCountDataProcNorm <- matCountDataProc/matSizeFactors
+  colnames(matCountDataProcNorm) <- colnames(matCountDataProc)
   
   vecLongitudinalSeriesAssign <- dfAnnotationProc[match(
     colnames(matCountDataProc),
     dfAnnotationProc$Sample),]$LongitudinalSeries
   names(vecLongitudinalSeriesAssign) <- colnames(matCountDataProc)
   vecLongitudinalSeries <- unique( vecLongitudinalSeriesAssign )
-  matCountDataProcNorm <- matCountDataProc/matSizeFactors
+  
+  # 1. All data: This is case with a single condition and 
+  # combined with control condition.
+  
   # Fit mean to normalised counts. Count normalisation 
   # corresponds to model normalisation in impulse model 
   # fitting.
-  vecMu <- apply(matCountDataProcNorm,1,function(gene){mean(gene, na.rm=TRUE)})
-  matMuLongitudinal <- t(apply(matCountDataProcNorm, 1, function(gene){
+  vecMuAll <- apply(matCountDataProcNorm,1,function(gene){mean(gene, na.rm=TRUE)})
+  matMuAll <- matrix(vecMuAll,
+    nrow=dim(matCountDataProc)[1],
+    ncol=dim(matCountDataProc)[2],
+    byrow=FALSE)
+  matMuLongitudinalAll <- t(apply(matCountDataProcNorm, 1, function(gene){
     sapply(vecLongitudinalSeries, function(longser){
       mean(gene[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
     })
   }))
-  colnames(matMuLongitudinal) <- vecLongitudinalSeries
+  colnames(matMuLongitudinalAll) <- vecLongitudinalSeries
   
-  # Compute translation factors: Normalisation factor
-  # to scale impulse model to a longitudinal series.
-  # Note: Translation factor is the same for all samples
-  # of a gene in a longitudinal series
+  matTranslationFactorsAll <- matMuLongitudinalAll[,as.vector(vecLongitudinalSeriesAssign)]/matMuAll
+  matTranslationFactorsAll[matTranslationFactorsAll==0 | matMuAll==0] <- 1
   
-  # Scaled mean ratio per sample
-  matMu <- matrix(vecMu,
-    nrow=dim(matCountDataProc)[1],
-    ncol=dim(matCountDataProc)[2],
-    byrow=FALSE)
-  matTranslationFactors <- matMuLongitudinal[,as.vector(vecLongitudinalSeriesAssign)]/matMu
-  # Note: If all samples are zero, scaMu is zero and
-  # vecTranslationFactors are NA. Genes only with zero counts
-  # are removed in processData(). The input data to this function
-  # ma still consist entirely of zeros if this function is called
-  # on the subset of case or control data (if control condition
-  # is given). Those subsets may be only zeros. This exception
-  # is caught here and vecTranslationFactors set to 1 from NA.
-  # This removes the effect of vecTranslationFactors on fitting.
-  # The negative binomial density can still be
-  # evaluated as it is initialised with values from an impulse model
-  # padded with zero counts.
-  matTranslationFactors[matTranslationFactors==0] <- 1
-  
-  return(matTranslationFactors)
+  if(!is.null(strControlName)){
+    # 2. Case
+    vecboolindColsCase <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Sample)
+    vecMuCase <- apply(matCountDataProcNorm[,vecboolindColsCase],1,function(gene){mean(gene, na.rm=TRUE)})
+    matMuLongitudinalCase <- matrix(NA,nrow=dim(matCountDataProc)[1],ncol=length(vecLongitudinalSeries))
+    colnames(matMuLongitudinalCase) <- vecLongitudinalSeries
+    for(longser in vecLongitudinalSeries){
+      matMuLongitudinalCase[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCase & vecLongitudinalSeriesAssign==longser], 1, 
+        function(gene){mean(gene, na.rm=TRUE)
+      })
+    }
+    colnames(matMuLongitudinalCase) <- vecLongitudinalSeries
+    
+    # Scaled mean ratio per sample
+    matMuCase <- matrix(vecMuCase,
+      nrow=dim(matCountDataProc)[1],
+      ncol=dim(matCountDataProc)[2],
+      byrow=FALSE)
+    matTranslationFactorsCase <- matMuLongitudinalCase[,as.vector(vecLongitudinalSeriesAssign)]/matMuCase
+    matTranslationFactorsCase[matTranslationFactorsCase==0 | matMuCase==0] <- 1
+    # Take out samples which do not belong to case
+    matTranslationFactorsCase[,!vecboolindColsCase] <- NA
+    
+    # 3. Control
+    vecboolindColsCtrl <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Sample)
+    vecMuCtrl <- apply(matCountDataProcNorm[,vecboolindColsCtrl],1,function(gene){mean(gene, na.rm=TRUE)})
+    matMuLongitudinalCtrl <- matrix(NA,nrow=dim(matCountDataProc)[1],ncol=length(vecLongitudinalSeries))
+    colnames(matMuLongitudinalCtrl) <- vecLongitudinalSeries
+    for(longser in vecLongitudinalSeries){
+      matMuLongitudinalCtrl[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCtrl & vecLongitudinalSeriesAssign==longser], 1, 
+        function(gene){mean(gene, na.rm=TRUE)
+      })
+    }
+    colnames(matMuLongitudinalCtrl) <- vecLongitudinalSeries
+    
+    # Scaled mean ratio per sample
+    matMuCtrl <- matrix(vecMuCtrl,
+      nrow=dim(matCountDataProc)[1],
+      ncol=dim(matCountDataProc)[2],
+      byrow=FALSE)
+    matTranslationFactorsCtrl <- matMuLongitudinalCtrl[,as.vector(vecLongitudinalSeriesAssign)]/matMuCtrl
+    matTranslationFactorsCtrl[matTranslationFactorsCtrl==0 | matMuCtrl==0] <- 1
+    # Take out samples which do not belong to control
+    matTranslationFactorsCtrl[,!vecboolindColsCtrl] <- NA
+    
+    lsMatTranslationFactors <- list(matTranslationFactorsAll,
+      matTranslationFactorsCase, matTranslationFactorsCtrl)
+    names(lsMatTranslationFactors) <- c("combined","case","control")
+    return(lsMatTranslationFactors)
+  } else {
+    lsMatTranslationFactors <- list(matTranslationFactorsAll)
+    names(lsMatTranslationFactors) <- c("case")
+    return(lsMatTranslationFactors)
+  }
 }
 
 #' Compute normalisation constant for each replicate
@@ -182,19 +242,29 @@ computeTranslationFactors <- function(matCountDataProc,matSizeFactors,
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and LongitudinalSeries). For internal use.
+#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationRedFull}.
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
 #' 
-#' @return (list {matNormConst,matSizeFactors})
+#' @return (list {lsMatTranslationFactors,matSizeFactors})
 #'    \itemize{
-#'      \item matNormConst: (numeric matrix genes x samples) 
-#'    Model scaling factors for each observation which take
-#'    sequencing depth and longitudinal time series mean
-#'    within a gene into account (size and translation
-#'    factors).
+#'      \item lsMatTranslationFactors 
+#'      (list {case} or {case, ctrl, combined}) List of
+#'      translation factor matrices. NULL if strMode not
+#'      "longitudinal".
+#'      \itemize{
+#'        \item matTranslationFactorsAll: (numeric matrix genes x samples) 
+#'      Model scaling factors for each observation which take
+#'      longitudinal time series mean within a gene into account 
+#'      (translation factors). Computed based based on all samples.
+#'        \item matTranslationFactorsCase: As matTranslationFactorsAll
+#'        for case samples only, non-case samples set NA.
+#'        \item matTranslationFactorsCtrl: As matTranslationFactorsAll
+#'        for control samples only, non-control samples set NA.
+#'      }
 #'      \item matSizeFactors: (numeric matrix genes x samples) 
 #'    Model scaling factors for each observation which take
 #'    sequencing depth into account (size factors).
@@ -204,6 +274,7 @@ computeTranslationFactors <- function(matCountDataProc,matSizeFactors,
 computeNormConst <- function(matCountDataProc,
   matProbNB=NULL,
   dfAnnotationProc,
+  strCaseName,
   strControlName=NULL,
   strMode="batch"){
   
@@ -216,19 +287,14 @@ computeNormConst <- function(matCountDataProc,
   # Translation factors account for different mean expression levels of a
   # gene between longitudinal sample series.
   if(strMode=="longitudinal"){
-    matTranslationFactors <- computeTranslationFactors(matCountDataProc=matCountDataProc,
+    lsMatTranslationFactors <- computeTranslationFactors(matCountDataProc=matCountDataProc,
       matSizeFactors=matSizeFactors,
-      dfAnnotationProc=dfAnnotationProc )
-  }
-  
-  # 3. Compute composite normalisation constants
-  if(strMode=="longitudinal"){
-    matNormConst <- matSizeFactors*matTranslationFactors
+      dfAnnotationProc=dfAnnotationProc,
+      strCaseName=strCaseName,
+      strControlName=strControlName)
   } else {
-    matNormConst <- matSizeFactors 
+    lsMatTranslationFactors <- NULL
   }
-  colnames(matNormConst) <- colnames(matCountDataProc)
-  rownames(matNormConst) <- rownames(matCountDataProc)
   
-  return(list(matNormConst=matNormConst,matSizeFactors=matSizeFactors))
+  return(list(lsMatTranslationFactors=lsMatTranslationFactors,matSizeFactors=matSizeFactors))
 }

@@ -17,11 +17,20 @@
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and LongitudinalSeries). For internal use.
-#' @param matNormConst: (numeric matrix genes x samples) 
-#'    Model scaling factors for each observation: Take
-#'    sequencing depth and longitudinal time series mean
-#'    within a gene into account (size and translation
-#'    factors).
+#' @param lsMatTranslationFactors 
+#'      (list {case} or {case, ctrl, combined}) List of
+#'      translation factor matrices. NULL if strMode not
+#'      "longitudinal".
+#'      \itemize{
+#'        \item matTranslationFactorsAll: (numeric matrix genes x samples) 
+#'      Model scaling factors for each observation which take
+#'      longitudinal time series mean within a gene into account 
+#'      (translation factors). Computed based based on all samples.
+#'        \item matTranslationFactorsCase: As matTranslationFactorsAll
+#'        for case samples only, non-case samples set NA.
+#'        \item matTranslationFactorsCtrl: As matTranslationFactorsAll
+#'        for control samples only, non-control samples set NA.
+#'      }
 #' @param matSizeFactors: (numeric matrix genes x samples) 
 #'    Model scaling factors for each observation only accounting
 #'    for sequencing depth into account (size factors).
@@ -56,7 +65,7 @@
 
 plotDEGenes <- function(vecGeneIDs, 
   matCountDataProc, 
-  matNormConst, matSizeFactors,
+  lsMatTranslationFactors, matSizeFactors,
   dfAnnotationProc, lsImpulseFits, matClusterMeansFitted=NULL,
   dfImpulseResults, vecRefPval=NULL, 
   strCaseName, strControlName=NULL, strMode="batch",
@@ -65,9 +74,6 @@ plotDEGenes <- function(vecGeneIDs,
   boolSimplePlot=FALSE, boolLogPlot=FALSE,
   NPARAM=6){
   
-  # Reconstruct translation factors
-  matTranslationFactors <- matNormConst / matSizeFactors
-  rownames(matTranslationFactors) <- rownames(matNormConst)
   # Scale count data by size factors for plotting:
   # The impulse models are fit based on normalised means.
   # Therefore, the model curves follow the normalised
@@ -250,7 +256,7 @@ plotDEGenes <- function(vecGeneIDs,
             cex=0.6, 
             inset=c(0,scaLegendInset))
         } else if(strMode=="longitudinal"){
-          vecTranslationFactors <- matTranslationFactors[geneID,vecindLongitudinalSeriesAssignUnique]
+          vecTranslationFactors <- (lsMatTranslationFactors[["case"]])[geneID,vecindLongitudinalSeriesAssignUnique]
           
           # Create colour vector
           vecCol <- rainbow(n=length(vecLongitudinalSeries))

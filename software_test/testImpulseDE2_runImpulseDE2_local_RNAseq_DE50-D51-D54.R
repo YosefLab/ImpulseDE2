@@ -4,11 +4,11 @@ rm(list = ls())
 ### LOAD DATA
 ### Load annotation
 # With control
-#dfAnnotationCtrl <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_RNAseq_D50-D51-D54_D50control.tab",header=T)
-#rownames(dfAnnotationCtrl) <- dfAnnotationCtrl$Sample
+dfAnnotationCtrl <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_RNAseq_D50-D51-D54_D50control.tab",header=T)
+rownames(dfAnnotationCtrl) <- dfAnnotationCtrl$Sample
 # Without control
-dfAnnotationCase <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_RNAseq_D50-D51-D54.tab",header=T)
-rownames(dfAnnotationCase) <- dfAnnotationCase$Sample
+#dfAnnotationCase <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_RNAseq_D50-D51-D54.tab",header=T)
+#rownames(dfAnnotationCase) <- dfAnnotationCase$Sample
 
 ### Load count data
 dfCountData <- read.table("/Users/davidsebastianfischer/MasterThesis/data/DESeq_RNAseq/raw_RNAseq/hDC_TPM_D50-D51-D54.tab",sep="\t",header=T)
@@ -27,12 +27,12 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_f
 
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 strCaseName = "case"
-strControlName = NULL
+strControlName = "ctrl"
 if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 }else{dfAnnotation=dfAnnotationCase}
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "longitudinal"
+strMode <- "batch"
 boolPlotting <- TRUE
 lsImpulseDE_results <- runImpulseDE2(
   matCountData=matCountData, 
@@ -60,16 +60,16 @@ if(FALSE){
   load("ImpulseDE2_vecDEGenes.RData")
   load("ImpulseDE2_lsImpulseFits.RData")
   load("ImpulseDE2_dfDESeq2Results.RData")
-  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_matNormConst.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_lsMatTranslationFactors.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_matSizeFactors.RData")
   NPARAM <- 6
   setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
   source("srcImpulseDE2_plotDEGenes.R")
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
   plotDEGenes(
-    vecGeneIDs=rownames(matCountDataProc)[1:4],
+    vecGeneIDs=rownames(matCountDataProc)[1:16],
     matCountDataProc=matCountDataProc,
-    matNormConst=matNormConst,
+    lsMatTranslationFactors=lsMatTranslationFactors,
     matSizeFactors=matSizeFactors,
     dfAnnotation=dfAnnotation, 
     lsImpulseFits=lsImpulseFits,
