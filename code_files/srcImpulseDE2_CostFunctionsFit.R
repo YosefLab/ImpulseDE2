@@ -62,6 +62,7 @@ evalLogLikImpulseBatch <- function(vecTheta,
   return(scaLogLik)
 }
 
+# to be deprecated DAVID
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 #' Cost function impulse model fit - Time course mode

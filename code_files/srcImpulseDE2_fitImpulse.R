@@ -263,9 +263,6 @@ estimateImpulseParam <- function(vecTimepoints, vecCounts,
 #'    Dropout rate estimate for each cell for given gene.
 #' @param vecNormConst: (numeric vector number of samples) 
 #'    Normalisation constants for each sample.
-#' @param vecTranslationFactors: (numeric vector number of samples)
-#'    Scaling factors for impulse model between different longitudinal series:
-#'    Mean timecourse/overall mean, each scaled by size factors.
 #' @param vecindTimepointAssign (numeric vector number samples) 
 #'    Index of time point assigned to sample in list of sorted
 #'    time points (vecX).
@@ -292,7 +289,6 @@ optimiseImpulseModelFit <- function(
   scaDispersionEstimate,
   vecDropoutRate=NULL,
   vecNormConst,
-  vecTranslationFactors=NULL,
   vecindTimepointAssign,
   vecboolObserved, 
   vecboolNotZeroObserved=NULL,
@@ -301,7 +297,7 @@ optimiseImpulseModelFit <- function(
   # Chose the cost function for optimisation according
   # to the mode strMode.
   # David: call these as one, assign the extra param as dummies?
-  if(strMode=="batch"){
+  if(strMode=="batch" | strMode=="longitudinal"){
     vecFit <- unlist( optim(
       par=vecParamGuess,
       fn=evalLogLikImpulseBatch_comp,
@@ -312,20 +308,6 @@ optimiseImpulseModelFit <- function(
       vecindTimepointAssign=vecindTimepointAssign,
       vecboolObserved=vecboolObserved,
       method="BFGS",
-      control=list(maxit=MAXIT,fnscale=-1)
-    )[c("par","value","convergence")] )
-  }else if(strMode=="longitudinal"){
-    vecFit <- unlist( optim(
-      par=vecParamGuess, 
-      fn=evalLogLikImpulseByTC_comp, 
-      vecX=vecTimepoints,
-      vecY=vecCounts, 
-      scaDispEst=scaDispersionEstimate,
-      vecNormConst=vecNormConst,
-      vecTranslationFactors=vecTranslationFactors,
-      vecindTimepointAssign=vecindTimepointAssign,
-      vecboolObserved=vecboolObserved,
-      method="BFGS", 
       control=list(maxit=MAXIT,fnscale=-1)
     )[c("par","value","convergence")] )
   }else if(strMode=="singlecell"){
@@ -376,7 +358,10 @@ optimiseImpulseModelFit <- function(
 #'    Probability of observations to come from negative binomial 
 #'    component of mixture model.
 #' @param vecNormConst: (numeric vector number of samples) 
-#'    Normalisation constants for each sample.
+#'    Model scaling factors for each observation: Take
+#'    sequencing depth and longitudinal time series mean
+#'    within a gene into account (size and translation
+#'    factors).
 #' @param vecTimepointAssign: (numeric vector number samples) 
 #'    Timepoints assigned to samples.
 #' @param vecLongitudinalSeriesAssign (numeric vector number samples) 
@@ -426,16 +411,16 @@ fitImpulse_gene <- function(vecCounts,
   
   # Compute time course specifc parameters
   # Set default:
-  vecTranslationFactors <- NULL
+  #vecTranslationFactors <- NULL
   if(strMode=="longitudinal"){
     vecLongitudinalSeries <- unique( vecLongitudinalSeriesAssign )
     #nLongitudinalSeries <- length(vecLongitudinalSeries)
     # Compute translation factors between longitudinal series.
-    vecTranslationFactors <- computeTranslationFactors(
-      vecCounts=vecCounts,
-      vecNormConst=vecNormConst,
-      vecLongitudinalSeries=vecLongitudinalSeries,
-      vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign)
+    #vecTranslationFactors <- computeTranslationFactors(
+    #  vecCounts=vecCounts,
+    #  vecNormConst=vecNormConst,
+    #  vecLongitudinalSeries=vecLongitudinalSeries,
+    #  vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign)
   }
   
   # (II) Fit null model and compute likelihood of null model
@@ -475,7 +460,6 @@ fitImpulse_gene <- function(vecCounts,
     scaDispersionEstimate=scaDispersionEstimate,
     vecDropoutRate=vecDropoutRate,
     vecNormConst=vecNormConst,
-    vecTranslationFactors=vecTranslationFactors,
     vecindTimepointAssign=vecindTimepointAssign,
     vecboolObserved=vecboolObserved, 
     vecboolNotZeroObserved=vecboolNotZeroObserved,
@@ -489,7 +473,6 @@ fitImpulse_gene <- function(vecCounts,
     scaDispersionEstimate=scaDispersionEstimate,
     vecDropoutRate=vecDropoutRate,
     vecNormConst=vecNormConst,
-    vecTranslationFactors=vecTranslationFactors,
     vecindTimepointAssign=vecindTimepointAssign,
     vecboolObserved=vecboolObserved, 
     vecboolNotZeroObserved=vecboolNotZeroObserved,
@@ -512,20 +495,18 @@ fitImpulse_gene <- function(vecCounts,
     names(vecBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1","mu","logL_H0")
   } else if(strMode=="longitudinal") {
-    vecTranslationFactorsUnique <- vecTranslationFactors[as.vector(vecLongitudinalSeries)]
+    #vecTranslationFactorsUnique <- vecTranslationFactors[as.vector(vecLongitudinalSeries)]
     vecBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],
       scaMu,
       scaLogLikNull,
-      vecMuLongitudinalSeries,
-      vecTranslationFactorsUnique)
+      vecMuLongitudinalSeries)
     vecColnamesMubyLongitudinalSeries <- paste0(rep("mu_",length(vecMuLongitudinalSeries)), names(vecMuLongitudinalSeries))
-    vecColnameTranslationFactors <- paste0(rep("TranslationFac_",length(vecTranslationFactorsUnique)), names(vecTranslationFactorsUnique))
+    #vecColnameTranslationFactors <- paste0(rep("TranslationFac_",length(vecTranslationFactorsUnique)), names(vecTranslationFactorsUnique))
     names(vecBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1",
       "mu",
       "logL_H0",
-      vecColnamesMubyLongitudinalSeries,
-      vecColnameTranslationFactors)
+      vecColnamesMubyLongitudinalSeries)
   }  else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
@@ -558,8 +539,11 @@ fitImpulse_gene <- function(vecCounts,
 #' @param matProbNB: (probability vector genes x samples) 
 #'    Probability of observations to come from negative binomial 
 #'    component of mixture model.
-#' @param vecNormConst: (numeric vector number of samples) 
-#'    Normalisation constants for each sample.
+#' @param matNormConst: (numeric matrix genes x samples) 
+#'    Model scaling factors for each observation: Take
+#'    sequencing depth and longitudinal time series mean
+#'    within a gene into account (size and translation
+#'    factors).
 #' @param vecTimepointAssign: (numeric vector number samples) Timepoints 
 #'    assigned to samples.
 #' @param vecLongitudinalSeriesAssign: (numeric vector number samples) Time courses 
@@ -599,7 +583,7 @@ fitImpulse_gene <- function(vecCounts,
 fitImpulse_matrix <- function(matCountDataProcCondition, 
   vecDispersions, 
   matDropoutRate=NULL, matProbNB=NULL,
-  vecNormConst, 
+  matNormConst, 
   vecTimepointAssign, vecLongitudinalSeriesAssign, 
   dfAnnotationProc,
   strCaseName, strControlName=NULL, strMode="batch", 
@@ -633,7 +617,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("vecDispersions", vecDispersions, envir = my.env)
     assign("matDropoutRate", matDropoutRate, envir = my.env)
     assign("matProbNB", matProbNB, envir = my.env)
-    assign("vecNormConst", vecNormConst, envir = my.env)
+    assign("matNormConst", matNormConst, envir = my.env)
     assign("vecTimepointAssign", vecTimepointAssign, envir = my.env)
     assign("vecLongitudinalSeriesAssign", vecLongitudinalSeriesAssign, envir = my.env)
     assign("dfAnnotationProc", dfAnnotationProc, envir = my.env)
@@ -658,7 +642,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "vecDispersions",
       "matDropoutRate",
       "matProbNB",
-      "vecNormConst",
+      "matNormConst",
       "vecTimepointAssign",
       "vecLongitudinalSeriesAssign",
       "dfAnnotationProc",
@@ -690,7 +674,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
             scaDispersionEstimate=vecDispersions[x],
             vecDropoutRate=matDropoutRate[x,],
             vecProbNB=matProbNB[x,],
-            vecNormConst=vecNormConst,
+            vecNormConst=matNormConst[x,],
             vecTimepointAssign=vecTimepointAssign,
             vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
             dfAnnotationProc=dfAnnotationProc,
@@ -705,7 +689,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
           function(x){fitImpulse_gene(
             vecCounts=matCountDataProcCondition[x,],
             scaDispersionEstimate=vecDispersions[x],
-            vecNormConst=vecNormConst,
+            vecNormConst=matNormConst[x,],
             vecTimepointAssign=vecTimepointAssign,
             vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
             dfAnnotationProc=dfAnnotationProc,
@@ -804,8 +788,11 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and LongitudinalSeries). For internal use.
-#' @param vecNormConst: (numeric vector number of samples) 
-#'    Normalisation constants for each sample.
+#' @param matNormConst: (numeric matrix genes x samples) 
+#'    Model scaling factors for each observation: Take
+#'    sequencing depth and longitudinal time series mean
+#'    within a gene into account (size and translation
+#'    factors).
 #' @param vecDispersions: (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
 #' @param matDropoutRate: (probability matrix genes x samples) Dropout 
@@ -841,7 +828,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
 #' @export
 
 fitImpulse <- function(matCountDataProc, 
-  dfAnnotationProc, vecNormConst,
+  dfAnnotationProc, matNormConst,
   vecDispersions, 
   matDropoutRate, matProbNB,
   strCaseName, strControlName=NULL, strMode="batch",
@@ -899,7 +886,7 @@ fitImpulse <- function(matCountDataProc,
       # Call fitting with single cell parameters
       lsFitResults_run <- fitImpulse_matrix(
         matCountDataProcCondition=matCountDataProc[,lsSamplesByCond[[label]]],
-        vecNormConst=vecNormConst[lsSamplesByCond[[label]]],
+        matNormConst=matNormConst[,lsSamplesByCond[[label]]],
         vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate[,lsSamplesByCond[[label]]],
         matProbNB=matProbNB[,lsSamplesByCond[[label]]],
@@ -915,7 +902,7 @@ fitImpulse <- function(matCountDataProc,
       # Call fitting without singlecell parameters
       lsFitResults_run <- fitImpulse_matrix(
         matCountDataProcCondition=matCountDataProc[,lsSamplesByCond[[label]]],
-        vecNormConst=vecNormConst[lsSamplesByCond[[label]]],
+        matNormConst=matNormConst[,lsSamplesByCond[[label]]],
         vecDispersions=vecDispersions,
         vecTimepointAssign=vecTimepointAssign[lsSamplesByCond[[label]]],
         vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign[lsSamplesByCond[[label]]],

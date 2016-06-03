@@ -27,12 +27,16 @@
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
 #' 
-#' @return vecSizeFactors: (numeric vector number of samples) 
-#'    Normalisation constants for counts for each sample. 
+#' @return matNormConst: (numeric matrix genes x samples) 
+#'    Model scaling factors for each observation: Take
+#'    sequencing depth and longitudinal time series mean
+#'    within a gene into account (size and translation
+#'    factors).
 #' @export
 
 computeNormConst <- function(matCountDataProc,
   matProbNB=NULL,
+  dfAnnotationProc,
   strMode="batch"){
   
   # 1. Compute size factors
@@ -76,17 +80,70 @@ computeNormConst <- function(matCountDataProc,
     function(replicate){
       median(replicate, na.rm=TRUE)
     })
-  names(vecSizeFactors) <- colnames(matCountDataProc)
   
   if(any(vecSizeFactors==0)){
     warning("WARNING: Found size factors==0, setting these to 1.")
     vecSizeFactors[vecSizeFactors==0] <- 1
   }
   
+  matSizeFactors <- matrix(vecSizeFactors,
+    nrow=dim(matCountDataProc)[1],
+    ncol=dim(matCountDataProc)[2],
+    byrow=TRUE)
+  colnames(matSizeFactors) <- colnames(matCountDataProc)
+  rownames(matSizeFactors) <- rownames(matCountDataProc)
+  
   # 2. Compute translation factors:
   # Translation factors account for different mean expression levels of a
   # gene between longitudinal sample series.
+  if(strMode=="longitudinal"){
+    vecLongitudinalSeriesAssign <- dfAnnotationProc[match(
+      colnames(matCountDataProc),
+      dfAnnotationProc$Sample),]$LongitudinalSeries
+    names(vecLongitudinalSeriesAssign) <- colnames(matCountDataProc)
+    vecLongitudinalSeries <- unique( vecLongitudinalSeriesAssign )
+    matCountDataProcNorm <- matCountDataProc/matSizeFactors
+    # Fit mean to normalised counts. Count normalisation 
+    # corresponds to model normalisation in impulse model 
+    # fitting.
+    vecMu <- apply(matCountDataProcNorm,1,function(gene){mean(gene, na.rm=TRUE)})
+    matMuLongitudinal <- t(apply(matCountDataProcNorm, 1, function(gene){
+      sapply(vecLongitudinalSeries, function(longser){
+        mean(gene[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
+      })
+    }))
+    colnames(matMuLongitudinal) <- vecLongitudinalSeries
+    
+    # Compute translation factors: Normalisation factor
+    # to scale impulse model to a longitudinal series.
+    # Note: Translation factor is the same for all samples
+    # of a gene in a longitudinal series
+    
+    # Scaled mean ratio per sample
+    matMu <- matrix(vecMu,
+      nrow=dim(matCountDataProc)[1],
+      ncol=dim(matCountDataProc)[2],
+      byrow=FALSE)
+    matTranslationFactors <- matMuLongitudinal[,as.vector(vecLongitudinalSeriesAssign)]/matMu
+    # Note: If all samples are zero, scaMu is zero and
+    # vecTranslationFactors are NA. Genes only with zero counts
+    # are removed in processData(). The input data to this function
+    # ma still consist entirely of zeros if this function is called
+    # on the subset of case or control data (if control condition
+    # is given). Those subsets may be only zeros. This exception
+    # is caught here and vecTranslationFactors set to 1 from NA.
+    # This removes the effect of vecTranslationFactors on fitting.
+    # The negative binomial density can still be
+    # evaluated as it is initialised with values from an impulse model
+    # padded with zero counts.
+    matTranslationFactors[matTranslationFactors==0] <- 1
+    
+    matNormConst <- matSizeFactors*matTranslationFactors
+  } else {
+    matNormConst <- matSizeFactors
+  }
+  colnames(matNormConst) <- colnames(matCountDataProc)
+  rownames(matNormConst) <- rownames(matCountDataProc)
   
-  
-  return(vecSizeFactors)
+  return(list(matNormConst=matNormConst,matSizeFactors=matSizeFactors))
 }

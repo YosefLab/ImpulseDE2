@@ -32,7 +32,7 @@ if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 }else{dfAnnotation=dfAnnotationCase}
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "batch"
+strMode <- "longitudinal"
 boolPlotting <- TRUE
 lsImpulseDE_results <- runImpulseDE2(
   matCountData=matCountData, 
@@ -54,13 +54,14 @@ if(FALSE){
   # Load files from interior of ImpulseDE
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
   load("ImpulseDE2_matCountDataProc.RData")
-  load("ImpulseDE2_dfAnnotation.RData")
+  load("ImpulseDE2_dfAnnotationProc.RData")
   # Load Impulse output
   load("ImpulseDE2_dfImpulseResults.RData")
   load("ImpulseDE2_vecDEGenes.RData")
   load("ImpulseDE2_lsImpulseFits.RData")
   load("ImpulseDE2_dfDESeq2Results.RData")
-  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_vecNormConst.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_matNormConst.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_matSizeFactors.RData")
   NPARAM <- 6
   setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
   source("srcImpulseDE2_plotDEGenes.R")
@@ -68,7 +69,8 @@ if(FALSE){
   plotDEGenes(
     vecGeneIDs=rownames(matCountDataProc)[1:4],
     matCountDataProc=matCountDataProc,
-    vecNormConst=vecNormConst,
+    matNormConst=matNormConst,
+    matSizeFactors=matSizeFactors,
     dfAnnotation=dfAnnotation, 
     lsImpulseFits=lsImpulseFits,
     strCaseName=strCaseName, 

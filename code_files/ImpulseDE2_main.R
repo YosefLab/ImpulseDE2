@@ -261,11 +261,15 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
     
     # 2. Compute normalisation constants
     print("2. Compute Normalisation constants")
-    vecNormConst <- computeNormConst(
+    lsMatNormConst <- computeNormConst(
       matCountDataProc=matCountDataProc,
       matProbNB=matProbNB,
+      dfAnnotationProc=dfAnnotationProc,
       strMode=strMode)
-    save(vecNormConst,file=file.path(getwd(),"ImpulseDE2_vecNormConst.RData"))
+    matNormConst <- lsMatNormConst$matNormConst
+    matSizeFactors <- lsMatNormConst$matSizeFactors
+    save(matNormConst,file=file.path(getwd(),"ImpulseDE2_matNormConst.RData"))
+    save(matSizeFactors,file=file.path(getwd(),"ImpulseDE2_matSizeFactors.RData"))
     
     # 3. Run DESeq2
     if(boolRunDESeq2){
@@ -311,7 +315,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
         vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate,
         matProbNB=matProbNB,
-        vecNormConst=vecNormConst,
+        matNormConst=matNormConst,
         dfAnnotationProc=dfAnnotationProc, 
         strCaseName=strCaseName, 
         strControlName=strControlName,
@@ -348,7 +352,8 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
         plotDEGenes(
           vecGeneIDs=vecDEGenes,
           matCountDataProc=matCountDataProc,
-          vecNormConst=vecNormConst,
+          matNormConst=matNormConst,
+          matSizeFactors=matSizeFactors,
           dfAnnotationProc=dfAnnotationProc, 
           lsImpulseFits=lsImpulseFits,
           matClusterMeansFitted=matClusterMeansFitted,

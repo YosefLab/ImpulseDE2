@@ -17,8 +17,14 @@
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and LongitudinalSeries). For internal use.
-#' @param vecNormConst: (numeric vector number of samples) 
-#'    Normalisation constants for each sample.
+#' @param matNormConst: (numeric matrix genes x samples) 
+#'    Model scaling factors for each observation: Take
+#'    sequencing depth and longitudinal time series mean
+#'    within a gene into account (size and translation
+#'    factors).
+#' @param matSizeFactors: (numeric matrix genes x samples) 
+#'    Model scaling factors for each observation only accounting
+#'    for sequencing depth into account (size factors).
 #' @param lsImpulseFits (list length 2 or 6) List of matrices which
 #'    contain parameter fits and model values for given time course for the
 #'    case condition (and control and combined if control is present).
@@ -49,7 +55,8 @@
 #' @export
 
 plotDEGenes <- function(vecGeneIDs, 
-  matCountDataProc, vecNormConst,
+  matCountDataProc, 
+  matNormConst, matSizeFactors,
   dfAnnotationProc, lsImpulseFits, matClusterMeansFitted=NULL,
   dfImpulseResults, vecRefPval=NULL, 
   strCaseName, strControlName=NULL, strMode="batch",
@@ -58,15 +65,15 @@ plotDEGenes <- function(vecGeneIDs,
   boolSimplePlot=FALSE, boolLogPlot=FALSE,
   NPARAM=6){
   
+  # Reconstruct translation factors
+  matTranslationFactors <- matNormConst / matSizeFactors
+  rownames(matTranslationFactors) <- rownames(matNormConst)
   # Scale count data by size factors for plotting:
   # The impulse models are fit based on normalised means.
   # Therefore, the model curves follow the normalised
   # count data and not the raw count data. However, 
   # fitting was still performed based on raw count data.
-  matCountDataProc <- matCountDataProc / matrix(vecNormConst, 
-    nrow=dim(matCountDataProc)[1], 
-    ncol=dim(matCountDataProc)[2], 
-    byrow=TRUE)
+  matCountDataProc <- matCountDataProc / matSizeFactors
   if(boolLogPlot){
     # Add Pseudocount for plotting convenience
     matCountDataProc <- log(matCountDataProc+1)/log(10)
@@ -103,6 +110,8 @@ plotDEGenes <- function(vecGeneIDs,
       ]$LongitudinalSeries
     vecLongitudinalSeries <- unique(vecLongitudinalSeriesAssign)
     vecindLongitudinalSeriesAssign <- match(vecLongitudinalSeriesAssign, vecLongitudinalSeries)
+    vecindLongitudinalSeriesAssignUnique <- sapply(vecLongitudinalSeries,
+      function(longser){min(which(vecLongitudinalSeriesAssign %in% longser))})
   }
   
   # Only for batch/singlecell plotting:
@@ -241,17 +250,7 @@ plotDEGenes <- function(vecGeneIDs,
             cex=0.6, 
             inset=c(0,scaLegendInset))
         } else if(strMode=="longitudinal"){
-          # Identify columns containing translation factors
-          vecindTranslationFactors <- (colnames(lsImpulseFits$parameters_case))[
-            grep("TranslationFac_",colnames(lsImpulseFits$parameters_case))]
-          # Extract time course corresponding to translation factors
-          vecLongitudinalSeriesInResults <- sapply( vecindTranslationFactors,
-            function(strColumnName){ 
-              vecSplits <- unlist(strsplit(strColumnName, split="_"))
-              return(paste0(vecSplits[2:length(vecSplits)],collapse="_"))
-            } )
-          vecTranslationFactors <- (lsImpulseFits$parameters_case[geneID,vecindTranslationFactors])[
-            match(vecLongitudinalSeriesInResults,vecLongitudinalSeries)]
+          vecTranslationFactors <- matTranslationFactors[geneID,vecindLongitudinalSeriesAssignUnique]
           
           # Create colour vector
           vecCol <- rainbow(n=length(vecLongitudinalSeries))
@@ -283,18 +282,18 @@ plotDEGenes <- function(vecGeneIDs,
           
           # Plot remaining time courses
           if(length(vecLongitudinalSeries)>1){
-            for(tc in 2:length(vecLongitudinalSeries)){
+            for(longser in 2:length(vecLongitudinalSeries)){
               # Plot data of time course
-              points(x=vecTimepointAssign[vecindLongitudinalSeriesAssign==tc],
-                y=matCountDataProc[geneID, vecindLongitudinalSeriesAssign==tc],
-                col=vecCol[tc],pch=3)
+              points(x=vecTimepointAssign[vecindLongitudinalSeriesAssign==longser],
+                y=matCountDataProc[geneID, vecindLongitudinalSeriesAssign==longser],
+                col=vecCol[longser],pch=3)
               # Plot impulse within boundaries of observed points
-              vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[tc]
+              vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[longser]
               indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
               vecCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
               points(vecX, 
                 vecCaseValuesToPlotTC,
-                col=vecCol[tc], type="l")
+                col=vecCol[longser], type="l")
             }
           }
           
