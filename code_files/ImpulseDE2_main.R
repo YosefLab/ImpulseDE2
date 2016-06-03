@@ -115,25 +115,39 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' 
 #' @aliases ImpulseDE2
 #' 
-#' @param matCountData (matrix genes x replicates) [Default NULL] 
+#' @param matCountData: (matrix genes x replicates) [Default NULL] 
 #'    Count data of all conditions, unobserved entries are NA.
-#' @param dfAnnotation (Table) [Default NULL] 
+#' @param dfAnnotation: (Table) [Default NULL] 
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), (and Timecourse).
-#' @param strCaseName (str) [Default NULL] 
+#' @param strCaseName: (str) [Default NULL] 
 #'    Name of the case condition in \code{dfAnnotation}.
 #' @param strControlName: (str) [Default NULL] 
 #'    Name of the control condition in \code{dfAnnotation}.
-#' @param nProc (scalar) [Default 3] Number of processes for 
+#' @param strMode: (str) [Default "batch"] 
+#'    {"batch","longitudinal","singlecell"}
+#'    Mode of model fitting.
+#' @param nProc: (scalar) [Default 3] Number of processes for 
 #'    parallelisation. The specified value is internally changed 
 #'    to \code{min(detectCores() - 1, nProc)} using the 
 #'    \code{detectCores} function from the package \code{parallel} 
 #'    to avoid overload.
-#' @param Q_value (scalar) [Default 0.01] 
+#' @param Q_value: (scalar) [Default 0.01] 
 #'    FDR-corrected p-value cutoff for significance.
-#' @param boolPlotting (bool) [TRUE] 
+#' @param boolPlotting: (bool) [TRUE] 
 #'    Whether to plot significant DE genes into output pdf.
 #'    Consider setting FALSE for large data sets with many hits.
+#' @param lsPseudoDE: (list) [Defaul NULL] 
+#' @param vecDispersionsExternal: (vector length number of
+#'    genes in matCountData) [Default NULL]
+#'    Externally generated list of gene-wise dispersion factors
+#'    which overides DESeq2 generated dispersion factors.
+#' @param boolRunDESeq2: (bool) [Default TRUE]
+#'    Whether to run DESeq2.
+#' @param boolSimplePlot: (bool) [Default FALSE]
+#'    Whether to reduce plot to data points and impulse trace.
+#' @param boolLogPlot: (bool) [Default FALSE]
+#'    Whether to plot in counts in log space.
 #' 
 #' @return (list length 4) with the following elements:
 #' \itemize{

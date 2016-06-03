@@ -19,14 +19,14 @@
 #'    Count data of all conditions, unobserved entries are NA. 
 #' @param dfAnnotation: (Table) [Default NULL] 
 #'    Annotation table. Lists co-variables of samples: 
-#'    Sample, Condition, Time (and Timecourse). 
+#'    Sample, Condition, Time (and LongitudinalSeries). 
 #'    Time must be numeric.
 #' @param strCaseName (str) [Default NULL] 
 #'    Name of the case condition in \code{dfAnnotation}.
 #' @param strControlName: (str) [Default NULL] 
 #'    Name of the control condition in \code{dfAnnotation}.
 #' @param strMode: (str) [Default "batch"] 
-#'    {"batch","timecourses","singlecell"}
+#'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
 #'    
 #' @return (list length 3) with the following elements:
@@ -108,7 +108,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     checkNull(strMode)
     
     ### 2. Check mode
-    lsAllowedModes <- c("batch", "timecourses", "singlecell")
+    lsAllowedModes <- c("batch", "longitudinal", "singlecell")
     if(sum(strMode==lsAllowedModes) != 1){
       stop(paste0( "ERROR: ImpulseDE2 mode given as input, strMode=", strMode,
         ", is not recognised. Chose from {", paste0(lsAllowedModes, collapse=","), "}." ))
@@ -118,8 +118,8 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     ### a) Check column names
     if(strMode=="batch" | strMode=="singlecell"){
       vecColNamesRequired <- c("Sample","Condition","Time")
-    } else if(strMode=="timecourses"){
-      vecColNamesRequired <- c("Sample","Condition","Time","Timecourse")
+    } else if(strMode=="longitudinal"){
+      vecColNamesRequired <- c("Sample","Condition","Time","LongitudinalSeries")
     } else {
       stop(paste0("ERROR: Unrecognised strMode in processData::checkData(): ",strMode))
     }
@@ -150,11 +150,11 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
         stop("ERROR: Condition given for control does not occur in annotation table condition column.")
       }
     }
-    ### e) Timecourses
-    if(strMode=="timecourses"){
+    ### e) LongitudinalSeries
+    if(strMode=="longitudinal"){
       # Check that number of time courses given is > 1
-      if(length(unique( dfAnnotation$Timecourse ))==1){
-        stop("ERROR: Only one time course given in annotation table in mode timecourses. Use batch mode.")
+      if(length(unique( dfAnnotation$LongitudinalSeries ))==1){
+        stop("ERROR: Only one time course given in annotation table in mode longitudinal. Use batch mode.")
       }
     }
     
@@ -223,14 +223,14 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     }
     
     ### Summarise which mode, conditions, samples and
-    ### timecourses were found
+    ### longitudinal series were found
     print(paste0("Found conditions: ",paste0(lsConditions,collapse=",")))
     print(paste0("Case condition: '", strCaseName, "'"))
     if(!is.null(strControlName)){
       print(paste0("Control condition: '", strControlName, "'"))
     }
     print(paste0( "ImpulseDE2 runs in mode: ", strMode ))
-    if(strMode=="batch" | strMode=="timecourses"){
+    if(strMode=="batch" | strMode=="longitudinal"){
       print(paste0( "Found time points: ",
         paste( vecTimepoints, collapse=",") ))
       for(tp in vecTimepoints){
@@ -269,12 +269,12 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
       }
       print(paste0( "Found ", length(vecTimepoints), " time points."))
     }
-    if(strMode=="timecourses"){
-      for(tc in unique( dfAnnotation$Timecourse )){
-        print(paste0( "Found the following samples for timecourse ",
-          tc, ": ",
+    if(strMode=="longitudinal"){
+      for(longser in unique( dfAnnotation$LongitudinalSeries )){
+        print(paste0( "Found the following samples for longitudinal series ",
+          longser, ": ",
           paste0( dfAnnotation[
-            dfAnnotation$Timecourse %in% tc &
+            dfAnnotation$LongitudinalSeries %in% longser &
               dfAnnotation$Sample %in% colnames(matCountData),
             ]$Sample,collapse=",") ))
       }

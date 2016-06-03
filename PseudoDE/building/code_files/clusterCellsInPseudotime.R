@@ -30,7 +30,7 @@ clusterCellsInPseudotime <- function(vecPseudotime){
   #} ) == FALSE )) - 1
   # II.
   # Gap statistic (Tibshirani)
-  # Bootstraps form data:
+  # Bootstraps from a uniform null distribution of cells in pseudo-time.
   B <- 100
   N <- length(vecPseudotime)
   lsPseudotimeBoot <- lapply(seq(1,B),function(b){runif(N, min=min(vecPseudotime), max=max(vecPseudotime))})

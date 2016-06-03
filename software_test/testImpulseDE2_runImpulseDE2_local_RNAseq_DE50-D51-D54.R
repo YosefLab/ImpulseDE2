@@ -4,8 +4,8 @@ rm(list = ls())
 ### LOAD DATA
 ### Load annotation
 # With control
-dfAnnotationCtrl <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_RNAseq_D50-D51-D54_D50control.tab",header=T)
-rownames(dfAnnotationCtrl) <- dfAnnotationCtrl$Sample
+#dfAnnotationCtrl <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_RNAseq_D50-D51-D54_D50control.tab",header=T)
+#rownames(dfAnnotationCtrl) <- dfAnnotationCtrl$Sample
 # Without control
 dfAnnotationCase <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_RNAseq_D50-D51-D54.tab",header=T)
 rownames(dfAnnotationCase) <- dfAnnotationCase$Sample
@@ -27,7 +27,7 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_f
 
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 strCaseName = "case"
-strControlName = "ctrl"
+strControlName = NULL
 if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 }else{dfAnnotation=dfAnnotationCase}
 n_process = 3
@@ -53,11 +53,11 @@ dfDESeq2Results <- lsImpulseDE_results$dfDESeq2Results
 if(FALSE){
   # Load files from interior of ImpulseDE
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-  load("ImpulseDE2_arr2DCountData.RData")
-  load("ImpulseDE2_dfAnnotationFull.RData")
+  load("ImpulseDE2_matCountDataProc.RData")
+  load("ImpulseDE2_dfAnnotation.RData")
   # Load Impulse output
   load("ImpulseDE2_dfImpulseResults.RData")
-  load("ImpulseDE2_lsDEGenes.RData")
+  load("ImpulseDE2_vecDEGenes.RData")
   load("ImpulseDE2_lsImpulseFits.RData")
   load("ImpulseDE2_dfDESeq2Results.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_vecNormConst.RData")
@@ -66,10 +66,10 @@ if(FALSE){
   source("srcImpulseDE2_plotDEGenes.R")
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
   plotDEGenes(
-    lsGeneIDs=rownames(expression_table)[1:4],
-    arr2DCountData=arr2DCountData,
+    vecGeneIDs=rownames(matCountDataProc)[1:4],
+    matCountDataProc=matCountDataProc,
     vecNormConst=vecNormConst,
-    dfAnnotationFull=dfAnnotationFull, 
+    dfAnnotation=dfAnnotation, 
     lsImpulseFits=lsImpulseFits,
     strCaseName=strCaseName, 
     strControlName=strControlName, 
@@ -77,7 +77,7 @@ if(FALSE){
     strPlotTitleSuffix="", 
     strPlotSubtitle="",
     dfImpulseResults=dfImpulseResults,
-    vecMethod2Results=dfDESeq2Results$padj,
+    vecRefPval=dfDESeq2Results$padj,
     strMode=strMode, 
     NPARAM=NPARAM)
 }

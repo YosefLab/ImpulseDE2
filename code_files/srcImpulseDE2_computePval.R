@@ -15,7 +15,7 @@
 #' @param dfAnnotationProc: (Table) Processed annotation table. 
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (categorial)
-#'    (and Timecourse). For internal use.
+#'    (and LongitudinalSeries). For internal use.
 #' @param vecDispersions (vector number of genes) Inverse of gene-wise 
 #'    negative binomial dispersion coefficients computed by DESeq2.
 #' @param lsImpulseFits (list length 2 or 6) List of matrices which
@@ -34,7 +34,7 @@
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationRedFull}.
-#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#' @param strMode: (str) [Default "batch"] {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
 #' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
 #' 
@@ -61,12 +61,12 @@ computePval <- function(matCountDataProc,vecDispersions,
       scaDegFreedomFull <- NPARAM + 1
       # 1 dispersion estimate and overall mean estimate
       scaDegFreedomRed <- 1 + 1
-    } else if(strMode=="timecourses"){
+    } else if(strMode=="longitudinal"){
       # Parameters, 1 dispersion estimate and 
       # scaling factor for each time course
-      scaDegFreedomFull <- NPARAM + 1 + length(unique(dfAnnotationProc$Timecourse))
+      scaDegFreedomFull <- NPARAM + 1 + length(unique(dfAnnotationProc$LongitudinalSeries))
       # 1 dispersion estimate and 1 mean estimate for each time course
-      scaDegFreedomRed <- 1 + length(unique(dfAnnotationProc$Timecourse))
+      scaDegFreedomRed <- 1 + length(unique(dfAnnotationProc$LongitudinalSeries))
     }
   } else {
     # With control data:
@@ -83,13 +83,13 @@ computePval <- function(matCountDataProc,vecDispersions,
       scaDegFreedomFull <- NPARAM*2 + 1
       # Parameters of one model (combined) and 1 dispersion estimate
       scaDegFreedomRed <- NPARAM + 1
-    } else if(strMode=="timecourses"){
+    } else if(strMode=="longitudinal"){
       # Parameters of both models (case and control), 1 dispersion estimate and 
       # scaling factor for each time course
-      scaDegFreedomFull <- NPARAM*2 + 1 + length(unique(dfAnnotationProc$Timecourse))
+      scaDegFreedomFull <- NPARAM*2 + 1 + length(unique(dfAnnotationProc$LongitudinalSeries))
       # Parameters of one model (combined), 1 dispersion estimate 
       # and 1 mean estimate for each time course
-      scaDegFreedomRed <- 1 + length(unique(dfAnnotationProc$Timecourse))
+      scaDegFreedomRed <- 1 + length(unique(dfAnnotationProc$LongitudinalSeries))
     }
   }
   

@@ -24,7 +24,7 @@
 #'    Probability of observations to come from negative binomial 
 #'    component of mixture model.
 #' @param strMode: (str) [Default "batch"] 
-#'    {"batch","timecourses","singlecell"}
+#'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
 #' 
 #' @return vecSizeFactors: (numeric vector number of samples) 
@@ -32,7 +32,11 @@
 #' @export
 
 computeNormConst <- function(matCountDataProc,
-  matProbNB=NULL, strMode="batch"){
+  matProbNB=NULL,
+  strMode="batch"){
+  
+  # 1. Compute size factors
+  # Size factors account for differential sequencing depth.
   
   # Compute geometric count mean over replicates
   # for each gene: Set zero counts to one
@@ -43,7 +47,7 @@ computeNormConst <- function(matCountDataProc,
   matCountDataProcNoZeros <- matCountDataProc
   matCountDataProcNoZeros[matCountDataProcNoZeros==0] <- 0.1
   boolObserved <- !is.na(matCountDataProc)
-  if(strMode=="batch" | strMode=="timecourses"){
+  if(strMode=="batch" | strMode=="longitudinal"){
     # Take geometric mean
     vecGeomMean <- sapply(c(1:dim(matCountDataProcNoZeros)[1]), 
       function(gene){
@@ -78,6 +82,11 @@ computeNormConst <- function(matCountDataProc,
     warning("WARNING: Found size factors==0, setting these to 1.")
     vecSizeFactors[vecSizeFactors==0] <- 1
   }
+  
+  # 2. Compute translation factors:
+  # Translation factors account for different mean expression levels of a
+  # gene between longitudinal sample series.
+  
   
   return(vecSizeFactors)
 }

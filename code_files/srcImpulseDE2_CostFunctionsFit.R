@@ -114,7 +114,7 @@ evalLogLikImpulseByTC <- function(vecTheta,
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each sample
   # and scaled by translation factor (one for each
-  # timecourse).
+  # longitudinal series).
   vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
     vecNormConst*
     vecTranslationFactors

@@ -16,7 +16,7 @@
 #' @param dfAnnotationProc: (Table) Processed annotation table. 
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
-#'    (and Timecourse). For internal use.
+#'    (and LongitudinalSeries). For internal use.
 #' @param vecNormConst: (numeric vector number of samples) 
 #'    Normalisation constants for each sample.
 #' @param lsImpulseFits (list length 2 or 6) List of matrices which
@@ -37,7 +37,7 @@
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationProcFull}.
 #' @param strControlName: (str) [Default NULL] Name of the control condition in 
 #'    \code{dfAnnotationProcFull}.
-#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
+#' @param strMode: (str) [Default "batch"] {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
 #' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
 #' @param strFileNameSuffix (character string) [Default ""] File extention.
@@ -96,13 +96,13 @@ plotDEGenes <- function(vecGeneIDs,
     vecidxSamplesCase <- vecConditions %in% strCaseName
     vecidxSamplesCtrl <- vecConditions %in% strControlName
   }
-  if(strMode=="timecourses"){
-    vecTimecourseAssign <- dfAnnotationProc[match(
+  if(strMode=="longitudinal"){
+    vecLongitudinalSeriesAssign <- dfAnnotationProc[match(
       colnames(matCountDataProc),
       dfAnnotationProc$Sample),
-      ]$Timecourse
-    vecTimecourses <- unique(vecTimecourseAssign)
-    vecindTimecourseAssign <- match(vecTimecourseAssign, vecTimecourses)
+      ]$LongitudinalSeries
+    vecLongitudinalSeries <- unique(vecLongitudinalSeriesAssign)
+    vecindLongitudinalSeriesAssign <- match(vecLongitudinalSeriesAssign, vecLongitudinalSeries)
   }
   
   # Only for batch/singlecell plotting:
@@ -190,7 +190,7 @@ plotDEGenes <- function(vecGeneIDs,
       } else {
         # Plot points, impulse trace and
         # batch: inferred negative binomials
-        # timecourses: timecourse scaled impulse traces
+        # longitudinal: longitudinal series scaled impulse traces
         
         if(strMode=="batch" | strMode=="singlecell"){
           # Plot observed points in blue - all time courses in same colour
@@ -240,21 +240,21 @@ plotDEGenes <- function(vecGeneIDs,
             fill=c("blue"), 
             cex=0.6, 
             inset=c(0,scaLegendInset))
-        } else if(strMode=="timecourses"){
+        } else if(strMode=="longitudinal"){
           # Identify columns containing translation factors
           vecindTranslationFactors <- (colnames(lsImpulseFits$parameters_case))[
             grep("TranslationFac_",colnames(lsImpulseFits$parameters_case))]
           # Extract time course corresponding to translation factors
-          vecTimecoursesInResults <- sapply( vecindTranslationFactors,
+          vecLongitudinalSeriesInResults <- sapply( vecindTranslationFactors,
             function(strColumnName){ 
               vecSplits <- unlist(strsplit(strColumnName, split="_"))
               return(paste0(vecSplits[2:length(vecSplits)],collapse="_"))
             } )
           vecTranslationFactors <- (lsImpulseFits$parameters_case[geneID,vecindTranslationFactors])[
-            match(vecTimecoursesInResults,vecTimecourses)]
+            match(vecLongitudinalSeriesInResults,vecLongitudinalSeries)]
           
           # Create colour vector
-          vecCol <- rainbow(n=length(vecTimecourses))
+          vecCol <- rainbow(n=length(vecLongitudinalSeries))
           
           # Create plot and plot data of first time course
           scaYlim_lower <- min( min(matCountDataProc[geneID,],na.rm=TRUE), 
@@ -267,8 +267,8 @@ plotDEGenes <- function(vecGeneIDs,
           } else {
             strPvalMethod2 <- NULL
           }
-          plot(vecTimepointAssign[vecindTimecourseAssign==1],
-            matCountDataProc[geneID, vecindTimecourseAssign==1],
+          plot(vecTimepointAssign[vecindLongitudinalSeriesAssign==1],
+            matCountDataProc[geneID, vecindLongitudinalSeriesAssign==1],
             col=vecCol[1],pch=3,
             xlim=c(0,max(vecTimepoints,na.rm=TRUE)), 
             ylim=c(scaYlim_lower,scaYlim_upper),
@@ -282,11 +282,11 @@ plotDEGenes <- function(vecGeneIDs,
           points(vecX, vecCaseValuesToPlotTC,col=vecCol[1], type="l")
           
           # Plot remaining time courses
-          if(length(vecTimecourses)>1){
-            for(tc in 2:length(vecTimecourses)){
+          if(length(vecLongitudinalSeries)>1){
+            for(tc in 2:length(vecLongitudinalSeries)){
               # Plot data of time course
-              points(x=vecTimepointAssign[vecindTimecourseAssign==tc],
-                y=matCountDataProc[geneID, vecindTimecourseAssign==tc],
+              points(x=vecTimepointAssign[vecindLongitudinalSeriesAssign==tc],
+                y=matCountDataProc[geneID, vecindLongitudinalSeriesAssign==tc],
                 col=vecCol[tc],pch=3)
               # Plot impulse within boundaries of observed points
               vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[tc]
@@ -304,10 +304,10 @@ plotDEGenes <- function(vecGeneIDs,
             col="black",pch=1)
           
           legend(x="bottomright",
-            legend=vecTimecourses,
+            legend=vecLongitudinalSeries,
             fill=vecCol, 
             cex=0.6, 
-            inset=c(0,scaLegendInset-0.04*length(vecTimecourses)))
+            inset=c(0,scaLegendInset-0.04*length(vecLongitudinalSeries)))
         } else {
           stop(paste0("ERROR: Unrecognised strMode in plotDEGenes(): ",strMode))
         }
@@ -315,7 +315,7 @@ plotDEGenes <- function(vecGeneIDs,
       
     } else {
       # With control data:
-      # Do not distinguish batch/singlecell/timecourses plotting:
+      # Do not distinguish batch/singlecell/longitudinals plotting:
       # Plots become to crowded if more than 3 traces (case, control
       # combined) and two point clouds (case, control) are plotted.
       

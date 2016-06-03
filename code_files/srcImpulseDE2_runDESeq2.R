@@ -22,7 +22,7 @@
 #'    using the \code{detectCores} function from the package 
 #'    \code{parallel} to avoid overload.
 #' @param strMode: (str) [Default "batch"] 
-#'    {"batch","timecourses","singlecell"}
+#'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
 #'    
 #' @return (list length 2) with the following elements:
@@ -43,7 +43,7 @@ runDESeq2 <- function(dfAnnotationProc, matCountDataProc,
   if(is.null(strControlName)){
     # Without control data:
     
-    # The covariate Timecourses, indicating the time series
+    # The covariate LongitudinalSeries, indicating the time series
     # experiment a sample belongs to, is ignored in batch mode,
     # in which replicates of one sample from different time series
     # experimentes are assumed to be i.i.d. In batch mode,
@@ -60,14 +60,14 @@ runDESeq2 <- function(dfAnnotationProc, matCountDataProc,
         full = ~ TimeCateg, reduced = ~ 1,
         parallel=TRUE)
       
-    } else if(strMode=="timecourses"){
+    } else if(strMode=="longitudinal"){
       # Create DESeq2 data object
       dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
         colData = dfAnnotationProc,
-        design = ~ TimeCateg + Timecourse) )
+        design = ~ TimeCateg + LongitudinalSeries) )
       # Run DESeq2
       ddsDESeqObject <- DESeq(dds, test = "LRT", 
-        full = ~ TimeCateg + Timecourse, reduced = ~ Timecourse,
+        full = ~ TimeCateg + LongitudinalSeries, reduced = ~ LongitudinalSeries,
         parallel=TRUE)
       
     } else {
@@ -84,10 +84,10 @@ runDESeq2 <- function(dfAnnotationProc, matCountDataProc,
     # With control data:
     
     # Hypothesis testing operates under the same model
-    # for batch, singlecell and timecourses: Condition
-    # is a predictor included in timecourses and therefore
+    # for batch, singlecell and longitudinal: Condition
+    # is a predictor included in LongitudinalSeries and therefore
     # not allowed by DESeq2. Note that that the dispersions
-    # are fit on the more exact full model for timecourses.
+    # are fit on the more exact full model for LongitudinalSeries
     
     if(strMode=="batch" | strMode=="singlecell"){
       # Create DESeq2 data object
@@ -107,7 +107,7 @@ runDESeq2 <- function(dfAnnotationProc, matCountDataProc,
       # DESeq results for comparison
       dds_resultsTable <- results(ddsDESeqObject)
       
-    } else if(strMode=="timecourses"){
+    } else if(strMode=="longitudinal"){
       # Create DESeq2 data object
       # Define linear model suited to hypothesis testing
       dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
@@ -125,10 +125,10 @@ runDESeq2 <- function(dfAnnotationProc, matCountDataProc,
       # of DESeq2 is negligible.
       dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
         colData = dfAnnotationProc,
-        design = ~ TimeCateg + Timecourse) )
+        design = ~ TimeCateg + LongitudinalSeries) )
       # Run DESeq2
       ddsDESeqObjectFit <- DESeq(dds, test = "LRT", 
-        full = ~ TimeCateg + Timecourse, reduced = ~ TimeCateg,
+        full = ~ TimeCateg + LongitudinalSeries, reduced = ~ TimeCateg,
         parallel=TRUE)
       # Get gene-wise dispersion estimates
       # var = mean + alpha * mean^2, alpha is dispersion
