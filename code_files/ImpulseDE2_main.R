@@ -34,7 +34,6 @@ source("srcImpulseDE2_CostFunctionsFit.R")
 
 # Compile functions
 evalLogLikImpulseBatch_comp <- cmpfun(evalLogLikImpulseBatch)
-evalLogLikImpulseByTC_comp <- cmpfun(evalLogLikImpulseByTC)
 evalLogLikImpulseSC_comp <- cmpfun(evalLogLikImpulseSC)
 
 # Fit impulse model to a timecourse dataset

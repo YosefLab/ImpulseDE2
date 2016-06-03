@@ -5,11 +5,12 @@
 #' Cost function impulse model fit - Batch mode
 #' 
 #' Log likelihood cost function for impulse model fit based on negative 
-#' binomial model. Batch mode means that residuals are assumed to be 
-#' independent.
+#' binomial model. This cost function is called in the modes
+#' "batch" and "longitudinal".
 #' In analogy to generalised linear models, a log linker
 #' function is used for the count parameters. The inferred negative
-#' binomial model is normalised by the factors in vecNormConst
+#' binomial model is scaled by the factors in vecNormConst,
+#' which represent size factors (and translation factors),
 #' for evaluation of the likelihood on the data.
 #' 
 #' @aliases evalLogLikImpulseBatch_comp
@@ -57,78 +58,6 @@ evalLogLikImpulseBatch <- function(vecTheta,
     mu=vecImpulseValue[vecboolObserved], 
     size=scaDispEst, 
     log=TRUE))
-  
-  # Maximise log likelihood: Return likelihood as value to optimisation routine
-  return(scaLogLik)
-}
-
-# to be deprecated DAVID
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-
-#' Cost function impulse model fit - Time course mode
-#' 
-#' Log likelihood cost function for impulse model fit based on negative 
-#' binomial model. Time course means that samples of samples can be
-#' grouped into time course experiments, i.e. residuals are dependent
-#' within a time course. The impulse model is scaled to the
-#' mean of each time course.
-#' In analogy to generalised linear models, a log linker
-#' function is used for the count parameters. The inferred negative
-#' binomial model is normalised by the factors in vecNormConst
-#' for evaluation of the likelihood on the data.
-#' 
-#' @aliases evalLogLikImpulseByTC_comp
-#' 
-#' @seealso Called by \code{fitImpulse}:\code{fitImpulse_gene}.
-#' Calls \code{calcImpulse}. \code{evalLogLikImpulseBatch} for
-#' independent residuals.
-#' 
-#' @param vecTheta (vector number of parameters [6]) Impulse model parameters.
-#' @param vecX (numeric vector number of timepoints) 
-#'    Time-points at which gene was sampled.
-#' @param vecY (numeric vector samples) Observed expression values for 
-#     given gene.
-#' @param scaDispEst: (scalar) Dispersion estimate for given gene.
-#' @param vecNormConst: (count vector number of samples) 
-#'    Normalisation constants for each sample.
-#' @param vecTranslationFactors: (numeric vector number of samples)
-#'    Scaling factors for impulse model between different timecourses:
-#'    Mean timecourse/overall mean, each scaled by size factors.
-#' @param vecindTimepointAssign (numeric vector number samples) 
-#'    Index of time point assigned to sample in list of sorted
-#'    time points (vecX).
-#' @param vecboolObserved: (bool vector number of samples)
-#'    Stores bool of sample being not NA (observed).
-#'    
-#' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
-#' @export
-
-evalLogLikImpulseByTC <- function(vecTheta,
-  vecX,
-  vecY,
-  scaDispEst, 
-  vecNormConst,
-  vecTranslationFactors, 
-  vecindTimepointAssign, 
-  vecboolObserved){  
-  # Compute normalised impulse function value: 
-  # Mean of negative binomial density at each time point,
-  # scaled by normalisation factor of each sample
-  # and scaled by translation factor (one for each
-  # longitudinal series).
-  vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
-    vecNormConst*
-    vecTranslationFactors
-  
-  # Compute log likelihood under impulse model by
-  # adding log likelihood of model at each timepoint.
-  scaLogLik <- sum(dnbinom(
-    vecY[vecboolObserved], 
-    mu=vecImpulseValue[vecboolObserved],   
-    size=scaDispEst, 
-    log=TRUE))
-  
-  #DAVID to do: take vecboolObserved out of these functions and reduce data at input to cost function
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)

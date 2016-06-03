@@ -2,65 +2,6 @@
 #++++++++++++++++++++++     Impulse model fit    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-# DAVID TODO: restructure cost functions and cost function calling - single call with
-# dummy variables? think of as classes, take variables as NULL if not needed.
-
-#' Compute translation factors for a gene and a longitudinal series
-#' 
-#' Translation factors are scaling factors to normalise the 
-#' expression strength of a longitudinal series by gene. This
-#' function is only callde if strMode="longitudinal".
-#' 
-#' @seealso Called by \code{fitImpulse_gene}.
-#' 
-#' @param vecCounts: (count vector number of samples) Count data.
-#' @param vecNormConst: (numeric vector number of samples) 
-#'    Normalisation constants for each sample.
-#' @param vecLongitudinalSeries: (string vector number of time courses) 
-#'    Time coureses observed.
-#' @param vecLongitudinalSeriesAssign: (numeric vector number samples) 
-#'    Time courses assigned to samples. 
-#'    NULL if not operating in strMode="longitudinal".
-#' 
-#' @return vecTranslationFactors: (numeric vector number
-#'    of longitudinal) Translation factors, one for each
-#'    longitudinal series in the sample set of a gene.
-#' @export
-
-computeTranslationFactors <- function(vecCounts,vecNormConst,
-  vecLongitudinalSeries, vecLongitudinalSeriesAssign){
-  # Fit mean to normalised counts. Count normalisation 
-  # corresponds to model normalisation in impulse model 
-  # fitting.
-  scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
-  vecMuLongitudinal <- sapply(vecLongitudinalSeries,
-    function(longser){mean((vecCounts/vecNormConst)[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)})
-  names(vecMuLongitudinal) <- vecLongitudinalSeries
-  
-  # Compute translation factors: Normalisation factor
-  # to scale impulse model to a longitudinal series.
-  # Note: Translation factor is the same for all samples
-  # of a gene in a longitudinal series
-  
-  # Scaled mean ratio per sample
-  vecTranslationFactors <- vecMuLongitudinal[as.vector(vecLongitudinalSeriesAssign)]/scaMu
-  # Note: If all samples are zero, scaMu is zero and
-  # vecTranslationFactors are NA. Genes only with zero counts
-  # are removed in processData(). The input data to this function
-  # ma still consist entirely of zeros if this function is called
-  # on the subset of case or control data (if control condition
-  # is given). Those subsets may be only zeros. This exception
-  # is caught here and vecTranslationFactors set to 1 from NA.
-  # This removes the effect of vecTranslationFactors on fitting.
-  # The negative binomial density can still be
-  # evaluated as it is initialised with values from an impulse model
-  # padded with zero counts.
-  if(scaMu==0){
-    vecTranslationFactors <- array(1,length(vecTranslationFactors))
-  }
-  return(vecTranslationFactors)
-}
-
 #' Fit and compute likelihood of null model for a single gene
 #' 
 #' Fits an impulse model and a mean model to a single gene.
@@ -410,17 +351,8 @@ fitImpulse_gene <- function(vecCounts,
   vecindTimepointAssign <- match(vecTimepointAssign, vecTimepoints)
   
   # Compute time course specifc parameters
-  # Set default:
-  #vecTranslationFactors <- NULL
   if(strMode=="longitudinal"){
     vecLongitudinalSeries <- unique( vecLongitudinalSeriesAssign )
-    #nLongitudinalSeries <- length(vecLongitudinalSeries)
-    # Compute translation factors between longitudinal series.
-    #vecTranslationFactors <- computeTranslationFactors(
-    #  vecCounts=vecCounts,
-    #  vecNormConst=vecNormConst,
-    #  vecLongitudinalSeries=vecLongitudinalSeries,
-    #  vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign)
   }
   
   # (II) Fit null model and compute likelihood of null model
@@ -630,7 +562,6 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("fitImpulse_matrix",fitImpulse_matrix, envir = my.env)
     assign("calcImpulse_comp", calcImpulse_comp, envir = my.env)
     assign("evalLogLikImpulseBatch_comp", evalLogLikImpulseBatch_comp, envir = my.env)
-    assign("evalLogLikImpulseByTC_comp", evalLogLikImpulseByTC_comp, envir = my.env)
     assign("evalLogLikImpulseSC_comp", evalLogLikImpulseSC_comp, envir = my.env)
     assign("computeTranslationFactors", computeTranslationFactors, envir = my.env)
     assign("computeLogLikNull", computeLogLikNull, envir = my.env)
@@ -651,7 +582,6 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "NPARAM",
       "calcImpulse_comp", 
       "evalLogLikImpulseBatch_comp", 
-      "evalLogLikImpulseByTC_comp",
       "evalLogLikImpulseSC_comp", 
       "fitImpulse", 
       "fitImpulse_matrix", 
