@@ -3,20 +3,20 @@ rm(list = ls())
 print("Process data DyNB")
 # Load Data set DyNB
 # 1. Counts
-matDataA <- as.matrix(read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/DyNB_Th0_dataset.txt",
+matDataA <- as.matrix(read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/DyNB_Th0_dataset.txt",
   sep=",",header=T,colClasses=c(
     "numeric","numeric","numeric","numeric","numeric",
     "numeric","numeric","numeric","numeric","numeric",
     "numeric","numeric","numeric","numeric","numeric")))
 rownames(matDataA) <- paste0(rep("Gene_",dim(matDataA)[1]),seq(1,dim(matDataA)[1]),sep="")
-matDataB <- as.matrix(read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/DyNB_Th17_dataset.txt",
+matDataB <- as.matrix(read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/DyNB_Th17_dataset.txt",
   sep=",",header=T,colClasses=c(
     "numeric","numeric","numeric","numeric","numeric",
     "numeric","numeric","numeric","numeric","numeric",
     "numeric","numeric","numeric","numeric","numeric")))
 rownames(matDataB) <- paste0(rep("Gene_",dim(matDataB)[1]),seq(1,dim(matDataB)[1]),sep="")
 # 2. Annotation
-dfAnnotationDyNB <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/AnnotationTable_DyNBdata.tab",header=T)
+dfAnnotationDyNB <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/AnnotationTable_DyNBdata.tab",header=T)
 dfAnnotationDyNB$TimeCateg <- paste0(rep("_",length(dfAnnotationDyNB$Time)),dfAnnotationDyNB$Time)
 rownames(dfAnnotationDyNB) <- dfAnnotationDyNB$Replicate
 # 3. Rename and merge for case control comparison
@@ -75,7 +75,7 @@ matDataB_ImpulseDE2 <- matDataB[vecboolNonzeroB,]
 matDataAB_ImpulseDE2 <- matDataAB[vecboolNonzeroAB,]
 
 tm_ImpulseDE2A <- system.time({
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/ImpulseDE2/Th0")
+  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/ImpulseDE2/Th0")
   strControlName = NULL
   strCaseName = "case"
   lsImpulseDE_resultsA <- runImpulseDE2(matCountData=matDataA_ImpulseDE2, 
@@ -92,7 +92,7 @@ tm_ImpulseDE2A <- system.time({
 })
 
 tm_ImpulseDE2B <- system.time({
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/ImpulseDE2/Th17")
+  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/ImpulseDE2/Th17")
   strControlName = NULL
   strCaseName = "case"
   lsImpulseDE_resultsB <- runImpulseDE2(matCountData=matDataB_ImpulseDE2, 
@@ -109,7 +109,7 @@ tm_ImpulseDE2B <- system.time({
 })
 
 tm_ImpulseDE2AB <- system.time({
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/ImpulseDE2/Th0vs17")
+  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/ImpulseDE2/Th0vs17")
   strControlName = "ctrl"
   strCaseName = "case"
   lsImpulseDE_resultsAB <- runImpulseDE2(matCountData=matDataAB_ImpulseDE2, 
@@ -142,7 +142,7 @@ lsResDEcomparison_DyNBdata <- list("matQval_DyNBData"=matQval_DyNBData,
   "matPval_DyNBData"=matPval_DyNBData, 
   "matRunTime_DyNBData"=matRunTime_DyNBData)
 
-save(lsResDEcomparison_DyNBdata,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/lsResDEcomparison_DyNBdata.RData"))
+save(lsResDEcomparison_DyNBdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/lsResDEcomparison_DyNBdata.RData"))
 print("Finished ImpulseDE2")
 
 ################################################################################
@@ -156,8 +156,8 @@ matDataA_ImpulseDE <- matDataA[vecboolNonzeroA,]
 matDataB_ImpulseDE <- matDataB[vecboolNonzeroB,]
 matDataAB_ImpulseDE <- matDataAB[vecboolNonzeroAB,]
 
-tm_ImpulseDE2AB <- system.time({
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/ImpulseDE/Th0")
+tm_ImpulseDEA <- system.time({
+  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/ImpulseDE/Th0")
   strControlName = NULL
   strCaseName = "case"
   lsImpulseDE_resultsA <- impulse_DE(
@@ -176,8 +176,8 @@ tm_ImpulseDE2AB <- system.time({
   pvals_A <- dfImpulseResultsA$p
 })
 
-tm_ImpulseDE2AB <- system.time({
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/ImpulseDE/Th17")
+tm_ImpulseDEB <- system.time({
+  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/ImpulseDE/Th17")
   strControlName = NULL
   strCaseName = "case"
   lsImpulseDE_resultsB <- impulse_DE(
@@ -196,8 +196,8 @@ tm_ImpulseDE2AB <- system.time({
   pvals_B <- dfImpulseResultsB$p
 })
 
-tm_ImpulseDE2AB <- system.time({
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/ImpulseDE/Th0vs17")
+tm_ImpulseDEAB <- system.time({
+  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/ImpulseDE/Th0vs17")
   strControlName = "ctrl"
   strCaseName = "case"
   lsImpulseDE_resultsAB <- impulse_DE(
@@ -297,7 +297,7 @@ lsResDEcomparison_DyNBdata <- list("matQval_DyNBData"=matQval_DyNBData,
   "matPval_DyNBData"=matPval_DyNBData, 
   "matRunTime_DyNBData"=matRunTime_DyNBData)
 
-save(lsResDEcomparison_DyNBdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/lsResDEcomparison_DyNBdata.RData"))
+save(lsResDEcomparison_DyNBdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/lsResDEcomparison_DyNBdata.RData"))
 print("Finished DESeq2.")
 
 ################################################################################
@@ -414,5 +414,5 @@ lsResDEcomparison_DyNBdata <- list("matQval_DyNBData"=matQval_DyNBData,
   "matPval_DyNBData"=matPval_DyNBData, 
   "matRunTime_DyNBData"=matRunTime_DyNBData)
 
-save(lsResDEcomparison_DyNBdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE_datasets/2014_DyNB/lsResDEcomparison_DyNBdata.RData"))
+save(lsResDEcomparison_DyNBdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_DyNB/lsResDEcomparison_DyNBdata.RData"))
 print("Finished edge.")

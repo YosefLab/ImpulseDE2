@@ -260,15 +260,15 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
     
     # 2. Compute normalisation constants
     print("2. Compute Normalisation constants")
-    lsMatNormConstSizeFac <- computeNormConst(
+    lsNormConst <- computeNormConst(
       matCountDataProc=matCountDataProc,
       matProbNB=matProbNB,
       dfAnnotationProc=dfAnnotationProc,
       strCaseName=strCaseName,
       strControlName=strControlName, 
       strMode=strMode)
-    lsMatTranslationFactors <- lsMatNormConstSizeFac$lsMatTranslationFactors
-    matSizeFactors <- lsMatNormConstSizeFac$matSizeFactors
+    lsMatTranslationFactors <- lsNormConst$lsMatTranslationFactors
+    matSizeFactors <- lsNormConst$matSizeFactors
     save(lsMatTranslationFactors,file=file.path(getwd(),"ImpulseDE2_lsMatTranslationFactors.RData"))
     save(matSizeFactors,file=file.path(getwd(),"ImpulseDE2_matSizeFactors.RData"))
     

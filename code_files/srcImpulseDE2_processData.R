@@ -338,7 +338,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     }
     # DAVID to be deprecated
     # Shorten expression table
-    if(TRUE){
+    if(FALSE){
       ind_toKeep <- 100
       print(paste0("Working on subset of data: ",min(ind_toKeep,dim(matCountDataProc)[1])," genes."))
       matCountDataProc <- matCountDataProc[1:min(ind_toKeep,dim(matCountDataProc)[1]),]
