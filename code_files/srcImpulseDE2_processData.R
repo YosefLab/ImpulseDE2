@@ -7,11 +7,19 @@
 #' Check validity of input and process count data matrix and annotation
 #' into data structures used later in \code{runImpulseDE2}.
 #' \code{processData} is structure in the following way:
-#' (I) Helper functions:
-#'   checkData()
-#'   nameGenes()
-#'   reduceCountData()
-#' (II) Script body
+#' (I) Subhelper functions:
+#'    checkNull() Check whether object was supplied (is not NULL).
+#'    checkDimMatch() Checks whether dimensions of matrices agree.
+#'    checkElementMatch() Checks whether vectors are identical.
+#'    checkNumeric() Checks whether elements are numeric.
+#'    checkProbability() Checks whether elements are probabilities.
+#'    checkCounts() Checks whether elements are count data.
+#' (II) Helper functions:
+#'    checkData() Check format and presence of input data.
+#'    nameGenes() Name genes if names are not given.
+#'    procAnnotation() Add categorial time variable to annotation table.
+#'    reduceCountData() Reduce count data to data which are utilised later.
+#' (III) Script body
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
@@ -95,7 +103,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     }
   }
   
-  # Check format and presence of input data
+  # Check format and presence of input data.
   checkData <- function(dfAnnotation=NULL, matCountData=NULL,
     strCaseName=NULL, strControlName=NULL, strMode=NULL,
     lsPseudoDE=NULL, vecDispersionsExternal=NULL,
@@ -283,8 +291,8 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     return(NULL)
   }
   
-  # Add categorial time variable:
-  # Add column with time scalars with underscore prefix
+  # Add categorial time variable to annotation table.
+  # Add column with time scalars with underscore prefix.
   procAnnotation <- function(dfAnnotation=NULL){
     dfAnnotationProc <- dfAnnotation
     dfAnnotationProc$TimeCateg <- paste0(
@@ -293,7 +301,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     return(dfAnnotationProc)
   }
   
-  # Name genes if names are not given
+  # Name genes if names are not given.
   nameGenes <- function(matCountDataProc=NULL){
     if(is.null(rownames(matCountDataProc))){
       rownames(matCountDataProc) <- paste("G", 1:nrow(matCountDataProc),

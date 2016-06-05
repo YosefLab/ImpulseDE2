@@ -13,8 +13,8 @@
 #' @seealso Called by \code{fitImpulse_gene}.
 #' 
 #' @param vecCounts: (count vector number of samples) Count data.
-#' @param scaDispersionEstimate: (scalar) Inverse of negative binomial 
-#'    dispersion coefficients computed by DESeq2 for given gene.
+#' @param scaDispersionEstimate: (scalar) Negative binomial 
+#'    dispersion coefficient for given gene.
 #' @param vecDropoutRate: (probability vector number of samples) 
 #'    [Default NULL] Dropout rate/mixing probability of zero inflated 
 #'    negative binomial mixturemodel for each gene and cell.
@@ -23,10 +23,10 @@
 #'    component of mixture model.
 #' @param vecNormConst: (numeric vector number of samples) 
 #'    Normalisation constants for each sample.
-#' @param vecLongitudinalSeries: (string vector number of time courses) 
-#'    Time coureses observed.
+#' @param vecLongitudinalSeries: (string vector number of longitudinal
+#'    sample series) Longitudinal sample series.
 #' @param vecLongitudinalSeriesAssign (numeric vector number samples) 
-#'    Time courses assigned to samples. 
+#'    Longitudinal sample series assigned to samples. 
 #'    NULL if not operating in strMode="longitudinal".
 #' @param vecboolObserved: (bool vector number of samples)
 #'    Stores bool of sample being not NA (observed).
@@ -35,13 +35,29 @@
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
+#'    
+#' @return (list length 3)
+#'    \itemize{
+#'      \item scaMu: (scalar) Null model in batch or
+#'        singlecell mode: One overall mean.
+#'      \item vecMuLongitudinalSeries: (numerical vector
+#'        length number of longitudinal series) Null model
+#'        in longitudinal mode: One mean per longitudinal
+#'        series. Null if mode is not longitudinal.
+#'      \item scaLogLikNull: (scalar) Log likelihood of null
+#'        model.
+#'      }
 #' @export
 
-computeLogLikNull <- function(vecCounts, scaDispersionEstimate,
-  vecDropoutRate=NULL, vecProbNB=NULL,
+computeLogLikNull <- function(vecCounts, 
+  scaDispersionEstimate,
+  vecDropoutRate=NULL, 
+  vecProbNB=NULL,
   vecNormConst,
-  vecLongitudinalSeries=NULL, vecLongitudinalSeriesAssign=NULL,
-  vecboolObserved, vecboolZero,
+  vecLongitudinalSeries=NULL, 
+  vecLongitudinalSeriesAssign=NULL,
+  vecboolObserved, 
+  vecboolZero,
   strMode){
   
   vecMuLongitudinalSeries <- NULL
@@ -133,8 +149,10 @@ computeLogLikNull <- function(vecCounts, scaDispersionEstimate,
 #'    corresponding to a peak.
 #' @export
 
-estimateImpulseParam <- function(vecTimepoints, vecCounts, 
-  vecTimepointAssign, vecNormConst,
+estimateImpulseParam <- function(vecTimepoints, 
+  vecCounts, 
+  vecTimepointAssign, 
+  vecNormConst,
   strMode, 
   vecProbNB=NULL){
   # Compute general statistics for initialisation:
@@ -223,8 +241,7 @@ estimateImpulseParam <- function(vecTimepoints, vecCounts,
 #'    and convergence status of numerical optimisation.
 #' @export
 
-optimiseImpulseModelFit <- function(
-  vecParamGuess,
+optimiseImpulseModelFit <- function(vecParamGuess,
   vecTimepoints, 
   vecCounts,
   scaDispersionEstimate,
@@ -233,7 +250,8 @@ optimiseImpulseModelFit <- function(
   vecindTimepointAssign,
   vecboolObserved, 
   vecboolNotZeroObserved=NULL,
-  strMode="batch", MAXIT){
+  strMode="batch", 
+  MAXIT=100){
   
   # Chose the cost function for optimisation according
   # to the mode strMode.
@@ -306,7 +324,7 @@ optimiseImpulseModelFit <- function(
 #' @param vecTimepointAssign: (numeric vector number samples) 
 #'    Timepoints assigned to samples.
 #' @param vecLongitudinalSeriesAssign (numeric vector number samples) 
-#'    Time courses assigned to samples. 
+#'    Longitudinal series assigned to samples. 
 #'    NULL if not operating in strMode="longitudinal".
 #' @param dfAnnotationProc: (Table) Processed annotation table. 
 #'    Lists co-variables of samples: 
@@ -329,9 +347,11 @@ optimiseImpulseModelFit <- function(
 
 fitImpulse_gene <- function(vecCounts, 
   scaDispersionEstimate,
-  vecDropoutRate=NULL, vecProbNB=NULL,
+  vecDropoutRate=NULL, 
+  vecProbNB=NULL,
   vecNormConst,
-  vecTimepointAssign, vecLongitudinalSeriesAssign, 
+  vecTimepointAssign, 
+  vecLongitudinalSeriesAssign, 
   dfAnnotationProc,
   strMode="batch", NPARAM=6, MAXIT=1000){
   
@@ -414,10 +434,6 @@ fitImpulse_gene <- function(vecCounts,
   # (IV) Process fits
   dfFitsByInitialisation <- cbind(vecFitPeak, vecFitValley)
   
-  # Name row containing value of objective as value 
-  # Need this if optimisation routine is not optim::BFGS
-  #rownames(dfFitsByInitialisation) <- c(rownames(dfFitsByInitialisation[1:(nrow(dfFitsByInitialisation)-1),]),"value")
-  
   # Select best fit and report fit type
   # Report mean fit objective value as null hypothesis, too.
   # match() selects first hit if maximum occurs multiple times
@@ -435,10 +451,7 @@ fitImpulse_gene <- function(vecCounts,
     vecColnamesMubyLongitudinalSeries <- paste0(rep("mu_",length(vecMuLongitudinalSeries)), names(vecMuLongitudinalSeries))
     #vecColnameTranslationFactors <- paste0(rep("TranslationFac_",length(vecTranslationFactorsUnique)), names(vecTranslationFactorsUnique))
     names(vecBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
-      "logL_H1","converge_H1",
-      "mu",
-      "logL_H0",
-      vecColnamesMubyLongitudinalSeries)
+      "logL_H1","converge_H1", "mu", "logL_H0", vecColnamesMubyLongitudinalSeries)
   }  else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
@@ -463,8 +476,8 @@ fitImpulse_gene <- function(vecCounts,
 #' @seealso Called by \code{fitImpulse}. Calls \code{fitImpulse_gene}.
 #'   
 #' @param matCountDataProc: (count matrix genes x samples) Count data.
-#' @param vecDispersions: (vector number of genes) Inverse of gene-wise 
-#'    negative binomial dispersion coefficients computed by DESeq2.
+#' @param vecDispersions: (vector number of genes) Gene-wise 
+#'    negative binomial dispersion coefficients.
 #' @param matDropoutRate: (probability matrix genes x samples) Dropout 
 #'    rate/mixing probability of zero inflated negative binomial mixture 
 #'    model for each gene and cell.
@@ -514,12 +527,17 @@ fitImpulse_gene <- function(vecCounts,
 
 fitImpulse_matrix <- function(matCountDataProcCondition, 
   vecDispersions, 
-  matDropoutRate=NULL, matProbNB=NULL,
+  matDropoutRate=NULL, 
+  matProbNB=NULL,
   matNormConst, 
-  vecTimepointAssign, vecLongitudinalSeriesAssign, 
+  vecTimepointAssign, 
+  vecLongitudinalSeriesAssign, 
   dfAnnotationProc,
-  strCaseName, strControlName=NULL, strMode="batch", 
-  nProcessesAssigned=3, NPARAM=6){
+  strCaseName, 
+  strControlName=NULL, 
+  strMode="batch", 
+  nProcessesAssigned=3, 
+  NPARAM=6){
   
   # Maximum number of iterations for numerical optimisation of
   # likelihood function in MLE fitting of Impulse model:
@@ -676,7 +694,6 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     rownames(matFits) <- rownames(matCountDataProcCondition)
   }
   
-  ### DAVID: can reduce this if clause?
   # Use obtained impulse parameters to calculate impulse fit values
   matTheta <- matFits[,1:NPARAM]
   matTheta[,2:4] <- log(matTheta[,2:4])
@@ -734,13 +751,14 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
 #'      }
 #' @param matSizeFactors: (numeric matrix genes x samples) 
 #'    Model scaling factors for each observation which take
-#'    sequencing depth into account (size factors).
-#' @param vecDispersions: (vector number of genes) Inverse of gene-wise 
-#'    negative binomial dispersion coefficients computed by DESeq2.
+#'    sequencing depth into account (size factors). One size
+#'    factor per sample - rows of this matrix are equal.
+#' @param vecDispersions: (vector number of genes) Gene-wise 
+#'    negative binomial dispersion coefficients.
 #' @param matDropoutRate: (probability matrix genes x samples) Dropout 
 #'    rate/mixing probability of zero inflated negative binomial mixture 
 #'    model for each gene and cell.
-#' @param matProbNB: (probability vector genes x samples) 
+#' @param matProbNB: (probability matrix genes x samples) 
 #'    Probability of observations to come from negative binomial 
 #'    component of mixture model.
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
@@ -771,7 +789,8 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
 
 fitImpulse <- function(matCountDataProc, 
   dfAnnotationProc, 
-  lsMatTranslationFactors, matSizeFactors,
+  lsMatTranslationFactors, 
+  matSizeFactors,
   vecDispersions, 
   matDropoutRate, matProbNB,
   strCaseName, strControlName=NULL, strMode="batch",

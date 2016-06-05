@@ -148,12 +148,12 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' @param boolLogPlot: (bool) [Default FALSE]
 #'    Whether to plot in counts in log space.
 #' 
-#' @return (list length 4) with the following elements:
+#' @return (list length 4)
 #' \itemize{
-#'    \item \code{vecDEGenes} (list number of genes) Genes IDs identified
+#'    \item vecDEGenes: (list number of genes) Genes IDs identified
 #'        as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
-#'    \item \code{dfImpulseResults} (data frame) ImpulseDE2 results.
-#'    \item \code{lsImpulseFits} (list) List of matrices which
+#'    \item dfImpulseResults: (data frame) ImpulseDE2 results.
+#'    \item lsImpulseFits: (list) List of matrices which
 #'        contain parameter fits and model values for given time course for the
 #'        case condition (and control and combined if control is present).
 #'        Each parameter matrix is called parameter_'condition' and has the form
@@ -165,7 +165,7 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'        \code{optim} from \code{stats} of either model. Each value matrix is called
 #'        value_'condition' and has the form (genes x time points) and contains the
 #'        counts predicted by the impulse model at the observed time points.
-#'    \item \code{dfDESeq2Results} (data frame) DESeq2 results.
+#'    \item dfDESeq2Results: (data frame) DESeq2 results. NULL if DESeq2 is not run.
 #' }
 #' Additionally, \code{ImpulseDE2} saves the following objects and tables into
 #' the working directory:
@@ -173,8 +173,24 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'    \item \code{ImpulseDE2_matCountDataProc.RData} (2D array genes x replicates) 
 #'        Count data: Reduced version of \code{matCountData}. For internal use.
 #'    \item \code{ImpulseDE2_dfAnnotationProc.RData} (data frame) Annotation table.
-#'    \item \code{ImpulseDE2_vecNormConst.RData} (matrix samples x replicates) Normalisation
-#'    constants for each replicate. Missing samples are set NA.
+#'    \item \code{ImpulseDE2_matSizeFactors.RData} (numeric matrix genes x samples) 
+#'        Model scaling factors for each observation which take
+#'        sequencing depth into account (size factors). One size
+#'        factor per sample - rows of this matrix are equal.
+#'    \item \code{ImpulseDE2_lsMatTranslationFactors.RData} 
+#'      (list {case} or {case, ctrl, combined}) List of
+#'      translation factor matrices. NULL if strMode not
+#'      "longitudinal".
+#'      \itemize{
+#'        \item matTranslationFactorsAll: (numeric matrix genes x samples) 
+#'        Model scaling factors for each observation which take
+#'        longitudinal time series mean within a gene into account 
+#'        (translation factors). Computed based based on all samples.
+#'        \item matTranslationFactorsCase: As matTranslationFactorsAll
+#'        for case samples only, non-case samples set NA.
+#'        \item matTranslationFactorsCtrl: As matTranslationFactorsAll
+#'        for control samples only, non-control samples set NA.
+#'      }
 #'    \item \code{ImpulseDE2_vecDispersions.RData} (vector number of genes) Inverse 
 #'        of gene-wise negative binomial dispersion coefficients computed by DESeq2.
 #'    \item \code{ImpulseDE2_dfDESeq2Results.RData} (data frame) DESeq2 results.
@@ -197,14 +213,10 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'        cluster created in \code{fitImpulse}.
 #' }
 #' 
-#' @seealso Coordinates the following source functions:
+#' @seealso Calls the following functions:
 #' \code{\link{processData}}, \code{\link{runDESeq2}},
-#' \code{\link{fitImpulse}}, \code{\link{evalLogLikImpulse}}, 
-#' \code{\link{evalLogLikMean}}, \code{\link{calcImpulse}},
+#' \code{\link{fitImpulse}},
 #' \code{\link{computePval}}, \code{\link{plotDEGenes}}.
-#' Calls directly: \code{\link{processData}}, \code{\link{runDESeq2}},
-#' \code{\link{fitImpulse}}, \code{\link{computePval}},
-#' \code{\link{plotDEGenes}}.
 #' 
 #' @author David Sebastian Fischer
 #' 
@@ -291,6 +303,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
       strRefMethod <- "DESeq2"
     } else { 
       print("3. Not running DESeq2")
+      dfDESeq2Results <- NULL
       vecRefPval <- NULL
       strRefMethod <- NULL
     }
@@ -303,7 +316,6 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
     } else {
       # Use externally provided dispersions and reorder
       vecDispersions <- vecDispersionsExternal[rownames(matCountDataProc)]
-      dfDESeq2Results <- NULL
     }
     save(vecDispersions,file=file.path(getwd(),"ImpulseDE2_vecDispersions.RData"))
     save(dfDESeq2Results,file=file.path(getwd(),"ImpulseDE2_dfDESeq2Results.RData"))
@@ -364,7 +376,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
           strMode=strMode,
           strCaseName=strCaseName, 
           strControlName=strControlName, 
-          strFileNameSuffix="DE", 
+          strFileNameSuffix="DEgenes", 
           strPlotTitleSuffix="", 
           strPlotSubtitle="",
           strNameMethod2=strRefMethod,

@@ -2,53 +2,49 @@
 #+++++++++++++++++++++++++     Plot ZINB fits    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Plots the zero inflated negative binomial fits and data to pdf
+#' Plots the zero inflated negative binomial fits and data to pdf.
 #' 
-#' Plots the zero inflated negative binomial fits and data to pdf
+#' Plots the zero inflated negative binomial fits and data to pdf.
 #' 
 #' @seealso Called by \code{runPseudoDE}.
 #' 
-#' @param lsGeneIDs (character vector) of gene names to be plotted; must be
-#     trownames of arr3DCountData.
-#' @param arr2DCountData (2D array genes x replicates) Count data: Reduced 
-#'    version of \code{matCountData}. For internal use.
-#' @param vecNormConst: (numeric vector number of replicates) 
-#'    Normalisation constants for each replicate.
-#' @param dfAnnotation (Table) Lists co-variables of individual replicates:
-#'    Replicate, Sample, Condition, Time. Time must be numeric.
-#' @param lsImpulseFits (list length 2 or 6) List of matrices which
-#'    contain parameter fits and model values for given time course for the
-#'    case condition (and control and combined if control is present).
-#'    Each parameter matrix is called parameter_'condition' and has the form
-#'    (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
-#'    ) where beta to t2 are parameters of the impulse
-#'    model, mu is the single parameter of the mean model, logL are
-#'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
-#'    is convergence status of numerical optimisation of model fitting by
-#'    \code{optim} from \code{stats}. Each value matrix is called
-#'    value_'condition' and has the form (genes x time points) and contains the
-#'    counts predicted by the impulse model at the observed time points.
-#' @param dfDEAnalysis (data frame genes x fitting characteristics) 
-#'    Summary of fitting procedure for each gene.
-#' @param vecRefPval (vec length genes) Method 2 (DESeq2) adjusted p-values
-#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationFull}.
-#' @param strControlName: (str) [Default NULL] Name of the control condition in 
-#'    \code{dfAnnotationFull}.
-#' @param strMode: (str) [Default "batch"] {"batch","timecourses","singlecell"}
-#'    Mode of model fitting.
-#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
-#' @param strFileNameSuffix (character string) [Default ""] File extention.
-#' @param title_string (character string) [Default ""] Title for each plot.
-#' @param strPlotSubtitle (character string) [Default ""] Subtitle for each plot.
-#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
+#' @param vecGeneIDs: (string vector) Gene names to be plotted. 
+#'    Elements must be rownames of matCounts.
+#' @param matCounts: (matrix genes x cells)
+#'    Count data of all cells, unobserved entries are NA.
+#' @param matClusterMeans:
+#' @param vecDispersions: (vector number of genes) Gene-wise 
+#'    negative binomial dispersion coefficients.
+#' @param matProbNB: (probability matrix genes x samples) 
+#'    Probability of observations to come from negative binomial 
+#'    component of mixture model.
+#' @param vecClusterAssignments:
+#' @param lsResultsClustering (list {"Assignments","Centroids","K"})
+#'    \itemize{
+#'      \item   Assignments: (integer vector length number of
+#'        cells) Index of cluster assigned to each cell.
+#'      \item   Centroids: 1D Coordinates of cluster centroids,
+#'        one scalar per centroid.
+#'      \item   K: (scalar) Number of clusters selected.
+#'      }
+#' @param dfAnnotationImpulseDE2: (Table)
+#'    Annotation table. Lists covariates of samples: 
+#'    Sample, Condition, Time. Time must be numeric. No longitudinal
+#'    series given as scRNA-seq data are not longitudinal.
+#' @param strPDFname: (str) Name of .pdf with plots.
 #' 
 #' @return NULL
 #' @export
 
-plotZINBfits <- function(lsGeneIDs, arr2DCountData,
-  matClusterMeans, vecDispersions, matProbNB,
-  vecClusterAssignments, lsResultsClustering,
-  dfAnnotation, strPDFname="PseudoDE_ZINBfits.pdf"){
+plotZINBfits <- function(vecGeneIDs, 
+  matCounts,
+  matClusterMeans, 
+  vecDispersions,
+  matProbNB,
+  vecClusterAssignments,
+  lsResultsClustering,
+  dfAnnotation, 
+  strPDFname="PseudoDE_ZINBfits.pdf"){
   
   # Only for batch/singlecell plotting:
   # Width of negative binomial pdf (ylim) in time units for plotting
@@ -83,6 +79,7 @@ plotZINBfits <- function(lsGeneIDs, arr2DCountData,
   par(mfrow=c(3,3), xpd=TRUE)
   scaLegendInset <- -0.65
   
+  # Create list of plots
   lsPlots <- list()
   for (geneID in lsGeneIDs){
     # Plot observed points in blue - all time courses in same colour
@@ -124,21 +121,20 @@ plotZINBfits <- function(lsGeneIDs, arr2DCountData,
           mixture=vecMixtures[as.numeric(matProbNB[geneID,vecindClusterAssignments==match(cl,vecClusters)] < 0.5)+1]  )
         dfDensity <- data.frame( counts=vecXCoordPDF, density=vecYCoordPDF*(dim(dfData)[1]))
         lsPlots[[length(lsPlots)+1]] <- suppressMessages( ggplot( ) +
-          geom_histogram( data=dfData, aes(x=counts, y=..count.., fill=mixture), alpha=0.5 ) +
-          geom_line( data=dfDensity, aes(x=counts, y=density), col = "blue") +
-          labs(title=paste0(geneID," Cluster ", cl, " Observed cells: ",length(dfData$counts),
-            "\n Non-zero counts: ", sum(dfData$counts!=0), " Inferred mean: ", round(matClusterMeans[geneID,match(cl,vecClusters)]))) +
-          xlab("Counts") +
-          ylab("Density") )
+            geom_histogram( data=dfData, aes(x=counts, y=..count.., fill=mixture), alpha=0.5 ) +
+            geom_line( data=dfDensity, aes(x=counts, y=density), col = "blue") +
+            labs(title=paste0(geneID," Cluster ", cl, " Observed cells: ",length(dfData$counts),
+              "\n Non-zero counts: ", sum(dfData$counts!=0), " Inferred mean: ", round(matClusterMeans[geneID,match(cl,vecClusters)]))) +
+            xlab("Counts") +
+            ylab("Density") )
       }
     }
   }
   
-  # Open .pdf
+  # Write plots into .pdf
   pdf(strPDFname,height=6.0,width=9.0)
   for(plotTF in lsPlots){
     suppressMessages( print(plotTF) )
   }
-  # Close .pdf
   dev.off()
 }

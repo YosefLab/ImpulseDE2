@@ -32,8 +32,9 @@
 #'        for control samples only, non-control samples set NA.
 #'      }
 #' @param matSizeFactors: (numeric matrix genes x samples) 
-#'    Model scaling factors for each observation only accounting
-#'    for sequencing depth into account (size factors).
+#'    Model scaling factors for each observation which take
+#'    sequencing depth into account (size factors). One size
+#'    factor per sample - rows of this matrix are equal.
 #' @param lsImpulseFits (list length 2 or 6) List of matrices which
 #'    contain parameter fits and model values for given time course for the
 #'    case condition (and control and combined if control is present).

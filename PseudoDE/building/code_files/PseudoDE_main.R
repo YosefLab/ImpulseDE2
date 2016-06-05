@@ -1,264 +1,193 @@
-library(compiler)
-library(parallel)
-library(DESeq2)
 library(BiocParallel)
 library(ggplot2)
 #library(scone)
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
 library(MASS)
-
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_CostFunctionsFit.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_runDESeq2.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/clusterCellsInPseudotime.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/createAnnotation.R")
+
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_clusterCellsInPseudotime.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_createAnnotation.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotPseudotimeClustering.R")
 
-evalLogLikHurdleDrop_comp <- cmpfun(evalLogLikHurdleDrop)
 
-runPseudoDE <- function(matCounts, vecPseudotime,
+#' 
+#' @param matCounts: (matrix genes x cells)
+#'    Count data of all cells, unobserved entries are NA.
+#' @param vecPseudotime: (numerical vector length number of cells)
+#'    Pseudotime coordinates (1D) of cells: One scalar per cell.
+#'    Has to be named: Names of elements are cell names.
+#' @param boolDEAnalysisImpulseModel: (bool) [Default TRUE]
+#'    Whether to perform differential expression analysis with ImpulseDE2.
+#' @param boolDEAnalysisModelFree: (bool) [Default FALSE]
+#'    Whether to perform model-free differential expression analysis.
+#' @param nProc: (scalar) [Default 1] Number of processes for 
+#'    parallelisation. The specified value is internally changed 
+#'    to \code{min(detectCores() - 1, nProc)} using the 
+#'    \code{detectCores} function from the package \code{parallel} 
+#'    to avoid overload.
+#' 
+#' @return (list length 2)
+#'    \itemize{
+#'    \item lsImpulseDE2results: (list length 4)
+#'    \itemize{
+#'      \item vecDEGenes: (list number of genes) Genes IDs identified
+#'        as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
+#'      \item dfImpulseResults: (data frame) ImpulseDE2 results.
+#'      \item lsImpulseFits: (list) List of matrices which
+#'        contain parameter fits and model values for given time course for the
+#'        case condition (and control and combined if control is present).
+#'        Each parameter matrix is called parameter_'condition' and has the form
+#'        (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
+#'        converge_H0]) where beta to t2 are parameters of the impulse
+#'        model, mu is the single parameter of the mean model, logL are
+#'        log likelihoods of full (H1) and reduced model (H0) respectively, converge
+#'        is convergence status of numerical optimisation of model fitting by
+#'        \code{optim} from \code{stats} of either model. Each value matrix is called
+#'        value_'condition' and has the form (genes x time points) and contains the
+#'        counts predicted by the impulse model at the observed time points.
+#'      \item dfDESeq2Results: (NULL) DESeq2 results, DESeq2 is not run within
+#'        ImpulseDE2 in singlecell mode.
+#'    }
+#'    \item dfModelFreeDEAnalysis: (data frame) 
+#'        Summary of model-free differential expression analysis.
+#'    }   
+#' @export
+
+runPseudoDE <- function(matCounts, 
+  vecPseudotime,
+  boolDEAnalysisImpulseModel = TRUE,
+  boolDEAnalysisModelFree = FALSE,
   nProc=1){
-  
-  MAXITER <- 20
   
   # 1. Data preprocessing
   print("1. Data preprocessing:")
   tm_preproc <- system.time({
-    # Check data
-    # 1. matCounts
-    if(any(matCounts %% 1 != 0)){
-      stop("ERROR: matCounts contains non-integer elements. Requires count data.")
-    }
-    if(any(is.na(matCounts) | !is.finite(matCounts) | matCounts<0 )){
-      stop("ERROR: Non positive counts (NA/Inf/-Inf/negative).")
-    }
-    # 2. vecPseudotime
-    if(!all(names(vecPseudotime) %in% colnames(matCounts))){
-      stop("ERROR: Cell names in vecPseudotime and matCounts do not match.")
-    }
-    
-    # Convert from data frame to matrix for zinb()
-    if(is.list(matCounts)){
-      matCounts <- data.matrix(matCounts)
-    }
-    # Take out NA cells
-    vecPseudotime <- vecPseudotime[!is.na(vecPseudotime)]
-    # Adjust ording of cells in objects
-    matCounts <- matCounts[,names(vecPseudotime)]
-    # Remove all zero genes: Mu is initialised
-    # as log(sum counts)
-    matCounts <- matCounts[apply(matCounts,1,function(gene){any(gene!=0)}),]
+    lsProcessedSCData <- processSCData(matCounts=matCounts,
+      vecPseudotime=vecPseudotime,
+      boolDEAnalysisImpulseModel=boolDEAnalysisImpulseModel,
+      boolDEAnalysisModelFree=boolDEAnalysisModelFree )
+    matCountsProc <- lsProcessedSCData$matCountsProc
+    vecPseudotimeProc <- lsProcessedSCData$vecPseudotimeProc
   })
-  save(matCounts,file=file.path(getwd(),"PseudoDE_matCounts.RData"))
+  save(matCountsProc,file=file.path(getwd(),"PseudoDE_matCountsProc.RData"))
+  save(vecPseudotimeProc,file=file.path(getwd(),"PseudoDE_vecPseudotimeProc.RData"))
   
   # 2. Cluster cells in pseudo-time
   print("2. Clustering:")
   tm_clustering <- system.time({
-    lsResultsClustering <- clusterCellsInPseudotime(vecPseudotime=vecPseudotime)
-    # Fit by cluster
-    dfAnnotation <- createAnnotationByCluster(matCounts=matCounts,
-      vecPseudotime=vecPseudotime,
+    # Cluster in pseudotime
+    lsResultsClustering <- clusterCellsInPseudotime(vecPseudotime=vecPseudotimeProc)
+    # Plot clustering
+    plotPseudotimeClustering(vecPseudotime=vecPseudotime, 
       lsResultsClustering=lsResultsClustering)
-    # Fit by cell
-    #dfAnnotation <- createAnnotationByCell(matCounts=matCounts,
-    #  vecPseudotime=vecPseudotime)
   })
   save(lsResultsClustering,file=file.path(getwd(),"PseudoDE_lsResultsClustering.RData"))
-  save(dfAnnotation,file=file.path(getwd(),"PseudoDE_dfAnnotation.RData"))
-  plotPseudotimeClustering(vecPseudotime=vecPseudotime, 
-    lsResultsClustering=lsResultsClustering)
   print(paste("Time elapsed during clustering: ",round(tm_clustering["elapsed"]/60,2),
     " min",sep=""))
   
-  # 3. Fit mixture model
-  print("3. Fit mixture model:")
+  # 3. Create annotation table
+  print("3. Create annotation table")
+  dfAnnotation <- createAnnotationByCluster(matCounts=matCountsProc,
+    vecPseudotime=vecPseudotimeProc,
+    lsResultsClustering=lsResultsClustering)
+  # Fit by cell
+  #dfAnnotation <- createAnnotationByCell(matCounts=matCounts,
+  #  vecPseudotime=vecPseudotime)
+  save(dfAnnotation,file=file.path(getwd(),"PseudoDE_dfAnnotation.RData"))
+  
+  # 4. Fit mixture model
+  print("4. Fit mixture model:")
   tm_fitmm <- system.time({
-    # Set number of processes to be used in this step:
-    # register(MulticoreParam()) controls the number of processes used for 
-    # BiocParallel, used in zinb().
-    nProcesses <- min(detectCores() - 1, nProc)
-    nProcesses <- 3
-    print(paste0("Number of processes: ", nProcesses))
-    register(MulticoreParam(nProcesses))
-    
-    # Fit zero-inflated negative binomial model to each cluster
-    # Imputed count data matrix
-    #matCountsImputed <- array(0,c(dim(matCounts)[1],dim(matCounts)[2]))
-    # Genes which are all 0 in one cluster recive pi=1, i.e. they
-    # drop out of the cost function during fitting as their likelihood
-    # is defined by the hyperparameter pi=1 independently of the
-    # mean model.
-    #matDropout <- array(1,c(dim(matCounts)[1],dim(matCounts)[2]))
-    #matProbNB <- array(1,c(dim(matCounts)[1],dim(matCounts)[2]))
-    if(FALSE){
-      # Fit to clusters seperately, use original verision of fitting function
-      
-      # Negative binomial over-dispersion factor: 1 per gene per cluster
-      matDispersion <- array(NA,c(dim(matCounts)[1],lsResultsClustering$K))
-      lsZinbOutputByCluster <- list()
-      for(k in 1:lsResultsClustering$K){
-        print(paste0("Fitting cluster ",k))
-        
-        # Remove all zero genes: Mu is initialised
-        # as log(sum counts)
-        vecidxCluster <- lsResultsClustering$Assignments==k
-        matCountsCluster <- matCounts[,vecidxCluster]
-        # this doesnt work for 20 genes:
-        #vecboolNonzeroGenes <- apply(matCountsCluster,1,
-        #  function(gene){any(gene!=0)})
-        # this works for 20 genes:
-        vecboolNonzeroGenes <- apply(matCountsCluster,1,
-          function(gene){mean(gene)>10})
-        matCountsCluster <- matCountsCluster[vecboolNonzeroGenes,]
-        
-        # Fit zinb model
-        lsZINBparam <- estimate_zinb(
-          Y = matCountsCluster, 
-          maxiter = MAXITER, 
-          verbose = TRUE)
-        lsZinbOutputByCluster[[k]] <- lsZINBparam
-        
-        # Record parameters
-        matDropout[vecboolNonzeroGenes,vecidxCluster] <- lsZINBparam$pi
-        matProbNB[vecboolNonzeroGenes,vecidxCluster] <- lsZINBparam$p_z
-        matDispersion[vecboolNonzeroGenes,k] <- lsZINBparam$theta
-        
-        # Impute count data matrix
-        matCountsImputed[vecboolNonzeroGenes,vecidxCluster] <- 
-          matCountsCluster * lsZINBparam$p_z + 
-          lsZINBparam$mu * (1 - lsZINBparam$p_z)
-      }
-    } else if(FALSE){
-      # Fit once to all data, one mean
-      
-      # Negative binomial over-dispersion factor: 1 per gene per cluster
-      matDispersion <- array(NA,c(dim(matCounts)[1],1))
-
-      # this doesnt work for 20 genes:
-      vecboolNonzeroGenes <- apply(matCountsCluster,1,
-        function(gene){any(gene!=0)})
-      # this works for 20 genes:
-      #vecboolNonzeroGenes <- apply(matCounts,1,
-      #  function(gene){mean(gene)>10})
-      matCountsClean <- matCounts[vecboolNonzeroGenes,]
-      
-      # Fit zinb model
-      lsZINBparam <- estimate_zinb(
-        Y = matCountsCluster, 
-        maxiter = MAXITER, 
-        verbose = TRUE)
-      
-      # Record parameters
-      matDropout <- lsZINBparam$pi
-      matProbNB <- lsZINBparam$p_z
-      vecDispersions <- lsZINBparam$theta
-      
-      # Impute count data matrix
-      vecClusters <- unique(vecClusterAssign)
-      vecindClusterAssing <- match(vecClusterAssign, vecClusters)
-      matCountsImputed <- 
-        matCountsClean * lsZINBparam$p_z + 
-        lsZINBparam$mu[,vecindClusterAssing] * (1 - lsZINBparam$p_z)
-    } else {
-      #vecDispersions <- array(NA,c(dim(matCounts)[1],1))
-      # this doesnt work for 20 genes:
-      vecboolNonzeroGenes <- apply(matCounts,1,
-        function(gene){ all(unlist(sapply( seq(1,lsResultsClustering$K), 
-          function(cl){any(gene[lsResultsClustering$Assignments==cl]>10)} 
-        ))) } )
-      # this works for 20 genes:
-      #vecboolNonzeroGenes <- apply(matCounts,1,
-      #  function(gene){ all(unlist(sapply( seq(1,lsResultsClustering$K), 
-      #    function(cl){any(gene[lsResultsClustering$Assignments==cl]>20)} 
-      #  ))) } )
-      matCountsClean <- matCounts[vecboolNonzeroGenes,]
-      # Fit zinb model
-      vecClusterAssign <- paste0(rep("cluster_",length(lsResultsClustering$Assignments)),lsResultsClustering$Assignments)
-      lsZINBparam <- estimate_zinb(
-        Y = matCountsClean,
-        vecClusterAssign = vecClusterAssign,
-        maxiter = MAXITER, 
-        verbose = TRUE)
-      lsZinbOutput <- lsZINBparam
-      
-      # Record parameters
-      matDropout <- lsZINBparam$pi
-      matProbNB <- lsZINBparam$p_z
-      vecDispersions <- lsZINBparam$theta
-      
-      # Impute count data matrix
-      vecClusters <- unique(vecClusterAssign)
-      vecindClusterAssing <- match(vecClusterAssign, vecClusters)
-      matCountsImputed <- 
-        matCountsClean * lsZINBparam$p_z + 
-        lsZINBparam$mu[,vecindClusterAssing] * (1 - lsZINBparam$p_z)
-    }
-    # Put objects together
-    rownames(matDropout) <- rownames(matCountsClean)
-    colnames(matDropout) <- colnames(matCountsClean)
-    rownames(matProbNB) <- rownames(matCountsClean)
-    colnames(matProbNB) <- colnames(matCountsClean)
-    rownames(matCountsImputed) <- rownames(matCountsClean)
-    colnames(matCountsImputed) <- colnames(matCountsClean)
-    matCountsImputed <- round(matCountsImputed)
-    names(vecDispersions) <- rownames(matCountsClean)
-    matClusterMeansFitted <- (lsZINBparam$mu)[,match(seq(1,length(vecClusters)),lsResultsClustering$Assignments)]
-    rownames(matClusterMeansFitted) <- rownames(matCountsClean)
-    lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed, matClusterMeansFitted)
-    names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed", "matClusterMeansFitted")
+    lsResZINBFits <- fitZINB(matCounts, lsResultsClustering, nProc)
+    vecDispersions <- lsResZINBFits$vecDispersions
+    matDropout <- lsResZINBFits$matDropout
+    matProbNB  <- lsResZINBFits$matProbNB
+    matCountsImputed  <- lsResZINBFits$matCountsImputed
+    matClusterMeansFitted  <- lsResZINBFits$matClusterMeansFitted
+    matConvergence <- lsResZINBFits$matConvergence
   })
-  save(lsInputToImpulseDE2,file=file.path(getwd(),"PseudoDE_lsInputToImpulseDE2.RData"))
-  save(lsZINBparam,file=file.path(getwd(),"PseudoDE_lsZINBparam.RData"))
   save(vecDispersions,file=file.path(getwd(),"PseudoDE_vecDispersions.RData"))
+  save(matDropout,file=file.path(getwd(),"PseudoDE_matDropout.RData"))
+  save(matProbNB,file=file.path(getwd(),"PseudoDE_matProbNB.RData"))
+  save(matCountsImputed,file=file.path(getwd(),"PseudoDE_matCountsImputed.RData"))
+  save(matClusterMeansFitted,file=file.path(getwd(),"PseudoDE_matClusterMeansFitted.RData"))
+  
   save(matCountsClean,file=file.path(getwd(),"PseudoDE_matCountsClean.RData"))
   save(matClusterMeansFitted,file=file.path(getwd(),"PseudoDE_matClusterMeansFitted.RData"))
   print(paste("Time elapsed during ZINB fitting: ",round(tm_fitmm["elapsed"]/60,2),
     " min",sep=""))
   
-  if(any(is.na(vecDispersions) | !is.finite(vecDispersions))){
-    vecDispersions[is.na(vecDispersions) | !is.finite(vecDispersions)] <- 1
-    print("WARNING: Found NA/inf dispersions")
-    print(vecDispersions)
-  }
   graphics.off()
-  source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
-  plotZINBfits(lsGeneIDs=rownames(matCountsClean)[1:10], 
-    arr2DCountData=matCountsClean,
-    matClusterMeans=matClusterMeansFitted, 
-    vecDispersions=vecDispersions,
-    matProbNB=matProbNB,
-    vecClusterAssignments=lsResultsClustering$Assignments,
-    lsResultsClustering=lsResultsClustering,
-    dfAnnotation=dfAnnotation, 
-    strPDFname="PseudoDE_ZINBfits.pdf" )
+  # 5. Plot ZINB fits to data.
+  if(boolPlotZINBfits){
+    print("5. Plot ZINB fits to data.")
+    plotZINBfits(vecGeneIDs=rownames(matCountsClean)[1:10], 
+      matCounts=matCountsClean,
+      matClusterMeans=matClusterMeansFitted, 
+      vecDispersions=vecDispersions,
+      matProbNB=matProbNB,
+      vecClusterAssignments=lsResultsClustering$Assignments,
+      lsResultsClustering=lsResultsClustering,
+      dfAnnotation=dfAnnotation, 
+      strPDFname="PseudoDE_ZINBfits.pdf" )
+  }
   
-  # 4. Differential expression analysis: Run ImpulseDE2
-  print("4. Differential expression analysis: Run ImpulseDE2:")
-  print("### Begin ImpulseDE2 output ################################")
-  tm_deanalysis <- system.time({
-    source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
-    setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-    lsImpulseDE2results <- runImpulseDE2(
-      matCountData = matCountsClean, 
-      dfAnnotationFull = dfAnnotation,
-      strCaseName = "case", 
-      strControlName = NULL, 
-      strMode = "singlecell", 
-      nProc = nProc, 
-      Q_value = 0.01,
-      boolPlotting = TRUE,
-      lsPseudo = lsInputToImpulseDE2,
-      vecDispersionsExternal=vecDispersions,
-      boolRunDESeq2=FALSE,
-      boolSimplePlot=TRUE, boolLogPlot=TRUE
-    )
-  })
-  print("### End ImpulseDE2 output ##################################")
-  save(lsImpulseDE2results,file=file.path(getwd(),"PseudoDE_lsImpulseDE2results.RData"))
-  print(paste("Time elapsed during ImpulseDE2 step: ",round(tm_deanalysis["elapsed"]/60,2),
-    " min",sep=""))
+  # 6. Differential expression analysis:
+  print("6. Differential expression analysis:")
+  if(boolDEAnalysisImpulseModel){
+    # a) Model-based: Impulse model
+    print("Differential expression analysis: Model-based (Impulse model)")
+    print("### Begin ImpulseDE2 output ################################")
+    tm_deanalysis_impulse <- system.time({
+      lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed, matClusterMeansFitted)
+      names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed", "matClusterMeansFitted")
+      
+      lsImpulseDE2results <- runImpulseDE2(
+        matCountData = matCountsClean, 
+        dfAnnotation = dfAnnotation,
+        strCaseName = "case", 
+        strControlName = NULL, 
+        strMode = "singlecell", 
+        nProc = nProc, 
+        Q_value = 0.01,
+        boolPlotting = TRUE,
+        lsPseudo = lsInputToImpulseDE2,
+        vecDispersionsExternal = vecDispersions,
+        boolRunDESeq2 = FALSE,
+        boolSimplePlot = TRUE, 
+        boolLogPlot = TRUE )
+    })
+    print("### End ImpulseDE2 output ##################################")
+    save(lsInputToImpulseDE2,file=file.path(getwd(),"PseudoDE_lsInputToImpulseDE2.RData"))
+    save(lsImpulseDE2results,file=file.path(getwd(),"PseudoDE_lsImpulseDE2results.RData"))
+    print(paste("Time elapsed during differential expression analysis with ImpulseDE2: ",
+      round(tm_deanalysis_impulse["elapsed"]/60,2)," min",sep=""))
+  } else {
+    lsImpulseDE2results <- NULL
+  }
+  if(boolDEAnalysisModelFree){
+    # b) Model-based: Impulse model
+    print("Differential expression analysis: Model-free")
+    tm_deanalysis_mf <- system.time({
+      dfModelFreeDEAnalysis <- runModelFreeDEAnalysis(
+        matCountData = matCountsClean, 
+        dfAnnotation = dfAnnotation,
+        strMode = "singlecell", 
+        nProc = nProc, 
+        Q_value = 0.01,
+        boolPlotting = TRUE,
+        lsPseudo = lsInputToImpulseDE2,
+        vecDispersionsExternal = vecDispersions,)
+    })
+    save(dfModelFreeDEAnalysis,file=file.path(getwd(),"PseudoDE_dfModelFreeDEAnalysis.RData"))
+    print(paste("Time elapsed during model-free differential expression analysis: ",
+      round(tm_deanalysis_mf["elapsed"]/60,2)," min",sep=""))
+  } else {
+    dfModelFreeDEAnalysis <- NULL
+  }
   
   print("Completed PseudoDE.")
-  return(lsImpulseDE2results)
+  return(list(lsImpulseDE2results=lsImpulseDE2results,
+    dfModelFreeDEAnalysis=dfModelFreeDEAnalysis))
 }

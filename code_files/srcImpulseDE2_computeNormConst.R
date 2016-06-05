@@ -21,7 +21,8 @@
 #' 
 #' @return matSizeFactors: (numeric matrix genes x samples) 
 #'    Model scaling factors for each observation which take
-#'    sequencing depth into account (size factors).
+#'    sequencing depth into account (size factors). One size
+#'    factor per sample - rows of this matrix are equal.
 #' @export
 
 computeSizeFactors <- function(matCountDataProc,
@@ -266,8 +267,9 @@ computeTranslationFactors <- function(matCountDataProc,matSizeFactors,
 #'        for control samples only, non-control samples set NA.
 #'      }
 #'      \item matSizeFactors: (numeric matrix genes x samples) 
-#'    Model scaling factors for each observation which take
-#'    sequencing depth into account (size factors).
+#'        Model scaling factors for each observation which take
+#'        sequencing depth into account (size factors). One size
+#'        factor per sample - rows of this matrix are equal.
 #'      } 
 #' @export
 

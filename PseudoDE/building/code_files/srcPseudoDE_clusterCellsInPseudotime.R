@@ -1,3 +1,28 @@
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+#++++++++++++++++++++     Cluster cells in pseudotime    ++++++++++++++++++++++#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+#' Cluster cells in pseudotime
+#' 
+#' This function clusters cells in the 1D space pseudotime with K-means
+#' and selects the number of clusters to represent the sample based
+#' on the gap statistic.
+#' 
+#' @seealso Called by \code{runPseudoDE}.
+#' 
+#' @param vecPseudotime: (numerical vector length number of cells)
+#'    Pseudotime coordinates (1D) of cells: One scalar per cell.
+#' 
+#' @return (list {"Assignments","Centroids","K"})
+#'    \itemize{
+#'      \item   Assignments: (integer vector length number of
+#'        cells) Index of cluster assigned to each cell.
+#'      \item   Centroids: 1D Coordinates of cluster centroids,
+#'        one scalar per centroid.
+#'      \item   K: (scalar) Number of clusters selected.
+#'      }
+#' @export
+
 clusterCellsInPseudotime <- function(vecPseudotime){
   
   # Range of K for K-means is number of unique cells
