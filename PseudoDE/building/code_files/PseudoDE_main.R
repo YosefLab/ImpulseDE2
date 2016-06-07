@@ -1,3 +1,14 @@
+################################################################################
+########################     PseudodE package     ##############################
+################################################################################
+
+### Version 1.0
+### Author David Sebastian Fischer
+
+################################################################################
+### Libraries and source code
+################################################################################
+
 library(BiocParallel)
 library(ggplot2)
 #library(scone)
@@ -10,7 +21,43 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotPseudotimeClustering.R")
 
+################################################################################
+### Main function
+################################################################################
 
+#' PseudoDE wrapper: Differential expression analysis in pseudotime
+#' 
+#' This function is the wrapper function for the PseudoDE algorithm,
+#' which performs data processing, clustering, zero-inflated negative
+#' binomial model identification (hyperparameter estimation) and 
+#' model-based differential expression analysis with ImpulseDE2 in 
+#' the singlecell mode or model-free differential expression analysis.
+#' Differential expression is defined as differential expression over
+#' time within one condition, PseuoDE does not handle case-control
+#' comparisons at the moment.
+#' 
+#' @details The computational complexity of ImpulseDE2 is linear in the
+#' number of genes and linear in the number of cells.
+#' \enumerate{
+#' \item \textbf{Cluster cells in pseudo-time with K-means:}
+#' The number of clusters $K$ is selected based on the gap-statistic.
+#' \item \textbf{Hyperparameter estimation:}
+#' A zero-inflated negative binomial model is fit to the clusters for each gene with SCONE.
+#' Drop-out rates and dispersion factors are retained as hyperparameters.
+#' \item \textbf{Differential expression analysis in pseudo time:}
+#' \enumerate{
+#'    \item \textbf{Model-free:}
+#'    A zero-inflated negative binomial model with an overall mean is fit to the data with SCONE (null model).
+#'    The fit of the null model is compared to the fit of the alternative model (cluster-wise zero-inflated negative binomial models from hyperparameter estimation)
+#'    with a loglikelihood ratio test.
+#'    \item \textbf{Model-based:}
+#'    ImpulseDE2 (in the batch mode) fits the impulse model to the data based on a zero-inflated negative binomial cost function 
+#'    with drop-out rate and dispersion factor set by SCONE.
+#'    ImpulseDE2 performs differential expression analysis based on a loglikelihood ratio test.
+#'    }
+#' }
+#' 
+#' @aliases PseudoDE
 #' 
 #' @param matCounts: (matrix genes x cells)
 #'    Count data of all cells, unobserved entries are NA.
@@ -51,7 +98,10 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 #'    }
 #'    \item dfModelFreeDEAnalysis: (data frame) 
 #'        Summary of model-free differential expression analysis.
-#'    }   
+#'    }
+#'    
+#' @author David Sebastian Fischer
+#' 
 #' @export
 
 runPseudoDE <- function(matCounts, 

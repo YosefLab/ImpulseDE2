@@ -50,6 +50,9 @@
 fitZINB <- function(matCounts, 
   lsResultsClustering, 
   nProc=1,
+  strDropoutTraining="PoissonVar",
+  vecHousekeepingGenes=NULL,
+  vecSpikeInGenes=NULL,
   MAXITER=20){
   
   # Set number of processes to be used in this step:
@@ -63,8 +66,6 @@ fitZINB <- function(matCounts,
   N <- dim(matCounts)[2]
   
   if(TRUE){
-    # Fit to clusters seperately, use original verision of fitting function
-    
     matDispersion <- matrix(NA,nrow=J,ncol=lsResultsClustering$K)
     matDropout <- matrix(NA,nrow=J,ncol=N)
     matProbNB <- matrix(NA,nrow=J,ncol=N)
@@ -72,6 +73,77 @@ fitZINB <- function(matCounts,
     matCountsImputed <- matrix(NA,nrow=J,ncol=N)
     vecConvergence <- array(NA,lsResultsClustering$K)
     
+    # 1. Identify dropout rates as Bernoulli model:
+    # Dropout rates are modelled as a sample-specific
+    # linear model of the gene-wise mean expression level.
+    # This step is performed on the entire data set.
+
+    # a) Define the set of genes on which dropout Bernoulli
+    # model is trained for each cell.
+    if(strDropoutTraining=="PoissonVar"){
+      vecTargetGenes <- 
+    } else if(strDropoutTraining=="Housekeeping"){
+      vecTargetGenes <- vecHousekeepingGenes
+    } else if(strDropoutTraining=="SpikeIns"){
+      vecTargetGenes <- vecSpikeInGenes
+    } else if(strDropoutTraining=="All"){
+      vecTargetGenes <- as.vector(rownames(matCounts))
+    } else {
+      stop(paste0("ERROR: Did not recognise strDropoutTraining=",strDropoutTraining," in fitZINB()."))
+    }
+
+    # b) Identify zero-inflated Bernoulli model
+    # using an EM-algorithm implementation from SCONE.
+    lsZIBERparam <- estimate_ziber(
+        x = matCounts,
+        fp_thres = 0,
+        bulk_model = TRUE,
+        gfeatM = NULL,
+        pos_controls = vecTargetGenes,
+        maxiter = MAXITER, 
+        verbose = TRUE)
+    matDropout <- 1 - lsZIBERparam$p_nodrop
+    vecConvergence <- lsZIBERparam$convergence
+
+    # 2. Estimate dispersion factors:
+    # This step is performed on each cluster separately:
+    # Either as a GLM with cluster index as predictor,
+    # cluster-wise mean parameters and gene-wise dispersion
+    # parameter or K separate GLMs with one dispersion factor each.
+
+    # a) Initialisation
+    vecClusterAssign <- paste0(rep("cluster_",length(lsResultsClustering$Assignments)),lsResultsClustering$Assignments)
+    vecindClusterAssign <- match(vecClusterAssign, unique(vecClusterAssign))
+    scaNumGenes <- dim(matCounts)[1]
+    # Initialise mean parameters
+    lsMu0 <- lapply(vecClusters ,function(cluster){apply(matCounts[,vecClusterAssign==cluster],1,
+      function(gene){mean(gene[gene>0])}
+    )})
+    matMu0 <- do.call(cbind, lsMu0)
+    if(dim(matMu0)[2]>1){
+      matMuLinearCoeff0 <- log(matMu0[,2:dim(matMu0)[2]]) - log(matMu0[,1])
+      matMuCoeff <- cbind( log(matMu0[,1]), matMuLinearCoeff0 ) # Intersection, linear coefficients
+    } else {
+      matMuCoeff <- log(matMu0[,1])
+    }
+    # Initialise dispersion parameters
+    vecTheta0 <- array(1,scaNumGenes)
+
+    # b) GLM fitting
+    fit_mu <- bplapply(seq(1,scaNumGenes), function(i) {
+      fit <- glm.nb(matCounts[i,] ~ vecClusterAssign, weights = (1 - matDropout[i,]), init.theta = vecTheta0[i], start=matMuCoeff[i,])
+      return(list(fitted=fit$fitted.values, theta=fit$theta))
+    })
+    # Extract negative binomial parameters into matrix (genes x clusters)
+    matClusterMeansFitted <- do.call( rbind, lapply(fit_mu, function(x) x$fitted) )
+    vecDispersions <- unlist( lapply(fit_mu, function(x) x$theta) )
+    matDispersions <- matrix(thetahat, nrow=scaNumGenes, ncol=lsResultsClustering$K, byrow=FALSE)
+    # Compute mixture probabilities and imputed counts
+    matProbNB <- 1 - (matCounts == 0) * matDropout / (matDropout + (1 - matDropout) * (1 + muhat[,vecindClusterAssign] / matDispersions[,vecindClusterAssign])^(-matDispersions[,vecindClusterAssign]))
+    matCountsImputed <- 
+      matDropout * (1 - matProbNB) + 
+      matClusterMeansFitted[,vecindClusterAssign] * matProbNB
+
     # Name objects
     rownames(matDropout) <- rownames(matCounts)
     colnames(matDropout) <- colnames(matCounts)
@@ -81,42 +153,6 @@ fitZINB <- function(matCounts,
     colnames(matCountsImputed) <- colnames(matCounts)
     rownames(vecDispersions) <- rownames(matCounts)
     rownames(matClusterMeansFitted) <- rownames(matCounts)
-    
-    lsZinbOutputByCluster <- list()
-    for(k in 1:lsResultsClustering$K){
-      print(paste0("Fitting cluster ",k))
-      
-      ### remove with new version?
-      # Remove all zero genes: Mu is initialised
-      # as log(sum counts)
-      vecidxCluster <- lsResultsClustering$Assignments==k
-      matCountsCluster <- matCounts[,vecidxCluster]
-      # this doesnt work for 20 genes:
-      #vecboolNonzeroGenes <- apply(matCountsCluster,1,
-      #  function(gene){any(gene!=0)})
-      # this works for 20 genes:
-      vecboolNonzeroGenes <- apply(matCountsCluster,1,
-        function(gene){mean(gene)>10})
-      matCountsCluster <- matCountsCluster[vecboolNonzeroGenes,]
-      
-      # Fit zinb model
-      lsZINBparam <- estimate_zinb(
-        Y = matCountsCluster, 
-        maxiter = MAXITER, 
-        verbose = TRUE)
-      lsZinbOutputByCluster[[k]] <- lsZINBparam
-      
-      # Record inferred parameters
-      matClusterMeansFitted[vecboolNonzeroGenes,k] <- lsZINBparam$mu
-      matDispersion[vecboolNonzeroGenes,k] <- lsZINBparam$theta
-      matDropout[vecboolNonzeroGenes,vecidxCluster] <- lsZINBparam$pi
-      matProbNB[vecboolNonzeroGenes,vecidxCluster] <- lsZINBparam$p_z
-      # Impute count data matrix
-      matCountsImputed[vecboolNonzeroGenes,vecidxCluster] <- 
-        matCountsCluster * lsZINBparam$p_z + 
-        lsZINBparam$mu * (1 - lsZINBparam$p_z)
-      vecConvergence[k] <- lsZINBparam$converged
-    }
   }
   
   if(FALSE){

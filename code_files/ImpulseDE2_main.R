@@ -2,7 +2,7 @@
 ########################     ImpulseDE2 package     ############################
 ################################################################################
 
-### Date laste change:     May 15th 2016
+### Version 1.0
 ### Author David Sebastian Fischer
 
 ################################################################################
@@ -71,8 +71,8 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' type of count data which follows the negative binomial distribution
 #' (as frequently encountered in sequencing data). ImpulseDE2 performs
 #' fitting of the impulse model and a mean model to data and evaluates
-#' the fit. The computational complexity of ImpulseDE2 is O(N), where
-#' N is the number of genes or regions observed.
+#' the fit. The computational complexity of ImpulseDE2 is linear in the
+#' number of genes and linear in the number of samples.
 #' \enumerate{
 #'  \item Impulse fitting: The impulse model is fitted based on the assumption
 #'    that the input count data follow a negative binomial distribution with
@@ -220,19 +220,6 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' 
 #' @author David Sebastian Fischer
 #' 
-#' @references Benjamini, Y. and Hochberg, Y. (1995) Controlling the false
-#' discovery rate: a practical and powerful approach to multiple testing.
-#' J. R. Stat. Soc. Series B Stat. Methodol., 57, 289-300.
-#' @references Storey, J.D. et al. (2005) Significance analysis of time course
-#' microarray experiments. Proc. Natl. Acad. Sci. USA, 102, 12837-12841.
-#' @references Rangel, C., Angus, J., Ghahramani, Z., Lioumi, M., Sotheran, E.,
-#' Gaiba, A., Wild, D.L., Falciani, F. (2004) Modeling T-cell activation using
-#' gene expression profiling and state-space models. Bioinformatics, 20(9),
-#' 1361-72.
-#' @references Chechik, G. and Koller, D. (2009) Timing of Gene Expression
-#' Responses to Envi-ronmental Changes. J. Comput. Biol., 16, 279-290.
-#' @references Yosef, N. et al. (2013) Dynamic regulatory network controlling
-#' TH17 cell differentiation. Nature, 496, 461-468.
 #' @export
 
 runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
