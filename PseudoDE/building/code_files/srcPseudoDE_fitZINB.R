@@ -62,9 +62,6 @@ fitZINB <- function(matCounts,
   print(paste0("Number of processes: ", nProcesses))
   register(MulticoreParam(nProcesses))
   
-  J <- dim(matCounts)[1]
-  N <- dim(matCounts)[2]
-  
   if(TRUE){
     matDispersion <- matrix(NA,nrow=J,ncol=lsResultsClustering$K)
     matDropout <- matrix(NA,nrow=J,ncol=N)
@@ -97,7 +94,7 @@ fitZINB <- function(matCounts,
     lsZIBERparam <- estimate_ziber(
         x = matCounts,
         fp_thres = 0,
-        bulk_model = TRUE,
+        bulk_model = strDropoutTraining!="All",
         gfeatM = NULL,
         pos_controls = vecTargetGenes,
         maxiter = MAXITER, 
@@ -131,18 +128,26 @@ fitZINB <- function(matCounts,
 
     # b) GLM fitting
     fit_mu <- bplapply(seq(1,scaNumGenes), function(i) {
-      fit <- glm.nb(matCounts[i,] ~ vecClusterAssign, weights = (1 - matDropout[i,]), init.theta = vecTheta0[i], start=matMuCoeff[i,])
-      return(list(fitted=fit$fitted.values, theta=fit$theta))
+      fit <- glm.nb(matCounts[i,] ~ vecClusterAssign, weights = (1 - matDropout[i,]), init.theta = vecTheta0[i], start=matMuCoeff[i,], link=log)
+      return(list(fitted=fit$fitted.values, theta=fit$theta, ll=))
     })
     # Extract negative binomial parameters into matrix (genes x clusters)
     matClusterMeansFitted <- do.call( rbind, lapply(fit_mu, function(x) x$fitted) )
     vecDispersions <- unlist( lapply(fit_mu, function(x) x$theta) )
     matDispersions <- matrix(thetahat, nrow=scaNumGenes, ncol=lsResultsClustering$K, byrow=FALSE)
     # Compute mixture probabilities and imputed counts
-    matProbNB <- 1 - (matCounts == 0) * matDropout / (matDropout + (1 - matDropout) * (1 + muhat[,vecindClusterAssign] / matDispersions[,vecindClusterAssign])^(-matDispersions[,vecindClusterAssign]))
+    matProbNB <- 1 - (matCounts == 0) * matDropout / (matDropout + (1 - matDropout) * (1 + matClusterMeansFitted[,vecindClusterAssign] / matDispersions[,vecindClusterAssign])^(-matDispersions[,vecindClusterAssign]))
     matCountsImputed <- 
       matDropout * (1 - matProbNB) + 
       matClusterMeansFitted[,vecindClusterAssign] * matProbNB
+
+    # Compute the overall log likelihood of the inferred zero-inflated
+    # Bernoulli model. This model is the alternative model for
+    # model-free differential expression analysis
+    matboolZeros <- matCounts==0
+    scalLogLikZeros <- sum(log( matDropout[matCounts==0] + (1 - matDropout[matboolZeros]) * dnbinom(matCounts[matboolZeros], mu=(matClusterMeansFitted[,vecindClusterAssign])[matboolZeros], size=(matDispersions[,vecindClusterAssign])[matboolZeros], log=FALSE) ))
+    scalLogLikNonZeros <- sum(log( (1 - matDropout[!matboolZeros]) * dnbinom(matCounts[!matboolZeros], mu=(matClusterMeansFitted[,vecindClusterAssign])[!matboolZeros], size=(matDispersions[,vecindClusterAssign])[!matboolZeros], log=FALSE) ))
+    scaLogLik <- scalLogLikZeros + scalLogLikNonZeros
 
     # Name objects
     rownames(matDropout) <- rownames(matCounts)
