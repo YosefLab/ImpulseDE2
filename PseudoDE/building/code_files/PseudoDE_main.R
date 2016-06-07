@@ -11,15 +11,17 @@
 
 library(BiocParallel)
 library(ggplot2)
-#library(scone)
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
+library(scone)
 library(MASS)
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
 
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_clusterCellsInPseudotime.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_createAnnotation.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_fitZINB.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotZINBfits.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_plotPseudotimeClustering.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_processSCData.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_runModelFreeDEAnalysis.R")
 
 ################################################################################
 ### Main function
@@ -149,7 +151,13 @@ runPseudoDE <- function(matCounts,
   # 4. Fit mixture model
   print("4. Fit mixture model:")
   tm_fitmm <- system.time({
-    lsResZINBFits <- fitZINB(matCounts, lsResultsClustering, nProc)
+    lsResZINBFits <- fitZINB( matCounts, 
+      lsResultsClustering, 
+      strDropoutTraining="PoissonVar",
+      vecHousekeepingGenes=NULL,
+      vecSpikeInGenes=NULL,
+      boolOneDispPerGene=TRUE,
+      nProc )
     vecDispersions <- lsResZINBFits$vecDispersions
     matDropout <- lsResZINBFits$matDropout
     matProbNB  <- lsResZINBFits$matProbNB
