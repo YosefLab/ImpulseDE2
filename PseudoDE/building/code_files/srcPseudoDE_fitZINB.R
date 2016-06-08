@@ -5,13 +5,14 @@
 selectPoissonGenes <- function(matCounts){
   # Tolerance level: Factor by which variance may be
   # larger than mean to be considered Poisson.
-  scaPoissonTol <- 10
+  scaPoissonTol <- 100
   
   # Only non-zero counts are tested for whether they are Poisson distributed.
   vecMu <- apply(matCounts, 1, function(gene){mean(gene[gene>=1], na.rm=TRUE)})
   vecStdv <- apply(matCounts, 1, function(gene){sd(gene[gene>=1], na.rm=TRUE)})
   vecPoissonGenes <- c(vecStdv^2 <= scaPoissonTol*vecMu)
   # Standard deviation is NA if only single count is non-zero:
+  print(vecPoissonGenes)
   vecPoissonGenes[is.na(vecPoissonGenes)] <- FALSE
   
   vecCV <- vecStdv/vecMu
@@ -30,14 +31,14 @@ selectPoissonGenes <- function(matCounts){
   # Handle case of few near Poisson-distributed genes.
   scaNWarning <- 50
   scaNStop <- 10
-  if(length(vecPoissonGenes) < scaNWarning & length(vecPoissonGenes) > scaNStop){
-    warning(paste0("WARNING: Found few (", length(vecPoissonGenes),") Poisson distributed genes in dataset.",
+  if(sum(vecPoissonGenes) < scaNWarning & sum(vecPoissonGenes) > scaNStop){
+    warning(paste0("WARNING: Found few (", sum(vecPoissonGenes),") Poisson distributed genes in dataset.",
       "Consider identifying drop-out rate through different gene set (strDropoutTrainingSet)."))
-  } else if(length(vecPoissonGenes) <= scaNStop){
-    stop(paste0("ERROR: Found too few (", length(vecPoissonGenes),") Poisson distributed genes in dataset.",
+  } else if(sum(vecPoissonGenes) <= scaNStop){
+    stop(paste0("ERROR: Found too few (", sum(vecPoissonGenes),") Poisson distributed genes in dataset.",
       " Switch to different gene set for identification of drop-out rates (strDropoutTrainingSet)."))
   } else {
-    print(paste0("Found ", length(vecPoissonGenes)," Poisson distributed genes in dataset."))
+    print(paste0("Found ", sum(vecPoissonGenes)," Poisson distributed genes in dataset."))
   }
   return(vecPoissonGenes)
 }
@@ -101,7 +102,7 @@ fitZINB <- function(matCounts,
   vecHousekeepingGenes=NULL,
   vecSpikeInGenes=NULL,
   boolOneDispPerGene=TRUE,
-  MAXITER=20,
+  MAXITER=100,
   verbose=FALSE){
   
   # Set number of processes to be used in this step:
@@ -157,7 +158,7 @@ fitZINB <- function(matCounts,
     gfeatM = NULL,
     pos_controls = vecTargetGenes,
     maxiter = MAXITER, 
-    verbose = verbose)
+    verbose = TRUE)
   if(verbose){print("### SCONE::estimate_ziber() output ends here. ######################")}
   matDropout <- 1 - lsZIBERparam$p_nodrop
   vecConvergence <- lsZIBERparam$convergence

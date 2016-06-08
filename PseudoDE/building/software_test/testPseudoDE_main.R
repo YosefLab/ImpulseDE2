@@ -19,7 +19,7 @@ lsPTpoints_p63PT1 <- lsPTpoints_p63PT1[!is.na(lsPTpoints_p63PT1)]
 matCounts <- matCounts[,colnames(matCounts) %in% names(lsPTpoints_p63PT1)]
 matCounts <- matCounts[1:500,]
 #matCounts <- round(counts)
-nProc=3
+nProc=2
 vecPseudotime <- lsPTpoints_p63PT1[colnames(matCounts)]
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/PseudoDE_main.R")
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")

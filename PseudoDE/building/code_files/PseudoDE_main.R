@@ -11,7 +11,7 @@
 
 library(BiocParallel)
 library(ggplot2)
-#library(scone)
+library(scone)
 library(MASS)
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
 
