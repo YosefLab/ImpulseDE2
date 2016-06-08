@@ -5,14 +5,13 @@
 selectPoissonGenes <- function(matCounts){
   # Tolerance level: Factor by which variance may be
   # larger than mean to be considered Poisson.
-  scaPoissonTol <- 100
+  scaPoissonTol <- 500
   
   # Only non-zero counts are tested for whether they are Poisson distributed.
   vecMu <- apply(matCounts, 1, function(gene){mean(gene[gene>=1], na.rm=TRUE)})
   vecStdv <- apply(matCounts, 1, function(gene){sd(gene[gene>=1], na.rm=TRUE)})
   vecPoissonGenes <- c(vecStdv^2 <= scaPoissonTol*vecMu)
   # Standard deviation is NA if only single count is non-zero:
-  print(vecPoissonGenes)
   vecPoissonGenes[is.na(vecPoissonGenes)] <- FALSE
   
   vecCV <- vecStdv/vecMu
@@ -194,27 +193,37 @@ fitZINB <- function(matCounts,
         function(gene){ mean(gene[gene>0], na.rm=TRUE) 
         })
     }))
+    matMu0[is.na(matMu0) | matMu0==0] <- 0.01
     
     if(dim(matMu0)[2]>1){
       matMuLinearCoeff0 <- log(matMu0[,2:dim(matMu0)[2]]) - log(matMu0[,1])
-      matMuCoeff <- cbind( log(matMu0[,1]), matMuLinearCoeff0 ) # Intersection, linear coefficients
+      matMuCoeff0 <- cbind( log(matMu0[,1]), matMuLinearCoeff0 ) # Intersection, linear coefficients
     } else {
-      matMuCoeff <- log(matMu0[,1])
+      matMuCoeff0 <- log(matMu0[,1])
     }
     
     # Fit GLM
+    for(i in seq(1,scaNumGenes)){
+      for(k in seq(1,lsResultsClustering$K)){
+        if(all(matCounts[i,lsResultsClustering$Assignments==k]==0)){
+          # Add a pseudocount in all-zero clusters
+          matCounts[i,match(k,vecindClusterAssign)] <- 1
+        }
+      }
+    }
     lsGLMNB <- bplapply(seq(1,scaNumGenes), function(i) {
       fit <- glm.nb( matCounts[i,] ~ vecClusterAssign, 
         weights = (1 - matDropout[i,]), 
         init.theta = vecTheta0[i], 
-        start=matMuCoeff[i,], 
+        start=matMuCoeff0[i,], 
         link=log )
       return(list(mu_estimate=fit$fitted.values, theta_estimate=fit$theta))
     })
+    #print(lapply(lsGLMNB, function(x) x$theta_estimate))
     # Extract negative binomial parameters into matrix (genes x clusters)
     matMu <- do.call( rbind, lapply(lsGLMNB, function(x) x$mu_estimate) )
     vecDispersions <- unlist( lapply(lsGLMNB, function(x) x$theta_estimate) )
-    matDispersions <- matrix(thetahat, nrow=scaNumGenes, ncol=lsResultsClustering$K, byrow=FALSE)
+    matDispersions <- matrix(vecDispersions, nrow=scaNumGenes, ncol=lsResultsClustering$K, byrow=FALSE)
     
   } else {
     # b2) Fit negative binomial with one mean per cluster and one
@@ -234,7 +243,8 @@ fitZINB <- function(matCounts,
         function(gene){ mean(gene[gene>0], na.rm=TRUE) 
         })
     }))
-    matMuCoeff <- log(matMu)
+    matMu0[is.na(matMu0) | matMu0==0] <- 0.01
+    matMuCoeff0 <- log(matMu0)
     
     # Fit GLM
     for(cluster in vecClusters){
@@ -244,7 +254,7 @@ fitZINB <- function(matCounts,
         fit <- glm.nb( matCounts[i,vecidxCells] ~ 1, 
           weights = (1 - matDropout[i,vecidxCells]), 
           init.theta = vecTheta0[i], 
-          start=matMuCoeff[i,idxCluster], 
+          start=matMuCoeff0[i,idxCluster], 
           link=log )
         return(list(mu_estimate=fit$fitted.values, theta_estimate=fit$theta))
       })
