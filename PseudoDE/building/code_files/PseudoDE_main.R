@@ -110,6 +110,7 @@ runPseudoDE <- function(matCounts,
   vecPseudotime,
   boolDEAnalysisImpulseModel = TRUE,
   boolDEAnalysisModelFree = FALSE,
+  boolPlotZINBfits = TRUE,
   nProc=1){
   
   # 1. Data preprocessing
@@ -171,9 +172,6 @@ runPseudoDE <- function(matCounts,
   save(matProbNB,file=file.path(getwd(),"PseudoDE_matProbNB.RData"))
   save(matCountsImputed,file=file.path(getwd(),"PseudoDE_matCountsImputed.RData"))
   save(matClusterMeansFitted,file=file.path(getwd(),"PseudoDE_matClusterMeansFitted.RData"))
-  
-  save(matCountsClean,file=file.path(getwd(),"PseudoDE_matCountsClean.RData"))
-  save(matClusterMeansFitted,file=file.path(getwd(),"PseudoDE_matClusterMeansFitted.RData"))
   print(paste("Time elapsed during ZINB fitting: ",round(tm_fitmm["elapsed"]/60,2),
     " min",sep=""))
   
@@ -203,7 +201,7 @@ runPseudoDE <- function(matCounts,
       names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed", "matClusterMeansFitted")
       
       lsImpulseDE2results <- runImpulseDE2(
-        matCountData = matCountsClean, 
+        matCountData = matCountsProc, 
         dfAnnotation = dfAnnotation,
         strCaseName = "case", 
         strControlName = NULL, 
@@ -230,7 +228,7 @@ runPseudoDE <- function(matCounts,
     print("Differential expression analysis: Model-free")
     tm_deanalysis_mf <- system.time({
       dfModelFreeDEAnalysis <- runModelFreeDEAnalysis(
-        matCountData = matCountsClean, 
+        matCountData = matCountsProc, 
         dfAnnotation = dfAnnotation,
         strMode = "singlecell", 
         nProc = nProc, 

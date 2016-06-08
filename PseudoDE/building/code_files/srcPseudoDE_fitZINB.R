@@ -188,12 +188,26 @@ fitZINB <- function(matCounts,
     # The structure of this linear model is required by the model 
     # formulation in glm.nb: Cluster assignment is given as 
     # a categorial variable.
+    matWeights <-  1- matDropout
+    matCountsTemp <- matCounts
+    matidxClusterToFit <- matrix(TRUE, scaNumGenes, lsResultsClustering$K)
+    for(i in seq(1,scaNumGenes)){
+      for(k in seq(1,lsResultsClustering$K)){
+        if(all(matCounts[i,lsResultsClustering$Assignments==k]==0)){
+          # Add a pseudocount in all-zero clusters and set the corresponding
+          # weight to 1.
+          matCountsTemp[i,match(k,lsResultsClustering$Assignments)] <- 1
+          matWeights[i,match(k,lsResultsClustering$Assignments)] <- 1
+          matidxClusterToFit[i,k] <- FALSE
+          print(paste0("Added pseudocount in gene ",i,", cluster ",k," in cell ",match(k,vecindClusterAssign),"."))
+        }
+      }
+    }
     matMu0 <- do.call(cbind, lapply(vecClusters, function(cluster){
-      apply( (matCounts*(1-matDropout))[,vecClusterAssign==cluster], 1,
+      apply( (matCountsTemp*matWeights)[,vecClusterAssign==cluster], 1,
         function(gene){ mean(gene[gene>0], na.rm=TRUE) 
         })
     }))
-    matMu0[is.na(matMu0) | matMu0==0] <- 0.01
     
     if(dim(matMu0)[2]>1){
       matMuLinearCoeff0 <- log(matMu0[,2:dim(matMu0)[2]]) - log(matMu0[,1])
@@ -203,26 +217,14 @@ fitZINB <- function(matCounts,
     }
     
     # Fit GLM
-    matWeights <- matDropout
-    for(i in seq(1,scaNumGenes)){
-      for(k in seq(1,lsResultsClustering$K)){
-        if(all(matCounts[i,lsResultsClustering$Assignments==k]==0)){
-          # Add a pseudocount in all-zero clusters
-          matCounts[i,match(k,vecindClusterAssign)] <- 1
-          matWeights[i,match(k,vecindClusterAssign)] <- 0
-          print(paste0("Added pseudocount in gene ",i," cluster ",k," in cell ",match(k,vecindClusterAssign),"."))
-        }
-      }
-    }
     lsGLMNB <- bplapply(seq(1,scaNumGenes), function(i) {
       fit <- glm.nb( matCounts[i,] ~ vecClusterAssign, 
-        weights = (1 - matWeights[i,]), 
+        weights = (1-matDropout)[i,], 
         init.theta = vecTheta0[i], 
         start=matMuCoeff0[i,], 
         link=log )
       return(list(mu_estimate=fit$fitted.values, theta_estimate=fit$theta))
     })
-    #print(lapply(lsGLMNB, function(x) x$theta_estimate))
     # Extract negative binomial parameters into matrix (genes x clusters)
     matMu <- do.call( rbind, lapply(lsGLMNB, function(x) x$mu_estimate) )
     vecDispersions <- unlist( lapply(lsGLMNB, function(x) x$theta_estimate) )
@@ -355,6 +357,6 @@ fitZINB <- function(matCounts,
     matDropout=matDropout, 
     matProbNB=matProbNB, 
     matCountsImputed=matCountsImputed, 
-    matClusterMeansFitted=matClusterMeansFitted,
+    matClusterMeansFitted=matMu,
     vecConvergence=vecConvergence ))
 }
