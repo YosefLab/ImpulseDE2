@@ -59,6 +59,18 @@ processSCData <- function(matCounts,
       stop(paste0( "ERROR: ", matInput, " contains negative elements. Requires count data." ))
     }
   }
+  # Name genes if names are not given.
+  nameGenes <- function(matInput){
+    if(is.null(rownames(matInput))){
+      rownames(matInput) <- paste0("Region_", seq(1,nrow(matInput)))
+    }
+    if(any(is.na(rownames(matInput)))){
+      scaNAs <- sum(is.na(rownames(matInput)))
+      idxNAs <- is.na(rownames(matInput))
+      (rownames(matInput))[idxNAs] <- paste0("Gene_", seq(1,scaNAs))
+    }
+    return(matInput)
+  }
   
   # (I) Check input
   # 1. matCounts
@@ -79,17 +91,20 @@ processSCData <- function(matCounts,
   }
   
   # (II) Process data
-  # Convert from data frame to matrix for zinb()
+  # Convert from data frame to matrix for ziber()
   if(is.list(matCounts)){
     matCounts <- data.matrix(matCounts)
   }
-  # Take out NA cells
+  # Take out cells with NA pseudotime coordinate
   vecPseudotimeProc <- vecPseudotime[!is.na(vecPseudotime)]
   # Adjust ording of cells in objects
   matCountsProc <- matCounts[,names(vecPseudotime)]
-  # Remove all zero genes: Mu is initialised
-  # as log(sum counts)
-  matCountsProc <- matCountsProc[apply(matCountsProc,1,function(gene){any(gene!=0)}),]
+  # Remove all zero or NA genes/cells
+  vecidxGenes <- apply(matCountsProc, 1, function(gene){any(gene>0 & is.finite(gene) & !is.na(gene))})
+  vecidxCells <- apply(matCountsProc, 2, function(cell){any(cell>0 & is.finite(cell) & !is.na(cell))})
+  matCountsProc <- matCountsProc[vecidxGenes,vecidxCells]
+  # Name nameless gene:
+  matCountsProc <- nameGenes(matCountsProc)
   
   return(list(matCountsProc=matCountsProc,
     vecPseudotimeProc=vecPseudotimeProc))

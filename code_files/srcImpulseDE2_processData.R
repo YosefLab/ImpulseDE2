@@ -304,10 +304,8 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   # Name genes if names are not given.
   nameGenes <- function(matCountDataProc=NULL){
     if(is.null(rownames(matCountDataProc))){
-      rownames(matCountDataProc) <- paste("G", 1:nrow(matCountDataProc),
-        sep = "_")
+      rownames(matCountDataProc) <- paste0("Region_", seq(1,nrow(matCountDataProc)))
     }
-    
     return(matCountDataProc)
   }
   

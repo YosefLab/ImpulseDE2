@@ -11,7 +11,7 @@
 
 library(BiocParallel)
 library(ggplot2)
-library(scone)
+#library(scone)
 library(MASS)
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
 
@@ -151,13 +151,13 @@ runPseudoDE <- function(matCounts,
   # 4. Fit mixture model
   print("4. Fit mixture model:")
   tm_fitmm <- system.time({
-    lsResZINBFits <- fitZINB( matCounts, 
-      lsResultsClustering, 
+    lsResZINBFits <- fitZINB( matCounts=matCountsProc, 
+      lsResultsClustering=lsResultsClustering, 
       strDropoutTraining="PoissonVar",
       vecHousekeepingGenes=NULL,
       vecSpikeInGenes=NULL,
       boolOneDispPerGene=TRUE,
-      nProc )
+      nProc=nProc )
     vecDispersions <- lsResZINBFits$vecDispersions
     matDropout <- lsResZINBFits$matDropout
     matProbNB  <- lsResZINBFits$matProbNB
@@ -181,7 +181,7 @@ runPseudoDE <- function(matCounts,
   if(boolPlotZINBfits){
     print("5. Plot ZINB fits to data.")
     plotZINBfits(vecGeneIDs=rownames(matCountsClean)[1:10], 
-      matCounts=matCountsClean,
+      matCounts=matCountsProc,
       matClusterMeans=matClusterMeansFitted, 
       vecDispersions=vecDispersions,
       matProbNB=matProbNB,

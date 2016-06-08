@@ -5,25 +5,39 @@
 selectPoissonGenes <- function(matCounts){
   # Tolerance level: Factor by which variance may be
   # larger than mean to be considered Poisson.
-  scaPoissonTol <- 1.1
+  scaPoissonTol <- 10
   
   # Only non-zero counts are tested for whether they are Poisson distributed.
-  vecMu <- apply(matCounts, 1, function(gene){mean(gene[gene>0], na.rm=TRUE)})
-  vecStdv <- apply(matCounts, 1, function(gene){sd(gene[gene>0], na.rm=TRUE)})
-  vecPoissonGenes <- as.vector( (rownames(matCounts))[vecStdv^2 <= scaPoissonTol*vecMu] )
-  # Print distribution of gene-wise coefficients of
-  # variation to file.
-  pdf("Genewise_CV",height=6.0,width=9.0)
+  vecMu <- apply(matCounts, 1, function(gene){mean(gene[gene>=1], na.rm=TRUE)})
+  vecStdv <- apply(matCounts, 1, function(gene){sd(gene[gene>=1], na.rm=TRUE)})
+  vecPoissonGenes <- c(vecStdv^2 <= scaPoissonTol*vecMu)
+  # Standard deviation is NA if only single count is non-zero:
+  vecPoissonGenes[is.na(vecPoissonGenes)] <- FALSE
   
+  vecCV <- vecStdv/vecMu
+  dfScatter <- data.frame( logmu=log(vecMu)/log(2),
+    logcv=log(vecCV)/log(2) )
+  pdf("PseudoDE_Genewise_CV.pdf",height=6.0,width=9.0)
+  #hist(vecStdv^2/vecMu)
+  plotScatter <- ggplot(dfScatter, aes(x = logmu, y = logcv)) + 
+    geom_point() +
+    labs(title="Mean-variance relationship") +
+    xlab("log_2 Mean") +
+    ylab("log_2 CV")
+  print(plotScatter)
+  #scatter(x=log(vecMu)/log(2),y=log(vecStdv^2)/log(vecMu))
   dev.off()
   # Handle case of few near Poisson-distributed genes.
-  if(length(vecPoissonGenes) < 50){
+  scaNWarning <- 50
+  scaNStop <- 10
+  if(length(vecPoissonGenes) < scaNWarning & length(vecPoissonGenes) > scaNStop){
     warning(paste0("WARNING: Found few (", length(vecPoissonGenes),") Poisson distributed genes in dataset.",
       "Consider identifying drop-out rate through different gene set (strDropoutTrainingSet)."))
-  }
-  if(length(vecPoissonGenes) < 10){
+  } else if(length(vecPoissonGenes) <= scaNStop){
     stop(paste0("ERROR: Found too few (", length(vecPoissonGenes),") Poisson distributed genes in dataset.",
-      "Switch to different gene set for identification of drop-out rates (strDropoutTrainingSet)."))
+      " Switch to different gene set for identification of drop-out rates (strDropoutTrainingSet)."))
+  } else {
+    print(paste0("Found ", length(vecPoissonGenes)," Poisson distributed genes in dataset."))
   }
   return(vecPoissonGenes)
 }
@@ -133,7 +147,7 @@ fitZINB <- function(matCounts,
   # using an EM-algorithm implementation from SCONE.
   lsZIBERparam <- estimate_ziber(
     x = matCounts,
-    fp_thres = 0,
+    fp_tresh = 0,
     bulk_model = strDropoutTrainingSet!="All",
     gfeatM = NULL,
     pos_controls = vecTargetGenes,
@@ -316,7 +330,7 @@ fitZINB <- function(matCounts,
     print(matDispersions)
   }
   
-  return(list( matDispersions=matDispersions,
+  return(list( vecDispersions=matDispersions[,1],
     matDropout=matDropout, 
     matProbNB=matProbNB, 
     matCountsImputed=matCountsImputed, 

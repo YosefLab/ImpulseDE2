@@ -31,7 +31,7 @@
 #' @export
 
 runModelFreeDEAnalysis <- function(matCounts,
-  vecDispersions
+  vecDispersions,
   matClusterMeans,
   scaLogLikFull,
   vecConvergenceFull,
