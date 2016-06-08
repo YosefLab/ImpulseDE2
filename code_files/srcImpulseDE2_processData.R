@@ -58,48 +58,48 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   # (I) Helper functions
   
   # Check whether object was supplied (is not NULL).
-  checkNull <- function(objectInput){
+  checkNull <- function(objectInput,strObjectInput){
     if(is.null(objectInput)){
-      stop(paste0( "ERROR: ", objectInput," was not given as input." ))
+      stop(paste0( "ERROR: ", strObjectInput," was not given as input." ))
     }
   }
   # Checks whether dimensions of matrices agree.
-  checkDimMatch <-function(matInput1, matInput2){
+  checkDimMatch <-function(matInput1, matInput2, strMatInput1, strMatInput2){
     if(any(dim(matInput1)!=dim(matInput2))){
-      stop(paste0( "ERROR: ", matInput1, " does not have the dimensions as ", matInput2 , "." ))
+      stop(paste0( "ERROR: ", strMatInput1, " does not have the dimensions as ", strMatInput2 , "." ))
     }
   }
   # Checks whether vectors are identical.
-  checkElementMatch <- function(vec1, vec2){
+  checkElementMatch <- function(vec1, vec2, strVec1, strVec2){
     if(!any(vec1==vec2)){
-      stop(paste0( "ERROR: ",vec1 ," do not agree with ", vec2, "." ))
+      stop(paste0( "ERROR: ",strVec1 ," do not agree with ", strVec2, "." ))
     }
   }
   # Checks whether elements are numeric
-  checkNumeric <- function(matInput){
+  checkNumeric <- function(matInput, strMatInput){
     if(any(!is.numeric(matInput))){
-      stop(paste0( "ERROR: ", matInput, " contains non-numeric elements. Requires count data." ))
+      stop(paste0( "ERROR: ", strMatInput, " contains non-numeric elements. Requires count data." ))
     }
   }
   # Checks whether elements are probabilities (in [0,1]).
-  checkProbability <- function(matInput){
-    checkNumeric(matInput)
+  checkProbability <- function(matInput, strMatInput){
+    checkNumeric(matInput, strMatInput)
     if(any(matInput < 0 | matInput > 1 | is.na(matInput))){
-      stop(paste0( "ERROR: ", matInput, " contains elements outside of interval [0,1]." ))
+      stop(paste0( "ERROR: ", strMatInput, " contains elements outside of interval [0,1]." ))
     }
   }
   # Checks whether elements are count data: non-negative integer finite numeric elements.
   # Note that NA are allowed.
-  checkCounts <- function(matInput){
-    checkNumeric(matInput)
+  checkCounts <- function(matInput, strMatInput){
+    checkNumeric(matInput, strMatInput)
     if(any(matInput %% 1 != 0)){
-      stop(paste0( "ERROR: ", matInput, " contains non-integer elements. Requires count data." ))
+      stop(paste0( "ERROR: ", strMatInput, " contains non-integer elements. Requires count data." ))
     }
     if(any(!is.finite(matInput))){
-      stop(paste0( "ERROR: ", matInput, " contains infinite elements. Requires count data." ))
+      stop(paste0( "ERROR: ", strMatInput, " contains infinite elements. Requires count data." ))
     }
     if(any(matInput<0)){
-      stop(paste0( "ERROR: ", matInput, " contains negative elements. Requires count data." ))
+      stop(paste0( "ERROR: ", strMatInput, " contains negative elements. Requires count data." ))
     }
   }
   
@@ -110,10 +110,10 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     boolRunDESeq2=NULL ){
     
     ### 1. Check that all necessary input was specified
-    checkNull(dfAnnotation)
-    checkNull(matCountData)
-    checkNull(strCaseName)
-    checkNull(strMode)
+    checkNull(dfAnnotation,"dfAnnotation")
+    checkNull(matCountData,"matCountData")
+    checkNull(strCaseName,"strCaseName")
+    checkNull(strMode,"strMode")
     
     ### 2. Check mode
     lsAllowedModes <- c("batch", "longitudinal", "singlecell")
@@ -146,7 +146,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     ### c) Time points
     vecTimepoints <- unique(as.vector( dfAnnotation$Time ))
     # Check that time points are numeric
-    checkNumeric(dfAnnotation$Time)
+    checkNumeric(dfAnnotation$Time, "dfAnnotation$Time")
     ### d) Conditions
     lsConditions <- unique( dfAnnotation$Condition )
     # Check that given conditions exisit in annotation table
@@ -174,34 +174,34 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
           !(colnames(matCountData) %in% dfAnnotation$Sample)] ),collapse=","),
         " in the count data table do(es) not occur in annotation table and will be ignored."))
     }
-    checkNull(rownames(matCountData))
-    checkCounts(matCountData)
+    checkNull(rownames(matCountData),"[Rownames of matCountData]")
+    checkCounts(matCountData, "matCountData")
     
     ### 5. Check PseudoDE objects
     if(strMode=="singlecell"){
       # Check that PseudoDE object was supplied
-      checkNull(lsPseudoDE)
+      checkNull(lsPseudoDE,"lsPseudoDE")
       ### a) Dropout rates
-      checkNull(lsPseudoDE$matDropout)
-      checkDimMatch(lsPseudoDE$matDropout,matCountData)
-      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matDropout))
-      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matDropout))
-      checkProbability(lsPseudoDE$matDropout)
+      checkNull(lsPseudoDE$matDropout,"lsPseudoDE$matDropout")
+      checkDimMatch(lsPseudoDE$matDropout,matCountData,"lsPseudoDE$matDropout","matCountData")
+      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matDropout), "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matDropout]")
+      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matDropout), "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matDropout]")
+      checkProbability(lsPseudoDE$matDropout, "lsPseudoDE$matDropout")
       
       ### b) Posterior of observation belonging to negative binomial
       ### component in mixture model.
-      checkNull(lsPseudoDE$matProbNB)
-      checkDimMatch(lsPseudoDE$matProbNB,matCountData)
-      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matProbNB))
-      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matProbNB))
-      checkProbability(lsPseudoDE$matProbNB)
+      checkNull(lsPseudoDE$matProbNB,"lsPseudoDE$matProbNB")
+      checkDimMatch(lsPseudoDE$matProbNB,matCountData,"lsPseudoDE$matProbNB","matCountData")
+      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matProbNB), "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matProbNB]")
+      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matProbNB), "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matProbNB]")
+      checkProbability(lsPseudoDE$matProbNB, "lsPseudoDE$matProbNB")
       
       ### c) Imputed counts
-      checkNull(lsPseudoDE$matCountsImputed)
-      checkDimMatch(lsPseudoDE$matCountsImputed,matCountData)
-      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matCountsImputed))
-      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matCountsImputed))
-      checkCounts(lsPseudoDE$matCountsImputed)
+      checkNull(lsPseudoDE$matCountsImputed,"lsPseudoDE$matCountsImputed")
+      checkDimMatch(lsPseudoDE$matCountsImputed,matCountData,"lsPseudoDE$matCountsImputed","matCountData")
+      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matCountsImputed), "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matCountsImputed]")
+      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matCountsImputed), "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matCountsImputed]")
+      checkCounts(lsPseudoDE$matCountsImputed, "lsPseudoDE$matCountsImputed")
     }
     
     ### 6. Check supplied dispersion vector
@@ -216,7 +216,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
         stop("ERROR: vecDispersionsExternal supplied but names do not agree with rownames of matCountData.")
       }
       # Check that dispersion vector is numeric
-      checkNumeric(vecDispersionsExternal)
+      checkNumeric(vecDispersionsExternal, "vecDispersionsExternal")
       # Check that dispersions are positive (should not have sub-poissonian noise in count data)
       if(any(vecDispersionsExternal < 0)){
         warning(paste0( "WARNING: vecDispersionsExternal contains negative elements which corresponds to sub-poissonian noise.",

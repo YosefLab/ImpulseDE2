@@ -231,7 +231,7 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
   
   NPARAM=6
   
-  print("Impulse v1.3 for count data")
+  print("ImpulseDE2 v1.0 for count data")
   
   tm_runImpulseDE2 <- system.time({    
     # 1. Process input data 
