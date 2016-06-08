@@ -42,7 +42,6 @@ runDESeq2 <- function(dfAnnotationProc, matCountDataProc,
   
   if(is.null(strControlName)){
     # Without control data:
-    
     # The covariate LongitudinalSeries, indicating the time series
     # experiment a sample belongs to, is ignored in batch mode,
     # in which replicates of one sample from different time series

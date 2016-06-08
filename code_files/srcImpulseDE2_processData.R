@@ -92,13 +92,13 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   # Note that NA are allowed.
   checkCounts <- function(matInput, strMatInput){
     checkNumeric(matInput, strMatInput)
-    if(any(matInput %% 1 != 0)){
+    if(any(matInput[!is.na(matInput)] %% 1 != 0)){
       stop(paste0( "ERROR: ", strMatInput, " contains non-integer elements. Requires count data." ))
     }
-    if(any(!is.finite(matInput))){
+    if(any(!is.finite(matInput[!is.na(matInput)]))){
       stop(paste0( "ERROR: ", strMatInput, " contains infinite elements. Requires count data." ))
     }
-    if(any(matInput<0)){
+    if(any(matInput[!is.na(matInput)]<0)){
       stop(paste0( "ERROR: ", strMatInput, " contains negative elements. Requires count data." ))
     }
   }
@@ -138,10 +138,11 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     }
     ### b) Samples
     # Check that sample name do not occur twice
-    if(length(unique(dfAnnotation$Sample)) != length(dfAnnotation$Sample)){
+    if(any(duplicated(dfAnnotation$Sample))){
       stop(paste0("ERROR: [Annotation table] ",
-        "Number of samples different to number of unique sample names. ",
-        "Sample names must be unique."))
+        "Sample names must be unique: Sample(s) ",
+        paste0((dfAnnotation$Sample)[vecboolDuplicates],collapse=","),
+        " is/are duplicated."))
     }
     ### c) Time points
     vecTimepoints <- unique(as.vector( dfAnnotation$Time ))
@@ -293,11 +294,17 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   
   # Add categorial time variable to annotation table.
   # Add column with time scalars with underscore prefix.
-  procAnnotation <- function(dfAnnotation=NULL){
+  procAnnotation <- function(dfAnnotation, strCaseName, strControlName){
     dfAnnotationProc <- dfAnnotation
     dfAnnotationProc$TimeCateg <- paste0(
       rep("_",length(dfAnnotation$Time)), 
       dfAnnotation$Time )
+    if(is.null(strControlName)){
+      dfAnnotationProc <- dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]
+    } else {
+      dfAnnotationProc <- dfAnnotationProc[dfAnnotationProc$Condition==strCaseName | 
+          dfAnnotationProc$Condition==strControlName,]
+    }
     return(dfAnnotationProc)
   }
   
@@ -312,6 +319,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   # Reduce count data to data which are utilised later
   reduceCountData <- function(dfAnnotation=NULL, matCountDataProc=NULL){
     
+    print(paste0("Input contained ",dim(matCountDataProc)[1]," genes/regions."))
     ### 1. Columns (Conditions):
     # Reduce expression table to columns of considered conditions
     if(!is.null(strControlName)){
@@ -328,18 +336,24 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     # Check that every sample contains at least one observed value (not NA)
     vecNARep <- any(apply(matCountDataProc,2,function(rep){all(is.na(rep))}))
     if(any(vecNARep)){
-      print(paste0( "WARNING: Sample(s) ",
+      warning(paste0( "WARNING: Sample(s) ",
         paste0(colnames(matCountDataProc[vecNARep,]), collapse=","),
         " only contain(s) NA values and will be removed from the analysis."))
       matCountDataProc <- matCountDataProc[,!vecNARep]
     }
     ### 2. Rows (Genes):
+    # Exclude genes with only missing values (NAs)
+    indx_NA <- apply(matCountDataProc,1,function(x){all(is.na(x))})
+    if(any(indx_NA)){
+      warning(paste0("WARNING: Excluded ",sum(indx_NA)," genes because no real valued samples were given."))
+    }
+    matCountDataProc <- matCountDataProc[!(indx_NA),]
     # Reduce expression table to rows containing at least one non-zero count
-    rowIdx_lowCounts <- apply(matCountDataProc,1,function(x){all(x==0)})
+    rowIdx_lowCounts <- apply(matCountDataProc,1,function(x){all(x[!is.na(x)]==0)})
     if(sum(rowIdx_lowCounts) > 0){
-      print(paste0("WARNING: ",sum(rowIdx_lowCounts), " out of ",
-        dim(matCountDataProc)[1]," genes had only zero counts in all considered samples."))
-      print("These genes are omitted in the analysis.")
+      warning(paste0("WARNING: ",sum(rowIdx_lowCounts), " out of ",
+        dim(matCountDataProc)[1],
+        " genes had only zero counts in all considered samples and are omitted."))
       matCountDataProc <- matCountDataProc[!rowIdx_lowCounts,]
     }
     # DAVID to be deprecated
@@ -349,16 +363,11 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
       print(paste0("Working on subset of data: ",min(ind_toKeep,dim(matCountDataProc)[1])," genes."))
       matCountDataProc <- matCountDataProc[1:min(ind_toKeep,dim(matCountDataProc)[1]),]
     }
-    # Exclude genes with only missing values (NAs)
-    indx_NA <- apply(matCountDataProc,1,function(x){all(is.na(x))})
-    if(any(indx_NA)){
-      print(paste0("WARNING: Excluded ",sum(indx_NA)," genes because no real valued samples were given."))
-    }
-    matCountDataProc <- matCountDataProc[!(indx_NA),]
     
-    # Sort copunt matrix column by annotation table
+    # Sort count matrix column by annotation table
     matCountDataProc <- matCountDataProc[,match(as.vector(dfAnnotation$Sample),colnames(matCountDataProc))]
     
+    print(paste0("Selected ",dim(matCountDataProc)[1]," genes/regions for analysis."))
     return(matCountDataProc)
   }
   
@@ -377,12 +386,14 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     boolRunDESeq2=boolRunDESeq2 )
   
   # Process annotation table
-  dfAnnotationProc <- procAnnotation(dfAnnotation=dfAnnotation)
+  dfAnnotationProc <- procAnnotation(dfAnnotation=dfAnnotation, 
+    strCaseName=strCaseName, 
+    strControlName=strControlName )
   
   # Process raw counts
   matCountDataProc <- nameGenes(matCountDataProc=matCountData)
   matCountDataProc <- reduceCountData(
-    dfAnnotation=dfAnnotation, 
+    dfAnnotation=dfAnnotationProc, 
     matCountDataProc=matCountDataProc)
 
   # Process single cell hyperparameters
