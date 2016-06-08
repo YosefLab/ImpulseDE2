@@ -203,17 +203,20 @@ fitZINB <- function(matCounts,
     }
     
     # Fit GLM
+    matWeights <- matDropout
     for(i in seq(1,scaNumGenes)){
       for(k in seq(1,lsResultsClustering$K)){
         if(all(matCounts[i,lsResultsClustering$Assignments==k]==0)){
           # Add a pseudocount in all-zero clusters
           matCounts[i,match(k,vecindClusterAssign)] <- 1
+          matWeights[i,match(k,vecindClusterAssign)] <- 0
+          print(paste0("Added pseudocount in gene ",i," cluster ",k," in cell ",match(k,vecindClusterAssign),"."))
         }
       }
     }
     lsGLMNB <- bplapply(seq(1,scaNumGenes), function(i) {
       fit <- glm.nb( matCounts[i,] ~ vecClusterAssign, 
-        weights = (1 - matDropout[i,]), 
+        weights = (1 - matWeights[i,]), 
         init.theta = vecTheta0[i], 
         start=matMuCoeff0[i,], 
         link=log )
