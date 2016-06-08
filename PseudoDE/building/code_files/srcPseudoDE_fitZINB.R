@@ -101,7 +101,8 @@ fitZINB <- function(matCounts,
   vecHousekeepingGenes=NULL,
   vecSpikeInGenes=NULL,
   boolOneDispPerGene=TRUE,
-  MAXITER=20){
+  MAXITER=20,
+  verbose=FALSE){
   
   # Set number of processes to be used in this step:
   # register(MulticoreParam()) controls the number of processes used for 
@@ -145,6 +146,10 @@ fitZINB <- function(matCounts,
   
   # b) Identify zero-inflated Bernoulli model
   # using an EM-algorithm implementation from SCONE.
+  if(verbose){
+    print("4.1 Fitting zero-inflated Bernoulli model for drop-out rates.")
+    print("### SCONE::estimate_ziber() output starts here: #####################")
+  }
   lsZIBERparam <- estimate_ziber(
     x = matCounts,
     fp_tresh = 0,
@@ -152,7 +157,8 @@ fitZINB <- function(matCounts,
     gfeatM = NULL,
     pos_controls = vecTargetGenes,
     maxiter = MAXITER, 
-    verbose = TRUE)
+    verbose = verbose)
+  if(verbose){print("### SCONE::estimate_ziber() output ends here. ######################")}
   matDropout <- 1 - lsZIBERparam$p_nodrop
   vecConvergence <- lsZIBERparam$convergence
   
@@ -169,6 +175,7 @@ fitZINB <- function(matCounts,
   # b) GLM fitting
   # Initialise dispersion parameters
   vecTheta0 <- array(1,scaNumGenes)
+  if(verbose){print("4.2 Fitting negative model to drop-out weighted data with glm.nb().")}
   
   if(boolOneDispPerGene){
     # b1) Fit negative binomial with one mean per cluster and one

@@ -157,7 +157,8 @@ runPseudoDE <- function(matCounts,
       vecHousekeepingGenes=NULL,
       vecSpikeInGenes=NULL,
       boolOneDispPerGene=TRUE,
-      nProc=nProc )
+      nProc=nProc,
+      verbose=TRUE )
     vecDispersions <- lsResZINBFits$vecDispersions
     matDropout <- lsResZINBFits$matDropout
     matProbNB  <- lsResZINBFits$matProbNB
