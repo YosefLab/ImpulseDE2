@@ -9,7 +9,6 @@ dfH3K4me1 <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseD
     "numeric","numeric","numeric","numeric","numeric",
     "numeric","numeric","numeric","numeric","numeric",
     "numeric","numeric","numeric","numeric"))
-dfH3K4me1 <- dfH3K4me1[1:5000,]
 vecPeaksIDs <- apply(dfH3K4me1[,1:3],1,function(coord){paste(coord,collapse="-")})
 matDataA <- dfH3K4me1[,4:dim(dfH3K4me1)[2]]
 matDataA <- t(apply(matDataA,1,as.numeric))
@@ -26,6 +25,7 @@ dfAnnotationA <- dfAnnotationiChIP
 
 # All zero rows
 vecboolNonzeroA <- apply(matDataA,1,function(gene){any(gene>0)})
+matDataA <- matDataA[vecboolNonzeroA,]
 
 # Summary matrices
 matQval_iChIPData <- matrix(c("NA",rep(NA,4)),nrow=dim(matDataA)[1],ncol=4+1,byrow=TRUE)
@@ -49,13 +49,55 @@ matPval_iChIPData[,"Gene"] <- rownames(matDataA)
 names(matRunTime_iChIPData) <- c("ImpulseDE2", "ImpulseDE", "DESeq2", "edge")
 
 ################################################################################
+# DESeq2 for Gene-E
+print("Run DESeq2")
+library(DESeq2)
+library(BiocParallel)
+# Parallelisation
+nProcessesAssigned <- 3
+nProcesses <- min(detectCores() - 1, nProcessesAssigned)
+register(MulticoreParam(nProcesses))
+
+# Create input data set
+# Only retain non zero
+matDataA_DESeq2 <- matDataA
+
+# Create DESeq2 data object
+dds <- DESeqDataSetFromMatrix(countData = matDataA_DESeq2,
+  colData = dfAnnotationA,
+  design = ~TimeCateg)
+# Run DESeq2
+ddsDESeqObjectA <- DESeq(dds, test = "LRT", 
+  full = ~ TimeCateg, reduced = ~ 1,
+  parallel=TRUE)
+
+# DESeq results for comparison
+dds_resultsTableA <- results(ddsDESeqObjectA)
+qvals_A <- dds_resultsTableA$padj
+dfDESeq2DEgeneCounts <- matDataA[rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5),]),]
+rownames(dfDESeq2DEgeneCounts) <- rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5),])
+dfDESeq2DEgeneCountsNorm <- dfDESeq2DEgeneCounts/rep(sizeFactors(ddsDESeqObjectA), each = nrow(dfDESeq2DEgeneCounts))
+dfDESeq2DEgeneCountsNormMeans <- do.call(cbind, lapply(unique(dfAnnotationA$Time),function(t){
+  if(length(as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)) > 1 ){
+    apply(dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)],1,mean)
+  }else{
+    dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)]
+  }
+}))
+colnames(dfDESeq2DEgeneCountsNormMeans) <- unique(dfAnnotationA$TimeCateg)
+write.table(dfDESeq2DEgeneCountsNormMeans,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/matCounts_DESeq2_1e-5.tab",sep="\t",row.names=F,quote=FALSE)
+# retain only high variation
+dfDESeq2DEgeneCountsNormMeansFilt <- dfDESeq2DEgeneCountsNormMeans[2*apply(dfDESeq2DEgeneCountsNormMeans,1,min) <= apply(dfDESeq2DEgeneCountsNormMeans,1,max),]
+write.table(dfDESeq2DEgeneCountsNormMeansFilt,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/matCounts_DESeq2_1e-5_x1-5.tab",sep="\t",row.names=F,quote=FALSE)
+
+################################################################################
 # ImpulseDE2
 print("Run ImpulseDE2")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
 
 # Create input data set
 # Only retain non zero
-matDataA_ImpulseDE2 <- matDataA[vecboolNonzeroA,]
+matDataA_ImpulseDE2 <- matDataA
 
 tm_ImpulseDE2A <- system.time({
   setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/ImpulseDE2/H3K4me1")
@@ -75,8 +117,8 @@ tm_ImpulseDE2A <- system.time({
 })
 
 # Extract Results
-matQval_iChIPData[vecboolNonzeroA,"A_ImpulseDE2"] <- qvals_A
-matPval_iChIPData[vecboolNonzeroA,"A_ImpulseDE2"] <- pvals_A
+matQval_iChIPData[rownames(dfImpulseResultsA),"A_ImpulseDE2"] <- qvals_A
+matPval_iChIPData[rownames(dfImpulseResultsA),"A_ImpulseDE2"] <- pvals_A
 
 matRunTime_iChIPData["ImpulseDE2"] <- round(tm_ImpulseDE2A["elapsed"])
 
@@ -96,7 +138,7 @@ if(FALSE){
   
   # Create input data set
   # Only retain non zero
-  matDataA_ImpulseDE <- matDataA[vecboolNonzeroA,]
+  matDataA_ImpulseDE <- matDataA
   
   if(FALSE){
     tm_ImpulseDE2A <- system.time({
@@ -131,7 +173,7 @@ if(FALSE){
   
   # Create input data set
   # Only retain non zero
-  matDataA_DESeq2 <- matDataA[vecboolNonzeroA,]
+  matDataA_DESeq2 <- matDataA
   
   tm_DESeq2A <- system.time({
     # Create DESeq2 data object
@@ -150,8 +192,8 @@ if(FALSE){
   })
   
   # Extract Results
-  matQval_iChIPData[vecboolNonzeroA,"A_DESeq2"] <- qvals_A
-  matPval_iChIPData[vecboolNonzeroA,"A_DESeq2"] <- pvals_A
+  matQval_iChIPData[rownames(dds_resultsTableA),"A_DESeq2"] <- qvals_A
+  matPval_iChIPData[rownames(dds_resultsTableA),"A_DESeq2"] <- pvals_A
   matRunTime_iChIPData["DESeq2"] <- round(tm_DESeq2A["elapsed"])
   
   lsResDEcomparison_iChIPdataH3K4me1 <- list("matQval_iChIPData"=matQval_iChIPData, 
@@ -169,7 +211,7 @@ if(FALSE){
   
   # Create input data set
   # Take out row and col names, only retain non zero
-  matDataA_EDGE <- matDataA[vecboolNonzeroA,]
+  matDataA_EDGE <- matDataA
   rownames(matDataA_EDGE) <- NULL
   colnames(matDataA_EDGE) <- NULL
   
@@ -188,12 +230,12 @@ if(FALSE){
     
     # optimal discovery procedure: Chose this one
     #edge_odp <- odp(edge_sva, bs.its = 30, verbose=FALSE)
-    edge_odp <- odp(edge_norm, bs.its = 30, verbose=FALSE)
+    #edge_odp <- odp(edge_norm, bs.its = 30, verbose=FALSE)
     # likelihood ratio test: throws error
-    # edge_lrt <- lrt(edge_sva)
+    edge_lrt <- lrt(edge_sva)
     
     # Extract results
-    qval_obj_A <- qvalueObj(edge_odp)
+    qval_obj_A <- qvalueObj(edge_lrt)
     qvals_A <- qval_obj_A$qvalues
     pvals_A <- qval_obj_A$pvalues
     lfdr_A <- qval_obj_A$lfdr
@@ -201,8 +243,8 @@ if(FALSE){
   })
   
   # Extract Results
-  matQval_iChIPData[vecboolNonzeroA,"A_edge"] <- qvals_A
-  matPval_iChIPData[vecboolNonzeroA,"A_edge"] <- pvals_A
+  matQval_iChIPData[rownames(edge_lrt),"A_edge"] <- qvals_A
+  matPval_iChIPData[rownames(edge_lrt),"A_edge"] <- pvals_A
   matRunTime_iChIPData["edge"] <- round(tm_edgeA["elapsed"])
   
   lsResDEcomparison_iChIPdataH3K4me1 <- list("matQval_iChIPData"=matQval_iChIPData, 

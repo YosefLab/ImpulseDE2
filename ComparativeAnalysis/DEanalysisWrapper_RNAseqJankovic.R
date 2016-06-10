@@ -1,3 +1,4 @@
+# Local
 rm(list = ls())
 
 print("Process data RNAseq Jankovic")
@@ -20,7 +21,7 @@ if(sum(vecboolidxDupIDs)>0){
 }
 rownames(matDataA) <- vecGeneIDs
 colnames(matDataA) <- vecSamples
-#matDataA <- matDataA[1:1000,]
+matDataA <- matDataA[1:2000,]
 
 # 2. Annotation
 dfAnnotationRNA <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/AnnotationTable_RNAseqJankovic.tab",header=T)
@@ -38,6 +39,7 @@ colnames(matDataA) <- dfAnnotationA$Sample
 matDataA <- matDataA[,dfAnnotationA$Condition=="case"]
 colnames(matDataA) <- dfAnnotationA[dfAnnotationA$Condition=="case",]$Sample
 dfAnnotationA <- dfAnnotationA[dfAnnotationA$Condition=="case",]
+rownames(dfAnnotationA) <- dfAnnotationA$Sample
 
 # All zero rows
 matDataA[!is.finite(matDataA)] <- NA
@@ -107,27 +109,42 @@ print("Finished ImpulseDE2")
 
 ################################################################################
 # ImpulseDE
+# Run on server
+if(FALSE){
 print("Run ImpulseDE")
-source("/Users/davidsebastianfischer/MasterThesis/software/ImpulseDE/R/Impulse_DE_fin.R")
+library(compiler)
+library(grDevices)
+library(graphics)
+library(stats)
+library(stats)
+library(utils)
+library(amap)
+library(ImpulseDE)
 
 # Create input data set
 # Only retain non zero
 matDataA_ImpulseDE <- matDataA
-
-if(FALSE){
-  tm_ImpulseDE2A <- system.time({
+dfAnnotationA_ImpulseDE <- dfAnnotationA[dfAnnotationA$Condition=="case",c("Time","Condition")]
+dfAnnotationA_ImpulseDE$Condition <- as.vector(dfAnnotationA_ImpulseDE$Condition)
+dfAnnotationA_ImpulseDE$Time <- as.numeric(as.vector(dfAnnotationA_ImpulseDE$Time))
+rownames(dfAnnotationA_ImpulseDE) <- as.vector(dfAnnotationA$Sample)
+if(TRUE){
+  tm_ImpulseDEA <- system.time({
     setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ImpulseDE")
     strControlName = NULL
     strCaseName = "case"
     lsImpulseDE_resultsA <- impulse_DE(
       expression_table = matDataA_ImpulseDE, 
-      annotation_table = dfAnnotationA,
-      colname_time = "Time", colname_condition = "Condition", 
+      annotation_table = dfAnnotationA_ImpulseDE,
+      colname_time = "Time", 
+      colname_condition = "Condition", 
       control_timecourse = FALSE,
-      control_name = strControlName, case_name = strCaseName, 
+      control_name = strControlName,
+      case_name = strCaseName, 
       expr_type = "Seq",
       plot_clusters = FALSE, 
-      n_iter = 100, n_randoms = 50000, 
+      n_iter = 100, 
+      n_randoms = 50000, 
       n_process = 3,
       Q_value = 0.01)
     dfImpulseResultsA <- lsImpulseDE_resultsA$impulse_fit_results
@@ -135,6 +152,7 @@ if(FALSE){
     pvals_A <- dfImpulseResultsA$p
     ids_A <- dfImpulseResultsA$Gene
   })
+}
 }
 ################################################################################
 # DESeq2
@@ -207,7 +225,7 @@ tm_edgeA <- system.time({
   # optimal discovery procedure: Chose this one
   #edge_res <- odp(edge_sva, bs.its = 30, verbose=FALSE)
   #edge_res <- odp(edge_norm, bs.its = 30, verbose=FALSE)
-  # likelihood ratio test: throws error? not anymore
+  ## likelihood ratio test: throws error? not anymore
   edge_res <- lrt(edge_norm)
   
   # Extract results
@@ -263,6 +281,8 @@ strMode <- "batch"
 if(length(vecImpulse2_DEgenes)==0){
   vecImpulse2_DEgenes <- rownames(matCountDataProc[1:32,])
 }
+vecRefResults <- dfDESeq2Results$padj
+names(vecRefResults) <- rownames(dfDESeq2Results)
 plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes,
   matCountDataProc=matCountDataProc,
   lsMatTranslationFactors=lsMatTranslationFactors,
@@ -271,11 +291,11 @@ plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes,
   lsImpulseFits=lsImpulseFits,
   strCaseName=strCaseName, 
   strControlName=strControlName, 
-  strFileNameSuffix="ImpulseDE2_DEgenes", 
+  strFileNameSuffix="DEgenes", 
   strPlotTitleSuffix="", 
   strPlotSubtitle="",
   dfImpulseResults=dfImpulseResults,
-  vecRefPval=dfDESeq2Results$padj,
+  vecRefPval=vecRefResults,
   strMode=strMode, 
   NPARAM=6)
 
