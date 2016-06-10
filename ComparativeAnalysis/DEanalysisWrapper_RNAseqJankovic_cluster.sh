@@ -8,4 +8,4 @@
 #PBS -M fischerd@berkeley.edu
 
 ### ############################################################################
-Rscript /data/yosef2/users/fischerd/code/ImpulseDE_v2/ComparativeAnalysis/DEanalysisWrapper_RNAseqJankovic_cluster.sh
+Rscript /data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/ComparativeAnalysisCluster.R

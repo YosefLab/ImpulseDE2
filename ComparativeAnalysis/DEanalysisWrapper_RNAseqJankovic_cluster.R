@@ -1,6 +1,6 @@
-NCORES=32
 # Cluster
 rm(list = ls())
+NCORES <- 16
 
 print("Process data RNAseq Jankovic")
 # Load Data set RNAseq
@@ -22,7 +22,7 @@ if(sum(vecboolidxDupIDs)>0){
 }
 rownames(matDataA) <- vecGeneIDs
 colnames(matDataA) <- vecSamples
-matDataA <- matDataA[1:2000,]
+#matDataA <- matDataA[1:2000,]
 
 # 2. Annotation
 dfAnnotationRNA <- read.table("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/input/AnnotationTable_RNAseqJankovic.tab",header=T)
