@@ -116,53 +116,6 @@ if(!boolCluster){
   print("Finished ImpulseDE2")
   
   ################################################################################
-  # ImpulseDE
-  # Run on server
-  if(FALSE){
-    print("Run ImpulseDE")
-    library(compiler)
-    library(grDevices)
-    library(graphics)
-    library(stats)
-    library(stats)
-    library(utils)
-    library(amap)
-    library(ImpulseDE)
-    
-    # Create input data set
-    # Only retain non zero
-    matDataA_ImpulseDE <- matDataA
-    dfAnnotationA_ImpulseDE <- dfAnnotationA[dfAnnotationA$Condition=="case",c("Time","Condition")]
-    dfAnnotationA_ImpulseDE$Condition <- as.vector(dfAnnotationA_ImpulseDE$Condition)
-    dfAnnotationA_ImpulseDE$Time <- as.numeric(as.vector(dfAnnotationA_ImpulseDE$Time))
-    rownames(dfAnnotationA_ImpulseDE) <- as.vector(dfAnnotationA$Sample)
-    if(TRUE){
-      tm_ImpulseDEA <- system.time({
-        setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ImpulseDE")
-        strControlName = NULL
-        strCaseName = "case"
-        lsImpulseDE_resultsA <- impulse_DE(
-          expression_table = matDataA_ImpulseDE, 
-          annotation_table = dfAnnotationA_ImpulseDE,
-          colname_time = "Time", 
-          colname_condition = "Condition", 
-          control_timecourse = FALSE,
-          control_name = strControlName,
-          case_name = strCaseName, 
-          expr_type = "Seq",
-          plot_clusters = FALSE, 
-          n_iter = 100, 
-          n_randoms = 50000, 
-          n_process = 3,
-          Q_value = 0.01)
-        dfImpulseResultsA <- lsImpulseDE_resultsA$impulse_fit_results
-        qvals_A <- dfImpulseResultsA$adj.p
-        pvals_A <- dfImpulseResultsA$p
-        ids_A <- dfImpulseResultsA$Gene
-      })
-    }
-  }
-  ################################################################################
   # DESeq2
   print("Run DESeq2")
   library(DESeq2)
@@ -204,6 +157,64 @@ if(!boolCluster){
   
   save(lsResDEcomparison_RNAseqdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/lsResDEcomparison_RNAseqdata.RData"))
   print("Finished DESeq2.")
+  
+  ################################################################################
+  # ImpulseDE
+  # Run on server
+  print("Run ImpulseDE")
+  library(compiler)
+  library(grDevices)
+  library(graphics)
+  library(stats)
+  library(stats)
+  library(utils)
+  library(amap)
+  library(ImpulseDE)
+  
+  # Create input data set
+  # Only retain non zero, normalise and log transform
+  matDataA_ImpulseDE <- matDataA/rep(sizeFactors(ddsDESeqObjectA), each = nrow(matDataA))
+  matDataA_ImpulseDE[matDataA_ImpulseDE==0] <- 1
+  matDataA_ImpulseDE <- log(matDataA_ImpulseDE)/log(2)
+  
+  dfAnnotationA_ImpulseDE <- dfAnnotationA[dfAnnotationA$Condition=="case",c("Time","Condition")]
+  dfAnnotationA_ImpulseDE$Condition <- as.vector(dfAnnotationA_ImpulseDE$Condition)
+  dfAnnotationA_ImpulseDE$Time <- as.numeric(as.vector(dfAnnotationA_ImpulseDE$Time))
+  rownames(dfAnnotationA_ImpulseDE) <- as.vector(dfAnnotationA$Sample)
+  tm_ImpulseDEA <- system.time({
+    setwd("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output/ImpulseDE")
+    strControlName = NULL
+    strCaseName = "case"
+    lsImpulseDE_resultsA <- impulse_DE(
+      expression_table = matDataA_ImpulseDE, 
+      annotation_table = dfAnnotationA_ImpulseDE,
+      colname_time = "Time", 
+      colname_condition = "Condition", 
+      control_timecourse = FALSE,
+      control_name = strControlName,
+      case_name = strCaseName, 
+      expr_type = "Seq",
+      plot_clusters = FALSE, 
+      n_iter = 100, 
+      n_randoms = 50000, 
+      n_process = NCORES,
+      Q_value = 0.01)
+    dfImpulseResultsA <- lsImpulseDE_resultsA$DE_results
+    qvals_A <- dfImpulseResultsA$adj.p
+    ids_A <- dfImpulseResultsA$Gene
+  })
+  
+  # Extract Results
+  matQval_RNAseqData[ids_A,"A_ImpulseDE"] <- qvals_A
+  
+  matRunTime_RNAseqData["ImpulseDE"] <- round(tm_ImpulseDE2A["elapsed"])
+  
+  lsResDEcomparison_RNAseqdata <- list("matQval_RNAseqData"=matQval_RNAseqData, 
+    "matPval_RNAseqData"=matPval_RNAseqData, 
+    "matRunTime_RNAseqData"=matRunTime_RNAseqData)
+  
+  save(lsResDEcomparison_RNAseqdata,file=file.path("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output/lsResDEcomparison_RNAseqdata.RData"))
+  print("Finished ImpulseDE")
   
 }
 ################################################################################

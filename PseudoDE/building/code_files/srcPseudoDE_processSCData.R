@@ -33,32 +33,32 @@ processSCData <- function(matCounts,
   boolDEAnalysisModelFree ){
   
   # Check whether object was supplied (is not NULL).
-  checkNull <- function(objectInput){
+  checkNull <- function(objectInput,strObjectInput){
     if(is.null(objectInput)){
-      stop(paste0( "ERROR: ", objectInput," was not given as input." ))
+      stop(paste0( "ERROR: ", strObjectInput," was not given as input." ))
     }
   }
-  
   # Checks whether elements are numeric
-  checkNumeric <- function(matInput){
+  checkNumeric <- function(matInput, strMatInput){
     if(any(!is.numeric(matInput))){
-      stop(paste0( "ERROR: ", matInput, " contains non-numeric elements. Requires count data." ))
+      stop(paste0( "ERROR: ", strMatInput, " contains non-numeric elements. Requires count data." ))
     }
   }
   # Checks whether elements are count data: non-negative integer finite numeric elements.
   # Note that NA are allowed.
-  checkCounts <- function(matInput){
-    checkNumeric(matInput)
-    if(any(matInput %% 1 != 0)){
-      stop(paste0( "ERROR: ", matInput, " contains non-integer elements. Requires count data." ))
+  checkCounts <- function(matInput, strMatInput){
+    checkNumeric(matInput, strMatInput)
+    if(any(matInput[!is.na(matInput)] %% 1 != 0)){
+      stop(paste0( "ERROR: ", strMatInput, " contains non-integer elements. Requires count data." ))
     }
-    if(any(!is.finite(matInput))){
-      stop(paste0( "ERROR: ", matInput, " contains infinite elements. Requires count data." ))
+    if(any(!is.finite(matInput[!is.na(matInput)]))){
+      stop(paste0( "ERROR: ", strMatInput, " contains infinite elements. Requires count data." ))
     }
-    if(any(matInput<0)){
-      stop(paste0( "ERROR: ", matInput, " contains negative elements. Requires count data." ))
+    if(any(matInput[!is.na(matInput)]<0)){
+      stop(paste0( "ERROR: ", strMatInput, " contains negative elements. Requires count data." ))
     }
   }
+
   # Name genes if names are not given.
   nameGenes <- function(matInput){
     if(is.null(rownames(matInput))){
@@ -74,12 +74,12 @@ processSCData <- function(matCounts,
   
   # (I) Check input
   # 1. matCounts
-  checkNull(matCounts)
-  checkCounts(matCounts)
+  checkNull(matCounts,"matCounts")
+  checkCounts(matCounts,"matCounts")
   
   # 2. vecPseudotime
-  checkNull(vecPseudotime)
-  checkNumeric(vecPseudotime)
+  checkNull(vecPseudotime,"vecPseudotime")
+  checkNumeric(vecPseudotime,"vecPseudotime")
   if(!all(names(vecPseudotime) %in% colnames(matCounts))){
     stop("ERROR: Not all cells in vecPseudotime are given matCounts.")
   }
