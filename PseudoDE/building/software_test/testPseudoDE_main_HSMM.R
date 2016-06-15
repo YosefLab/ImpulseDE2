@@ -82,6 +82,13 @@ if(FALSE){
   load("PseudoDE_HSMM_gene_annotationRAW.RData")
   load("PseudoDE_dfCountsHSMM_SC.RData")
   load("PseudoDE_dfFpkmHSMM_SC.RData")
+  
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_dfAnnotation.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsZINBparam.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matCountsProc.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsResultsClustering.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matProbNB.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matMuCluster.RData")
 }
 
 # Investigate distribution of cells over pseudotime
@@ -104,7 +111,7 @@ plotEDF <- ggplot() +
   ylab("empirical probability density")
 print(plotEDF)
 
-matCountsRed <- matCounts[1:5000,]
+matCountsRed <- matCounts[1:200,]
 matCountsRed <- round(matCountsRed)
 
 nProc=3

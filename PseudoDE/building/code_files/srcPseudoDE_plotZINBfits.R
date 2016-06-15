@@ -75,52 +75,22 @@ plotZINBfits <- function(vecGeneIDs,
   # Create list of plots
   lsPlots <- list()
   for (geneID in vecGeneIDs){
-    # Plot observed points in blue - all time courses in same colour
-    if(FALSE){
-      scaYlim_lower <- min(matCounts[geneID,],na.rm=TRUE)
-      scaYlim_upper <- max(matCounts[geneID,],na.rm=TRUE)
-      plot(vecindClusterAssignments,
-        matCounts[geneID,],
-        col="blue",pch=3,
-        xlim=c(0,max(vecindClusterAssignments,na.rm=TRUE)+PDF_WIDTH), 
-        ylim=c(scaYlim_lower,scaYlim_upper),
-        xlab="Cluster", ylab="Counts",
-        main=geneID )
-      
-      # Plot inferred negative binomial pdf at each time point in black (vertical)
-      vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
-      for(cl in vecClusters){
-        vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matMuCluster[geneID,cl],
-          size=vecDispersions[geneID])
-        # Scale Y_coord to uniform peak heights of 1
-        # This translates into width of one time unit in plot
-        vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
-        # Plot pdf vertically at time point
-        lines(x=match(cl,vecClusters)+vecYCoordPDF,y=vecXCoordPDF,col="black")
-      }
-      
-      # Plot mean of each cluster
-      points(seq(1,length(vecClusters)),
-        matMuCluster[geneID,],
-        col="black",pch=1)
-    } else{
-      for(cl in vecClusters){
-        vecXCoordPDF <- seq(0,max(matCounts[geneID,vecindClusterAssignments==match(cl,vecClusters)],na.rm=TRUE))
-        vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matMuCluster[geneID,cl],
-          size=vecDispersions[geneID])
-        # Plot both
-        vecMixtures <- c("Negative binomial","Dropout")
-        dfData <- data.frame( counts=as.vector(matCounts[geneID,vecindClusterAssignments==match(cl,vecClusters)] ),
-          mixture=vecMixtures[as.numeric(matProbNB[geneID,vecindClusterAssignments==match(cl,vecClusters)] < 0.5)+1]  )
-        dfDensity <- data.frame( counts=vecXCoordPDF, density=vecYCoordPDF*(dim(dfData)[1]))
-        lsPlots[[length(lsPlots)+1]] <- suppressMessages( ggplot( ) +
-            geom_histogram( data=dfData, aes(x=counts, y=..count.., fill=mixture), alpha=0.5 ) +
-            geom_line( data=dfDensity, aes(x=counts, y=density), col = "blue") +
-            labs(title=paste0(geneID," Cluster ", cl, " Observed cells: ",length(dfData$counts),
-              "\n Non-zero counts: ", sum(dfData$counts!=0), " Inferred mean: ", round(matMuCluster[geneID,cl]))) +
-            xlab("Counts") +
-            ylab("Frequency") )
-      }
+    for(cl in vecClusters){
+      vecXCoordPDF <- seq(0,max(matCounts[geneID,vecindClusterAssignments==match(cl,vecClusters)],na.rm=TRUE))
+      vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matMuCluster[geneID,cl],
+        size=vecDispersions[geneID])
+      # Plot both
+      vecMixtures <- c("Negative binomial","Dropout")
+      dfData <- data.frame( counts=as.vector(matCounts[geneID,vecindClusterAssignments==match(cl,vecClusters)] ),
+        mixture=vecMixtures[as.numeric(matProbNB[geneID,vecindClusterAssignments==match(cl,vecClusters)] < 0.5)+1]  )
+      dfDensity <- data.frame( counts=vecXCoordPDF, density=vecYCoordPDF*(dim(dfData)[1]))
+      lsPlots[[length(lsPlots)+1]] <- suppressMessages( ggplot( ) +
+          geom_histogram( data=dfData, aes(x=counts, y=..count.., fill=mixture), alpha=0.5 ) +
+          geom_line( data=dfDensity, aes(x=counts, y=density), col = "blue") +
+          labs(title=paste0(geneID," Cluster ", cl, " Observed cells: ",length(dfData$counts),
+            "\n Non-zero counts: ", sum(dfData$counts!=0), " Inferred mean: ", round(matMuCluster[geneID,cl]))) +
+          xlab("Counts") +
+          ylab("Frequency") )
     }
   }
   

@@ -152,7 +152,7 @@ runPseudoDE <- function(matCounts,
   # 4. Fit mixture model
   print("4. Fit mixture model:")
   tm_fitmm <- system.time({
-    lsResZINBFits <- fitZINB( matCounts=matCountsProc, 
+    lsResZINBFits <- fitZINB( matCountsProc=matCountsProc, 
       lsResultsClustering=lsResultsClustering,
       dfAnnotation=dfAnnotation,
       strDropoutTraining="PoissonVar",
@@ -181,7 +181,8 @@ runPseudoDE <- function(matCounts,
   # 5. Plot ZINB fits to data.
   if(boolPlotZINBfits){
     print("5. Plot ZINB fits to data.")
-    plotZINBfits(vecGeneIDs=rownames(matCountsProc)[1:10], 
+    vecZINBfitPlotIDs <- names(sort(apply(matCountsProc, 1, mean),decreasing=TRUE)[1:50])
+    plotZINBfits(vecGeneIDs=vecZINBfitPlotIDs, 
       matCounts=matCountsProc,
       matMuCluster=matMuCluster, 
       vecDispersions=vecDispersions,
@@ -216,7 +217,7 @@ runPseudoDE <- function(matCounts,
         lsPseudo = lsInputToImpulseDE2,
         vecDispersionsExternal = vecDispersions,
         boolRunDESeq2 = FALSE,
-        boolSimplePlot = TRUE, 
+        boolSimplePlot = FALSE, 
         boolLogPlot = FALSE )
     })
     print("### End ImpulseDE2 output ##################################")
