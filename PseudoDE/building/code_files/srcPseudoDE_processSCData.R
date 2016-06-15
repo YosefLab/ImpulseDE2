@@ -30,7 +30,8 @@
 processSCData <- function(matCounts,
   vecPseudotime,
   boolDEAnalysisImpulseModel,
-  boolDEAnalysisModelFree ){
+  boolDEAnalysisModelFree,
+  verbose ){
   
   # Check whether object was supplied (is not NULL).
   checkNull <- function(objectInput,strObjectInput){
@@ -96,13 +97,21 @@ processSCData <- function(matCounts,
     matCounts <- data.matrix(matCounts)
   }
   # Take out cells with NA pseudotime coordinate
-  vecPseudotimeProc <- vecPseudotime[!is.na(vecPseudotime)]
-  # Adjust ording of cells in objects
-  matCountsProc <- matCounts[,names(vecPseudotime)]
+  vecidxPT <- !is.na(vecPseudotime)
+  vecPseudotimeProc <- vecPseudotime[vecidxPT]
+  matCountsProc <- matCounts[,names(vecPseudotimeProc)]
   # Remove all zero or NA genes/cells
   vecidxGenes <- apply(matCountsProc, 1, function(gene){any(gene>0 & is.finite(gene) & !is.na(gene))})
   vecidxCells <- apply(matCountsProc, 2, function(cell){any(cell>0 & is.finite(cell) & !is.na(cell))})
+  
+  vecPseudotimeProc <- vecPseudotimeProc[vecidxCells]
   matCountsProc <- matCountsProc[vecidxGenes,vecidxCells]
+  
+  # Print summary of processing
+  print(paste0(sum(!vecidxPT), " out of ", length(vecidxPT), " cells did not have a pseudotime coordinate and were excluded."))
+  print(paste0(sum(!vecidxGenes), " out of ", length(vecidxGenes), " genes did not contain non-zero observations and are excluded from analysis."))
+  print(paste0(sum(!vecidxCells), " out of ", length(vecidxCells), " cells did not contain non-zero observations and are excluded from analysis."))
+  
   # Name nameless gene:
   matCountsProc <- nameGenes(matCountsProc)
   

@@ -2,6 +2,89 @@
 #+++++++++++++++++++++++++     Fit ZINB model    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+#' Cost function hurdle model fit - Negative binomial
+#' 
+#' Log likelihood cost function for hurdle model fit (zero inflated  negative 
+#' binomial model). This function is designed to allow numerical optimisation
+#' of negative binomial mean and overdispersion on single gene given
+#' the drop-out rate.
+#' Note: During optimisation, this function does not make use of the
+#' fact that there exists a closed-form MLE for the mean of a negative
+#' binomial because the negative binomial is estimated within the hurdle model
+#' here.
+#' This function is used for iterative hurdle model fitting (separate fitting
+#' of negative binomial and drop-out rate). This separation allows 
+#' parallelisation of the individual fitting steps over genes/cells and
+#' reduces the dimensionality of the individual optimisation problems
+#' drastically.
+#' 
+#' @aliases evalLogLikHurdleNB_com
+#' 
+#' @seealso Called by \code{fitHurdleModel}.
+#' 
+#' @param vecTheta: (vector number of parameters) Parmeters of negative
+#'    binomial in hurdle model of one gene to be estimated:
+#'    Overdispersion and one mean per cluster.
+#' @param vecY: (vector number of cells) Observed expression values 
+#'    of gene in cells in cluster.
+#' @param vecMuEst: (vector number of cells) Negative binomial
+#'    mean parameter estimate of clusters to which cells
+#'    belong.
+#' @param vecDropoutRateEst: (vector number of cells) Dropout estimate of cell. 
+#' @param vecboolObserved: (bool vector number of samples)
+#'    Whether sample is not NA (observed).
+#' @param vecboolZero: (bool vector number of samples)
+#'    Whether sample has zero count.
+#' 
+#' @return scaLogLik: (scalar) Value of cost function (likelihood)
+#'    of hurdle model for gene
+#' @export
+
+evalLogLikDispNB <- function(scaTheta,
+  vecY,
+  vecMuEst,
+  vecDropoutRateEst,
+  vecboolNotZeroObserved, 
+  vecboolZero){ 
+  
+  scaDispEst <- scaTheta
+  # Compute log likelihood under impulse model by
+  # adding log likelihood of model at each timepoint.
+  # Likelihood function of hurdle modle differs between
+  # zero and non-zero counts: Add likelihood of both together.
+  # Note that the log is taken over the sum of mixture model 
+  # components of the likelihood model and accordingly log=FALSE
+  # inside dnbinom.
+  # Likelihood of zero counts:
+  vecLikZeros <- (1-vecDropoutRateEst[vecboolZero])*
+    dnbinom(
+      vecY[vecboolZero], 
+      mu=vecMuEst[vecboolZero], 
+      size=scaDispEst, 
+      log=FALSE) +
+    vecDropoutRateEst[vecboolZero]
+  # Replace zero likelihood observation with machine precision
+  # for taking log.
+  scaLogLikZeros <- sum( log(vecLikZeros[vecLikZeros!=0]) +
+      sum(vecLikZeros==0)*log(.Machine$double.eps) )
+  # Likelihood of non-zero counts:
+  vecLikNonzeros <- (1-vecDropoutRateEst[vecboolNotZeroObserved])*
+    dnbinom(
+      vecY[vecboolNotZeroObserved], 
+      mu=vecMuEst[vecboolNotZeroObserved], 
+      size=scaDispEst, 
+      log=FALSE)
+  # Replace zero likelihood observation with machine precision
+  # for taking log.
+  scaLogLikNonzeros <- sum( log(vecLikNonzeros[vecLikNonzeros!=0]) +
+      sum(vecLikNonzeros==0)*log(.Machine$double.eps) )
+  # Compute likelihood of all data:
+  scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
+  # Maximise log likelihood: Return likelihood as value to optimisation routine
+  return(scaLogLik)
+}
+
+
 selectPoissonGenes <- function(matCounts){
   # Tolerance level: Factor by which variance may be
   # larger than mean to be considered Poisson.
@@ -95,7 +178,8 @@ library(scone)
 #source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcSCONE_zinb.R")
 
 fitZINB <- function(matCounts, 
-  lsResultsClustering, 
+  lsResultsClustering,
+  dfAnnotation,
   nProc=1,
   strDropoutTrainingSet="PoissonVar",
   vecHousekeepingGenes=NULL,
@@ -171,6 +255,7 @@ fitZINB <- function(matCounts,
   vecClusters <- unique(vecClusterAssign)
   vecindClusterAssign <- match(vecClusterAssign, vecClusters)
   scaNumGenes <- dim(matCounts)[1]
+  scaNumCells <- dim(matCounts)[2]
   
   # b) GLM fitting
   # Initialise dispersion parameters
@@ -188,47 +273,90 @@ fitZINB <- function(matCounts,
     # The structure of this linear model is required by the model 
     # formulation in glm.nb: Cluster assignment is given as 
     # a categorial variable.
-    matWeights <-  1- matDropout
-    matCountsTemp <- matCounts
-    matidxClusterToFit <- matrix(TRUE, scaNumGenes, lsResultsClustering$K)
-    for(i in seq(1,scaNumGenes)){
-      for(k in seq(1,lsResultsClustering$K)){
-        if(all(matCounts[i,lsResultsClustering$Assignments==k]==0)){
-          # Add a pseudocount in all-zero clusters and set the corresponding
-          # weight to 1.
-          matCountsTemp[i,match(k,lsResultsClustering$Assignments)] <- 1
-          matWeights[i,match(k,lsResultsClustering$Assignments)] <- 1
-          matidxClusterToFit[i,k] <- FALSE
-          print(paste0("Added pseudocount in gene ",i,", cluster ",k," in cell ",match(k,vecindClusterAssign),"."))
-        }
-      }
-    }
-    matMu0 <- do.call(cbind, lapply(vecClusters, function(cluster){
-      apply( (matCountsTemp*matWeights)[,vecClusterAssign==cluster], 1,
-        function(gene){ mean(gene[gene>0], na.rm=TRUE) 
-        })
-    }))
+    #matWeights <-  1- matDropout
+    #matCountsTemp <- matCounts
+    #matidxClusterToFit <- matrix(TRUE, scaNumGenes, lsResultsClustering$K)
+    # This is out
+    #for(i in seq(1,scaNumGenes)){
+    #  for(k in seq(1,lsResultsClustering$K)){
+    #    if(all(matCounts[i,lsResultsClustering$Assignments==k]==0)){
+    #      # Add a pseudocount in all-zero clusters and set the corresponding
+    #      # weight to 1.
+    #      matCountsTemp[i,match(k,lsResultsClustering$Assignments)] <- 1
+    #      matWeights[i,match(k,lsResultsClustering$Assignments)] <- 1
+    #      matidxClusterToFit[i,k] <- FALSE
+    #      print(paste0("Added pseudocount in gene ",i,", cluster ",k," in cell ",match(k,vecindClusterAssign),"."))
+    #    }
+    #  }
+    #}
     
-    if(dim(matMu0)[2]>1){
-      matMuLinearCoeff0 <- log(matMu0[,2:dim(matMu0)[2]]) - log(matMu0[,1])
-      matMuCoeff0 <- cbind( log(matMu0[,1]), matMuLinearCoeff0 ) # Intersection, linear coefficients
-    } else {
-      matMuCoeff0 <- log(matMu0[,1])
-    }
+    # This is GLM
+    #matMu0 <- do.call(cbind, lapply(vecClusters, function(cluster){
+    #  apply( (matCounts*matWeights)[,vecClusterAssign==cluster], 1,
+    #    function(gene){ mean(gene, na.rm=TRUE) 
+    #    })
+    #}))
+    # Add pseudocounts for taking log
+    #matMu0 <- matMu0+1
+    #matMu0[is.na(matMu0)] <- 1
+    
+    #if(dim(matMu0)[2]>1){
+    #  matMuLinearCoeff0 <- log(matMu0[,2:dim(matMu0)[2]]) - log(matMu0[,1])
+    #  matMuCoeff0 <- cbind( log(matMu0[,1]), matMuLinearCoeff0 ) # Intersection, linear coefficients
+    #} else {
+    #  matMuCoeff0 <- log(matMu0[,1])
+    #}
     
     # Fit GLM
-    lsGLMNB <- bplapply(seq(1,scaNumGenes), function(i) {
-      fit <- glm.nb( matCounts[i,] ~ vecClusterAssign, 
-        weights = (1-matDropout)[i,], 
-        init.theta = vecTheta0[i], 
-        start=matMuCoeff0[i,], 
-        link=log )
-      return(list(mu_estimate=fit$fitted.values, theta_estimate=fit$theta))
-    })
+    #lsGLMNB <- bplapply(seq(1,scaNumGenes), function(i) {
+    #  fit <- glm.nb( matCounts[i,] ~ vecClusterAssign, 
+    #    weights = (1-matDropout)[i,], 
+    #    init.theta = vecTheta0[i], 
+    #    start=matMuCoeff0[i,], 
+    #    link=log )
+    #  return(list(mu_estimate=fit$fitted.values, theta_estimate=fit$theta))
+    #})
     # Extract negative binomial parameters into matrix (genes x clusters)
-    matMu <- do.call( rbind, lapply(lsGLMNB, function(x) x$mu_estimate) )
-    vecDispersions <- unlist( lapply(lsGLMNB, function(x) x$theta_estimate) )
-    matDispersions <- matrix(vecDispersions, nrow=scaNumGenes, ncol=lsResultsClustering$K, byrow=FALSE)
+    #matMu <- do.call( rbind, lapply(lsGLMNB, function(x) x$mu_estimate) )
+    #vecDispersions <- unlist( lapply(lsGLMNB, function(x) x$theta_estimate) )
+    #matDispersions <- matrix(vecDispersions, nrow=length(vecDispersions), ncol=scaNumCells, byrow=FALSE)
+    
+    matMuCluster <- array(NA,c(scaNumGenes,lsResultsClustering$K))
+    vecDispersions <- array(NA,c(scaNumGenes))
+    
+    # Use MLE of mean parameter of negative binomial distribution: weighted average
+    if(verbose){print("Estimtate negative binomial mean parameters")}
+    for(i in seq(1,scaNumGenes)){
+      matMuCluster[i,] <- sapply(seq(1,max(vecindClusterAssign)), function(k){
+        mean(matCounts[i,vecindClusterAssign==k]*(1-matDropout)[i,vecindClusterAssign==k], na.rm=TRUE)
+      })
+    }
+    # Add pseudocounts to zeros
+    matMuCluster[matMuCluster==0 | is.na(matMuCluster)] <- 1/scaNumCells
+    matMu <- matMuCluster[,vecindClusterAssign]
+    
+    # Use MLE of dispersion factor: numeric optimisation of likelihood
+    if(verbose){print("Estimtate negative binomial dispersion parameters")}
+    vecboolNotZeroObserved <- matCounts[i,] > 0 & !is.na(matCounts[i,]) & is.finite(matCounts[i,])
+    vecboolZero <- matCounts[i,] == 0
+    for(i in seq(1,scaNumGenes)){
+      vecFit <- unlist( optim(
+        par=1,
+        fn=evalLogLikDispNB,
+        vecY=matCounts[i,],
+        vecMuEst=matMu[i,],
+        vecDropoutRateEst=matDropout[i,],
+        vecboolNotZeroObserved=vecboolNotZeroObserved, 
+        vecboolZero=vecboolZero,
+        method="BFGS",
+        control=list(maxit=1000, fnscale=-1)
+      )[c("par","convergence")] )
+      if(vecFit["convergence"]){
+        print(paste0(i, " convergence: ", vecFit["convergence"] ))
+      }
+      vecDispersions[i] <- vecFit["par"]
+    }
+    matDispersions <- matrix(vecDispersions, nrow=length(vecDispersions), ncol=scaNumCells, byrow=FALSE)
     
   } else {
     # b2) Fit negative binomial with one mean per cluster and one
@@ -270,8 +398,8 @@ fitZINB <- function(matCounts,
   # Expand matrices from (genes x clusters)
   # to (genes x cells) by column duplication.
   # Now each element represents one observation.
-  matMu <- matMu[,vecindClusterAssign]
-  matDispersions <- matDispersions[,vecindClusterAssign]
+  #matMu <- matMu[,vecindClusterAssign]
+  #matDispersions <- matDispersions[,vecindClusterAssign]
   
   # Compute mixture probabilities and imputed counts
   matProbNB <- 1 - (matCounts == 0) * matDropout / (matDropout + (1 - matDropout) *
@@ -292,6 +420,8 @@ fitZINB <- function(matCounts,
   colnames(matDropout) <- colnames(matCounts)
   rownames(matMu) <- rownames(matCounts)
   colnames(matMu) <- colnames(matCounts)
+  rownames(matMuCluster) <- rownames(matCounts)
+  names(vecDispersions) <- rownames(matCounts)
   rownames(matDispersions) <- rownames(matCounts)
   colnames(matDispersions) <- colnames(matCounts)
   rownames(matProbNB) <- rownames(matCounts)
@@ -353,10 +483,10 @@ fitZINB <- function(matCounts,
     print(matDispersions)
   }
   
-  return(list( vecDispersions=matDispersions[,1],
+  return(list( vecDispersions=vecDispersions,
     matDropout=matDropout, 
     matProbNB=matProbNB, 
     matCountsImputed=matCountsImputed, 
-    matClusterMeansFitted=matMu,
+    matMuCluster=matMuCluster,
     vecConvergence=vecConvergence ))
 }

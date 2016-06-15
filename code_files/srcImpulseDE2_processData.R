@@ -78,7 +78,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   # Checks whether elements are numeric
   checkNumeric <- function(matInput, strMatInput){
     if(any(!is.numeric(matInput))){
-      stop(paste0( "ERROR: ", strMatInput, " contains non-numeric elements. Requires count data." ))
+      stop(paste0( "ERROR: ", strMatInput, " contains non-numeric elements. Requires numeric data." ))
     }
   }
   # Checks whether elements are probabilities (in [0,1]).
@@ -104,9 +104,13 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   }
   
   # Check format and presence of input data.
-  checkData <- function(dfAnnotation=NULL, matCountData=NULL,
-    strCaseName=NULL, strControlName=NULL, strMode=NULL,
-    lsPseudoDE=NULL, vecDispersionsExternal=NULL,
+  checkData <- function(dfAnnotation=NULL, 
+    matCountData=NULL,
+    strCaseName=NULL, 
+    strControlName=NULL, 
+    strMode=NULL,
+    lsPseudoDE=NULL, 
+    vecDispersionsExternal=NULL,
     boolRunDESeq2=NULL ){
     
     ### 1. Check that all necessary input was specified
@@ -185,24 +189,47 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
       ### a) Dropout rates
       checkNull(lsPseudoDE$matDropout,"lsPseudoDE$matDropout")
       checkDimMatch(lsPseudoDE$matDropout,matCountData,"lsPseudoDE$matDropout","matCountData")
-      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matDropout), "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matDropout]")
-      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matDropout), "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matDropout]")
+      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matDropout), 
+        "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matDropout]")
+      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matDropout), 
+        "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matDropout]")
       checkProbability(lsPseudoDE$matDropout, "lsPseudoDE$matDropout")
       
       ### b) Posterior of observation belonging to negative binomial
       ### component in mixture model.
       checkNull(lsPseudoDE$matProbNB,"lsPseudoDE$matProbNB")
       checkDimMatch(lsPseudoDE$matProbNB,matCountData,"lsPseudoDE$matProbNB","matCountData")
-      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matProbNB), "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matProbNB]")
-      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matProbNB), "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matProbNB]")
+      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matProbNB), 
+        "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matProbNB]")
+      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matProbNB), 
+        "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matProbNB]")
       checkProbability(lsPseudoDE$matProbNB, "lsPseudoDE$matProbNB")
       
-      ### c) Imputed counts
-      checkNull(lsPseudoDE$matCountsImputed,"lsPseudoDE$matCountsImputed")
-      checkDimMatch(lsPseudoDE$matCountsImputed,matCountData,"lsPseudoDE$matCountsImputed","matCountData")
-      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matCountsImputed), "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matCountsImputed]")
-      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matCountsImputed), "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matCountsImputed]")
-      checkCounts(lsPseudoDE$matCountsImputed, "lsPseudoDE$matCountsImputed")
+      ### c) Inferred mean parameter of negative binomial component
+      ### component in mixture model.
+      checkNull(lsPseudoDE$matMuCluster,"lsPseudoDE$matMuCluster")
+      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matMuCluster),
+        "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matMuCluster]")
+      checkNumeric(lsPseudoDE$matMuCluster, "lsPseudoDE$matMuCluster")
+      if(any(lsPseudoDE$matMuCluster <= 0)){
+        stop(paste0("ERROR: Some elements of lsPseudoDE$matMuCluster are <=0",
+          " which cannot be the case for the mean parameter of a negative binomial distribution."))
+      }
+      
+      ### d) Cluster index of each cell
+      checkNull(lsPseudoDE$vecClusterAssignments,"lsPseudoDE$vecClusterAssignments")
+      checkElementMatch(colnames(matCountData), names(lsPseudoDE$vecClusterAssignments),
+        "[Colnames of matCountData]", "[Rownames of lsPseudoDE$vecClusterAssignments]")
+      if(!all(seq(1,length(unique(lsPseudoDE$vecClusterAssignments))) %in% unique(lsPseudoDE$vecClusterAssignments))){
+        stop(paste0("ERROR: lsPseudoDE$vecClusterAssignments must contain integers from 1 to (number of clusters)",
+          " as indeces."))
+      }
+      if(length(unique(lsPseudoDE$vecClusterAssignments)) != dim(lsPseudoDE$matMuCluster)[2]){
+        stop(paste0("ERROR: The number of clusters indexed in lsPseudoDE$vecClusterAssignments (",
+          length(unique(lsPseudoDE$vecClusterAssignments)),
+          ") differs from the number of clusters in lsPseudoDE$matMuCluster (",
+          dim(lsPseudoDE$matMuCluster)[2], ")."))
+      }
     }
     
     ### 6. Check supplied dispersion vector
@@ -400,22 +427,26 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   if(strMode=="singlecell"){
     matProbNB <- lsPseudoDE$matProbNB
     matDropout <- lsPseudoDE$matDropout
-    matClusterMeansFitted <- lsPseudoDE$matClusterMeansFitted
+    matMuCluster <- lsPseudoDE$matMuCluster
+    vecClusterAssignments <- lsPseudoDE$vecClusterAssignments
   } else {
     matProbNB <- NULL
     matDropout <- NULL
-    matClusterMeansFitted <- NULL
+    matMuCluster <- NULL
+    vecClusterAssignments <- NULL
   }
   
   lsProcessedData <- list(matCountDataProc, 
     dfAnnotationProc,
     matProbNB, 
     matDropout, 
-    matClusterMeansFitted)
+    matMuCluster,
+    vecClusterAssignments)
   names(lsProcessedData) <- c("matCountDataProc",
     "dfAnnotationProc",
     "matProbNB", 
     "matDropout", 
-    "matClusterMeansFitted")
+    "matMuCluster",
+    "vecClusterAssignments")
   return( lsProcessedData )
 }

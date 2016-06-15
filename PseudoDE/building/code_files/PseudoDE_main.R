@@ -132,7 +132,7 @@ runPseudoDE <- function(matCounts,
     # Cluster in pseudotime
     lsResultsClustering <- clusterCellsInPseudotime(vecPseudotime=vecPseudotimeProc)
     # Plot clustering
-    plotPseudotimeClustering(vecPseudotime=vecPseudotime, 
+    plotPseudotimeClustering(vecPseudotime=vecPseudotimeProc, 
       lsResultsClustering=lsResultsClustering)
   })
   save(lsResultsClustering,file=file.path(getwd(),"PseudoDE_lsResultsClustering.RData"))
@@ -145,33 +145,35 @@ runPseudoDE <- function(matCounts,
     vecPseudotime=vecPseudotimeProc,
     lsResultsClustering=lsResultsClustering)
   # Fit by cell
-  #dfAnnotation <- createAnnotationByCell(matCounts=matCounts,
-  #  vecPseudotime=vecPseudotime)
+  #dfAnnotation <- createAnnotationByCell(matCounts=matCountsProc,
+  #  vecPseudotime=vecPseudotimeProc)
   save(dfAnnotation,file=file.path(getwd(),"PseudoDE_dfAnnotation.RData"))
   
   # 4. Fit mixture model
   print("4. Fit mixture model:")
   tm_fitmm <- system.time({
     lsResZINBFits <- fitZINB( matCounts=matCountsProc, 
-      lsResultsClustering=lsResultsClustering, 
+      lsResultsClustering=lsResultsClustering,
+      dfAnnotation=dfAnnotation,
       strDropoutTraining="PoissonVar",
       vecHousekeepingGenes=NULL,
       vecSpikeInGenes=NULL,
       boolOneDispPerGene=TRUE,
       nProc=nProc,
+      MAXITER=1000,
       verbose=TRUE )
     vecDispersions <- lsResZINBFits$vecDispersions
     matDropout <- lsResZINBFits$matDropout
     matProbNB  <- lsResZINBFits$matProbNB
     matCountsImputed  <- lsResZINBFits$matCountsImputed
-    matClusterMeansFitted  <- lsResZINBFits$matClusterMeansFitted
+    matMuCluster  <- lsResZINBFits$matMuCluster
     matConvergence <- lsResZINBFits$matConvergence
   })
   save(vecDispersions,file=file.path(getwd(),"PseudoDE_vecDispersions.RData"))
   save(matDropout,file=file.path(getwd(),"PseudoDE_matDropout.RData"))
   save(matProbNB,file=file.path(getwd(),"PseudoDE_matProbNB.RData"))
   save(matCountsImputed,file=file.path(getwd(),"PseudoDE_matCountsImputed.RData"))
-  save(matClusterMeansFitted,file=file.path(getwd(),"PseudoDE_matClusterMeansFitted.RData"))
+  save(matMuCluster,file=file.path(getwd(),"PseudoDE_matMuCluster.RData"))
   print(paste("Time elapsed during ZINB fitting: ",round(tm_fitmm["elapsed"]/60,2),
     " min",sep=""))
   
@@ -179,9 +181,9 @@ runPseudoDE <- function(matCounts,
   # 5. Plot ZINB fits to data.
   if(boolPlotZINBfits){
     print("5. Plot ZINB fits to data.")
-    plotZINBfits(vecGeneIDs=rownames(matCountsClean)[1:10], 
+    plotZINBfits(vecGeneIDs=rownames(matCountsProc)[1:10], 
       matCounts=matCountsProc,
-      matClusterMeans=matClusterMeansFitted, 
+      matMuCluster=matMuCluster, 
       vecDispersions=vecDispersions,
       matProbNB=matProbNB,
       vecClusterAssignments=lsResultsClustering$Assignments,
@@ -197,8 +199,10 @@ runPseudoDE <- function(matCounts,
     print("Differential expression analysis: Model-based (Impulse model)")
     print("### Begin ImpulseDE2 output ################################")
     tm_deanalysis_impulse <- system.time({
-      lsInputToImpulseDE2 <- list(matDropout, matProbNB, matCountsImputed, matClusterMeansFitted)
-      names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matCountsImputed", "matClusterMeansFitted")
+      vecClusterAssignments <- lsResultsClustering$Assignments
+      names(vecClusterAssignments) <- colnames(matCountsProc)
+      lsInputToImpulseDE2 <- list(matDropout, matProbNB, matMuCluster, vecClusterAssignments)
+      names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matMuCluster", "vecClusterAssignments")
       
       lsImpulseDE2results <- runImpulseDE2(
         matCountData = matCountsProc, 
@@ -213,7 +217,7 @@ runPseudoDE <- function(matCounts,
         vecDispersionsExternal = vecDispersions,
         boolRunDESeq2 = FALSE,
         boolSimplePlot = TRUE, 
-        boolLogPlot = TRUE )
+        boolLogPlot = FALSE )
     })
     print("### End ImpulseDE2 output ##################################")
     save(lsInputToImpulseDE2,file=file.path(getwd(),"PseudoDE_lsInputToImpulseDE2.RData"))

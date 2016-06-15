@@ -12,7 +12,7 @@
 #'    Elements must be rownames of matCounts.
 #' @param matCounts: (matrix genes x cells)
 #'    Count data of all cells, unobserved entries are NA.
-#' @param matClusterMeans:
+#' @param matMuCluster:
 #' @param vecDispersions: (vector number of genes) Gene-wise 
 #'    negative binomial dispersion coefficients.
 #' @param matProbNB: (probability matrix genes x samples) 
@@ -38,7 +38,7 @@
 
 plotZINBfits <- function(vecGeneIDs, 
   matCounts,
-  matClusterMeans, 
+  matMuCluster, 
   vecDispersions,
   matProbNB,
   vecClusterAssignments,
@@ -60,17 +60,10 @@ plotZINBfits <- function(vecGeneIDs,
   # Therefore, the model curves follow the normalised
   # count data and not the raw count data. However, 
   # fitting was still performed based on raw count data.
-  #arr2DCountData <- arr2DCountData / matrix(vecNormConst, 
-  #  nrow=dim(arr2DCountData)[1], 
-  #  ncol=dim(arr2DCountData)[2], 
+  #matCounts <- matCounts / matrix(vecNormConst, 
+  #  nrow=dim(matCounts)[1], 
+  #  ncol=dim(matCounts)[2], 
   #  byrow=TRUE)
-  
-  # Name genes if not previously named (already done if this function is
-  # called within the wrapper function).
-  if(length(grep("[a-zA-Z]",rownames(arr2DCountData))) == 0 ){
-    rownames(arr2DCountData) <- paste(rownames(arr2DCountData),"G", sep = "_")
-    lsGeneIDs <- paste(lsGeneIDs, "G", sep = "_")
-  }
   
   vecClusters <- sort(unique(vecClusterAssignments))
   vecindClusterAssignments <- match(vecClusterAssignments,vecClusters)
@@ -81,13 +74,13 @@ plotZINBfits <- function(vecGeneIDs,
   
   # Create list of plots
   lsPlots <- list()
-  for (geneID in lsGeneIDs){
+  for (geneID in vecGeneIDs){
     # Plot observed points in blue - all time courses in same colour
     if(FALSE){
-      scaYlim_lower <- min(arr2DCountData[geneID,],na.rm=TRUE)
-      scaYlim_upper <- max(arr2DCountData[geneID,],na.rm=TRUE)
+      scaYlim_lower <- min(matCounts[geneID,],na.rm=TRUE)
+      scaYlim_upper <- max(matCounts[geneID,],na.rm=TRUE)
       plot(vecindClusterAssignments,
-        arr2DCountData[geneID,],
+        matCounts[geneID,],
         col="blue",pch=3,
         xlim=c(0,max(vecindClusterAssignments,na.rm=TRUE)+PDF_WIDTH), 
         ylim=c(scaYlim_lower,scaYlim_upper),
@@ -97,7 +90,7 @@ plotZINBfits <- function(vecGeneIDs,
       # Plot inferred negative binomial pdf at each time point in black (vertical)
       vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
       for(cl in vecClusters){
-        vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matClusterMeans[geneID,match(cl,vecClusters)],
+        vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matMuCluster[geneID,cl],
           size=vecDispersions[geneID])
         # Scale Y_coord to uniform peak heights of 1
         # This translates into width of one time unit in plot
@@ -108,25 +101,25 @@ plotZINBfits <- function(vecGeneIDs,
       
       # Plot mean of each cluster
       points(seq(1,length(vecClusters)),
-        matClusterMeans[geneID,],
+        matMuCluster[geneID,],
         col="black",pch=1)
     } else{
       for(cl in vecClusters){
-        vecXCoordPDF <- seq(0,max(arr2DCountData[geneID,vecindClusterAssignments==match(cl,vecClusters)],na.rm=TRUE))
-        vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matClusterMeans[geneID,match(cl,vecClusters)],
+        vecXCoordPDF <- seq(0,max(matCounts[geneID,vecindClusterAssignments==match(cl,vecClusters)],na.rm=TRUE))
+        vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=matMuCluster[geneID,cl],
           size=vecDispersions[geneID])
         # Plot both
         vecMixtures <- c("Negative binomial","Dropout")
-        dfData <- data.frame( counts=as.vector(arr2DCountData[geneID,vecindClusterAssignments==match(cl,vecClusters)] ),
+        dfData <- data.frame( counts=as.vector(matCounts[geneID,vecindClusterAssignments==match(cl,vecClusters)] ),
           mixture=vecMixtures[as.numeric(matProbNB[geneID,vecindClusterAssignments==match(cl,vecClusters)] < 0.5)+1]  )
         dfDensity <- data.frame( counts=vecXCoordPDF, density=vecYCoordPDF*(dim(dfData)[1]))
         lsPlots[[length(lsPlots)+1]] <- suppressMessages( ggplot( ) +
             geom_histogram( data=dfData, aes(x=counts, y=..count.., fill=mixture), alpha=0.5 ) +
             geom_line( data=dfDensity, aes(x=counts, y=density), col = "blue") +
             labs(title=paste0(geneID," Cluster ", cl, " Observed cells: ",length(dfData$counts),
-              "\n Non-zero counts: ", sum(dfData$counts!=0), " Inferred mean: ", round(matClusterMeans[geneID,match(cl,vecClusters)]))) +
+              "\n Non-zero counts: ", sum(dfData$counts!=0), " Inferred mean: ", round(matMuCluster[geneID,cl]))) +
             xlab("Counts") +
-            ylab("Density") )
+            ylab("Frequency") )
       }
     }
   }

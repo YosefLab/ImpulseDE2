@@ -94,10 +94,10 @@ evalLogLikImpulseBatch <- function(vecTheta,
 #' @param vecindTimepointAssign (numeric vector number samples) 
 #'    Index of time point assigned to sample in list of sorted
 #'    time points (vecX).
-#' @param vecboolObserved: (bool vector number of samples)
-#'    Stores bool of sample being not NA (observed).
+#' @param vecboolNotZeroObserved: (bool vector number of samples)
+#'    Whether sample is not zero and observed (not NA).
 #' @param vecboolZero: (bool vector number of samples)
-#'    Stores bool of sample having a count of 0.
+#'    Whether sample has zero count.
 #'    
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export

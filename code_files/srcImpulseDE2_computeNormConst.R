@@ -15,6 +15,9 @@
 #' @param matCountDataProc: (matrix genes x samples)
 #'    Count data: Reduced version of \code{matCountData}. 
 #'    For internal use.
+#' @param matProbNB: (probability matrix genes x samples) 
+#'    Probability of observations to come from negative binomial 
+#'    component of mixture model.
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
@@ -26,6 +29,7 @@
 #' @export
 
 computeSizeFactors <- function(matCountDataProc,
+  matProbNB,
   strMode){
   
   # Compute geometric count mean over replicates
@@ -36,20 +40,20 @@ computeSizeFactors <- function(matCountDataProc,
   # from the negative binomial distribution.
   matCountDataProcNoZeros <- matCountDataProc
   matCountDataProcNoZeros[matCountDataProcNoZeros==0] <- 0.1
-  boolObserved <- !is.na(matCountDataProc)
+  matboolObserved <- !is.na(matCountDataProc)
   if(strMode=="batch" | strMode=="longitudinal"){
     # Take geometric mean
-    vecGeomMean <- sapply(c(1:dim(matCountDataProcNoZeros)[1]), 
+    vecGeomMean <- sapply(seq(1,dim(matCountDataProcNoZeros)[1]), 
       function(gene){
-        ( prod(matCountDataProcNoZeros[gene,boolObserved[gene,]]) )^
-          ( 1/sum(boolObserved[gene,]) )
+        ( prod(matCountDataProcNoZeros[gene,matboolObserved[gene,]]) )^
+          ( 1/sum(matboolObserved[gene,]) )
       })
   } else if(strMode=="singlecell"){
     # Take weighted geometric mean
-    vecGeomMean <- sapply(c(1:dim(matCountDataProcNoZeros)[1]), 
+    vecGeomMean <- sapply(seq(1,dim(matCountDataProcNoZeros)[1]), 
       function(gene){
-        ( prod(matCountDataProcNoZeros[gene,boolObserved[gene,]]^matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )^
-          ( 1/sum(matProbNB[gene,boolObserved[gene,]], na.rm=TRUE) )
+        ( prod(matCountDataProcNoZeros[gene,matboolObserved[gene,]]^matProbNB[gene,matboolObserved[gene,]], na.rm=TRUE) )^
+          ( 1/sum(matProbNB[gene,matboolObserved[gene,]], na.rm=TRUE) )
       })
   }
   matGeomMeans <- matrix(vecGeomMean, 
@@ -127,8 +131,11 @@ computeSizeFactors <- function(matCountDataProc,
 #'      }
 #' @export
 
-computeTranslationFactors <- function(matCountDataProc,matSizeFactors,
-  dfAnnotationProc,strCaseName,strControlName=NULL){
+computeTranslationFactors <- function(matCountDataProc,
+  matSizeFactors,
+  dfAnnotationProc,
+  strCaseName,
+  strControlName=NULL){
   
   # Compute size factor normalised count data
   matCountDataProcNorm <- matCountDataProc/matSizeFactors
@@ -236,7 +243,7 @@ computeTranslationFactors <- function(matCountDataProc,matSizeFactors,
 #' @param matCountDataProc: (matrix genes x samples)
 #'    Count data: Reduced version of \code{matCountData}. 
 #'    For internal use.
-#' @param matProbNB: (probability vector genes x samples) 
+#' @param matProbNB: (probability matrix genes x samples) 
 #'    Probability of observations to come from negative binomial 
 #'    component of mixture model.
 #' @param dfAnnotationProc: (Table) Processed annotation table. 
@@ -282,8 +289,9 @@ computeNormConst <- function(matCountDataProc,
   
   # 1. Compute size factors
   # Size factors account for differential sequencing depth.
-  matSizeFactors <- computeSizeFactors(matCountDataProc,
-    strMode)
+  matSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc,
+    matProbNB=matProbNB,
+    strMode=strMode)
   
   # 2. Compute translation factors:
   # Translation factors account for different mean expression levels of a

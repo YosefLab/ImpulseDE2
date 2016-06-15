@@ -70,7 +70,8 @@ plotDEGenes <- function(vecGeneIDs,
   matSizeFactors,
   dfAnnotationProc, 
   lsImpulseFits, 
-  matClusterMeansFitted=NULL,
+  matMuCluster=NULL,
+  vecClusterAssignments=NULL,
   dfImpulseResults, 
   vecRefPval=NULL, 
   strCaseName, 
@@ -93,18 +94,11 @@ plotDEGenes <- function(vecGeneIDs,
   matCountDataProc <- matCountDataProc / matSizeFactors
   if(boolLogPlot){
     # Add Pseudocount for plotting convenience
-    matCountDataProc <- log(matCountDataProc+1)/log(10)
-    matClusterMeansFitted <- log(matClusterMeansFitted)/log(10)
+    matCountDataProc <- log(matCountDataProc+1)/log(2)
+    matMuCluster <- log(matMuCluster)/log(2)
     strLogPlot <- "log_10"
   } else {
     strLogPlot <- NULL
-  }
-  
-  # Name genes if not previously named (already done if this function is
-  # called within the wrapper function).
-  if(length(grep("[a-zA-Z]",rownames(matCountDataProc))) == 0 ){
-    rownames(matCountDataProc) <- paste(rownames(matCountDataProc),"G", sep = "_")
-    vecGeneIDs <- paste(vecGeneIDs, "G", sep = "_")
   }
   
   vecConditions <- as.vector( dfAnnotationProc[match(
@@ -115,6 +109,7 @@ plotDEGenes <- function(vecGeneIDs,
     colnames(matCountDataProc),
     dfAnnotationProc$Sample),
     ]$Time )
+  names(vecTimepointAssign) <- colnames(matCountDataProc)
   vecTimepoints <- sort(unique(vecTimepointAssign))
   if(!is.null(strControlName)){
     vecidxSamplesCase <- vecConditions %in% strCaseName
@@ -203,15 +198,17 @@ plotDEGenes <- function(vecGeneIDs,
         vecCaseValuesToPlot[!indImpulseValToPlot] <- NA
         points(vecX, vecCaseValuesToPlot,col="black", type="l")
         
-        # Plot mean of each time point
-        points(vecTimepoints,
-          sapply(vecTimepoints,function(tp){mean(matCountDataProc[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
-          col="black",pch=1)
         if(strMode=="singlecell"){
           # Plot inferred mean of each time point
           points(vecTimepoints,
-            matClusterMeansFitted[geneID,],
+            matMuCluster[geneID, vecClusterAssignments[
+              names(vecTimepointAssign[match(vecTimepoints,vecTimepointAssign)])]],
             col="red",pch=1)
+        } else {
+          # Plot mean of each time point
+          points(vecTimepoints,
+            sapply(vecTimepoints,function(tp){mean(matCountDataProc[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
+            col="black",pch=1)
         }
       } else {
         # Plot points, impulse trace and

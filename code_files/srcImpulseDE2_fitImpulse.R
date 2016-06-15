@@ -29,9 +29,11 @@
 #'    Longitudinal sample series assigned to samples. 
 #'    NULL if not operating in strMode="longitudinal".
 #' @param vecboolObserved: (bool vector number of samples)
-#'    Stores bool of sample being not NA (observed).
+#'    Whether sample is observed (not NA).
 #' @param vecboolZero: (bool vector number of samples)
-#'    Stores bool of sample having a count of 0.
+#'    Whether sample has zero count.
+#' @param vecboolNotZeroObserved: (bool vector number of samples)
+#'    Whether sample is not zero and observed (not NA).
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
@@ -57,7 +59,8 @@ computeLogLikNull <- function(vecCounts,
   vecLongitudinalSeries=NULL, 
   vecLongitudinalSeriesAssign=NULL,
   vecboolObserved, 
-  vecboolZero,
+  vecboolZero=NULL,
+  vecboolNotZeroObserved=NULL,
   strMode){
   
   vecMuLongitudinalSeries <- NULL
@@ -150,19 +153,26 @@ computeLogLikNull <- function(vecCounts,
 #' @export
 
 estimateImpulseParam <- function(vecTimepoints, 
-  vecCounts, 
+  vecCounts,
+  vecDropoutRate=NULL,
+  vecProbNB=NULL,
+  vecMuCell=NULL,
   vecTimepointAssign, 
   vecNormConst,
-  strMode, 
-  vecProbNB=NULL){
+  strMode){
   # Compute general statistics for initialisation:
   # Expression means by timepoint
   if(strMode=="batch" | strMode=="longitudinal"){
     vecExpressionMeans <- sapply(vecTimepoints,
       function(tp){mean(vecCounts[vecTimepointAssign==tp], na.rm=TRUE)})
   } else if(strMode=="singlecell"){
-    vecExpressionMeans <- unlist(sapply( vecTimepoints,
-      function(tp){sum((vecCounts/vecNormConst*vecProbNB)[vecTimepointAssign==tp], na.rm=TRUE)/sum(vecProbNB[vecTimepointAssign==tp])} ))
+    vecExpressionMeans <- unlist(sapply( vecTimepoints, function(tp){
+      sum((vecCounts/vecNormConst*vecProbNB)[vecTimepointAssign==tp], na.rm=TRUE)/sum(vecProbNB[vecTimepointAssign==tp])
+    } ))
+    # Catch exception: sum(vecProbNB[vecTimepointAssign==tp])==0
+    vecExpressionMeans[is.na(vecExpressionMeans)] <- 0
+    # Impute counts for parameter initilisation
+    vecCounts[vecCounts==0] <- (vecDropoutRate * (1 - vecProbNB) + vecMuCell * vecProbNB)[vecCounts==0]
   } else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
@@ -226,9 +236,11 @@ estimateImpulseParam <- function(vecTimepoints,
 #'    Index of time point assigned to sample in list of sorted
 #'    time points (vecX).
 #' @param vecboolObserved: (bool vector number of samples)
-#'    Stores bool of sample being not NA (observed).
+#'    Whether sample is observed (not NA).
 #' @param vecboolZero: (bool vector number of samples)
-#'    Stores bool of sample having a count of 0.
+#'    Whether sample has zero count.
+#' @param vecboolNotZeroObserved: (bool vector number of samples)
+#'    Whether sample is not zero and observed (not NA).
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
@@ -248,7 +260,8 @@ optimiseImpulseModelFit <- function(vecParamGuess,
   vecDropoutRate=NULL,
   vecNormConst,
   vecindTimepointAssign,
-  vecboolObserved, 
+  vecboolObserved,
+  vecboolZero=NULL,
   vecboolNotZeroObserved=NULL,
   strMode="batch", 
   MAXIT=100){
@@ -349,11 +362,14 @@ fitImpulse_gene <- function(vecCounts,
   scaDispersionEstimate,
   vecDropoutRate=NULL, 
   vecProbNB=NULL,
+  vecMuCell=NULL,
   vecNormConst,
   vecTimepointAssign, 
   vecLongitudinalSeriesAssign, 
   dfAnnotationProc,
-  strMode="batch", NPARAM=6, MAXIT=1000){
+  strMode="batch", 
+  NPARAM=6, 
+  MAXIT=1000){
   
   optim_method <- "optim"
   #optim_method <- "nlminb"
@@ -362,8 +378,8 @@ fitImpulse_gene <- function(vecCounts,
   # (I) Process data
   # Get boolean observation vectors:
   vecboolObserved <- !is.na(vecCounts)
-  vecboolZero <- vecCounts==0
-  vecboolNotZeroObserved <- !is.na(vecCounts) & (vecCounts!=0)
+  vecboolZero <- vecCounts == 0
+  vecboolNotZeroObserved <- !is.na(vecCounts) & vecCounts > 0
   
   # Compute time point specifc parameters
   vecTimepoints <- sort(unique( vecTimepointAssign ))
@@ -386,6 +402,7 @@ fitImpulse_gene <- function(vecCounts,
     vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
     vecboolObserved=vecboolObserved, 
     vecboolZero=vecboolZero,
+    vecboolNotZeroObserved=vecboolNotZeroObserved,
     strMode=strMode)
   
   scaMu <- lsNullModel$scaMu
@@ -396,11 +413,13 @@ fitImpulse_gene <- function(vecCounts,
   # Compute initialisations
   lsParamGuesses <- estimateImpulseParam(
     vecTimepoints=vecTimepoints, 
-    vecCounts=vecCounts, 
+    vecCounts=vecCounts,
+    vecDropoutRate=vecDropoutRate, 
+    vecProbNB=vecProbNB,
+    vecMuCell=vecMuCell,
     vecTimepointAssign=vecTimepointAssign, 
     vecNormConst=vecNormConst,
-    strMode=strMode, 
-    vecProbNB=vecProbNB)
+    strMode=strMode)
   vecParamGuessPeak <- lsParamGuesses$peak
   vecParamGuessValley <- lsParamGuesses$valley
   
@@ -529,6 +548,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
   vecDispersions, 
   matDropoutRate=NULL, 
   matProbNB=NULL,
+  matMuCell=NULL,
   matNormConst, 
   vecTimepointAssign, 
   vecLongitudinalSeriesAssign, 
@@ -567,6 +587,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("vecDispersions", vecDispersions, envir = my.env)
     assign("matDropoutRate", matDropoutRate, envir = my.env)
     assign("matProbNB", matProbNB, envir = my.env)
+    assign("matMuCell", matMuCell, envir = my.env)
     assign("matNormConst", matNormConst, envir = my.env)
     assign("vecTimepointAssign", vecTimepointAssign, envir = my.env)
     assign("vecLongitudinalSeriesAssign", vecLongitudinalSeriesAssign, envir = my.env)
@@ -591,6 +612,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "vecDispersions",
       "matDropoutRate",
       "matProbNB",
+      "matMuCell",
       "matNormConst",
       "vecTimepointAssign",
       "vecLongitudinalSeriesAssign",
@@ -622,6 +644,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
             scaDispersionEstimate=vecDispersions[x],
             vecDropoutRate=matDropoutRate[x,],
             vecProbNB=matProbNB[x,],
+            vecMuCell=matMuCell[x,],
             vecNormConst=matNormConst[x,],
             vecTimepointAssign=vecTimepointAssign,
             vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
@@ -668,6 +691,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
           scaDispersionEstimate=vecDispersions[x],
           vecDropoutRate=matDropoutRate[x,],
           vecProbNB=matProbNB[x,],
+          vecMuCell=matMuCell[x,],
           vecNormConst=vecNormConst,
           vecTimepointAssign=vecTimepointAssign,
           vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
@@ -792,9 +816,15 @@ fitImpulse <- function(matCountDataProc,
   lsMatTranslationFactors, 
   matSizeFactors,
   vecDispersions, 
-  matDropoutRate, matProbNB,
-  strCaseName, strControlName=NULL, strMode="batch",
-  nProcessesAssigned=3, NPARAM=6){
+  matDropoutRate, 
+  matProbNB,
+  matMuCluster,
+  vecClusterAssignments,
+  strCaseName, 
+  strControlName=NULL, 
+  strMode="batch",
+  nProcessesAssigned=3, 
+  NPARAM=6){
   
   #g_names = rownames(arr3DCountData)
   lsFitResults_all = list()
@@ -850,6 +880,9 @@ fitImpulse <- function(matCountDataProc,
       matNormConst <- matSizeFactors
     }
     if(strMode=="singlecell"){
+      matMuCell <- matMuCluster[,vecClusterAssignments]
+      rownames(matMuCell) <- rownames(matMuCluster)
+      colnames(matMuCell) <- names(vecClusterAssignments)
       # Call fitting with single cell parameters
       lsFitResults_run <- fitImpulse_matrix(
         matCountDataProcCondition=matCountDataProc[,lsSamplesByCond[[label]]],
@@ -857,6 +890,7 @@ fitImpulse <- function(matCountDataProc,
         vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate[,lsSamplesByCond[[label]]],
         matProbNB=matProbNB[,lsSamplesByCond[[label]]],
+        matMuCell=matMuCell[,lsSamplesByCond[[label]]],
         vecTimepointAssign=vecTimepointAssign[lsSamplesByCond[[label]]],
         vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign[lsSamplesByCond[[label]]],
         dfAnnotationProc=dfAnnotationProc,

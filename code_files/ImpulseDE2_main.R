@@ -222,12 +222,18 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' 
 #' @export
 
-runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
-  strCaseName = NULL, strControlName=NULL, strMode="batch",
-  nProc=3, Q_value=0.01, boolPlotting=TRUE,
+runImpulseDE2 <- function(matCountData=NULL, 
+  dfAnnotation=NULL,
+  strCaseName = NULL, 
+  strControlName=NULL, 
+  strMode="batch",
+  nProc=3, Q_value=0.01, 
+  boolPlotting=TRUE,
   lsPseudoDE=NULL, 
-  vecDispersionsExternal=NULL, boolRunDESeq2=TRUE,
-  boolSimplePlot=FALSE, boolLogPlot=FALSE ){
+  vecDispersionsExternal=NULL, 
+  boolRunDESeq2=TRUE,
+  boolSimplePlot=FALSE, 
+  boolLogPlot=FALSE ){
   
   NPARAM=6
   
@@ -249,12 +255,14 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
     dfAnnotationProc <- lsProcessedData$dfAnnotationProc
     matProbNB <- lsProcessedData$matProbNB
     matDropoutRate <- lsProcessedData$matDropout
-    matClusterMeansFitted <- lsProcessedData$matClusterMeansFitted
+    matMuCluster <- lsProcessedData$matMuCluster
+    vecClusterAssignments <- lsProcessedData$vecClusterAssignments
     
     save(matCountDataProc,file=file.path(getwd(),"ImpulseDE2_matCountDataProc.RData"))
     save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_dfAnnotationProc.RData"))
     save(matProbNB,file=file.path(getwd(),"ImpulseDE2_matProbNB.RData"))
     save(matDropoutRate,file=file.path(getwd(),"ImpulseDE2_matDropoutRate.RData"))
+    save(vecClusterAssignments,file=file.path(getwd(),"ImpulseDE2_vecClusterAssignments.RData"))
     save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_dfAnnotationProc.RData"))
     
     # 2. Compute normalisation constants
@@ -315,6 +323,8 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
         vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate,
         matProbNB=matProbNB,
+        matMuCluster=matMuCluster,
+        vecClusterAssignments=vecClusterAssignments,
         matSizeFactors=matSizeFactors,
         lsMatTranslationFactors=lsMatTranslationFactors,
         dfAnnotationProc=dfAnnotationProc, 
@@ -357,7 +367,8 @@ runImpulseDE2 <- function(matCountData=NULL, dfAnnotation=NULL,
           matSizeFactors=matSizeFactors,
           dfAnnotationProc=dfAnnotationProc, 
           lsImpulseFits=lsImpulseFits,
-          matClusterMeansFitted=matClusterMeansFitted,
+          matMuCluster=matMuCluster,
+          vecClusterAssignments=vecClusterAssignments,
           dfImpulseResults=dfImpulseResults,
           vecRefPval=vecRefPval,
           strMode=strMode,

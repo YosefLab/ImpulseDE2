@@ -81,14 +81,24 @@ vecPT <- vecPTpoints_HSMM
 matCounts <- matCounts[,colnames(matCounts) %in% names(vecPTpoints_HSMM)]
 vecPT <- vecPT[colnames(matCounts)]
 
-matCounts <- matCounts[1:50,]
-matCounts <- round(matCounts)
+dfPseudotime <- data.frame( pseudotime=as.vector(vecPT) )
+plotEDF <- ggplot() +
+  geom_density(data=dfPseudotime, aes(x=pseudotime), colour="black", bw=1) +
+  labs(title="Density estimation of cells in pseudotime") +
+  xlab("pseudotime") +
+  ylab("empirical probability density")
+print(plotEDF)
+
+matCountsRed <- matCounts
+matCountsRed <- round(matCountsRed)
 
 nProc=3
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/PseudoDE_main.R")
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-lsDEresults <- runPseudoDE(matCounts=matCounts,
-  vecPseudotime=vecPT)
+lsDEresults <- runPseudoDE(matCounts=matCountsRed,
+  vecPseudotime=vecPT,
+  boolPlotZINBfits=FALSE,
+  nProc=nProc)
 
 if(FALSE){
   # Load files from interior of ImpulseDE
@@ -126,11 +136,10 @@ if(FALSE){
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_dfAnnotation.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_vecDispersions.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsInputToImpulseDE2.RData")
-  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsResultsClustering.RData")
-  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matCountsClean.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsZINBparam.RData")
-  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matCountsClean.RData")
-  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matClusterMeansFitted.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matCountsProc.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsResultsClustering.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matProbNB.RData")
   matDropout <- lsInputToImpulseDE2$matDropout
   matProbNB <- lsInputToImpulseDE2$matProbNB
   matCountsImputed <- lsInputToImpulseDE2$matCountsImputed

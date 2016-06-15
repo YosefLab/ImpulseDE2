@@ -27,11 +27,12 @@ clusterCellsInPseudotime <- function(vecPseudotime){
   
   # Range of K for K-means is number of unique cells
   vecPseudotimeUnique <- unique(vecPseudotime)
-  K <- max(round( log(length(vecPseudotimeUnique)/2 )),10)
-  vecWithinSS <- array(NA,K)
+  #K <- max(round( log(length(vecPseudotimeUnique)/2 )),10)
+  K <- round( log(length(vecPseudotimeUnique))/log(2) )
+  vecW <- array(NA,K)
   lsCentroids <- list()
   matAssignments <- array(NA,c(K,length(vecPseudotime)))
-  # Loop over range of K
+  k# Loop over range of K
   for(k in 1:K){
     if(k==1){
       lsKmeansResults <- kmeans(x=vecPseudotime,centers=1)
@@ -39,7 +40,7 @@ clusterCellsInPseudotime <- function(vecPseudotime){
       lsKmeansResults <- kmeans(x=vecPseudotime,centers=vecPseudotimeUnique[
         round(seq(1,length(vecPseudotimeUnique),by=(length(vecPseudotimeUnique)-1)/(k-1)))]) 
     }
-    vecWithinSS[k] <- lsKmeansResults$tot.withinss
+    vecW[k] <- sum(lsKmeansResults$withinss / (2*lsKmeansResults$size))
     lsCentroids[[k]] <- lsKmeansResults$centers
     matAssignments[k,] <- lsKmeansResults$cluster
   }
@@ -61,26 +62,33 @@ clusterCellsInPseudotime <- function(vecPseudotime){
   lsPseudotimeBoot <- lapply(seq(1,B),function(b){runif(N, min=min(vecPseudotime), max=max(vecPseudotime))})
   vecTmax <- unlist(lapply( lsPseudotimeBoot, max ))
   vecTmin  <- unlist(lapply( lsPseudotimeBoot, min ))
-  matLogWithinSSBoot <- array(NA,c(B,K))
+  matLogWBoot <- array(NA,c(B,K))
   # Loop over range of K
   for(b in seq(1,B)){
     lsCenters <- lapply(seq(1,k),function(k){
       if(k==1){ return(1) }
       else{ return(vecTmin[b] + (seq(0,(k-1))+0.5)/k*(vecTmax[b]-vecTmin[b])) }
     })
-    vecWithinSSBoot <- sapply(seq(1,K), function(k){
-      kmeans( x=lsPseudotimeBoot[[b]], centers=lsCenters[[k]] )$tot.withinss
-    })
-    matLogWithinSSBoot[b,] <- log(vecWithinSSBoot/seq(1:K))
+    for(k in seq(1,K)){
+      lsKmeansResultsBoot <- kmeans( x=lsPseudotimeBoot[[b]], centers=lsCenters[[k]] )
+      matLogWBoot[b,k] <- log(sum( lsKmeansResultsBoot$withinss / (2*lsKmeansResultsBoot$size) ))
+    }
   }
-  vecLogWithinSSBootExpect <- 1/B*apply(matLogWithinSSBoot,2,sum)
-  vecGapStat <- vecLogWithinSSBootExpect - log(vecWithinSS/seq(1:K))
+  
+  vecLogWBootExpect <- 1/B*apply(matLogWBoot,2,sum)
+  vecLogW <- log(vecW)
+  vecGapStat <- vecLogWBootExpect - vecLogW
   vecSigmaK <- sapply(seq(1,K), function(k){
-    sqrt(1/B*sum(sapply( seq(1,B), function(b){(matLogWithinSSBoot[b,k]-vecLogWithinSSBootExpect[k])^2} )))
+    sqrt(1/B*sum(
+      sapply( seq(1,B), function(b){
+        (matLogWBoot[b,k] - vecLogWBootExpect[k])^2
+      })
+    ))
   })
-  Khat <- min(which(sapply( seq(1:(K-1)), function(k){
-    vecGapStat[k] >= vecGapStat[k+1] - vecSigmaK[k+1]
-  })))
+  vecSK <- vecSigmaK*sqrt(1+1/B)
+  Khat <- min(which(sapply( seq(2,(K-1)), function(k){
+    vecGapStat[k] >= vecGapStat[k+1] - vecSK[k+1]
+  })))+1
   
   # Summarise output:
   lsResultsKhat <- list()
