@@ -69,6 +69,21 @@ HSMM <- orderCells(HSMM, num_paths=2, reverse=F)
 plot_spanning_tree(HSMM)
 print(pData(HSMM))
 
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+save(HSMM,file=file.path(getwd(),"PseudoDE_HSMM.RData"))
+save(HSMM_sample_sheetRAW,file=file.path(getwd(),"PseudoDE_HSMM_sample_sheetRAW.RData"))
+save(HSMM_gene_annotationRAW,file=file.path(getwd(),"PseudoDE_HSMM_gene_annotationRAW.RData"))
+save(dfCountsHSMM_SC,file=file.path(getwd(),"PseudoDE_dfCountsHSMM_SC.RData"))
+save(dfFpkmHSMM_SC,file=file.path(getwd(),"PseudoDE_dfFpkmHSMM_SC.RData"))
+if(FALSE){
+  setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+  load("PseudoDE_HSMM.RData")
+  load("PseudoDE_HSMM_sample_sheetRAW.RData")
+  load("PseudoDE_HSMM_gene_annotationRAW.RData")
+  load("PseudoDE_dfCountsHSMM_SC.RData")
+  load("PseudoDE_dfFpkmHSMM_SC.RData")
+}
+
 # Investigate distribution of cells over pseudotime
 vecPTpointsAll_HSMM <- as.vector(pData(HSMM)$Pseudotime)
 names(vecPTpointsAll_HSMM) <- as.vector(rownames(pData(HSMM)))
@@ -89,7 +104,7 @@ plotEDF <- ggplot() +
   ylab("empirical probability density")
 print(plotEDF)
 
-matCountsRed <- matCounts
+matCountsRed <- matCounts[1:5000,]
 matCountsRed <- round(matCountsRed)
 
 nProc=3

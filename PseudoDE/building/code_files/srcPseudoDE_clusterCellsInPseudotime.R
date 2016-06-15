@@ -32,7 +32,7 @@ clusterCellsInPseudotime <- function(vecPseudotime){
   vecW <- array(NA,K)
   lsCentroids <- list()
   matAssignments <- array(NA,c(K,length(vecPseudotime)))
-  k# Loop over range of K
+  # Loop over range of K
   for(k in 1:K){
     if(k==1){
       lsKmeansResults <- kmeans(x=vecPseudotime,centers=1)

@@ -160,7 +160,7 @@ runPseudoDE <- function(matCounts,
       vecSpikeInGenes=NULL,
       boolOneDispPerGene=TRUE,
       nProc=nProc,
-      MAXITER=1000,
+      MAXITER=20,
       verbose=TRUE )
     vecDispersions <- lsResZINBFits$vecDispersions
     matDropout <- lsResZINBFits$matDropout

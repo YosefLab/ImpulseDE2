@@ -241,8 +241,14 @@ plotDEGenes <- function(vecGeneIDs,
           
           # Plot inferred negative binomial pdf at each time point in black (vertical)
           vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
-          # Get means of negative binomial at each time point
+          # Mean parameter of negative binomial is value of inferred impulse model
           vecCaseValueAtTP <- calcImpulse_comp(lsImpulseParamCaseLog,vecTimepoints)
+          # Plot empirical density distribution of data at each time point because
+          # there are a lot of points with single cell data.
+          if(strMode=="singlecell"){
+            vecXCoordEDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
+            vecCaseValueAtTP <- calcImpulse_comp(lsImpulseParamCaseLog,vecTimepoints)
+          }
           for(tp in vecTimepoints){
             vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
               size=as.numeric(as.vector(dfImpulseResults[geneID,]$size)) )

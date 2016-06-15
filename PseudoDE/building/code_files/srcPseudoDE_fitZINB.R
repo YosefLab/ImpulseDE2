@@ -47,7 +47,8 @@ evalLogLikDispNB <- function(scaTheta,
   vecboolNotZeroObserved, 
   vecboolZero){ 
   
-  scaDispEst <- scaTheta
+  print(exp(scaTheta))
+  scaDispEst <- exp(scaTheta)
   # Compute log likelihood under impulse model by
   # adding log likelihood of model at each timepoint.
   # Likelihood function of hurdle modle differs between
@@ -340,8 +341,13 @@ fitZINB <- function(matCounts,
     vecboolNotZeroObserved <- matCounts[i,] > 0 & !is.na(matCounts[i,]) & is.finite(matCounts[i,])
     vecboolZero <- matCounts[i,] == 0
     for(i in seq(1,scaNumGenes)){
+      if(TRUE){
+        print(matCounts[i,matCounts[i,]>0])
+        print(unique(matMu[i,]))
+        print(matDropout[i,])
+      }
       vecFit <- unlist( optim(
-        par=1,
+        par=log(1),
         fn=evalLogLikDispNB,
         vecY=matCounts[i,],
         vecMuEst=matMu[i,],
@@ -354,7 +360,7 @@ fitZINB <- function(matCounts,
       if(vecFit["convergence"]){
         print(paste0(i, " convergence: ", vecFit["convergence"] ))
       }
-      vecDispersions[i] <- vecFit["par"]
+      vecDispersions[i] <- exp(vecFit["par"])
     }
     matDispersions <- matrix(vecDispersions, nrow=length(vecDispersions), ncol=scaNumCells, byrow=FALSE)
     
