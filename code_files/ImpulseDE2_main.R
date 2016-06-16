@@ -126,11 +126,8 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
-#' @param nProc: (scalar) [Default 3] Number of processes for 
-#'    parallelisation. The specified value is internally changed 
-#'    to \code{min(detectCores() - 1, nProc)} using the 
-#'    \code{detectCores} function from the package \code{parallel} 
-#'    to avoid overload.
+#' @param nProc: (scalar) [Default 1] Number of processes for 
+#'    parallelisation.
 #' @param Q_value: (scalar) [Default 0.01] 
 #'    FDR-corrected p-value cutoff for significance.
 #' @param boolPlotting: (bool) [TRUE] 
@@ -227,7 +224,8 @@ runImpulseDE2 <- function(matCountData=NULL,
   strCaseName = NULL, 
   strControlName=NULL, 
   strMode="batch",
-  nProc=3, Q_value=0.01, 
+  nProc=1, 
+  Q_value=0.01, 
   boolPlotting=TRUE,
   lsPseudoDE=NULL, 
   vecDispersionsExternal=NULL, 
@@ -286,7 +284,7 @@ runImpulseDE2 <- function(matCountData=NULL,
         lsDESeq2Results <- runDESeq2(
           dfAnnotationProc=dfAnnotationProc,
           matCountDataProc=matCountDataProc,
-          nProcessesAssigned=nProc,
+          nProc=nProc,
           strControlName=strControlName,
           strMode=strMode)
       })
@@ -331,7 +329,7 @@ runImpulseDE2 <- function(matCountData=NULL,
         strCaseName=strCaseName, 
         strControlName=strControlName,
         strMode=strMode,
-        nProcessesAssigned=nProc, 
+        nProc=nProc, 
         NPARAM=NPARAM)
     })
     save(lsImpulseFits,file=file.path(getwd(),"ImpulseDE2_lsImpulseFits.RData"))
@@ -356,9 +354,9 @@ runImpulseDE2 <- function(matCountData=NULL,
     save(vecDEGenes,file=file.path(getwd(),"ImpulseDE2_vecDEGenes.RData"))
     print(paste("Found ", length(vecDEGenes)," DE genes",sep=""))
     
-    ### 6. Plot the top DE genes
+    ### 6. Plot differentially expressed genes
     if(boolPlotting){
-      print("6. Plot top DE genes")
+      print("6. Plot differentially expressed genes")
       tm_plotDEGenes <- system.time({
         plotDEGenes(
           vecGeneIDs=vecDEGenes,

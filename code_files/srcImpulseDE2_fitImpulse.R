@@ -522,10 +522,7 @@ fitImpulse_gene <- function(vecCounts,
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
-#' @param nProcessesAssigned: (scalar) [Default 3] Number of processes for parallelisation. The
-#'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
-#'    using the \code{detectCores} function from the package \code{parallel} to 
-#'    avoid overload.
+#' @param nProc: (scalar) [Default 3] Number of processes for parallelisation.
 #' @param NPARAM: (scalar) [Default 6] Number of parameters of impulse model.
 #' 
 #' @return lsFitResults_matrix (list length 2) List of two matrices which
@@ -556,30 +553,28 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
   strCaseName, 
   strControlName=NULL, 
   strMode="batch", 
-  nProcessesAssigned=3, 
+  nProc=1, 
   NPARAM=6){
   
   # Maximum number of iterations for numerical optimisation of
   # likelihood function in MLE fitting of Impulse model:
   MAXIT <- 1000
   
-  # Set number of processes to number of cores assigned if available
-  nProcesses <- min(detectCores() - 1, nProcessesAssigned)
-  if(nrow(matCountDataProcCondition) > max(2*nProcesses,10)){
+  if(nrow(matCountDataProcCondition) > max(2*nProc,10)){
     # Use parallelisation if number of genes/centroids to fit is large
     
     # Define partitioning of genes onto nodes: lsGeneIndexByCore
     lsGeneIndexByCore = list()
-    bord = floor(nrow(matCountDataProcCondition)/nProcesses)
-    for (i in 1:nProcesses){
+    bord = floor(nrow(matCountDataProcCondition)/nProc)
+    for (i in 1:nProc){
       lsGeneIndexByCore[[i]] <- ((i-1)*bord+1):(i*bord)
     }
-    if(nProcesses*bord < nrow(matCountDataProcCondition)){
+    if(nProc*bord < nrow(matCountDataProcCondition)){
       # Add remaining genes to last node
-      lsGeneIndexByCore[[nProcesses]] <-  c(lsGeneIndexByCore[[nProcesses]],(nProcesses*bord+1):nrow(matCountDataProcCondition))
+      lsGeneIndexByCore[[nProc]] <-  c(lsGeneIndexByCore[[nProc]],(nProc*bord+1):nrow(matCountDataProcCondition))
     }
     
-    cl <- makeCluster(nProcesses, outfile = "ImpulseDE2_ClusterOut.txt")
+    cl <- makeCluster(nProc, outfile = "ImpulseDE2_ClusterOut.txt")
     #DAVID take fitImpulse out?
     my.env <- new.env()
     # Variables
@@ -722,11 +717,11 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
   matTheta <- matFits[,1:NPARAM]
   matTheta[,2:4] <- log(matTheta[,2:4])
   if(nrow(matFits) == 1){
-    # if matrix contains only one gene
+    # If matrix contains only one gene
     matImpulseValues <- as.data.frame(t(calcImpulse_comp(matTheta,
       unique(sort(vecTimepointAssign)))),row.names=rownames(matFits))
   } else {                    
-    # if matrix contains > 1 genes
+    # If matrix contains > 1 genes
     matImpulseValues <- t(apply(matTheta,1,function(x){calcImpulse_comp(x,
       unique(sort(vecTimepointAssign)))}))
   } 
@@ -791,10 +786,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
-#' @param nProcessesAssigned: (scalar) [Default 1] Number of processes for parallelisation. The
-#'    specified value is internally changed to \code{min(detectCores() - 1, nProc)} 
-#'    using the \code{detectCores} function from the package \code{parallel} to 
-#'    avoid overload.
+#' @param nProc: (scalar) [Default 1] Number of processes for parallelisation.
 #' @param NPARAM: (scalar) [Default 6] Number of parameters of impulse model.
 #' 
 #' @return lsFitResults_all (list length 2 or 6) List of matrices which
@@ -823,7 +815,7 @@ fitImpulse <- function(matCountDataProc,
   strCaseName, 
   strControlName=NULL, 
   strMode="batch",
-  nProcessesAssigned=3, 
+  nProc=1, 
   NPARAM=6){
   
   #g_names = rownames(arr3DCountData)
@@ -897,7 +889,7 @@ fitImpulse <- function(matCountDataProc,
         strCaseName=strCaseName,
         strControlName=strControlName,
         strMode=strMode,
-        nProcessesAssigned=nProcessesAssigned,
+        nProc=nProc,
         NPARAM=NPARAM )
     } else {
       # Call fitting without singlecell parameters
@@ -911,7 +903,7 @@ fitImpulse <- function(matCountDataProc,
         strCaseName=strCaseName,
         strControlName=strControlName,
         strMode=strMode,
-        nProcessesAssigned=nProcessesAssigned,
+        nProc=nProc,
         NPARAM=NPARAM )
     }
     

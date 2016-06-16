@@ -16,11 +16,8 @@
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and Timecourse). For internal use.
-#' @param nProcessesAssigned: (scalar) [Default 1] 
-#'    Number of processes for parallelisation. The specified 
-#'    value is internally changed to \code{min(detectCores() - 1, nProc)} 
-#'    using the \code{detectCores} function from the package 
-#'    \code{parallel} to avoid overload.
+#' @param nProc: (scalar) [Default 1] 
+#'    Number of processes for parallelisation.
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
@@ -33,12 +30,14 @@
 #' }
 #' @export
 
-runDESeq2 <- function(dfAnnotationProc, matCountDataProc,
-  nProcessesAssigned=1, strControlName=NULL, strMode="batch"){
+runDESeq2 <- function(dfAnnotationProc, 
+  matCountDataProc,
+  nProc=1, 
+  strControlName=NULL, 
+  strMode="batch"){
   
-  # Set number of processes to number of cores assigned if available
-  nProcesses <- min(detectCores() - 1, nProcessesAssigned)
-  register(MulticoreParam(nProcesses))
+  # Set number of processes for parallelisation
+  register(MulticoreParam(nProc))
   
   if(is.null(strControlName)){
     # Without control data:

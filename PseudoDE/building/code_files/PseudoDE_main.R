@@ -66,15 +66,29 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 #' @param vecPseudotime: (numerical vector length number of cells)
 #'    Pseudotime coordinates (1D) of cells: One scalar per cell.
 #'    Has to be named: Names of elements are cell names.
+#' @param boolPseudotime: (bool) [Default TRUE]
+#'    Whether to treat time as pseudotime or real time. If FALSE,
+#'    time points are treated as clusters. This means that the time
+#'    of sampling of the single cells is used as their time coordinate:
+#'    e.g. 0,24,28,72 hours in the HSMM data set of the Monocle paper.
+#' @param boolContPseudotimeFit: (bool) [Default TRUE]
+#'    Whether to fit the impulse model to the pseudotime coordinates
+#'    of the cells. If false, the pseudotime centroids of the clusters
+#'    are chose: Impulse fitting is done based on the same clusters
+#'    as hyperparameter estimation.
 #' @param boolDEAnalysisImpulseModel: (bool) [Default TRUE]
 #'    Whether to perform differential expression analysis with ImpulseDE2.
 #' @param boolDEAnalysisModelFree: (bool) [Default FALSE]
 #'    Whether to perform model-free differential expression analysis.
+#' @param boolPlotZINBfits: (bool) [Default TRUE]
+#'    Whether to plot zero-inflated negative binomial fits to selected genes
+#'    and clusters.
+#' @param scaMaxiterEM: (integer) [Default 5] Maximium number 
+#'    of EM-terations performed in fitZINB(), i.e. during
+#'    estimation of the zero-inflated negative binomial 
+#'    hyperparameters.
 #' @param nProc: (scalar) [Default 1] Number of processes for 
-#'    parallelisation. The specified value is internally changed 
-#'    to \code{min(detectCores() - 1, nProc)} using the 
-#'    \code{detectCores} function from the package \code{parallel} 
-#'    to avoid overload.
+#'    parallelisation.
 #' 
 #' @return (list length 2)
 #'    \itemize{
@@ -109,9 +123,11 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 runPseudoDE <- function(matCounts, 
   vecPseudotime,
   boolPseudotime = TRUE,
+  boolContPseudotimeFit = FALSE,
   boolDEAnalysisImpulseModel = TRUE,
   boolDEAnalysisModelFree = FALSE,
   boolPlotZINBfits = TRUE,
+  scaMaxiterEM=5,
   nProc=1){
   
   # 1. Data preprocessing
@@ -152,12 +168,16 @@ runPseudoDE <- function(matCounts,
   
   # 3. Create annotation table
   print("3. Create annotation table")
-  dfAnnotation <- createAnnotationByCluster(matCounts=matCountsProc,
-    vecPseudotime=vecPseudotimeProc,
-    lsResultsClustering=lsResultsClustering)
-  # Fit by cell
-  #dfAnnotation <- createAnnotationByCell(matCounts=matCountsProc,
-  #  vecPseudotime=vecPseudotimeProc)
+  if(boolContPseudotimeFit){
+    # Fit time trace by cell
+    dfAnnotation <- createAnnotationByCell(matCounts=matCountsProc,
+      vecPseudotime=vecPseudotimeProc)
+  } else {
+    # Fit time trace by cluster
+    dfAnnotation <- createAnnotationByCluster(matCounts=matCountsProc,
+      vecPseudotime=vecPseudotimeProc,
+      lsResultsClustering=lsResultsClustering)
+  }
   save(dfAnnotation,file=file.path(getwd(),"PseudoDE_dfAnnotation.RData"))
   
   # 4. Fit mixture model
@@ -170,7 +190,7 @@ runPseudoDE <- function(matCounts,
       vecSpikeInGenes=NULL,
       boolOneDispPerGene=TRUE,
       nProc=nProc,
-      MAXITER=20,
+      scaMaxiterEM=scaMaxiterEM,
       verbose=TRUE )
     vecDispersions <- lsResZINBFits$vecDispersions
     matDropout <- lsResZINBFits$matDropout
@@ -222,13 +242,13 @@ runPseudoDE <- function(matCounts,
         strControlName = NULL, 
         strMode = "singlecell", 
         nProc = nProc, 
-        Q_value = 0.01,
+        Q_value = 10^(-5),
         boolPlotting = TRUE,
         lsPseudo = lsInputToImpulseDE2,
         vecDispersionsExternal = vecDispersions,
         boolRunDESeq2 = FALSE,
-        boolSimplePlot = FALSE, 
-        boolLogPlot = FALSE )
+        boolSimplePlot = boolContPseudotimeFit, 
+        boolLogPlot = TRUE )
     })
     print("### End ImpulseDE2 output ##################################")
     save(lsInputToImpulseDE2,file=file.path(getwd(),"PseudoDE_lsInputToImpulseDE2.RData"))
@@ -247,7 +267,7 @@ runPseudoDE <- function(matCounts,
         dfAnnotation = dfAnnotation,
         strMode = "singlecell", 
         nProc = nProc, 
-        Q_value = 0.01,
+        Q_value = 10^(-5),
         boolPlotting = TRUE,
         lsPseudo = lsInputToImpulseDE2,
         vecDispersionsExternal = vecDispersions,)

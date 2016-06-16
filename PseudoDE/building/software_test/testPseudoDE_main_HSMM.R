@@ -115,7 +115,7 @@ plotEDF <- ggplot() +
   ylab("empirical probability density")
 print(plotEDF)
 
-matCountsRed <- matCounts[1:1000,]
+matCountsRed <- matCounts[1:200,]
 matCountsRed <- round(matCountsRed)
 
 nProc=3
@@ -123,7 +123,8 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 lsDEresults <- runPseudoDE(matCounts=matCountsRed,
   vecPseudotime=vecPT,
-  boolPseudotime = FALSE,
+  boolPseudotime = TRUE,
+  boolContPseudotimeFit=FALSE,
   boolPlotZINBfits=FALSE,
   nProc=nProc)
 
