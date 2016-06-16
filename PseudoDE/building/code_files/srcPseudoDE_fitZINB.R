@@ -311,68 +311,6 @@ fitZINB <- function(matCountsProc,
     if(superverbose){print("Initialisation E-step: Estimtate posterior of dropout")}
     matZ <- t(apply(matCountsProc==0, 1, as.numeric))
     
-    if(FALSE){
-    # M-step:
-    # a) Negative binomial mean parameters
-    if(superverbose){print("Initialisation M-step: Estimtate negative binomial mean parameters")}
-    for(k in seq(1,max(vecindClusterAssign))){
-      matMuCluster[,k] <- rowSums(
-        matCountsProc[,vecindClusterAssign==k]*(1-matZ)[,vecindClusterAssign==k],
-        na.rm=TRUE) / rowSums((1-matZ)[,vecindClusterAssign==k])
-    }
-    # Add pseudocounts to zeros
-    matMuCluster[matMuCluster==0 | is.na(matMuCluster)] <- 1/scaNumCells
-    matMu <- matMuCluster[,vecindClusterAssign]
-    
-    # b) Dropout rate
-    if(superverbose){print("Initialisation M-step: Estimtate dropout rate")}
-    # Fit dropout rate with GLM
-    fit_pi <- lapply(seq(1,scaNumCells), function(j) {
-      fit <- glm( matZ[,j] ~ matMu[,j], family=binomial)
-      return(list(coefs=coefficients(fit), fitted=fitted.values(fit)))
-    })
-    coefs_pi <- sapply(fit_pi, function(x) x$coefs)
-    matDropout <- sapply(fit_pi, function(x) x$fitted)
-    
-    # c) Negative binomial dispersion parameter
-    # Use MLE of dispersion factor: numeric optimisation of likelihood
-    if(superverbose){print("Initialisation M-step: Estimtate negative binomial dispersion parameters")}
-    for(i in seq(1,scaNumGenes)){
-      vecboolNotZeroObserved <- matCountsProc[i,] > 0 & !is.na(matCountsProc[i,]) & is.finite(matCountsProc[i,])
-      vecboolZero <- matCountsProc[i,] == 0
-      vecFit <- unlist( optim(
-        par=log(1),
-        fn=evalLogLikDispNB,
-        vecY=matCountsProc[i,],
-        vecMuEst=matMu[i,],
-        vecDropoutRateEst=matDropout[i,],
-        vecboolNotZeroObserved=vecboolNotZeroObserved, 
-        vecboolZero=vecboolZero,
-        method="BFGS",
-        control=list(maxit=1000, fnscale=-1)
-      )[c("par","convergence")] )
-      if(superverbose & vecFit["convergence"]){
-        print(paste0(i, " convergence: ", vecFit["convergence"] ))
-      }
-      vecDispersions[i] <- exp(vecFit["par"])
-    }
-    matDispersions <- matrix(vecDispersions, nrow=length(vecDispersions), ncol=scaNumCells, byrow=FALSE)
-    matDispersions[matDispersions<=0] <- min(matDispersions[matDispersions>0])
-    
-    # E-step: 
-    # Posterior of dropout
-    if(superverbose){print("Initialisation E-step: Estimtate posterior of dropout")}
-    matZ <- matDropout/(matDropout + (1-matDropout)*
-        dnbinom(0, mu = matMu, size = matDispersions) )
-    matZ[matCountsProc > 0] <- 0
-
-    matLikNew <- matDropout*(matCountsProc==0) + (1-matDropout)*
-      dnbinom(matCountsProc, mu = matMu, size = matDispersions)
-    scaLogLikNew <- sum( log(matLikNew[matLikNew!=0]) +
-        sum(matLikNew==0)*log(.Machine$double.eps) )
-    if(verbose){print(paste0("Completed Initialisation with data log likelihood of ", scaLogLikNew))}
-    }
-    
     # (II) EM itertion
     # Have to allow second iteration independent of likelihood as the first iteration
     # represents a reinitialisation based on a different model.
