@@ -90,7 +90,10 @@ evalLogLikDispNB <- function(scaTheta,
 #' and either one dispersion parameter across all observations in all cluster
 #' for a gene or one dispersion parameter per cluster per gene. Dropout rate
 #' and dispersion factor inferred here are used as hyperparamters in the
-#'impulse fitting stage of PseudoDE.
+#' impulse fitting stage of PseudoDE.
+#' To parallelise this code, replace lapply by bplapply in dispersion
+#' factor and drop-out rate estimation and uncomment the BiocParallel
+#' register() command at the beginning of this function.
 #' 
 #' @seealso Called by \code{runPseudoDE}.
 #' 
@@ -152,10 +155,14 @@ fitZINB <- function(matCountsProc,
   boolSuperVerbose=TRUE ){
   
   # Parameters
+  # Minimim fractional liklihood increment necessary to
+  # continue EM-iterations.
   scaPrecEM <- 1-10^(-4)
   
   # Set number of processes to be used for parallelisation
-  register(MulticoreParam(nProc))
+  # This function is currently not parallelised to reduce memory usage.
+  # Read function description for further information.
+  # register(MulticoreParam(nProc))
   
   vecClusterAssign <- paste0(rep("cluster_",length(lsResultsClustering$Assignments)),lsResultsClustering$Assignments)
   vecClusters <- unique(vecClusterAssign)
@@ -196,7 +203,7 @@ fitZINB <- function(matCountsProc,
     # b) Dropout rate
     # Fit dropout rate with GLM
     if(boolSuperVerbose){print("M-step: Estimtate dropout rate")}
-    vecPiFit <- bplapply(seq(1,scaNumCells), function(j) {
+    vecPiFit <- lapply(seq(1,scaNumCells), function(j) {
       glm( matZ[,j] ~ log(matMu[,j]),
         family=binomial(link=logit),
         control=list(maxit=1000)
@@ -216,7 +223,7 @@ fitZINB <- function(matCountsProc,
     matboolZero <- matCountsProc == 0
     scaDispGues <- 1
     if(boolOneDispPerGene){  
-      vecDispFit <- bplapply(seq(1,scaNumGenes), function(i){
+      vecDispFit <- lapply(seq(1,scaNumGenes), function(i){
         unlist(optim(
           par=log(scaDispGues),
           fn=evalLogLikDispNB,
