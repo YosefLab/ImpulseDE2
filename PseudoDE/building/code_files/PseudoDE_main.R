@@ -108,6 +108,7 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 
 runPseudoDE <- function(matCounts, 
   vecPseudotime,
+  boolPseudotime = TRUE,
   boolDEAnalysisImpulseModel = TRUE,
   boolDEAnalysisModelFree = FALSE,
   boolPlotZINBfits = TRUE,
@@ -129,11 +130,21 @@ runPseudoDE <- function(matCounts,
   # 2. Cluster cells in pseudo-time
   print("2. Clustering:")
   tm_clustering <- system.time({
-    # Cluster in pseudotime
-    lsResultsClustering <- clusterCellsInPseudotime(vecPseudotime=vecPseudotimeProc)
-    # Plot clustering
-    plotPseudotimeClustering(vecPseudotime=vecPseudotimeProc, 
-      lsResultsClustering=lsResultsClustering)
+    if(boolPseudotime){
+      # Cluster in pseudotime
+      lsResultsClustering <- clusterCellsInPseudotime(vecPseudotime=vecPseudotimeProc)
+      # Plot clustering
+      plotPseudotimeClustering(vecPseudotime=vecPseudotimeProc, 
+        lsResultsClustering=lsResultsClustering)
+    } else {
+      # Take observation time points as clusters
+      print("Chose grouping by given time points.")
+      lsResultsClustering <- list()
+      lsResultsClustering[[1]] <- match(vecPseudotimeProc, sort(unique(vecPseudotimeProc)))
+      lsResultsClustering[[2]] <- sort( unique(vecPseudotimeProc) )
+      lsResultsClustering[[3]] <- length(unique(vecPseudotimeProc))
+      names(lsResultsClustering) <- c("Assignments","Centroids","K")
+    }
   })
   save(lsResultsClustering,file=file.path(getwd(),"PseudoDE_lsResultsClustering.RData"))
   print(paste("Time elapsed during clustering: ",round(tm_clustering["elapsed"]/60,2),

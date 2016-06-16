@@ -28,7 +28,7 @@ clusterCellsInPseudotime <- function(vecPseudotime){
   # Range of K for K-means is number of unique cells
   vecPseudotimeUnique <- unique(vecPseudotime)
   #K <- max(round( log(length(vecPseudotimeUnique)/2 )),10)
-  K <- round( log(length(vecPseudotimeUnique))/log(2) )
+  K <- round( log(length(vecPseudotime))/log(2) )
   vecW <- array(NA,K)
   lsCentroids <- list()
   matAssignments <- array(NA,c(K,length(vecPseudotime)))
@@ -37,8 +37,10 @@ clusterCellsInPseudotime <- function(vecPseudotime){
     if(k==1){
       lsKmeansResults <- kmeans(x=vecPseudotime,centers=1)
     } else {
-      lsKmeansResults <- kmeans(x=vecPseudotime,centers=vecPseudotimeUnique[
-        round(seq(1,length(vecPseudotimeUnique),by=(length(vecPseudotimeUnique)-1)/(k-1)))]) 
+      #lsKmeansResults <- kmeans(x=vecPseudotime,centers=vecPseudotimeUnique[
+      #  round(seq(1,length(vecPseudotimeUnique),by=(length(vecPseudotimeUnique)-1)/(k-1)))])
+      lsKmeansResults <- kmeans(x=vecPseudotime,centers=c(min(vecPseudotime) +
+        (max(vecPseudotime)-min(vecPseudotime))*seq(0,k-1)/(k-1))) 
     }
     vecW[k] <- sum(lsKmeansResults$withinss / (2*lsKmeansResults$size))
     lsCentroids[[k]] <- lsKmeansResults$centers

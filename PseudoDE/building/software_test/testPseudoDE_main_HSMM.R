@@ -96,6 +96,10 @@ vecPTpointsAll_HSMM <- as.vector(pData(HSMM)$Pseudotime)
 names(vecPTpointsAll_HSMM) <- as.vector(rownames(pData(HSMM)))
 vecPTpoints_HSMM <- vecPTpointsAll_HSMM[!is.na(vecPTpointsAll_HSMM)]
 print(paste0("HSMM: Total cells: ",length(vecPTpointsAll_HSMM),", Non NA: ",length(vecPTpoints_HSMM)))
+# Use real observation time
+vecPTpointsAll_HSMM <- HSMM_sample_sheetRAW$Hours
+names(vecPTpointsAll_HSMM) <- rownames(HSMM_sample_sheetRAW)
+vecPTpoints_HSMM <- vecPTpointsAll_HSMM[!is.na(vecPTpointsAll_HSMM)]
 
 # Run PseudoDE
 matCounts <- data.matrix(dfCountsHSMM_SC)
@@ -111,7 +115,7 @@ plotEDF <- ggplot() +
   ylab("empirical probability density")
 print(plotEDF)
 
-matCountsRed <- matCounts[1:10000,]
+matCountsRed <- matCounts[1:1000,]
 matCountsRed <- round(matCountsRed)
 
 nProc=3
@@ -119,6 +123,7 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 lsDEresults <- runPseudoDE(matCounts=matCountsRed,
   vecPseudotime=vecPT,
+  boolPseudotime = FALSE,
   boolPlotZINBfits=FALSE,
   nProc=nProc)
 

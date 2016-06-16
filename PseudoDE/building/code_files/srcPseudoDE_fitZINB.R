@@ -302,17 +302,23 @@ fitZINB <- function(matCountsProc,
     scaMaxiterEM <- 20
     superverbose = FALSE
     
-    # (I) Initialisation of posterior of dropout: matZ
+    # (I) Initialisation
+    # The initial model is estimated under the assumption that all zero-counts
+    # are drop-outs.
+    
+    # E-step:
+    # Posterior of dropout: matZ
     if(superverbose){print("Initialisation E-step: Estimtate posterior of dropout")}
     matZ <- t(apply(matCountsProc==0, 1, as.numeric))
     
+    if(FALSE){
+    # M-step:
+    # a) Negative binomial mean parameters
     if(superverbose){print("Initialisation M-step: Estimtate negative binomial mean parameters")}
-    matNonZeros <- matCountsProc>0
-    matNonZeros[!matNonZeros] <- NA
     for(k in seq(1,max(vecindClusterAssign))){
-      matMuCluster[,k] <- rowMeans(
-        matCountsProc[,vecindClusterAssign==k]*matNonZeros[,vecindClusterAssign==k],
-        na.rm=TRUE)
+      matMuCluster[,k] <- rowSums(
+        matCountsProc[,vecindClusterAssign==k]*(1-matZ)[,vecindClusterAssign==k],
+        na.rm=TRUE) / rowSums((1-matZ)[,vecindClusterAssign==k])
     }
     # Add pseudocounts to zeros
     matMuCluster[matMuCluster==0 | is.na(matMuCluster)] <- 1/scaNumCells
@@ -353,9 +359,9 @@ fitZINB <- function(matCountsProc,
     matDispersions <- matrix(vecDispersions, nrow=length(vecDispersions), ncol=scaNumCells, byrow=FALSE)
     matDispersions[matDispersions<=0] <- min(matDispersions[matDispersions>0])
     
+    # E-step: 
+    # Posterior of dropout
     if(superverbose){print("Initialisation E-step: Estimtate posterior of dropout")}
-    #vecFracZeros <- apply(matCountsProc==0, 2, function(cell){mean(cell, na.rm=TRUE)})
-    #matZ <- matrix(vecFracZeros, nrow=scaNumGenes, ncol=scaNumCells, byrow=TRUE)
     matZ <- matDropout/(matDropout + (1-matDropout)*
         dnbinom(0, mu = matMu, size = matDispersions) )
     matZ[matCountsProc > 0] <- 0
@@ -365,6 +371,7 @@ fitZINB <- function(matCountsProc,
     scaLogLikNew <- sum( log(matLikNew[matLikNew!=0]) +
         sum(matLikNew==0)*log(.Machine$double.eps) )
     if(verbose){print(paste0("Completed Initialisation with data log likelihood of ", scaLogLikNew))}
+    }
     
     # (II) EM itertion
     # Have to allow second iteration independent of likelihood as the first iteration
@@ -375,9 +382,9 @@ fitZINB <- function(matCountsProc,
       # Use MLE of mean parameter of negative binomial distribution: weighted average
       if(superverbose){print("M-step: Estimtate negative binomial mean parameters")}
       for(k in seq(1,max(vecindClusterAssign))){
-        matMuCluster[,k] <- rowMeans(
+        matMuCluster[,k] <- rowSums(
           matCountsProc[,vecindClusterAssign==k]*(1-matZ)[,vecindClusterAssign==k],
-          na.rm=TRUE)
+          na.rm=TRUE) / rowSums((1-matZ)[,vecindClusterAssign==k])
       }
       # Add pseudocounts to zeros
       matMuCluster[matMuCluster==0 | is.na(matMuCluster)] <- 1/scaNumCells

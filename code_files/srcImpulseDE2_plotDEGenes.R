@@ -273,10 +273,11 @@ plotDEGenes <- function(vecGeneIDs,
                 matMuCluster[geneID, vecClusterAssignments[
                   names(vecTimepointAssign[match(vecTimepoints,vecTimepointAssign)])]],
                 col="red",pch=1)
+            } else {
+              points(vecTimepoints,
+                sapply(vecTimepoints,function(tp){mean(matCountDataProc[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
+                col="red",pch=1)
             }
-            points(vecTimepoints,
-              sapply(vecTimepoints,function(tp){mean(matCountDataProc[geneID,vecTimepointAssign==tp],na.rm=TRUE)}),
-              col="black",pch=1)
           }
           # Plot impulse model within boundaries of observed points
           vecCaseValuesToPlot <- vecCaseValues
