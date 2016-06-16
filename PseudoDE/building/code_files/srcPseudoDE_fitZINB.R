@@ -178,7 +178,6 @@ library(scone)
 
 fitZINB <- function(matCountsProc, 
   lsResultsClustering,
-  dfAnnotation,
   nProc=1,
   strDropoutTrainingSet="PoissonVar",
   vecHousekeepingGenes=NULL,
@@ -255,8 +254,8 @@ fitZINB <- function(matCountsProc,
   
   # b) GLM fitting
   # Initialise dispersion parameters
-  vecTheta0 <- array(1,scaNumGenes)
-  if(verbose){print("4.2 Fitting negative model to drop-out weighted data with glm.nb().")}
+  #vecTheta0 <- array(1,scaNumGenes)
+  #if(verbose){print("4.2 Fitting negative model to drop-out weighted data with glm.nb().")}
   
   if(boolOneDispPerGene){
     # b1) Fit negative binomial with one mean per cluster and one
@@ -300,7 +299,7 @@ fitZINB <- function(matCountsProc,
     scaLogLikNew <- 0
     scaLogLikOld <- 0
     scaPrec <- 1-10^(-4)
-    scaMaxiterEM <- 10
+    scaMaxiterEM <- 20
     superverbose = FALSE
     
     # (I) Initialisation of posterior of dropout: matZ
@@ -359,7 +358,7 @@ fitZINB <- function(matCountsProc,
     #matZ <- matrix(vecFracZeros, nrow=scaNumGenes, ncol=scaNumCells, byrow=TRUE)
     matZ <- matDropout/(matDropout + (1-matDropout)*
         dnbinom(0, mu = matMu, size = matDispersions) )
-    matZ[matCountsProc==0] <- 0
+    matZ[matCountsProc > 0] <- 0
 
     matLikNew <- matDropout*(matCountsProc==0) + (1-matDropout)*
       dnbinom(matCountsProc, mu = matMu, size = matDispersions)
@@ -422,13 +421,13 @@ fitZINB <- function(matCountsProc,
         vecDispersions[i] <- exp(vecFit["par"])
       }
       matDispersions <- matrix(vecDispersions, nrow=length(vecDispersions), ncol=scaNumCells, byrow=FALSE)
-      #matDispersions[matDispersions<=0] <- min(matDispersions[matDispersions>0])
+      matDispersions[matDispersions<=0] <- min(matDispersions[matDispersions>0])
       
       # E-step:
       if(superverbose){print("E-step: Estimtate posterior of dropout")}
       matZ <- matDropout/(matDropout + (1-matDropout)*
           dnbinom(0, mu = matMu, size = matDispersions) )
-      matZ[matCountsProc>0] <- 0
+      matZ[matCountsProc > 0] <- 0
       
       # Evaluate Likelihood
       scaLogLikOld <- scaLogLikNew

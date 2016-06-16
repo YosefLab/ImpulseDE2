@@ -154,7 +154,6 @@ runPseudoDE <- function(matCounts,
   tm_fitmm <- system.time({
     lsResZINBFits <- fitZINB( matCountsProc=matCountsProc, 
       lsResultsClustering=lsResultsClustering,
-      dfAnnotation=dfAnnotation,
       strDropoutTraining="PoissonVar",
       vecHousekeepingGenes=NULL,
       vecSpikeInGenes=NULL,

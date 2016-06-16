@@ -111,7 +111,7 @@ plotEDF <- ggplot() +
   ylab("empirical probability density")
 print(plotEDF)
 
-matCountsRed <- matCounts[1:200,]
+matCountsRed <- matCounts[1:10000,]
 matCountsRed <- round(matCountsRed)
 
 nProc=3
