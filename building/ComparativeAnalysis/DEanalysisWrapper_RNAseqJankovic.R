@@ -22,7 +22,7 @@ if(sum(vecboolidxDupIDs)>0){
 }
 rownames(matDataA) <- vecGeneIDs
 colnames(matDataA) <- vecSamples
-matDataA <- matDataA[1:2000,]
+matDataA <- matDataA
 
 # 2. Annotation
 dfAnnotationRNA <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/AnnotationTable_RNAseqJankovic.tab",header=T)

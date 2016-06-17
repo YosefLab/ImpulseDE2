@@ -29,8 +29,8 @@
 library(gplots)
 
 compareDEMethods <- function(matQval,
-  strMethod1="ImpulseDE2"
-  strMethod2,
+  strMethod1="A_ImpulseDE2",
+  strMethod2="",
   Q = 10^(-3),
   Qdelta = 10^(2),
   matCountDataProc,
@@ -94,6 +94,9 @@ compareDEMethods <- function(matQval,
   vecboolImpulseBeatsRef <- as.numeric(matQval[,strMethod2]) >= Qdelta*as.numeric(matQval[,strMethod1]) | is.na(as.numeric(matQval[,strMethod1]))
   
   vecDEgenes_Ref_only <- as.vector(matQval[vecboolRefBeatsQ & vecBoolRefBeatsImpulse & vecboolImpulseFitted,"Gene"])
+  print(head(vecDEgenes_Ref_only))
+  print(dim(lsImpulseFits$parameters_case))
+  print(rownames(lsImpulseFits$parameters_case))
   vecDEgenes_Impulse_only <- as.vector(matQval[vecboolImpulseBeatsQ & vecboolImpulseBeatsRef & vecboolImpulseFitted,"Gene"])
   graphics.off()
   print(paste0("Number of significant DE genes at q-value of ",Q))

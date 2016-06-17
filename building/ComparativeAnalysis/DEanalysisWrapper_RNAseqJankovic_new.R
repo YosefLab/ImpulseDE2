@@ -48,11 +48,13 @@ plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes,
 rm(list=ls())
 library(gplots)
 load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/lsResDEcomparison_RNAseqdata.Rdata")
-matQval_RNAseqData <- lsResDEcomparison_RNAseqdata$matQval_RNAseqData 
-matRunTime_RNAseqData <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
+matQval <- lsResDEcomparison_RNAseqdata$matQval_RNAseqData 
+matRunTime <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
 
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_plotDEGenes.R")
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
+source("ImpulseDE2_main.R")
+source("srcImpulseDE2_plotDEGenes.R")
+source("srcImpulseDE2_compareDEMethods.R")
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ImpulseDE2")
 load("ImpulseDE2_matCountDataProc.RData")
 load("ImpulseDE2_dfAnnotationProc.RData")
@@ -68,8 +70,28 @@ setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseq
 Q <- 10^(-3)
 Qdelta <- 10^(2) # difference factor required to be plotted
 
-compareDEMethods <- function(matQval,
-  strMethod2="DESeq2",
+# Load run data ImpulseDE2, ImpulseDE, DESeq2
+load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/lsResDEcomparison_RNAseqdata.RData")
+matQval <- lsResDEcomparison_RNAseqdata$matQval_RNAseqData
+matRunTime <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
+
+compareDEMethods(matQval,
+  strMethod2="A_DESeq2",
+  Q = Q,
+  Qdelta = Qdelta,
+  matCountDataProc = matCountDataProc,
+  lsMatTranslationFactors = lsMatTranslationFactors,
+  matSizeFactors = matSizeFactors,
+  dfAnnotationProc = dfAnnotationProc, 
+  lsImpulseFits = lsImpulseFits,
+  dfImpulseResults = dfImpulseResults,
+  strCaseName="case", 
+  strControlName = NULL, 
+  strMode="batch",
+  strDataDescriptionFilename="")
+
+compareDEMethods(matQval,
+  strMethod2="A_ImpulseDE",
   Q = Q,
   Qdelta = Qdelta,
   matCountDataProc = matCountDataProc,
