@@ -118,7 +118,9 @@ plotEDF <- ggplot() +
   ylab("empirical probability density")
 print(plotEDF)
 
-matCountsRed <- matCounts[1:500,]
+matCountsRed <- matCounts[apply(matCounts,1,function(gene){any(gene>10)}),]
+matCountsRed <- matCountsRed[1:200,]
+#matCountsRed <- matCounts[1:500,]
 matCountsRed <- round(matCountsRed)
 
 nProc=3
@@ -126,14 +128,20 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 lsDEresults <- runPseudoDE(matCounts=matCountsRed,
   vecPseudotime=vecPT,
-  K=6,
+  K=NULL,
   boolPseudotime = TRUE,
   boolContPseudotimeFit=TRUE,
   boolPlotZINBfits=FALSE,
-  boolDEAnalysisImpulseModel = FALSE,
+  boolDEAnalysisImpulseModel = TRUE,
   boolDEAnalysisModelFree = TRUE,
   nProc=nProc,
-  scaMaxiterEM=5)
+  scaMaxiterEM=10)
+
+dfDEImpulse <- data.frame( lsDEresults$lsImpulseDE2results$dfImpulseResults[c("Gene","adj.p")], stringsAsFactors = FALSE)
+dfDEModelfree <- data.frame( lsDEresults$dfModelFreeDEAnalysis[c("Gene","adj.p")], stringsAsFactors = FALSE)
+dfDEModelfree <- dfDEModelfree[match(dfDEModelfree$Gene,dfDEImpulse$Gene),]
+dfComparison <- cbind(dfDEImpulse,dfDEModelfree)
+dfComparison
 
 if(FALSE){
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_dfAnnotation.RData")

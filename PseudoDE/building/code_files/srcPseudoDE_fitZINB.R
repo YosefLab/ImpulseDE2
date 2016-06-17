@@ -240,10 +240,18 @@ fitZINB <- function(matCountsProc,
     
     # Evaluate Likelihood
     scaLogLikOld <- scaLogLikNew
-    matLikNew <- matDropout*(matCountsProc==0) + (1-matDropout)*
-      dnbinom(matCountsProc, mu = matMu, size = matDispersions)
-    scaLogLikNew <- sum( log(matLikNew[matLikNew!=0]) +
-        sum(matLikNew==0)*log(.Machine$double.eps) )
+    matboolNotZeroObserved <- matCountsProc >0 & !is.na(matCountsProc)
+    matboolZero <- matCountsProc==0
+    scaLogLikNew <- sum(sapply( seq(1,scaNumGenes), function(i){
+      evalLogLikZINB_PseudoDE_comp(vecY=matCountsProc[i,],
+        vecMu=matMu[i,],
+        vecDispEst=matDispersions[i,], 
+        vecDropoutRateEst=matDropout[i,],
+        vecboolNotZeroObserved=matboolNotZeroObserved[i,], 
+        vecboolZero=matboolZero[i,])
+    }))
+    
+    # EM-iteration complete
     if(verbose){print(paste0("Completed Iteration ", scaIter, " with data log likelihood of ", scaLogLikNew))}
     scaIter <- scaIter+1
   }

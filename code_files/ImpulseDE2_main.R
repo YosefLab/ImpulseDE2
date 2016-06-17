@@ -17,30 +17,20 @@ library(BiocParallel)
 # Source functions in .R files from same directory as this function.
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2")
-# Prepares the data and annotation for internal use
-source("srcImpulseDE2_processData.R")
-# Compute normalisation constants
-source("srcImpulseDE2_computeNormConst.R")
-# Wrapper fur running DESeq2
-source("srcImpulseDE2_runDESeq2.R")
-# Compute value of impulse function given parameters
-source("srcImpulseDE2_calcImpulse.R")
 
+source("srcImpulseDE2_processData.R")
+source("srcImpulseDE2_computeNormConst.R")
+source("srcImpulseDE2_runDESeq2.R")
+source("srcImpulseDE2_calcImpulse.R")
 # Compile function
 calcImpulse_comp <- cmpfun(calcImpulse)
-
-# Cost functions for fitting
 source("srcImpulseDE2_CostFunctionsFit.R")
-
 # Compile functions
 evalLogLikImpulseBatch_comp <- cmpfun(evalLogLikImpulseBatch)
+evalLogLikZINB_comp <- cmpfun(evalLogLikZINB)
 evalLogLikImpulseSC_comp <- cmpfun(evalLogLikImpulseSC)
-
-# Fit impulse model to a timecourse dataset
 source("srcImpulseDE2_fitImpulse.R")
-# Detect differentially expressed genes over time
 source("srcImpulseDE2_computePval.R")
-# Plot the impulse fits and input data
 source("srcImpulseDE2_plotDEGenes.R")
 
 ################################################################################
@@ -323,8 +313,6 @@ runImpulseDE2 <- function(matCountData=NULL,
         vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate,
         matProbNB=matProbNB,
-        matMuCluster=matMuCluster,
-        vecCentroids=vecCentroids,
         vecClusterAssignments=vecClusterAssignments,
         matSizeFactors=matSizeFactors,
         lsMatTranslationFactors=lsMatTranslationFactors,
@@ -332,6 +320,7 @@ runImpulseDE2 <- function(matCountData=NULL,
         strCaseName=strCaseName, 
         strControlName=strControlName,
         strMode=strMode,
+        strSCMode=strSCMode,
         nProc=nProc, 
         NPARAM=NPARAM)
     })

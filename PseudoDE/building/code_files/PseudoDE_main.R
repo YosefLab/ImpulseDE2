@@ -10,11 +10,15 @@
 ################################################################################
 
 library(BiocParallel)
+library(compiler)
 library(ggplot2)
 library(scone)
 library(MASS)
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
 
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_evalLogLikZINB.R")
+# Compile function
+evalLogLikZINB_PseudoDE_comp <- cmpfun(evalLogLikZINB_PseudoDE)
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_clusterCellsInPseudotime.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_createAnnotation.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/srcPseudoDE_fitZINB.R")
@@ -277,10 +281,10 @@ runPseudoDE <- function(matCounts,
       dfModelFreeDEAnalysis <- runModelFreeDEAnalysis(
         matCountsProc = matCountsProc,
         vecPseudotime=vecPseudotimeProc,
-        lsResultsClustering=lsResultsClustering,
-        vecDispersions=vecDispersions,
-        matMuCluster=matMuCluster,
-        matDropout=matDropout,
+        lsResultsClusteringH1=lsResultsClustering,
+        vecDispersionsH1=vecDispersions,
+        matMuClusterH1=matMuCluster,
+        matDropoutH1=matDropout,
         boolConvergenceZINBH1=boolConvergenceZINB,
         nProc = nProc,
         boolOneDispPerGene=boolOneDispPerGene,

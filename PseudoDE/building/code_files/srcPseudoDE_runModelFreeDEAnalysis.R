@@ -40,10 +40,10 @@
 
 runModelFreeDEAnalysis <- function(matCountsProc,
   vecPseudotime,
-  lsResultsClustering,
-  vecDispersions,
-  matMuCluster,
-  matDropout,
+  lsResultsClusteringH1,
+  vecDispersionsH1,
+  matMuClusterH1,
+  matDropoutH1,
   boolConvergenceZINBH1,
   boolOneDispPerGene=TRUE,
   nProc=1,
@@ -52,97 +52,57 @@ runModelFreeDEAnalysis <- function(matCountsProc,
   
   # (I) Fit null model
   # Null model is a single cluster: Create Clustering.
-  lsNullClustering <- list()
-  lsNullClustering[[1]] <- rep(1,dim(matCountsProc)[2])
-  lsNullClustering[[2]] <- max(vecPseudotime)-min(vecPseudotime)
-  lsNullClustering[[3]] <- 1
-  names(lsNullClustering) <- c("Assignments","Centroids","K")
+  lsH0Clustering <- list()
+  lsH0Clustering[[1]] <- rep(1,dim(matCountsProc)[2])
+  lsH0Clustering[[2]] <- max(vecPseudotime)-min(vecPseudotime)
+  lsH0Clustering[[3]] <- 1
+  names(lsH0Clustering) <- c("Assignments","Centroids","K")
   
   # Fit zero-inflated negative binomial null model
-  lsResZINBFitsNULL <- fitZINB( matCountsProc=matCountsProc, 
-    lsResultsClustering=lsNullClustering,
+  lsResZINBFitsH0 <- fitZINB( matCountsProc=matCountsProc, 
+    lsResultsClustering=lsH0Clustering,
     vecSpikeInGenes=NULL,
     boolOneDispPerGene=boolOneDispPerGene,
     nProc=nProc,
     scaMaxiterEM=scaMaxiterEM,
     verbose=verbose )
-  vecDispersionsNULL <- lsResZINBFitsNULL$vecDispersions
-  matDropoutNULL <- lsResZINBFitsNULL$matDropout
-  matProbNBNULL  <- lsResZINBFitsNULL$matProbNB
-  matCountsProcImputedNULL  <- lsResZINBFitsNULL$matCountsProcImputed
-  vecMuClusterNULL  <- lsResZINBFitsNULL$matMuCluster
-  boolConvergenceZINBH0 <- lsResZINBFitsNULL$boolConvergence
-  matMuNULL <- matrix(vecMuClusterNULL, nrow=dim(matCountsProc)[1], 
+  vecDispersionsH0 <- lsResZINBFitsH0$vecDispersions
+  matDropoutH0 <- lsResZINBFitsH0$matDropout
+  matProbNBH0  <- lsResZINBFitsH0$matProbNB
+  vecMuClusterH0  <- lsResZINBFitsH0$matMuCluster
+  boolConvergenceZINBH0 <- lsResZINBFitsH0$boolConvergence
+  matMuH0 <- matrix(vecMuClusterH0, nrow=dim(matCountsProc)[1], 
     ncol=dim(matCountsProc)[2], byrow=FALSE)
-  matDispersionsNULL <- matrix(vecDispersionsNULL, nrow=dim(matCountsProc)[1], 
+  matDispersionsH0 <- matrix(vecDispersionsH0, nrow=dim(matCountsProc)[1], 
     ncol=dim(matCountsProc)[2], byrow=FALSE)
   
-  matDispersions <- matrix(vecDispersions, nrow=dim(matCountsProc)[1], 
+  matMuH1 <- matMuClusterH1[,lsResultsClusteringH1$Assignments]
+  matDispersionsH1 <- matrix(vecDispersionsH1, nrow=dim(matCountsProc)[1], 
     ncol=dim(matCountsProc)[2], byrow=FALSE)
   
   # (II) Compute log likelihoods
-  matboolZeros <- matCountsProc==0
-  matMu <- matMuCluster[,lsResultsClustering$Assignments]
-  vecLogLikFull <- array(NA,dim(matCountsProc)[1])
-  vecLogLikRed <- array(NA,dim(matCountsProc)[1])
-  for(i in dim(matCountsProc)[1]){
-    vecCounts <- matCountsProc[i,]
-    vecboolZero <- vecCounts==0
-    vecboolNotZeroObserved <- vecCounts>0 & !is.na(vecCounts)
-    # Evaluate likelihood of null model
-    # Likelihood of zero counts:
-    vecLikH0Zeros <- (1-matDropoutNULL[i,vecboolZero])*
-      dnbinom( vecCounts[vecboolZero], 
-        mu=matMuNULL[i,vecboolZero], 
-        size=matDispersionsNULL[i,vecboolZero], 
-        log=FALSE) +
-      matDropoutNULL[i,vecboolZero]
-    # Replace zero likelihood observation with machine precision
-    # for taking log.
-    scaLogLikH0Zeros <- sum( log(vecLikH0Zeros[vecLikH0Zeros!=0]) +
-        sum(vecLikH0Zeros==0)*log(.Machine$double.eps) )
-    # Likelihood of non-zero counts:
-    vecLikH0Nonzeros <- log(1-matDropoutNULL[i,vecboolNotZeroObserved]) + 
-      dnbinom(vecCounts[vecboolNotZeroObserved], 
-        mu=matMuNULL[i,vecboolNotZeroObserved], 
-        size=matDispersionsNULL[i,vecboolNotZeroObserved], 
-        log=TRUE)
-    # Replace zero likelihood observation with machine precision
-    # for taking log.
-    scaLogLikH0Nonzeros <- sum( vecLikH0Nonzeros[is.finite(vecLikH0Nonzeros)]) +
-      sum(!is.finite(vecLikH0Nonzeros))*log(.Machine$double.eps)
-    # Compute likelihood of all data:
-    vecLogLikRed[i] <- scaLogLikH0Zeros + scaLogLikH0Nonzeros
-    
-    # Evaluate likelihood of alternative model
-    # Likelihood of zero counts:
-    vecLikH1Zeros <- (1-matDropout[i,vecboolZero])*
-      dnbinom( vecCounts[vecboolZero], 
-        mu=matMu[i,vecboolZero], 
-        size=matDispersions[i,vecboolZero], 
-        log=FALSE) +
-      matDropout[i,vecboolZero]
-    # Replace zero likelihood observation with machine precision
-    # for taking log.
-    scaLogLikH1Zeros <- sum( log(vecLikH1Zeros[vecLikH1Zeros!=0]) +
-        sum(vecLikH1Zeros==0)*log(.Machine$double.eps) )
-    # Likelihood of non-zero counts:
-    vecLikH1Nonzeros <- log(1-matDropout[i,vecboolNotZeroObserved]) + 
-      dnbinom(vecCounts[vecboolNotZeroObserved], 
-        mu=matMu[i,vecboolNotZeroObserved], 
-        size=matDispersions[i,vecboolNotZeroObserved], 
-        log=TRUE)
-    # Replace zero likelihood observation with machine precision
-    # for taking log.
-    scaLogLikH1Nonzeros <- sum( vecLikH1Nonzeros[is.finite(vecLikH1Nonzeros)]) +
-      sum(!is.finite(vecLikH1Nonzeros))*log(.Machine$double.eps)    
-    # Compute likelihood of all data:
-    vecLogLikFull[i] <- scaLogLikH1Zeros + scaLogLikH1Nonzeros
-  }
+  matboolNotZeroObserved <- matCountsProc >0 & !is.na(matCountsProc)
+  matboolZero <- matCountsProc==0
+  vecLogLikFull <- sapply( seq(1,dim(matCountsProc)[1]), function(i){
+    evalLogLikZINB_PseudoDE_comp(vecY=matCountsProc[i,],
+      vecMu=matMuH1[i,],
+      vecDispEst=matDispersionsH1[i,], 
+      vecDropoutRateEst=matDropoutH1[i,],
+      vecboolNotZeroObserved=matboolNotZeroObserved[i,], 
+      vecboolZero=matboolZero[i,])
+  })
+  vecLogLikRed <- sapply( seq(1,dim(matCountsProc)[1]), function(i){
+    evalLogLikZINB_PseudoDE_comp(vecY=matCountsProc[i,],
+      vecMu=matMuH0[i,],
+      vecDispEst=matDispersionsH0[i,], 
+      vecDropoutRateEst=matDropoutH0[i,],
+      vecboolNotZeroObserved=matboolNotZeroObserved[i,], 
+      vecboolZero=matboolZero[i,])
+  })
   
   # (III) Differential expression analysis
   # scaK: Number of clusters used in full model
-  scaK <- lsResultsClustering$K
+  scaK <- lsResultsClusteringH1$K
   # K x mean and 1 or K x dispersion parameters
   if(boolOneDispPerGene){ scaDegFreedomFull <- scaK + 1
   }else{ scaDegFreedomFull <- scaK*2 }
@@ -164,9 +124,9 @@ runModelFreeDEAnalysis <- function(matCountsProc,
     "loglik_full"=vecLogLikFull,
     "loglik_red"=vecLogLikRed,
     "deviance"=vecDeviance,
-    "mean"=vecMuClusterNULL,
-    "dispersion_null"=vecDispersionsNULL,
-    "converged_null"=rep(boolConvergenceZINBH0!=0,dim(matCountsProc)[1]),
+    "mean"=vecMuClusterH0,
+    "dispersion_H0"=vecDispersionsH0,
+    "converged_H0"=rep(boolConvergenceZINBH0!=0,dim(matCountsProc)[1]),
     "converged_full"=rep(all(boolConvergenceZINBH1),dim(matCountsProc)[1]),
     stringsAsFactors = FALSE))
   
