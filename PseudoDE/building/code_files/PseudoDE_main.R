@@ -208,15 +208,15 @@ runPseudoDE <- function(matCounts,
     vecDispersions <- lsResZINBFits$vecDispersions
     matDropout <- lsResZINBFits$matDropout
     matProbNB  <- lsResZINBFits$matProbNB
-    matCountsImputed  <- lsResZINBFits$matCountsImputed
     matMuCluster  <- lsResZINBFits$matMuCluster
     boolConvergenceZINB <- lsResZINBFits$boolConvergence
+    vecEMLogLik <- lsResZINBFits$vecEMLogLik
   })
   save(vecDispersions,file=file.path(getwd(),"PseudoDE_vecDispersions.RData"))
   save(matDropout,file=file.path(getwd(),"PseudoDE_matDropout.RData"))
   save(matProbNB,file=file.path(getwd(),"PseudoDE_matProbNB.RData"))
-  save(matCountsImputed,file=file.path(getwd(),"PseudoDE_matCountsImputed.RData"))
   save(matMuCluster,file=file.path(getwd(),"PseudoDE_matMuCluster.RData"))
+  save(vecEMLogLik,file=file.path(getwd(),"PseudoDE_vecEMLogLik.RData"))
   print(paste("Time elapsed during ZINB fitting: ",round(tm_fitmm["elapsed"]/60,2),
     " min",sep=""))
   
@@ -267,7 +267,6 @@ runPseudoDE <- function(matCounts,
         boolLogPlot = TRUE )
     })
     print("### End ImpulseDE2 output ##################################")
-    save(lsInputToImpulseDE2,file=file.path(getwd(),"PseudoDE_lsInputToImpulseDE2.RData"))
     save(lsImpulseDE2results,file=file.path(getwd(),"PseudoDE_lsImpulseDE2results.RData"))
     print(paste("Time elapsed during differential expression analysis with ImpulseDE2: ",
       round(tm_deanalysis_impulse["elapsed"]/60,2)," min",sep=""))

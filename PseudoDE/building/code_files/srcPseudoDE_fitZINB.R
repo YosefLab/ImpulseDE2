@@ -83,6 +83,8 @@ evalLogLikDispNB <- function(scaTheta,
 #' To parallelise this code, replace lapply by bplapply in dispersion
 #' factor and drop-out rate estimation and uncomment the BiocParallel
 #' register() command at the beginning of this function.
+#' Counts can be imputed under the ZINB model as:
+#' matCountsProcImputed <- matDropout * (1 - matProbNB) + matMu * matProbNB
 #' 
 #' @seealso Called by \code{runPseudoDE}.
 #' 
@@ -143,6 +145,9 @@ fitZINB <- function(matCountsProc,
   # continue EM-iterations.
   scaPrecEM <- 1-10^(-4)
   
+  # Store EM convergence
+  vecEMLogLik <- array(NA,scaMaxiterEM)
+  
   # Set number of processes to be used for parallelisation
   # This function is currently not parallelised to reduce memory usage.
   # Read function description for further information.
@@ -166,11 +171,10 @@ fitZINB <- function(matCountsProc,
   matZ <- t(apply(matCountsProc==0, 1, as.numeric))
   
   # (II) EM itertion
-  # Allow two iteration to get reference likelihood
   scaIter <- 1
   scaLogLikNew <- 0
   scaLogLikOld <- 0
-  while(scaIter == 1 | scaIter == 2 | (scaLogLikNew > scaLogLikOld*scaPrecEM & scaIter <= scaMaxiterEM)){
+  while(scaIter == 1 | (scaLogLikNew > scaLogLikOld*scaPrecEM & scaIter <= scaMaxiterEM)){
     # M-step:
     # a) Negative binomial mean parameter
     # Use MLE of mean parameter of negative binomial distribution: weighted average
@@ -222,6 +226,7 @@ fitZINB <- function(matCountsProc,
       })
     } else {
       #  not coded
+      stop("not coded")
     }
     vecboolConvergedGLMdisp <- sapply(vecDispFit, function(x) x["convergence"])
     vecDispersions <- sapply(vecDispFit, function(fit){ exp(fit["par"]) })
@@ -253,6 +258,7 @@ fitZINB <- function(matCountsProc,
     
     # EM-iteration complete
     if(verbose){print(paste0("Completed Iteration ", scaIter, " with data log likelihood of ", scaLogLikNew))}
+    vecEMLogLik[scaIter] <- scaLogLikNew
     scaIter <- scaIter+1
   }
   # Evaluate convergence
@@ -265,21 +271,16 @@ fitZINB <- function(matCountsProc,
   
   # Compute mixture probabilities and imputed counts
   matProbNB <- 1 - matZ
-  matCountsProcImputed <- matDropout * (1 - matProbNB) + matMu * matProbNB
   
   # Name rows and columns of output
   rownames(matDropout) <- rownames(matCountsProc)
   colnames(matDropout) <- colnames(matCountsProc)
-  rownames(matMu) <- rownames(matCountsProc)
-  colnames(matMu) <- colnames(matCountsProc)
   rownames(matMuCluster) <- rownames(matCountsProc)
   names(vecDispersions) <- rownames(matCountsProc)
   rownames(matDispersions) <- rownames(matCountsProc)
   colnames(matDispersions) <- colnames(matCountsProc)
   rownames(matProbNB) <- rownames(matCountsProc)
   colnames(matProbNB) <- colnames(matCountsProc)
-  rownames(matCountsProcImputed) <- rownames(matCountsProc)
-  colnames(matCountsProcImputed) <- colnames(matCountsProc)
   
   # Check dispersions
   if(any(is.na(matDispersions) | !is.finite(matDispersions))){
@@ -290,8 +291,8 @@ fitZINB <- function(matCountsProc,
   
   return(list( vecDispersions=vecDispersions,
     matDropout=matDropout, 
-    matProbNB=matProbNB, 
-    matCountsProcImputed=matCountsProcImputed, 
+    matProbNB=matProbNB,
     matMuCluster=matMuCluster,
-    boolConvergence=boolConvergence ))
+    boolConvergence=boolConvergence,
+    vecEMLogLik=vecEMLogLik ))
 }

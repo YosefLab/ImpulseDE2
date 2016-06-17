@@ -253,7 +253,7 @@ runImpulseDE2 <- function(matCountData=NULL,
     save(matProbNB,file=file.path(getwd(),"ImpulseDE2_matProbNB.RData"))
     save(matDropoutRate,file=file.path(getwd(),"ImpulseDE2_matDropoutRate.RData"))
     save(vecClusterAssignments,file=file.path(getwd(),"ImpulseDE2_vecClusterAssignments.RData"))
-    save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_dfAnnotationProc.RData"))
+    save(vecCentroids,file=file.path(getwd(),"ImpulseDE2_vecCentroids.RData"))
     
     # 2. Compute normalisation constants
     print("2. Compute Normalisation constants")

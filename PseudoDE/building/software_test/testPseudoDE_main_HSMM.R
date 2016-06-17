@@ -118,7 +118,7 @@ plotEDF <- ggplot() +
   ylab("empirical probability density")
 print(plotEDF)
 
-matCountsRed <- matCounts[apply(matCounts,1,function(gene){any(gene>10)}),]
+matCountsRed <- matCounts[apply(matCounts,1,function(gene){any(gene>10) & mean(gene)>=1}),]
 matCountsRed <- matCountsRed[1:200,]
 #matCountsRed <- matCounts[1:500,]
 matCountsRed <- round(matCountsRed)
@@ -135,7 +135,7 @@ lsDEresults <- runPseudoDE(matCounts=matCountsRed,
   boolDEAnalysisImpulseModel = TRUE,
   boolDEAnalysisModelFree = TRUE,
   nProc=nProc,
-  scaMaxiterEM=10)
+  scaMaxiterEM=5)
 
 dfDEImpulse <- data.frame( lsDEresults$lsImpulseDE2results$dfImpulseResults[c("Gene","adj.p")], stringsAsFactors = FALSE)
 dfDEModelfree <- data.frame( lsDEresults$dfModelFreeDEAnalysis[c("Gene","adj.p")], stringsAsFactors = FALSE)
