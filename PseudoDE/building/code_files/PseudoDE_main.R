@@ -76,6 +76,9 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 #'    of the cells. If false, the pseudotime centroids of the clusters
 #'    are chose: Impulse fitting is done based on the same clusters
 #'    as hyperparameter estimation.
+#' @param boolOneDispPerGene: (bool) [Default TRUE]
+#'    Whether one negative binomial dispersion factor is fitted
+#'    per gene or per gene for each cluster.
 #' @param boolDEAnalysisImpulseModel: (bool) [Default TRUE]
 #'    Whether to perform differential expression analysis with ImpulseDE2.
 #' @param boolDEAnalysisModelFree: (bool) [Default FALSE]
@@ -83,7 +86,7 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 #' @param boolPlotZINBfits: (bool) [Default TRUE]
 #'    Whether to plot zero-inflated negative binomial fits to selected genes
 #'    and clusters.
-#' @param scaMaxiterEM: (integer) [Default 5] Maximium number 
+#' @param scaMaxiterEM: (integer) [Default 20] Maximium number 
 #'    of EM-terations performed in fitZINB(), i.e. during
 #'    estimation of the zero-inflated negative binomial 
 #'    hyperparameters.
@@ -124,11 +127,13 @@ runPseudoDE <- function(matCounts,
   vecPseudotime,
   boolPseudotime = TRUE,
   boolContPseudotimeFit = FALSE,
+  boolOneDispPerGene = TRUE,
   boolDEAnalysisImpulseModel = TRUE,
   boolDEAnalysisModelFree = FALSE,
   boolPlotZINBfits = TRUE,
-  scaMaxiterEM=5,
-  nProc=1){
+  scaMaxiterEM=20,
+  nProc=1,
+  verbose=TRUE ){
   
   # 1. Data preprocessing
   print("1. Data preprocessing:")
@@ -188,16 +193,16 @@ runPseudoDE <- function(matCounts,
       strDropoutTraining="PoissonVar",
       vecHousekeepingGenes=NULL,
       vecSpikeInGenes=NULL,
-      boolOneDispPerGene=TRUE,
+      boolOneDispPerGene=boolOneDispPerGene,
       nProc=nProc,
       scaMaxiterEM=scaMaxiterEM,
-      verbose=TRUE )
+      verbose=verbose )
     vecDispersions <- lsResZINBFits$vecDispersions
     matDropout <- lsResZINBFits$matDropout
     matProbNB  <- lsResZINBFits$matProbNB
     matCountsImputed  <- lsResZINBFits$matCountsImputed
     matMuCluster  <- lsResZINBFits$matMuCluster
-    matConvergence <- lsResZINBFits$matConvergence
+    boolConvergenceZINB <- lsResZINBFits$boolConvergence
   })
   save(vecDispersions,file=file.path(getwd(),"PseudoDE_vecDispersions.RData"))
   save(matDropout,file=file.path(getwd(),"PseudoDE_matDropout.RData"))
@@ -259,18 +264,21 @@ runPseudoDE <- function(matCounts,
     lsImpulseDE2results <- NULL
   }
   if(boolDEAnalysisModelFree){
-    # b) Model-based: Impulse model
+    # b) Model-free
     print("Differential expression analysis: Model-free")
     tm_deanalysis_mf <- system.time({
       dfModelFreeDEAnalysis <- runModelFreeDEAnalysis(
-        matCountData = matCountsProc, 
-        dfAnnotation = dfAnnotation,
-        strMode = "singlecell", 
-        nProc = nProc, 
-        Q_value = 10^(-5),
-        boolPlotting = TRUE,
-        lsPseudo = lsInputToImpulseDE2,
-        vecDispersionsExternal = vecDispersions,)
+        matCountsProc = matCountsProc,
+        vecPseudotime=vecPseudotimeProc,
+        lsResultsClustering=lsResultsClustering,
+        vecDispersions=vecDispersions,
+        matMuCluster=matMuCluster,
+        matDropout=matDropout,
+        boolConvergenceZINBH1=boolConvergenceZINB,
+        nProc = nProc,
+        boolOneDispPerGene=boolOneDispPerGene,
+        scaMaxiterEM=scaMaxiterEM,
+        verbose=verbose )
     })
     save(dfModelFreeDEAnalysis,file=file.path(getwd(),"PseudoDE_dfModelFreeDEAnalysis.RData"))
     print(paste("Time elapsed during model-free differential expression analysis: ",
@@ -280,6 +288,6 @@ runPseudoDE <- function(matCounts,
   }
   
   print("Completed PseudoDE.")
-  return(list(lsImpulseDE2results=lsImpulseDE2results,
-    dfModelFreeDEAnalysis=dfModelFreeDEAnalysis))
+  return(list( lsImpulseDE2results=lsImpulseDE2results,
+    dfModelFreeDEAnalysis=dfModelFreeDEAnalysis ))
 }

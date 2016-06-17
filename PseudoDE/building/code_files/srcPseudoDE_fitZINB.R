@@ -2,29 +2,18 @@
 #+++++++++++++++++++++++++     Fit ZINB model    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Cost function hurdle model fit - Negative binomial
+#' Cost function zero-inflated negative binomial model for dispersion fitting
 #' 
-#' Log likelihood cost function for hurdle model fit (zero inflated  negative 
-#' binomial model). This function is designed to allow numerical optimisation
-#' of negative binomial mean and overdispersion on single gene given
-#' the drop-out rate.
-#' Note: During optimisation, this function does not make use of the
-#' fact that there exists a closed-form MLE for the mean of a negative
-#' binomial because the negative binomial is estimated within the hurdle model
-#' here.
-#' This function is used for iterative hurdle model fitting (separate fitting
-#' of negative binomial and drop-out rate). This separation allows 
-#' parallelisation of the individual fitting steps over genes/cells and
-#' reduces the dimensionality of the individual optimisation problems
-#' drastically.
+#' Log likelihood of zero inflated  negative binomial model. 
+#' This function is designed to allow numerical optimisation
+#' of negative binomial overdispersion on single gene given
+#' the drop-out rate and negative binomial mean parameter.
 #' 
 #' @aliases evalLogLikHurdleNB_com
 #' 
-#' @seealso Called by \code{fitHurdleModel}.
+#' @seealso Called by \code{fitZINB}.
 #' 
-#' @param vecTheta: (vector number of parameters) Parmeters of negative
-#'    binomial in hurdle model of one gene to be estimated:
-#'    Overdispersion and one mean per cluster.
+#' @param scaTheta: (scalar) Log of dispersion estimate.
 #' @param vecY: (vector number of cells) Observed expression values 
 #'    of gene in cells in cluster.
 #' @param vecMuEst: (vector number of cells) Negative binomial
@@ -36,8 +25,8 @@
 #' @param vecboolZero: (bool vector number of samples)
 #'    Whether sample has zero count.
 #' 
-#' @return scaLogLik: (scalar) Value of cost function (likelihood)
-#'    of hurdle model for gene
+#' @return scaLogLik: (scalar) Value of cost function:
+#'    zero-inflated negative binomial likelihood.
 #' @export
 
 evalLogLikDispNB <- function(scaTheta,
@@ -111,11 +100,8 @@ evalLogLikDispNB <- function(scaTheta,
 #'    Whether one negative binomial dispersion factor is fitted
 #'    per gene or per gene for each cluster.
 #' @param nProc: (scalar) [Default 1] Number of processes for 
-#'    parallelisation. The specified value is set
-#'    to \code{min(detectCores() - 1, nProc)} using the 
-#'    \code{detectCores} function from the package \code{parallel} 
-#'    to avoid overload.
-#' @param MAXITER: (scalar) Maximum number of EM-iterations to
+#'    parallelisation.
+#' @param scaMaxiterEM: (scalar) Maximum number of EM-iterations to
 #'    be performed in ZINB model fitting.
 #' @param verbose: (bool) Whether to follow EM-algorithm
 #'    convergence.
@@ -135,11 +121,9 @@ evalLogLikDispNB <- function(scaTheta,
 #'      \item matCountsProcImputed: (numeric matrix genes x cells)
 #'        Data predicted with inferred zero-inflated negative binomial
 #'        model.
-#'      \item matClusterMeansFitted: (numeric matrix genes x clusters)
+#'      \item matMuCluster: (numeric matrix genes x clusters)
 #'        Inferred negative binomial cluster means.
-#'      \item vecConvergence: (numeric vector number of clusters)
-#'        Convergence value for each zero-inflated negative binomial
-#'        model fitting process.
+#'      \item boolConvergence: (bool) Convergence of EM algorithm.
 #'    }
 #' @export
 
@@ -150,9 +134,9 @@ fitZINB <- function(matCountsProc,
   vecHousekeepingGenes=NULL,
   vecSpikeInGenes=NULL,
   boolOneDispPerGene=TRUE,
-  scaMaxiterEM=5,
+  scaMaxiterEM=20,
   verbose=FALSE,
-  boolSuperVerbose=TRUE ){
+  boolSuperVerbose=FALSE ){
   
   # Parameters
   # Minimim fractional liklihood increment necessary to
@@ -263,6 +247,13 @@ fitZINB <- function(matCountsProc,
     if(verbose){print(paste0("Completed Iteration ", scaIter, " with data log likelihood of ", scaLogLikNew))}
     scaIter <- scaIter+1
   }
+  # Evaluate convergence
+  if(all(vecboolConvergedGLMdisp) & all(vecboolConvergedGLMpi) &
+      scaLogLikNew < scaLogLikOld*scaPrecEM & scaLogLikNew > scaLogLikOld){
+    boolConvergence <- TRUE
+  } else {
+    boolConvergence <- FALSE
+  }
   
   # Compute mixture probabilities and imputed counts
   matProbNB <- 1 - matZ
@@ -293,6 +284,6 @@ fitZINB <- function(matCountsProc,
     matDropout=matDropout, 
     matProbNB=matProbNB, 
     matCountsProcImputed=matCountsProcImputed, 
-    matMuCluster=matMuCluster))
-  #vecConvergence=vecConvergence ))
+    matMuCluster=matMuCluster,
+    boolConvergence=boolConvergence ))
 }

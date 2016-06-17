@@ -6,69 +6,101 @@
 #' 
 #' Performs model-free differential expression analysis. This functiion is
 #' broken up into:
-#' (I) Fit null model
-#' (II) Differential expression analysis
+#' (I) Fit null model.
+#' (II) Compute likelihood of full and reduced model.
+#' (II) Differential expression analysis.
 #' 
 #' @seealso Called by \code{runPseudoDE}.
 #' 
-#' @param matCounts: (matrix genes x cells)
+#' @param matCountsProc: (matrix genes x cells)
 #'    Count data of all cells, unobserved entries are NA.
+#' @param vecPseudotime: (numerical vector length number of cells)
+#'    Pseudotime coordinates (1D) of cells: One scalar per cell.
+#'    Has to be named: Names of elements are cell names.
 #' @param vecDispersions: (vector number of genes) Gene-wise 
 #'    negative binomial dispersion coefficients.
-#' @param matClusterMeans:
-#' @param vecLogLikFull: (numerical vector numer of genes)
-#'    Log likelihood of full model which is a ZINB model for each cluster.
-#' @param vecConvergenceFull: (numeric vector number of clusters)
-#'    Convergence value for each zero-inflated negative binomial
-#'    model fitting process (one for each cluster).
-#' @param Q_value: (scalar) Q-value threshold for calling differentially
-#'    expressed genes.
-#' @param MAXITER: (scalar) Maximum number of EM-iterations to
+#' @param vecDispersions: (numeric matrix genes x clusters)
+#'    Inferred negative binomial dispersions.
+#' @param matMuCluster: (numeric matrix genes x clusters)
+#'    Inferred negative binomial cluster means.
+#' @param matDropout: (numeric matrix genes x cells)
+#'    Inferred zero inflated negative binomial drop out rates.
+#' @param boolConvergenceZINBH1: (bool) Convergence of EM algorithm for
+#'    full model.
+#' @param nProc: (scalar) [Default 1] Number of processes for 
+#'    parallelisation.
+#' @param scaMaxiterEM: (scalar) Maximum number of EM-iterations to
 #'    be performed in ZINB model fitting.
+#' @param verbose: (bool) Whether to follow EM-algorithm
+#'    convergence.
 #' 
 #' @return dfModelFreeDEAnalysis: (data frame genes) 
 #'    Summary of model-free differential expression analysis.
 #' @export
 
-runModelFreeDEAnalysis <- function(matCounts,
+runModelFreeDEAnalysis <- function(matCountsProc,
+  vecPseudotime,
+  lsResultsClustering,
   vecDispersions,
-  matClusterMeans,
-  scaLogLikFull,
-  vecConvergenceFull,
-  Q_value = 0.01,
-  MAXITER = 20 ){
+  matMuCluster,
+  matDropout,
+  boolConvergenceZINBH1,
+  boolOneDispPerGene=TRUE,
+  nProc=1,
+  scaMaxiterEM = 20,
+  verbose=TRUE ){
   
   # (I) Fit null model
-  # Fit once to all data, one mean
+  # Null model is a single cluster: Create Clustering.
+  lsNullClustering <- list()
+  lsNullClustering[[1]] <- rep(1,dim(matCountsProc)[2])
+  lsNullClustering[[2]] <- max(vecPseudotime)-min(vecPseudotime)
+  lsNullClustering[[3]] <- 1
+  names(lsNullClustering) <- c("Assignments","Centroids","K")
   
-  # Negative binomial over-dispersion factor: 1 per gene per cluster
-  matDispersion <- array(NA,c(dim(matCounts)[1],1))
+  # Fit zero-inflated negative binomial null model
+  lsResZINBFitsNULL <- fitZINB( matCountsProc=matCountsProc, 
+    lsResultsClustering=lsNullClustering,
+    vecSpikeInGenes=NULL,
+    boolOneDispPerGene=boolOneDispPerGene,
+    nProc=nProc,
+    scaMaxiterEM=scaMaxiterEM,
+    verbose=verbose )
+  vecDispersionsNULL <- lsResZINBFitsNULL$vecDispersions
+  matDropoutNULL <- lsResZINBFitsNULL$matDropout
+  matProbNBNULL  <- lsResZINBFitsNULL$matProbNB
+  matCountsProcImputedNULL  <- lsResZINBFitsNULL$matCountsProcImputed
+  vecMuClusterNULL  <- lsResZINBFitsNULL$matMuCluster
+  boolConvergenceZINBH0 <- lsResZINBFitsNULL$boolConvergence
+  matMuNULL <- matrix(vecMuClusterNULL, nrow=dim(matCountsProc)[1], 
+    ncol=dim(matCountsProc)[2], byrow=FALSE)
+  matDispersionsNULL <- matrix(vecDispersionsNULL, nrow=dim(matCountsProc)[1], 
+    ncol=dim(matCountsProc)[2], byrow=FALSE)
   
-  # this doesnt work for 20 genes:
-  vecboolNonzeroGenes <- apply(matCountsCluster,1,
-    function(gene){any(gene!=0)})
-  # this works for 20 genes:
-  #vecboolNonzeroGenes <- apply(matCounts,1,
-  #  function(gene){mean(gene)>10})
-  matCountsClean <- matCounts[vecboolNonzeroGenes,]
+  matDispersions <- matrix(vecDispersions, nrow=dim(matCountsProc)[1], 
+    ncol=dim(matCountsProc)[2], byrow=FALSE)
   
-  # Fit zinb model
-  lsZINBparam <- estimate_zinb(
-    Y = matCountsCluster, 
-    maxiter = MAXITER, 
-    verbose = TRUE)
+  # (II) Compute log likelihoods
+  matMu <- matMuCluster[,lsResultsClustering$Assignments]
+  matLikFull <- matDropout*(matCountsProc==0) + (1-matDropout)*
+      dnbinom(matCountsProc, mu = matMu, size = matDispersions)
+  vecLogLikFull <- apply(matLikFull, 1, function(gene){
+    sum( log(gene[gene!=0]) +
+        sum(gene==0)*log(.Machine$double.eps) )
+  })
+  matLikRed <- matDropoutNULL*(matCountsProc==0) + (1-matDropoutNULL)*
+      dnbinom(matCountsProc, mu = matMuNULL, size = matDispersionsNULL)
+  vecLogLikRed <- apply(matLikRed, 1, function(gene){
+    sum( log(gene[gene!=0]) +
+        sum(gene==0)*log(.Machine$double.eps) )
+  })
   
-  # Record parameters
-  vecDispersions <- lsZINBparam$theta
-  vecMeans <- lsZINBparam$mu
-  vecLogLikRed <- lsZINBparam$loglikelihood
-  scaConvergedRed <- lsZINBparam$converged
-  
-  # (II) Differential expression analysis
+  # (III) Differential expression analysis
   # scaK: Number of clusters used in full model
-  scaK <- dim(matClusterMeans)[2]
-  # K mean and dispersion parameters
-  scaDegFreedomFull <- K*2
+  scaK <- lsResultsClustering$K
+  # K x mean and 1 or K x dispersion parameters
+  if(boolOneDispPerGene){ scaDegFreedomFull <- scaK + 1
+  }else{ scaDegFreedomFull <- scaK*2 }
   # One dispersion estimate and one overall mean estimate
   scaDegFreedomRed <- 2
   # Compute difference in degrees of freedom between null model and alternative model.
@@ -81,21 +113,21 @@ runModelFreeDEAnalysis <- function(matCounts,
   vecPvalueBH = p.adjust(vecPvalue, method = "BH")
   
   dfModelFreeDEAnalysis =   as.data.frame(cbind(
-    "Gene" = row.names(matCounts),
+    "Gene" = row.names(matCountsProc),
     "p"=as.numeric(vecPvalue),
     "adj.p"=as.numeric(vecPvalueBH),
     "loglik_full"=vecLogLikFull,
     "loglik_red"=vecLogLikRed,
     "deviance"=vecDeviance,
-    "mean"=vecMeans,
-    "dispersion_null"=vecDispersions,
-    "converged_null"=rep(scaConvergedRed!=0,dim(matCounts)[1]),
-    "converged_full"=rep(all(vecConvergenceFull),dim(matCounts)[1]),
+    "mean"=vecMuClusterNULL,
+    "dispersion_null"=vecDispersionsNULL,
+    "converged_null"=rep(boolConvergenceZINBH0!=0,dim(matCountsProc)[1]),
+    "converged_full"=rep(all(boolConvergenceZINBH1),dim(matCountsProc)[1]),
     stringsAsFactors = FALSE))
   
   # Order data frame by adjusted p-value
-  dfModelFreeDEAnalysis$adj.p <- as.numeric(as.character(dfDEAnalysis$adj.p))
-  dfModelFreeDEAnalysis = dfModelFreeDEAnalysis[order(dfDEAnalysis$adj.p),]
+  dfModelFreeDEAnalysis$adj.p <- as.numeric(as.character(dfModelFreeDEAnalysis$adj.p))
+  dfModelFreeDEAnalysis = dfModelFreeDEAnalysis[order(dfModelFreeDEAnalysis$adj.p),]
   
   return(dfModelFreeDEAnalysis)
 }

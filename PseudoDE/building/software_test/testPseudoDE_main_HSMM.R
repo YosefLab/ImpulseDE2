@@ -91,15 +91,18 @@ if(FALSE){
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matMuCluster.RData")
 }
 
-# Investigate distribution of cells over pseudotime
-vecPTpointsAll_HSMM <- as.vector(pData(HSMM)$Pseudotime)
-names(vecPTpointsAll_HSMM) <- as.vector(rownames(pData(HSMM)))
-vecPTpoints_HSMM <- vecPTpointsAll_HSMM[!is.na(vecPTpointsAll_HSMM)]
-print(paste0("HSMM: Total cells: ",length(vecPTpointsAll_HSMM),", Non NA: ",length(vecPTpoints_HSMM)))
-# Use real observation time
-vecPTpointsAll_HSMM <- HSMM_sample_sheetRAW$Hours
-names(vecPTpointsAll_HSMM) <- rownames(HSMM_sample_sheetRAW)
-vecPTpoints_HSMM <- vecPTpointsAll_HSMM[!is.na(vecPTpointsAll_HSMM)]
+if(TRUE){
+  # Investigate distribution of cells over pseudotime
+  vecPTpointsAll_HSMM <- as.vector(pData(HSMM)$Pseudotime)
+  names(vecPTpointsAll_HSMM) <- as.vector(rownames(pData(HSMM)))
+  vecPTpoints_HSMM <- vecPTpointsAll_HSMM[!is.na(vecPTpointsAll_HSMM)]
+  print(paste0("HSMM: Total cells: ",length(vecPTpointsAll_HSMM),", Non NA: ",length(vecPTpoints_HSMM)))
+}else{
+  # Use real observation time
+  vecPTpointsAll_HSMM <- HSMM_sample_sheetRAW$Hours
+  names(vecPTpointsAll_HSMM) <- rownames(HSMM_sample_sheetRAW)
+  vecPTpoints_HSMM <- vecPTpointsAll_HSMM[!is.na(vecPTpointsAll_HSMM)]
+}
 
 # Run PseudoDE
 matCounts <- data.matrix(dfCountsHSMM_SC)
@@ -115,7 +118,7 @@ plotEDF <- ggplot() +
   ylab("empirical probability density")
 print(plotEDF)
 
-matCountsRed <- matCounts
+matCountsRed <- matCounts[1:500,]
 matCountsRed <- round(matCountsRed)
 
 nProc=3
@@ -126,7 +129,10 @@ lsDEresults <- runPseudoDE(matCounts=matCountsRed,
   boolPseudotime = TRUE,
   boolContPseudotimeFit=FALSE,
   boolPlotZINBfits=FALSE,
-  nProc=nProc)
+  boolDEAnalysisImpulseModel = FALSE,
+  boolDEAnalysisModelFree = TRUE,
+  nProc=nProc,
+  scaMaxiterEM=5)
 
 if(FALSE){
   # Load files from interior of ImpulseDE
