@@ -130,8 +130,8 @@ lsDEresults <- runPseudoDE(matCounts=matCountsRed,
   boolPseudotime = TRUE,
   boolContPseudotimeFit=TRUE,
   boolPlotZINBfits=FALSE,
-  boolDEAnalysisImpulseModel = TRUE,
-  boolDEAnalysisModelFree = FALSE,
+  boolDEAnalysisImpulseModel = FALSE,
+  boolDEAnalysisModelFree = TRUE,
   nProc=nProc,
   scaMaxiterEM=5)
 
