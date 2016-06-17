@@ -126,46 +126,61 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
 lsDEresults <- runPseudoDE(matCounts=matCountsRed,
   vecPseudotime=vecPT,
+  K=6,
   boolPseudotime = TRUE,
-  boolContPseudotimeFit=FALSE,
+  boolContPseudotimeFit=TRUE,
   boolPlotZINBfits=FALSE,
-  boolDEAnalysisImpulseModel = FALSE,
-  boolDEAnalysisModelFree = TRUE,
+  boolDEAnalysisImpulseModel = TRUE,
+  boolDEAnalysisModelFree = FALSE,
   nProc=nProc,
   scaMaxiterEM=5)
 
 if(FALSE){
-  # Load files from interior of ImpulseDE
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_dfAnnotation.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsZINBparam.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matCountsProc.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_lsResultsClustering.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matProbNB.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matDropout.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_vecDispersions.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_matMuCluster.RData")
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-  load("ImpulseDE2_arr2DCountData.RData")
-  load("ImpulseDE2_dfAnnotationFull.RData")
+  load("ImpulseDE2_matCountDataProc.RData")
+  load("ImpulseDE2_dfAnnotationProc.RData")
   # Load Impulse output
   load("ImpulseDE2_dfImpulseResults.RData")
-  load("ImpulseDE2_lsDEGenes.RData")
+  load("ImpulseDE2_vecDEGenes.RData")
   load("ImpulseDE2_lsImpulseFits.RData")
   load("ImpulseDE2_dfDESeq2Results.RData")
-  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_vecNormConst.RData")
-  NPARAM <- 6
-  strMode <- "singlecell"
-  setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files")
-  source("srcImpulseDE2_plotDEGenes.R")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_lsMatTranslationFactors.RData")
+  load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/ImpulseDE2_matSizeFactors.RData")
+  source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/PseudoDE/building/code_files/PseudoDE_main.R")
   setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
-  plotDEGenes(
-    lsGeneIDs=rownames(matCountsClean),
-    arr2DCountData=arr2DCountData,
-    vecNormConst=vecNormConst,
-    dfAnnotationFull=dfAnnotationFull, 
-    lsImpulseFits=lsImpulseFits,
+  graphics.off()
+  plotDEGenes(vecGeneIDs=vecDEGenes, 
+    matCountDataProc=matCountDataProc, 
+    lsMatTranslationFactors=lsMatTranslationFactors, 
+    matSizeFactors=matSizeFactors,
+    dfAnnotationProc=dfAnnotationProc, 
+    lsImpulseFits=lsImpulseFits, 
+    matMuCluster=matMuCluster,
+    vecClusterAssignments=lsResultsClustering$Assignments,
+    dfImpulseResults, 
+    vecRefPval=NULL, 
     strCaseName="case", 
     strControlName=NULL, 
-    strFileNameSuffix="DE", 
-    strPlotTitleSuffix="", 
-    strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,
-    vecMethod2Results=dfDESeq2Results$padj,
-    strMode=strMode, 
-    NPARAM=NPARAM)
+    strMode="singlecell",
+    strSCMode="continuous",
+    strFileNameSuffix = "DEgenes", 
+    strPlotTitleSuffix = "", 
+    strPlotSubtitle = "",
+    strNameMethod1="ImpulseDE2", 
+    strNameMethod2=NULL,
+    boolSimplePlot=FALSE, 
+    boolLogPlot=TRUE,
+    NPARAM=6)
 }
+
 if(FALSE){
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_dfAnnotation.RData")
   load("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out/PseudoDE_vecDispersions.RData")

@@ -121,9 +121,15 @@ evalLogLikImpulseSC <- function(vecTheta,
   # adding log likelihood of model at each timepoint.
   # Likelihood function of hurdle modle differs between
   # zero and non-zero counts: Add likelihood of both together.
-  # Note that the log is taken over the sum of mixture model 
-  # components of the likelihood model and accordingly log=FALSE
-  # inside dnbinom.
+  # Note on handling very low probabilities: vecLikZeros
+  # typically does not have zero elements as it has the 
+  # the summand drop-out rate. Also the log cannot be
+  # broken up over the sum to dnbinom. In contrast to that,
+  # the log is taken in dnbinom for vecLikNonzeros to avoid 
+  # zero probabilities. Zero probabilities are handled
+  # through substitution of the minimal probability under
+  # machine precision.
+  
   # Likelihood of zero counts:
   vecLikZeros <- (1-vecDropoutRateEst[vecboolZero])*
     dnbinom(
@@ -137,16 +143,16 @@ evalLogLikImpulseSC <- function(vecTheta,
   scaLogLikZeros <- sum( log(vecLikZeros[vecLikZeros!=0]) +
       sum(vecLikZeros==0)*log(.Machine$double.eps) )
   # Likelihood of non-zero counts:
-  vecLikNonzeros <- (1-vecDropoutRateEst[vecboolNotZeroObserved])*
+  vecLikNonzeros <- log(1-vecDropoutRateEst[vecboolNotZeroObserved]) +
     dnbinom(
       vecY[vecboolNotZeroObserved], 
       mu=vecImpulseValue[vecboolNotZeroObserved], 
       size=scaDispEst, 
-      log=FALSE)
+      log=TRUE)
   # Replace zero likelihood observation with machine precision
   # for taking log.
-  scaLogLikNonzeros <- sum( log(vecLikNonzeros[vecLikNonzeros!=0]) +
-      sum(vecLikNonzeros==0)*log(.Machine$double.eps) )
+  scaLogLikNonzeros <- sum( vecLikNonzeros[is.finite(vecLikNonzeros)]) +
+      sum(!is.finite(vecLikNonzeros))*log(.Machine$double.eps)
   # Compute likelihood of all data:
   scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
   # Maximise log likelihood: Return likelihood as value to optimisation routine

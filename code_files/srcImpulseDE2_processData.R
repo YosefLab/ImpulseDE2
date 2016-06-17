@@ -429,11 +429,13 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     matDropout <- lsPseudoDE$matDropout
     matMuCluster <- lsPseudoDE$matMuCluster
     vecClusterAssignments <- lsPseudoDE$vecClusterAssignments
+    vecCentroids <- lsPseudoDE$vecCentroids
   } else {
     matProbNB <- NULL
     matDropout <- NULL
     matMuCluster <- NULL
     vecClusterAssignments <- NULL
+    vecCentroids <- NULL
   }
   
   lsProcessedData <- list(matCountDataProc, 
@@ -441,12 +443,14 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     matProbNB, 
     matDropout, 
     matMuCluster,
-    vecClusterAssignments)
+    vecClusterAssignments,
+    vecCentroids)
   names(lsProcessedData) <- c("matCountDataProc",
     "dfAnnotationProc",
     "matProbNB", 
     "matDropout", 
     "matMuCluster",
-    "vecClusterAssignments")
+    "vecClusterAssignments",
+    "vecCentroids")
   return( lsProcessedData )
 }

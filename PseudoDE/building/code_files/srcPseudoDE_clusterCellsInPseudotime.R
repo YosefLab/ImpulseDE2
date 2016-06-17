@@ -12,6 +12,7 @@
 #' 
 #' @param vecPseudotime: (numerical vector length number of cells)
 #'    Pseudotime coordinates (1D) of cells: One scalar per cell.
+#' @param Kexternal: (scalar) Externally set K.
 #' 
 #' @return (list {"Assignments","Centroids","K"})
 #'    \itemize{
@@ -23,12 +24,13 @@
 #'      }
 #' @export
 
-clusterCellsInPseudotime <- function(vecPseudotime){
+clusterCellsInPseudotime <- function(vecPseudotime,
+  Kexternal=NULL ){
   
   # Range of K for K-means is number of unique cells
   vecPseudotimeUnique <- unique(vecPseudotime)
-  #K <- max(round( log(length(vecPseudotimeUnique)/2 )),10)
   K <- round( log(length(vecPseudotime))/log(2) )
+  if(!is.null(Kexternal) & Kexternal > K){K <- Kexternal}
   vecW <- array(NA,K)
   lsCentroids <- list()
   matAssignments <- array(NA,c(K,length(vecPseudotime)))
@@ -91,6 +93,9 @@ clusterCellsInPseudotime <- function(vecPseudotime){
   Khat <- min(which(sapply( seq(2,(K-1)), function(k){
     vecGapStat[k] >= vecGapStat[k+1] - vecSK[k+1]
   })))+1
+  if(!is.null(Kexternal)){
+    Khat <- Kexternal
+  }
   
   # Summarise output:
   lsResultsKhat <- list()

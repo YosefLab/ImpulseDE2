@@ -71,12 +71,14 @@ plotDEGenes <- function(vecGeneIDs,
   dfAnnotationProc, 
   lsImpulseFits, 
   matMuCluster=NULL,
+  vecCentroids=NULL,
   vecClusterAssignments=NULL,
   dfImpulseResults, 
   vecRefPval=NULL, 
   strCaseName, 
   strControlName=NULL, 
   strMode="batch",
+  strSCMode="clustered",
   strFileNameSuffix = "", 
   strPlotTitleSuffix = "", 
   strPlotSubtitle = "",
@@ -88,6 +90,8 @@ plotDEGenes <- function(vecGeneIDs,
   
   # Base of logarithm to use if boolLogPlot==TRUE
   SCALOGBASE <- 2
+  # Plot one plot per page
+  boolPlotOnePerPage <- FALSE
   
   # Process metadata
   vecConditions <- as.vector( dfAnnotationProc[match(
@@ -147,13 +151,13 @@ plotDEGenes <- function(vecGeneIDs,
   # and plotted at sample x time units vertically in the interval
   # [x,x+1] time units, with the y axis (the counts) being the
   # horizontal axis of the pdf.
-  PDF_WIDTH <- max(vecTimepoints)/length(vecTimepoints)
+  PDF_WIDTH <- (max(vecTimepoints)-min(vecTimepoints))/10
   
   # Open .pdf
   pdf(paste("ImpulseDE2_",strFileNameSuffix,".pdf",sep=""),height=6.0,width=9.0)
   
   # Define grid for printing plots
-  if (length(vecGeneIDs) == 1){
+  if (length(vecGeneIDs) == 1 | boolPlotOnePerPage){
     par(mfrow=c(1,1), xpd=TRUE)
     scaLegendInset <- -0.15
   } else if (length(vecGeneIDs) <= 4){
@@ -218,11 +222,13 @@ plotDEGenes <- function(vecGeneIDs,
         # Plot points, impulse trace and
         # batch: inferred negative binomials
         # longitudinal: longitudinal series scaled impulse traces
-        
         if(strMode=="batch" | strMode=="singlecell"){
           # Plot observed points in blue - all time courses in same colour
           scaYlim_lower <- min( min(matCountDataProcNorm[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
           scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
+          if(max(vecCaseValues[indVecXObs]) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
+            scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)
+          }
           strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
           if(!is.null(vecRefPval)){
             strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
@@ -241,43 +247,65 @@ plotDEGenes <- function(vecGeneIDs,
             main=paste0(geneID," ",strPlotTitleSuffix," log_10(Pval):\n ",strPvalImpulse,
               strPvalMethod2 ),sub=strPlotSubtitle)
           
-          # Plot inferred negative binomial pdf at each time point in black (vertical)
+          # Add vertical density traces:
+          # Bulk: Plot inferred negative binomial pdf at each time point in black (vertical)
           vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
           # Mean parameter of negative binomial is value of inferred impulse model
           vecCaseValueAtTP <- calcImpulse_comp(vecImpulseParamCaseLog,vecTimepoints)
-          # Plot empirical density distribution of data at each time point because
-          # there are a lot of points with single cell data.
+          # Single cell: Plot empirical density distribution
           if(strMode=="singlecell"){
-            vecCaseValueAtTP <- calcImpulse_comp(vecImpulseParamCaseLog,vecTimepoints)
-          }
-          for(tp in vecTimepoints){
-            if(strMode=="singlecell"){
-              vecKernelData <- matCountDataProcNorm[geneID,vecTimepointAssign==tp]
-              vecKernelData <- vecKernelData[vecKernelData > 0]
-              if(length(vecKernelData)>5){
-                dfEDF <- density(x=vecKernelData)
-                vecXCoordEDF <- (dfEDF$x)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
-                vecYCoordEDF <- (dfEDF$y)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
-                vecYCoordEDF <- vecYCoordEDF * PDF_WIDTH/max(vecYCoordEDF)
-                lines(x=tp+vecYCoordEDF,y=vecXCoordEDF,col="blue")
+            if(strSCMode=="clustered"){
+              for(tp in vecTimepoints){
+                # Plot kernel density estimate at each time point
+                vecKernelData <- matCountDataProcNorm[geneID,vecTimepointAssign==tp]
+                #vecKernelData <- vecKernelData[vecKernelData > 0]
+                if(length(vecKernelData)>5){
+                  dfEDF <- density(x=vecKernelData)
+                  vecXCoordEDF <- (dfEDF$x)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
+                  vecYCoordEDF <- (dfEDF$y)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
+                  vecYCoordEDF <- vecYCoordEDF * PDF_WIDTH/max(vecYCoordEDF)
+                  lines(x=tp+vecYCoordEDF,y=vecXCoordEDF,col="blue")
+                }
+              }
+            }
+            if(strSCMode=="continuous"){
+              print("flag")
+              # Plot local kernel density estimate at each time point 
+              # equally spaced out.
+              scaKernels <- 10
+              vecDelta <- (max(vecTimepoints)-min(vecTimepoints))/scaKernels
+              vecKernels <- min(vecTimepoints) + vecDelta*(seq(0,scaKernels-1)+0.5)
+              for(ker in vecKernels){
+                vecboolRange <- vecTimepointAssign >= (ker-vecDelta) &
+                  vecTimepointAssign <= (ker+vecDelta)
+                vecKernelData <- matCountDataProcNorm[geneID,vecboolRange]
+                #vecKernelData <- vecKernelData[vecKernelData > 0]
+                if(length(vecKernelData)>5){
+                  dfEDF <- density(x=vecKernelData)
+                  vecXCoordEDF <- (dfEDF$x)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
+                  vecYCoordEDF <- (dfEDF$y)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
+                  vecYCoordEDF <- vecYCoordEDF * PDF_WIDTH/max(vecYCoordEDF)
+                  lines(x=ker+vecYCoordEDF,y=vecXCoordEDF,col="red")
+                }
               }
             } else {
-              vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
-                size=as.numeric(as.vector(dfImpulseResults[geneID,]$size)) )
-              # Scale Y_coord to uniform peak heights of 1
-              # This translates into width of one time unit in plot
-              vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
-              # Plot pdf vertically at time point
-              lines(x=tp+vecYCoordPDF,y=vecXCoordPDF,col="black")
+              for(tp in vecTimepoints){
+                vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
+                  size=as.numeric(as.vector(dfImpulseResults[geneID,]$size)) )
+                # Scale Y_coord to uniform peak heights of 1
+                # This translates into width of one time unit in plot
+                vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
+                # Plot pdf vertically at time point
+                lines(x=tp+vecYCoordPDF,y=vecXCoordPDF,col="black")
+              }
             }
             
             # Plot inferred mean of each time point
             if(strMode=="singlecell"){
-              points(vecTimepoints,
-                matMuCluster[geneID, vecClusterAssignments[
-                  names(vecTimepointAssign[match(vecTimepoints,vecTimepointAssign)])]],
+              points(vecCentroids,
+                matMuCluster[geneID,],
                 col="red",pch=1)
-            } else {
+            } else if(strMode=="batch" | strMode=="longitudinal") {
               points(vecTimepoints,
                 matMuTimepoints[geneID, match(vecTimepoints,vecTimepointAssign)],
                 col="black",pch=1)
@@ -294,29 +322,6 @@ plotDEGenes <- function(vecGeneIDs,
             fill=c("blue"), 
             cex=0.6, 
             inset=c(0,scaLegendInset))
-          if(FALSE) {
-            dfE2DF <- data.frame(x=vecTimepointAssign[matCountDataProcNorm[geneID,]>0], 
-              y=matCountDataProcNorm[geneID,matCountDataProcNorm[geneID,]>0])
-            # Plot impulse model within boundaries of observed points
-            vecCaseValuesToPlot <- vecCaseValues
-            indImpulseValToPlot <- vecCaseValuesToPlot >= scaYlim_lower & vecCaseValuesToPlot <= scaYlim_upper
-            vecCaseValuesToPlot[!indImpulseValToPlot] <- NA
-            dfImpulse <- data.frame(x=vecX,y=vecCaseValuesToPlot)
-            library(MASS)
-            commonTheme = list(labs(color="Density",fill="Density",
-              x="Pseudotime",
-              y="RNA-seq counts"),
-              theme_bw(),
-              theme(legend.position=c(0,1),
-                legend.justification=c(0,1)))
-            print(ggplot(data=dfE2DF, aes(x,y)) +
-                stat_density2d(data=dfE2DF, aes(fill=..level..,alpha=..level..),geom='polygon',colour='black') + 
-                scale_fill_continuous(low="green",high="red") +
-                geom_smooth(method=lm,linetype=2,colour="red",se=F) + 
-                guides(alpha="none") +
-                geom_point() + commonTheme)
-            #                geom_line( data=dfImpulse, aes(x=counts, y=density), col = "black") +
-          }
           
         } else if(strMode=="longitudinal"){
           vecTranslationFactors <- (lsMatTranslationFactors[["case"]])[geneID,vecindLongitudinalSeriesAssignUnique]
@@ -329,6 +334,9 @@ plotDEGenes <- function(vecGeneIDs,
             min(vecCaseValues[indVecXObs]*min(vecTranslationFactors)) )
           scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), 
             max(vecCaseValues[indVecXObs]*max(vecTranslationFactors)) )
+          if(max(vecCaseValues[indVecXObs])*max(vecTranslationFactors) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
+            scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)
+          }
           strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
           if(!is.null(vecRefPval)){
             strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)

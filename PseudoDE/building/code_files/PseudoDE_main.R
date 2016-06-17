@@ -125,6 +125,7 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/Pseudo
 
 runPseudoDE <- function(matCounts, 
   vecPseudotime,
+  K=NULL,
   boolPseudotime = TRUE,
   boolContPseudotimeFit = FALSE,
   boolOneDispPerGene = TRUE,
@@ -144,6 +145,8 @@ runPseudoDE <- function(matCounts,
       boolDEAnalysisModelFree=boolDEAnalysisModelFree )
     matCountsProc <- lsProcessedSCData$matCountsProc
     vecPseudotimeProc <- lsProcessedSCData$vecPseudotimeProc
+    if(boolContPseudotimeFit){strSCMode="continuous"
+    }else{strSCMode="clustered"}
   })
   save(matCountsProc,file=file.path(getwd(),"PseudoDE_matCountsProc.RData"))
   save(vecPseudotimeProc,file=file.path(getwd(),"PseudoDE_vecPseudotimeProc.RData"))
@@ -153,7 +156,8 @@ runPseudoDE <- function(matCounts,
   tm_clustering <- system.time({
     if(boolPseudotime){
       # Cluster in pseudotime
-      lsResultsClustering <- clusterCellsInPseudotime(vecPseudotime=vecPseudotimeProc)
+      lsResultsClustering <- clusterCellsInPseudotime(vecPseudotime=vecPseudotimeProc,
+        Kexternal=K)
       # Plot clustering
       plotPseudotimeClustering(vecPseudotime=vecPseudotimeProc, 
         lsResultsClustering=lsResultsClustering)
@@ -237,22 +241,25 @@ runPseudoDE <- function(matCounts,
     tm_deanalysis_impulse <- system.time({
       vecClusterAssignments <- lsResultsClustering$Assignments
       names(vecClusterAssignments) <- colnames(matCountsProc)
-      lsInputToImpulseDE2 <- list(matDropout, matProbNB, matMuCluster, vecClusterAssignments)
-      names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matMuCluster", "vecClusterAssignments")
+      lsInputToImpulseDE2 <- list(matDropout, matProbNB, matMuCluster, 
+        vecClusterAssignments, lsResultsClustering$Centroids )
+      names(lsInputToImpulseDE2) <- c("matDropout", "matProbNB", "matMuCluster", 
+        "vecClusterAssignments", "vecCentroids")
       
       lsImpulseDE2results <- runImpulseDE2(
         matCountData = matCountsProc, 
         dfAnnotation = dfAnnotation,
         strCaseName = "case", 
         strControlName = NULL, 
-        strMode = "singlecell", 
+        strMode = "singlecell",
+        strSCMode = strSCMode,
         nProc = nProc, 
         Q_value = 10^(-5),
         boolPlotting = TRUE,
         lsPseudo = lsInputToImpulseDE2,
         vecDispersionsExternal = vecDispersions,
         boolRunDESeq2 = FALSE,
-        boolSimplePlot = boolContPseudotimeFit, 
+        boolSimplePlot = FALSE, 
         boolLogPlot = TRUE )
     })
     print("### End ImpulseDE2 output ##################################")

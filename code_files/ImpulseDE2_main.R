@@ -224,6 +224,7 @@ runImpulseDE2 <- function(matCountData=NULL,
   strCaseName = NULL, 
   strControlName=NULL, 
   strMode="batch",
+  strSCMode="clustered",
   nProc=1, 
   Q_value=0.01, 
   boolPlotting=TRUE,
@@ -255,6 +256,7 @@ runImpulseDE2 <- function(matCountData=NULL,
     matDropoutRate <- lsProcessedData$matDropout
     matMuCluster <- lsProcessedData$matMuCluster
     vecClusterAssignments <- lsProcessedData$vecClusterAssignments
+    vecCentroids <- lsProcessedData$vecCentroids
     
     save(matCountDataProc,file=file.path(getwd(),"ImpulseDE2_matCountDataProc.RData"))
     save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_dfAnnotationProc.RData"))
@@ -322,6 +324,7 @@ runImpulseDE2 <- function(matCountData=NULL,
         matDropoutRate=matDropoutRate,
         matProbNB=matProbNB,
         matMuCluster=matMuCluster,
+        vecCentroids=vecCentroids,
         vecClusterAssignments=vecClusterAssignments,
         matSizeFactors=matSizeFactors,
         lsMatTranslationFactors=lsMatTranslationFactors,
@@ -366,10 +369,12 @@ runImpulseDE2 <- function(matCountData=NULL,
           dfAnnotationProc=dfAnnotationProc, 
           lsImpulseFits=lsImpulseFits,
           matMuCluster=matMuCluster,
+          vecCentroids=vecCentroids,
           vecClusterAssignments=vecClusterAssignments,
           dfImpulseResults=dfImpulseResults,
           vecRefPval=vecRefPval,
           strMode=strMode,
+          strSCMode=strSCMode,
           strCaseName=strCaseName, 
           strControlName=strControlName, 
           strFileNameSuffix="DEgenes", 

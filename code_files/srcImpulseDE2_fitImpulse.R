@@ -93,15 +93,15 @@ computeLogLikNull <- function(vecCounts,
     scaLogLikNullZeros <- sum( log(vecLikNullZeros[vecLikNullZeros!=0]) +
         sum(vecLikNullZeros==0)*log(.Machine$double.eps) )
     # Likelihood of non-zero counts:
-    vecLikNullNonzeros <- (1-vecDropoutRate[vecboolNotZeroObserved])*
+    vecLikNullNonzeros <- log(1-vecDropoutRate[vecboolNotZeroObserved]) + 
       dnbinom(vecCounts[vecboolNotZeroObserved], 
         mu=scaMu, 
         size=scaDispersionEstimate, 
-        log=FALSE)
+        log=TRUE)
     # Replace zero likelihood observation with machine precision
     # for taking log.
-    scaLogLikNullNonzeros <- sum( log(vecLikNullNonzeros[vecLikNullNonzeros!=0]) +
-        sum(vecLikNullNonzeros==0)*log(.Machine$double.eps) )
+    scaLogLikNullNonzeros <- sum( vecLikNullNonzeros[is.finite(vecLikNullNonzeros)]) +
+      sum(!is.finite(vecLikNullNonzeros))*log(.Machine$double.eps)
     
     # Compute likelihood of all data:
     scaLogLikNull <- scaLogLikNullZeros + scaLogLikNullNonzeros
@@ -156,7 +156,8 @@ estimateImpulseParam <- function(vecTimepoints,
   vecCounts,
   vecDropoutRate=NULL,
   vecProbNB=NULL,
-  vecMuCell=NULL,
+  vecMuCluster=NULL,
+  vecCentroids=NULL,
   vecTimepointAssign, 
   vecNormConst,
   strMode){
@@ -166,13 +167,14 @@ estimateImpulseParam <- function(vecTimepoints,
     vecExpressionMeans <- sapply(vecTimepoints,
       function(tp){mean(vecCounts[vecTimepointAssign==tp], na.rm=TRUE)})
   } else if(strMode=="singlecell"){
-    vecExpressionMeans <- unlist(sapply( vecTimepoints, function(tp){
-      sum((vecCounts/vecNormConst*vecProbNB)[vecTimepointAssign==tp], na.rm=TRUE)/sum(vecProbNB[vecTimepointAssign==tp])
-    } ))
+    #vecExpressionMeans <- unlist(sapply( vecTimepoints, function(tp){
+    #  sum((vecCounts/vecNormConst*vecProbNB)[vecTimepointAssign==tp], na.rm=TRUE)/sum(vecProbNB[vecTimepointAssign==tp])
+    #} ))
     # Catch exception: sum(vecProbNB[vecTimepointAssign==tp])==0
+    vecExpressionMeans <- vecMuCluster
+    vecTimepoints <- vecCentroids
+    vecTimepointAssign <- vecTimepoints
     vecExpressionMeans[is.na(vecExpressionMeans)] <- 0
-    # Impute counts for parameter initilisation
-    vecCounts[vecCounts==0] <- (vecDropoutRate * (1 - vecProbNB) + vecMuCell * vecProbNB)[vecCounts==0]
   } else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
@@ -362,7 +364,8 @@ fitImpulse_gene <- function(vecCounts,
   scaDispersionEstimate,
   vecDropoutRate=NULL, 
   vecProbNB=NULL,
-  vecMuCell=NULL,
+  vecMuCluster=NULL,
+  vecCentroids=NULL,
   vecNormConst,
   vecTimepointAssign, 
   vecLongitudinalSeriesAssign, 
@@ -416,7 +419,8 @@ fitImpulse_gene <- function(vecCounts,
     vecCounts=vecCounts,
     vecDropoutRate=vecDropoutRate, 
     vecProbNB=vecProbNB,
-    vecMuCell=vecMuCell,
+    vecMuCluster=vecMuCluster,
+    vecCentroids=vecCentroids,
     vecTimepointAssign=vecTimepointAssign, 
     vecNormConst=vecNormConst,
     strMode=strMode)
@@ -545,7 +549,8 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
   vecDispersions, 
   matDropoutRate=NULL, 
   matProbNB=NULL,
-  matMuCell=NULL,
+  matMuCluster=NULL,
+  vecCentroids=NULL,
   matNormConst, 
   vecTimepointAssign, 
   vecLongitudinalSeriesAssign, 
@@ -582,7 +587,8 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("vecDispersions", vecDispersions, envir = my.env)
     assign("matDropoutRate", matDropoutRate, envir = my.env)
     assign("matProbNB", matProbNB, envir = my.env)
-    assign("matMuCell", matMuCell, envir = my.env)
+    assign("matMuCluster", matMuCluster, envir = my.env)
+    assign("vecCentroids", vecCentroids, envir = my.env)
     assign("matNormConst", matNormConst, envir = my.env)
     assign("vecTimepointAssign", vecTimepointAssign, envir = my.env)
     assign("vecLongitudinalSeriesAssign", vecLongitudinalSeriesAssign, envir = my.env)
@@ -607,7 +613,8 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "vecDispersions",
       "matDropoutRate",
       "matProbNB",
-      "matMuCell",
+      "matMuCluster",
+      "vecCentroids",
       "matNormConst",
       "vecTimepointAssign",
       "vecLongitudinalSeriesAssign",
@@ -639,7 +646,8 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
             scaDispersionEstimate=vecDispersions[x],
             vecDropoutRate=matDropoutRate[x,],
             vecProbNB=matProbNB[x,],
-            vecMuCell=matMuCell[x,],
+            vecMuCluster=matMuCluster[x,],
+            vecCentroids=vecCentroids,
             vecNormConst=matNormConst[x,],
             vecTimepointAssign=vecTimepointAssign,
             vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
@@ -686,7 +694,8 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
           scaDispersionEstimate=vecDispersions[x],
           vecDropoutRate=matDropoutRate[x,],
           vecProbNB=matProbNB[x,],
-          vecMuCell=matMuCell[x,],
+          vecMuCluster=matMuCluster[x,],
+          vecCentroids=vecCentroids,
           vecNormConst=vecNormConst,
           vecTimepointAssign=vecTimepointAssign,
           vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
@@ -811,6 +820,7 @@ fitImpulse <- function(matCountDataProc,
   matDropoutRate, 
   matProbNB,
   matMuCluster,
+  vecCentroids,
   vecClusterAssignments,
   strCaseName, 
   strControlName=NULL, 
@@ -872,9 +882,9 @@ fitImpulse <- function(matCountDataProc,
       matNormConst <- matSizeFactors
     }
     if(strMode=="singlecell"){
-      matMuCell <- matMuCluster[,vecClusterAssignments]
-      rownames(matMuCell) <- rownames(matMuCluster)
-      colnames(matMuCell) <- names(vecClusterAssignments)
+      #matMuCell <- matMuCluster[,vecClusterAssignments]
+      #rownames(matMuCell) <- rownames(matMuCluster)
+      #colnames(matMuCell) <- names(vecClusterAssignments)
       # Call fitting with single cell parameters
       lsFitResults_run <- fitImpulse_matrix(
         matCountDataProcCondition=matCountDataProc[,lsSamplesByCond[[label]]],
@@ -882,7 +892,8 @@ fitImpulse <- function(matCountDataProc,
         vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate[,lsSamplesByCond[[label]]],
         matProbNB=matProbNB[,lsSamplesByCond[[label]]],
-        matMuCell=matMuCell[,lsSamplesByCond[[label]]],
+        matMuCluster=matMuCluster,
+        vecCentroids=vecCentroids,
         vecTimepointAssign=vecTimepointAssign[lsSamplesByCond[[label]]],
         vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign[lsSamplesByCond[[label]]],
         dfAnnotationProc=dfAnnotationProc,
