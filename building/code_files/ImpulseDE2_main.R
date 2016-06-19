@@ -15,6 +15,7 @@ library(DESeq2)
 library(BiocParallel)
 
 # Source functions in .R files from same directory as this function.
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
 source("srcImpulseDE2_processData.R")
 source("srcImpulseDE2_computeNormConst.R")
 source("srcImpulseDE2_runDESeq2.R")
@@ -216,7 +217,8 @@ runImpulseDE2 <- function(matCountData=NULL,
   Q_value=0.01, 
   boolPlotting=TRUE,
   lsPseudoDE=NULL, 
-  vecDispersionsExternal=NULL, 
+  vecDispersionsExternal=NULL,
+  vecSizeFactorsExternal=NULL,
   boolRunDESeq2=TRUE,
   boolSimplePlot=FALSE, 
   boolLogPlot=FALSE ){
@@ -256,11 +258,11 @@ runImpulseDE2 <- function(matCountData=NULL,
     print("2. Compute Normalisation constants")
     lsNormConst <- computeNormConst(
       matCountDataProc=matCountDataProc,
-      matProbNB=matProbNB,
       dfAnnotationProc=dfAnnotationProc,
       strCaseName=strCaseName,
       strControlName=strControlName, 
-      strMode=strMode)
+      strMode=strMode,
+      vecSizeFactorsExternal=vecSizeFactorsExternal)
     lsMatTranslationFactors <- lsNormConst$lsMatTranslationFactors
     matSizeFactors <- lsNormConst$matSizeFactors
     save(lsMatTranslationFactors,file=file.path(getwd(),"ImpulseDE2_lsMatTranslationFactors.RData"))

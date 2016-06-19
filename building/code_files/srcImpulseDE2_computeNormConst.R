@@ -9,15 +9,16 @@
 #' of the dataset.
 #' Size factors scale the negative binomial likelihood
 #' model of a gene to the sequencing depth of each sample.
+#' Note that size factors on bulk and single-cell data are 
+#' computed differently: Median ratio of data to geometric mean
+#' for bul data and normalised relative sequencing depth for
+#' single-cell data.
 #' 
 #' @seealso Called by \code{computeNormConst}.
 #' 
 #' @param matCountDataProc: (matrix genes x samples)
 #'    Count data: Reduced version of \code{matCountData}. 
 #'    For internal use.
-#' @param matProbNB: (probability matrix genes x samples) 
-#'    Probability of observations to come from negative binomial 
-#'    component of mixture model.
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
@@ -29,53 +30,53 @@
 #' @export
 
 computeSizeFactors <- function(matCountDataProc,
-  matProbNB,
   strMode){
   
-  # Compute geometric count mean over replicates
-  # for each gene: Set zero counts to one
-  # In the case of strMode=singlecell, this becomes
-  # the weighted geometric count mean, weighted by
-  # by the probability of each observation to come
-  # from the negative binomial distribution.
-  matCountDataProcNoZeros <- matCountDataProc
-  matCountDataProcNoZeros[matCountDataProcNoZeros==0] <- 0.1
-  matboolObserved <- !is.na(matCountDataProc)
   if(strMode=="batch" | strMode=="longitudinal"){
+    # Compute geometric count mean over replicates
+    # for each gene: Set zero counts to one
+    # In the case of strMode=singlecell, this becomes
+    # the weighted geometric count mean, weighted by
+    # by the probability of each observation to come
+    # from the negative binomial distribution.
+    matCountDataProcNoZeros <- matCountDataProc
+    matCountDataProcNoZeros[matCountDataProcNoZeros==0] <- 0.1
+    matboolObserved <- !is.na(matCountDataProc)
     # Take geometric mean
     vecGeomMean <- sapply(seq(1,dim(matCountDataProcNoZeros)[1]), 
       function(gene){
         ( prod(matCountDataProcNoZeros[gene,matboolObserved[gene,]]) )^
           ( 1/sum(matboolObserved[gene,]) )
       })
-  } else if(strMode=="singlecell"){
-    # Take weighted geometric mean
-    vecGeomMean <- sapply(seq(1,dim(matCountDataProcNoZeros)[1]), 
-      function(gene){
-        ( prod(matCountDataProcNoZeros[gene,matboolObserved[gene,]]^matProbNB[gene,matboolObserved[gene,]], na.rm=TRUE) )^
-          ( 1/sum(matProbNB[gene,matboolObserved[gene,]], na.rm=TRUE) )
+    
+    matGeomMeans <- matrix(vecGeomMean, 
+      nrow=dim(matCountDataProc)[1], 
+      ncol=dim(matCountDataProc)[2], 
+      byrow=FALSE)
+    
+    # Compute ratio of each observation to geometric
+    # mean.
+    matSizeRatios <- matCountDataProc / matGeomMeans
+    
+    # Chose median of ratios over genes as size factor
+    vecSizeFactors <- apply(matSizeRatios, 2,
+      function(replicate){
+        median(replicate, na.rm=TRUE)
       })
+  } else if(strMode=="singlecell"){
+    # Size factors directly represent sequencing depth:
+    # Normalised relative sequencing depth.
+    vecSeqDepth <- apply(matCountDataProc, 2,
+      function(cell){ sum(cell, na.rm=TRUE) })
+    vecSizeFactors <- vecSeqDepth/sum(vecSeqDepth)*length(vecSeqDepth)
   }
-  matGeomMeans <- matrix(vecGeomMean, 
-    nrow=dim(matCountDataProc)[1], 
-    ncol=dim(matCountDataProc)[2], 
-    byrow=FALSE)
-  
-  # Compute ratio of each observation to geometric
-  # mean.
-  matSizeRatios <- matCountDataProc / matGeomMeans
-  
-  # Chose median of ratios over genes as size factor
-  vecSizeFactors <- apply(matSizeRatios, 2,
-    function(replicate){
-      median(replicate, na.rm=TRUE)
-    })
   
   if(any(vecSizeFactors==0)){
     warning("WARNING: Found size factors==0, setting these to 1.")
     vecSizeFactors[vecSizeFactors==0] <- 1
   }
   
+  # Replicate vector to matrix
   matSizeFactors <- matrix(vecSizeFactors,
     nrow=dim(matCountDataProc)[1],
     ncol=dim(matCountDataProc)[2],
@@ -177,7 +178,7 @@ computeTranslationFactors <- function(matCountDataProc,
     for(longser in vecLongitudinalSeries){
       matMuLongitudinalCase[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCase & vecLongitudinalSeriesAssign==longser], 1, 
         function(gene){mean(gene, na.rm=TRUE)
-      })
+        })
     }
     colnames(matMuLongitudinalCase) <- vecLongitudinalSeries
     
@@ -199,7 +200,7 @@ computeTranslationFactors <- function(matCountDataProc,
     for(longser in vecLongitudinalSeries){
       matMuLongitudinalCtrl[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCtrl & vecLongitudinalSeriesAssign==longser], 1, 
         function(gene){mean(gene, na.rm=TRUE)
-      })
+        })
     }
     colnames(matMuLongitudinalCtrl) <- vecLongitudinalSeries
     
@@ -236,16 +237,16 @@ computeTranslationFactors <- function(matCountDataProc,
 #' of the given sample. The normalisation constants therefore replace
 #' normalisation at the count data level, which is not supposed to be done 
 #' in the framework of ImpulseDE2.
+#' There is the option to supply size factors to this function to override
+#' its size factor choice.
 #' 
 #' @seealso Called by \code{runImpulseDE2}. 
-#' Calls \code{computeTranslationFactors}.
+#' Calls \code{computeTranslationFactors} and
+#' \code{computeSizeFactors}.
 #' 
 #' @param matCountDataProc: (matrix genes x samples)
 #'    Count data: Reduced version of \code{matCountData}. 
 #'    For internal use.
-#' @param matProbNB: (probability matrix genes x samples) 
-#'    Probability of observations to come from negative binomial 
-#'    component of mixture model.
 #' @param dfAnnotationProc: (Table) Processed annotation table. 
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
@@ -256,6 +257,11 @@ computeTranslationFactors <- function(matCountDataProc,
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
+#' @param vecSizeFactorsExternal: (numeric vector number of cells) 
+#'    Model scaling factors for each observation which take
+#'    sequencing depth into account (size factors). One size
+#'    factor per cell. These are supplied to ImpulseDE, if this variable
+#'    is not set, size factors are computed in this function.
 #' 
 #' @return (list {lsMatTranslationFactors,matSizeFactors})
 #'    \itemize{
@@ -281,19 +287,29 @@ computeTranslationFactors <- function(matCountDataProc,
 #' @export
 
 computeNormConst <- function(matCountDataProc,
-  matProbNB=NULL,
   dfAnnotationProc,
   strCaseName,
   strControlName=NULL,
-  strMode="batch"){
+  strMode="batch",
+  vecSizeFactorsExternal=NULL){
   
   # 1. Compute size factors
   # Size factors account for differential sequencing depth.
-  matSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc,
-    matProbNB=matProbNB,
-    strMode=strMode)
-  
-  # 2. Compute translation factors:
+  if(is.null(vecSizeFactorsExternal)){
+    # Compute size factors if not supplied to ImpulseDE2.
+    matSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc,
+      strMode=strMode)
+  } else {
+    # Chose externally supplied size factors if supplied.
+    matSizeFactors <-   matSizeFactors <- matrix(vecSizeFactorsExternal,
+      nrow=dim(matCountDataProc)[1],
+      ncol=dim(matCountDataProc)[2],
+      byrow=TRUE)
+    colnames(matSizeFactors) <- colnames(matCountDataProc)
+    rownames(matSizeFactors) <- rownames(matCountDataProc)
+  }
+
+# 2. Compute translation factors:
   # Translation factors account for different mean expression levels of a
   # gene between longitudinal sample series.
   if(strMode=="longitudinal"){

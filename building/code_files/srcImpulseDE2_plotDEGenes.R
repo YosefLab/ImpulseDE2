@@ -269,7 +269,6 @@ plotDEGenes <- function(vecGeneIDs,
               }
             }
             if(strSCMode=="continuous"){
-              print("flag")
               # Plot local kernel density estimate at each time point 
               # equally spaced out.
               scaKernels <- 10
