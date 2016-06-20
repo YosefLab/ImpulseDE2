@@ -198,6 +198,10 @@ plotDEGenes <- function(vecGeneIDs,
         # Plot observed points in blue - all time courses in same colour
         scaYlim_lower <- min( min(matCountDataProcNorm[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
         scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
+        if(max(vecCaseValues) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
+          if(boolLogPlot){ scaYlim_upper <- 1+max(matCountDataProcNorm[geneID,],na.rm=TRUE)
+          } else { scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE) }
+        }
         strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
         if(!is.null(vecRefPval)){
           strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
@@ -226,8 +230,9 @@ plotDEGenes <- function(vecGeneIDs,
           # Plot observed points in blue - all time courses in same colour
           scaYlim_lower <- min( min(matCountDataProcNorm[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
           scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
-          if(max(vecCaseValues[indVecXObs]) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
-            scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)
+          if(max(vecCaseValues) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
+            if(boolLogPlot){ scaYlim_upper <- 1+max(matCountDataProcNorm[geneID,],na.rm=TRUE)
+            } else { scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE) }
           }
           strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
           if(!is.null(vecRefPval)){
@@ -329,8 +334,9 @@ plotDEGenes <- function(vecGeneIDs,
             min(vecCaseValues[indVecXObs]*min(vecTranslationFactors)) )
           scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), 
             max(vecCaseValues[indVecXObs]*max(vecTranslationFactors)) )
-          if(max(vecCaseValues[indVecXObs])*max(vecTranslationFactors) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
-            scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)
+          if(max(vecCaseValues)*max(vecTranslationFactors) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
+            if(boolLogPlot){ scaYlim_upper <- 1+max(matCountDataProcNorm[geneID,],na.rm=TRUE)
+            } else { scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE) }
           }
           strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
           if(!is.null(vecRefPval)){
