@@ -50,9 +50,16 @@
 #'
 #' @export
 
-processData <- function(dfAnnotation=NULL, matCountData=NULL,
-  strCaseName=NULL, strControlName=NULL, strMode=NULL,
-  lsPseudoDE=NULL, vecDispersionsExternal=NULL, boolRunDESeq2=NULL){
+processData <- function(dfAnnotation=NULL, 
+  matCountData=NULL,
+  scaSmallRun=NULL,
+  strCaseName=NULL, 
+  strControlName=NULL, 
+  strMode=NULL,
+  lsPseudoDE=NULL, 
+  vecDispersionsExternal=NULL,
+  vecSizeFactorsExternal=NULL,
+  boolRunDESeq2=NULL){
   
   ###############################################################
   # (I) Helper functions
@@ -106,11 +113,13 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   # Check format and presence of input data.
   checkData <- function(dfAnnotation=NULL, 
     matCountData=NULL,
+    scaSmallRun=NULL,
     strCaseName=NULL, 
     strControlName=NULL, 
     strMode=NULL,
     lsPseudoDE=NULL, 
     vecDispersionsExternal=NULL,
+    vecSizeFactorsExternal=NULL,
     boolRunDESeq2=NULL ){
     
     ### 1. Check that all necessary input was specified
@@ -252,11 +261,41 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
       }
     }
     
-    ### 7. Check DESeq2 settings
+    ### 7. Check supplied size facotrs
+    if(!is.null(vecSizeFactorsExternal)){
+      # Check that size factors were named
+      if(is.null(names(vecSizeFactorsExternal))){
+        stop("ERROR: vecSizeFactorsExternal was not named. Name according to colnames of matCountData.")
+      }
+      # Check that one size factors was supplied per cell
+      if(any( !(names(vecSizeFactorsExternal) %in% colnames(matCountData)) ) |
+          any( !(colnames(matCountData) %in% names(vecSizeFactorsExternal)) ) ){
+        stop("ERROR: vecSizeFactorsExternal supplied but names do not agree with colnames of matCountData.")
+      }
+      # Check that size factors vector is numeric
+      checkNumeric(vecSizeFactorsExternal, "vecSizeFactorsExternal")
+      # Check that size factors are positive
+      if(any(vecSizeFactorsExternal <= 0)){
+        stop(paste0( "WARNING: vecSizeFactorsExternal contains negative or zero elements which leads.",
+          "Size factors must be positive, remove samples if size factor is supposed to be zero." ))
+      }
+    }
+    
+    ### 8. Check DESeq2 settings
     if(is.null(vecDispersionsExternal) & !boolRunDESeq2){
       stop(paste0( "ERROR: vecDispersionsExternal not supplied and boolRunDESeq2 is FALSE.",
         "Dispersions have to be computed by DESeq2 or provided externally." ))
     }
+    
+    ### 9. Check scaSmallRun
+    if(!is.null(scaSmallRun)){
+      checkCounts(scaSmallRun, "scaSmallRun")
+      if(scaSmallRun > dim(matCountData)[1]){
+        stop(paste0( "ERROR: scaSmallRun (",scaSmallRun,
+          ") larger then data set (",dim(matCountData)[1]," genes)."))
+      }
+    }
+    
     
     ### Summarise which mode, conditions, samples and
     ### longitudinal series were found
@@ -363,7 +402,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     # Check that every sample contains at least one observed value (not NA)
     vecNARep <- any(apply(matCountDataProc,2,function(rep){all(is.na(rep))}))
     if(any(vecNARep)){
-      warning(paste0( "WARNING: Sample(s) ",
+      print(paste0( "WARNING: Sample(s) ",
         paste0(colnames(matCountDataProc[vecNARep,]), collapse=","),
         " only contain(s) NA values and will be removed from the analysis."))
       matCountDataProc <- matCountDataProc[,!vecNARep]
@@ -372,29 +411,33 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     # Exclude genes with only missing values (NAs)
     indx_NA <- apply(matCountDataProc,1,function(x){all(is.na(x))})
     if(any(indx_NA)){
-      warning(paste0("WARNING: Excluded ",sum(indx_NA)," genes because no real valued samples were given."))
+      print(paste0("WARNING: Excluded ",sum(indx_NA)," genes because no real valued samples were given."))
     }
     matCountDataProc <- matCountDataProc[!(indx_NA),]
     # Reduce expression table to rows containing at least one non-zero count
     rowIdx_lowCounts <- apply(matCountDataProc,1,function(x){all(x[!is.na(x)]==0)})
     if(sum(rowIdx_lowCounts) > 0){
-      warning(paste0("WARNING: ",sum(rowIdx_lowCounts), " out of ",
+      print(paste0("WARNING: ",sum(rowIdx_lowCounts), " out of ",
         dim(matCountDataProc)[1],
         " genes had only zero counts in all considered samples and are omitted."))
       matCountDataProc <- matCountDataProc[!rowIdx_lowCounts,]
-    }
-    # DAVID to be deprecated
-    # Shorten expression table
-    if(FALSE){
-      ind_toKeep <- 100
-      print(paste0("Working on subset of data: ",min(ind_toKeep,dim(matCountDataProc)[1])," genes."))
-      matCountDataProc <- matCountDataProc[1:min(ind_toKeep,dim(matCountDataProc)[1]),]
     }
     
     # Sort count matrix column by annotation table
     matCountDataProc <- matCountDataProc[,match(as.vector(dfAnnotation$Sample),colnames(matCountDataProc))]
     
     print(paste0("Selected ",dim(matCountDataProc)[1]," genes/regions for analysis."))
+    return(matCountDataProc)
+  }
+  
+  # Reduce data set to small run size if required.
+  reduceDataRows <- function(matCountDataProc,
+    scaSmallRun=NULL){
+    if(!is.null(scaSmallRun)){
+      scaNRows <- min(scaSmallRun,dim(matCountDataProc)[1])
+      print(paste0("Working on subset of data: ",scaNRows," genes."))
+      matCountDataProc <- matCountDataProc[1:scaNRows,]
+    }
     return(matCountDataProc)
   }
   
@@ -405,11 +448,13 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   checkData(
     dfAnnotation=dfAnnotation,
     matCountData=matCountData,
+    scaSmallRun=scaSmallRun,
     strControlName=strControlName,
     strCaseName=strCaseName,
     strMode=strMode,
     lsPseudoDE=lsPseudoDE,
     vecDispersionsExternal=vecDispersionsExternal,
+    vecSizeFactorsExternal=vecSizeFactorsExternal,
     boolRunDESeq2=boolRunDESeq2 )
   
   # Process annotation table
@@ -422,6 +467,19 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
   matCountDataProc <- reduceCountData(
     dfAnnotation=dfAnnotationProc, 
     matCountDataProc=matCountDataProc)
+  # Keep full data set for size factor estimation.
+  matCountDataProcFull <- matCountDataProc
+  matCountDataProc <- reduceDataRows(matCountDataProc=matCountDataProc,
+    scaSmallRun=scaSmallRun)
+  
+  # Reduce externally provided parameters according to reduced data set
+  # and reorder according to given data set.
+  if(!is.null(vecDispersionsExternal)){
+    vecDispersionsExternal <- vecDispersionsExternal[rownames(matCountDataProc)]
+  }
+  if(!is.null(vecSizeFactorsExternal)){
+    vecSizeFactorsExternal <- vecSizeFactorsExternal[colnames(matCountDataProc)]
+  }
 
   # Process single cell hyperparameters
   if(strMode=="singlecell"){
@@ -430,6 +488,12 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     matMuCluster <- lsPseudoDE$matMuCluster
     vecClusterAssignments <- lsPseudoDE$vecClusterAssignments
     vecCentroids <- lsPseudoDE$vecCentroids
+    if(!is.null(scaSmallRun)){
+      scaNRows <- min(scaSmallRun,dim(matCountDataProc)[1])
+      matProbNB <- matProbNB[1:scaNRows,]
+      matDropout <- matDropout[1:scaNRows,]
+      matMuCluster <- matMuCluster[1:scaNRows,]
+    }
   } else {
     matProbNB <- NULL
     matDropout <- NULL
@@ -438,7 +502,8 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     vecCentroids <- NULL
   }
   
-  lsProcessedData <- list(matCountDataProc, 
+  lsProcessedData <- list(matCountDataProc,
+    matCountDataProcFull,
     dfAnnotationProc,
     matProbNB, 
     matDropout, 
@@ -446,6 +511,7 @@ processData <- function(dfAnnotation=NULL, matCountData=NULL,
     vecClusterAssignments,
     vecCentroids)
   names(lsProcessedData) <- c("matCountDataProc",
+    "matCountDataProcFull",
     "dfAnnotationProc",
     "matProbNB", 
     "matDropout", 

@@ -19,6 +19,9 @@
 #' @param matCountDataProc: (matrix genes x samples)
 #'    Count data: Reduced version of \code{matCountData}. 
 #'    For internal use.
+#' @param scaSmallRun: (integer) [Default NULL] Number of rows
+#'    on which ImpulseDE2 is supposed to be run, the full
+#'    data set is only used for size factor estimation.
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
@@ -30,6 +33,7 @@
 #' @export
 
 computeSizeFactors <- function(matCountDataProc,
+  scaSmallRun=NULL,
   strMode){
   
   if(strMode=="batch" | strMode=="longitudinal"){
@@ -72,17 +76,21 @@ computeSizeFactors <- function(matCountDataProc,
   }
   
   if(any(vecSizeFactors==0)){
-    warning("WARNING: Found size factors==0, setting these to 1.")
+    print("WARNING: Found size factors==0, setting these to 1.")
     vecSizeFactors[vecSizeFactors==0] <- 1
   }
   
   # Replicate vector to matrix
+  # Matrix size reduced according to scaSmallRun
+  # if ImpulseDE2 is not run on entire data set.
+  if(!is.null(scaSmallRun)){ scaNRows <- min(scaSmallRun, dim(matCountDataProc)[1])
+  } else {scaNRows <- dim(matCountDataProc)[1] }
   matSizeFactors <- matrix(vecSizeFactors,
-    nrow=dim(matCountDataProc)[1],
+    nrow=scaNRows,
     ncol=dim(matCountDataProc)[2],
     byrow=TRUE)
   colnames(matSizeFactors) <- colnames(matCountDataProc)
-  rownames(matSizeFactors) <- rownames(matCountDataProc)
+  rownames(matSizeFactors) <- (rownames(matCountDataProc))[1:scaNRows]
   
   return(matSizeFactors)
 }
@@ -110,6 +118,9 @@ computeSizeFactors <- function(matCountDataProc,
 #' @param matSizeFactors: (numeric matrix genes x samples) 
 #'    Model scaling factors for each observation which take
 #'    sequencing depth into account (size factors).
+#' @param scaSmallRun: (integer) [Default NULL] Number of rows
+#'    on which ImpulseDE2 is supposed to be run, the full
+#'    data set is only used for size factor estimation.
 #' @param dfAnnotationProc: (Table) Processed annotation table. 
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
@@ -134,6 +145,7 @@ computeSizeFactors <- function(matCountDataProc,
 
 computeTranslationFactors <- function(matCountDataProc,
   matSizeFactors,
+  scaSmallRun=NULL,
   dfAnnotationProc,
   strCaseName,
   strControlName=NULL){
@@ -244,9 +256,16 @@ computeTranslationFactors <- function(matCountDataProc,
 #' Calls \code{computeTranslationFactors} and
 #' \code{computeSizeFactors}.
 #' 
+#' @param matCountDataProcFull: (matrix genes x samples)
+#'    Count data: Reduced version of \code{matCountData}. 
+#'    For internal use. This is the entire data set.
 #' @param matCountDataProc: (matrix genes x samples)
 #'    Count data: Reduced version of \code{matCountData}. 
-#'    For internal use.
+#'    For internal use. This is the data set reduced to the
+#'    genes which are supposed to be analysed.
+#' @param scaSmallRun: (integer) [Default NULL] Number of rows
+#'    on which ImpulseDE2 is supposed to be run, the full
+#'    data set is only used for size factor estimation.
 #' @param dfAnnotationProc: (Table) Processed annotation table. 
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
@@ -286,7 +305,9 @@ computeTranslationFactors <- function(matCountDataProc,
 #'      } 
 #' @export
 
-computeNormConst <- function(matCountDataProc,
+computeNormConst <- function(matCountDataProcFull,
+  matCountDataProc,
+  scaSmallRun=NULL,
   dfAnnotationProc,
   strCaseName,
   strControlName=NULL,
@@ -297,24 +318,31 @@ computeNormConst <- function(matCountDataProc,
   # Size factors account for differential sequencing depth.
   if(is.null(vecSizeFactorsExternal)){
     # Compute size factors if not supplied to ImpulseDE2.
-    matSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc,
+    matSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProcFull,
+      scaSmallRun=scaSmallRun,
       strMode=strMode)
   } else {
     # Chose externally supplied size factors if supplied.
-    matSizeFactors <-   matSizeFactors <- matrix(vecSizeFactorsExternal,
-      nrow=dim(matCountDataProc)[1],
+    # Matrix size reduced according to scaSmallRun
+    # if ImpulseDE2 is not run on entire data set.
+    print("Using externally supplied size factors.")
+    if(!is.null(scaSmallRun)){ scaRows <- min(scaSmallRun,dim(matCountDataProc)[1])
+    } else {scaRows <- dim(matCountDataProc)[1] }
+    matSizeFactors <- matrix(vecSizeFactorsExternal,
+      nrow=scaRows,
       ncol=dim(matCountDataProc)[2],
       byrow=TRUE)
     colnames(matSizeFactors) <- colnames(matCountDataProc)
     rownames(matSizeFactors) <- rownames(matCountDataProc)
   }
 
-# 2. Compute translation factors:
+  # 2. Compute translation factors:
   # Translation factors account for different mean expression levels of a
   # gene between longitudinal sample series.
   if(strMode=="longitudinal"){
     lsMatTranslationFactors <- computeTranslationFactors(matCountDataProc=matCountDataProc,
       matSizeFactors=matSizeFactors,
+      scaSmallRun=scaSmallRun,
       dfAnnotationProc=dfAnnotationProc,
       strCaseName=strCaseName,
       strControlName=strControlName)

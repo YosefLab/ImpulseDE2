@@ -4,11 +4,11 @@ rm(list = ls())
 ### LOAD DATA
 ### Load annotation
 # With control
-dfAnnotationCtrl <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_RNAseq_D50-D51-D54_D50control.tab",header=T)
+dfAnnotationCtrl <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/software_test/annotation_table_RNAseq_D50-D51-D54_D50control.tab",header=T)
 rownames(dfAnnotationCtrl) <- dfAnnotationCtrl$Sample
 # Without control
-#dfAnnotationCase <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_RNAseq_D50-D51-D54.tab",header=T)
-#rownames(dfAnnotationCase) <- dfAnnotationCase$Sample
+dfAnnotationCase <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/software_test/annotation_table_RNAseq_D50-D51-D54.tab",header=T)
+rownames(dfAnnotationCase) <- dfAnnotationCase$Sample
 
 ### Load count data
 dfCountData <- read.table("/Users/davidsebastianfischer/MasterThesis/data/DESeq_RNAseq/raw_RNAseq/hDC_TPM_D50-D51-D54.tab",sep="\t",header=T)
@@ -23,16 +23,16 @@ colnames(matCountData) <- colnames(dfCountData)[2:dim(dfCountData)[2]]
 # Only chose high counts
 #expression_table <- expression_table[apply(expression_table,1,function(gene){max(gene,na.rm=TRUE)}>500),]
 
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files/ImpulseDE2_main.R")
 
-setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/software_test_out")
 strCaseName = "case"
-strControlName = "ctrl"
+strControlName = NULL
 if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 }else{dfAnnotation=dfAnnotationCase}
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "batch"
+strMode <- "longitudinal"
 boolPlotting <- TRUE
 lsImpulseDE_results <- runImpulseDE2(
   matCountData=matCountData, 
@@ -42,7 +42,8 @@ lsImpulseDE_results <- runImpulseDE2(
   strMode=strMode,
   nProc=n_process, 
   Q_value=Q_value, 
-  boolPlotting=boolPlotting)
+  boolPlotting=boolPlotting,
+  scaSmallRun=100)
 
 lsDEGenes <- lsImpulseDE_results$lsDEGenes
 dfImpulseResults <- lsImpulseDE_results$dfImpulseResults
