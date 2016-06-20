@@ -300,11 +300,7 @@ plotDEGenes <- function(vecGeneIDs,
             }
             
             # Plot inferred mean of each time point
-            if(strMode=="singlecell"){
-              points(vecCentroids,
-                matMuCluster[geneID,],
-                col="red",pch=1)
-            } else if(strMode=="batch" | strMode=="longitudinal") {
+            if(strMode=="batch" | strMode=="longitudinal") {
               points(vecTimepoints,
                 matMuTimepoints[geneID, match(vecTimepoints,vecTimepointAssign)],
                 col="black",pch=1)
