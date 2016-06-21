@@ -32,7 +32,7 @@ if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 }else{dfAnnotation=dfAnnotationCase}
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "longitudinal"
+strMode <- "batch"
 boolPlotting <- TRUE
 lsImpulseDE_results <- runImpulseDE2(
   matCountData=matCountData, 
@@ -43,7 +43,7 @@ lsImpulseDE_results <- runImpulseDE2(
   nProc=n_process, 
   Q_value=Q_value, 
   boolPlotting=boolPlotting,
-  scaSmallRun=100)
+  scaSmallRun=1000)
 
 lsDEGenes <- lsImpulseDE_results$lsDEGenes
 dfImpulseResults <- lsImpulseDE_results$dfImpulseResults

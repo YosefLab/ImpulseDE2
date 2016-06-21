@@ -71,7 +71,7 @@ names(matRunTime_RNAseqData) <- c("ImpulseDE2", "ImpulseDE", "DESeq2", "edge")
 ################################################################################
 # ImpulseDE2
 print("Run ImpulseDE2")
-source("/data/yosef2/users/fischerd/code/ImpulseDE_v2/code_files/ImpulseDE2_main.R")
+source("/data/yosef2/users/fischerd/code/ImpulseDE2/building/code_files/ImpulseDE2_main.R")
 
 # Create input data set
 # Only retain non zero

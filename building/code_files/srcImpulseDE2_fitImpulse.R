@@ -569,7 +569,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
   # likelihood function in MLE fitting of Impulse model:
   MAXIT <- 1000
   
-  if(nrow(matCountDataProcCondition) > max(2*nProc,10) & FALSE){
+  if(nrow(matCountDataProcCondition) > max(2*nProc,10)){
     # Use parallelisation if number of genes/centroids to fit is large
     
     # Define partitioning of genes onto nodes: lsGeneIndexByCore

@@ -45,6 +45,7 @@ plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes,
 ########################################
 # 2. Graphical comparison
 ########################################
+## Full data set
 rm(list=ls())
 library(gplots)
 #load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/edge/lsResDEcomparison_RNAseqdata.Rdata")
@@ -55,7 +56,7 @@ setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_f
 source("ImpulseDE2_main.R")
 source("srcImpulseDE2_plotDEGenes.R")
 source("srcImpulseDE2_compareDEMethods.R")
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/ImpulseDE2")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/output/ImpulseDE2")
 load("ImpulseDE2_matCountDataProc.RData")
 load("ImpulseDE2_dfAnnotationProc.RData")
 load("ImpulseDE2_dfImpulseResults.RData")
@@ -69,12 +70,71 @@ Q <- 10^(-3)
 Qdelta <- 10^(2) # difference factor required to be plotted
 
 # Load run data ImpulseDE2, ImpulseDE, DESeq2
-load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/lsResDEcomparison_RNAseqdata.RData")
+load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/output/lsResDEcomparison_RNAseqdata.RData")
 matQval <- lsResDEcomparison_RNAseqdata$matQval_RNAseqData
 matRunTime <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
 
 colnames(matQval) <- c("Gene", sapply(colnames(matQval),function(str){unlist(strsplit(str,"A_"))[2]})[2:5])
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs/full")
+
+compareDEMethods(matQval,
+  strMethod2="DESeq2",
+  Q = Q,
+  Qdelta = Qdelta,
+  matCountDataProc = matCountDataProc,
+  lsMatTranslationFactors = lsMatTranslationFactors,
+  matSizeFactors = matSizeFactors,
+  dfAnnotationProc = dfAnnotationProc, 
+  lsImpulseFits = lsImpulseFits,
+  dfImpulseResults = dfImpulseResults,
+  strCaseName="case", 
+  strControlName = NULL, 
+  strMode="batch",
+  strDataDescriptionFilename="")
+
+compareDEMethods(matQval,
+  strMethod2="ImpulseDE",
+  Q = Q,
+  Qdelta = Qdelta,
+  matCountDataProc = matCountDataProc,
+  lsMatTranslationFactors = lsMatTranslationFactors,
+  matSizeFactors = matSizeFactors,
+  dfAnnotationProc = dfAnnotationProc, 
+  lsImpulseFits = lsImpulseFits,
+  dfImpulseResults = dfImpulseResults,
+  strCaseName="case", 
+  strControlName = NULL, 
+  strMode="batch",
+  strDataDescriptionFilename="")
+
+## Full data set witout 12h
+rm(list=ls())
+library(gplots)
+
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
+source("ImpulseDE2_main.R")
+source("srcImpulseDE2_plotDEGenes.R")
+source("srcImpulseDE2_compareDEMethods.R")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/output_no12h/ImpulseDE2")
+load("ImpulseDE2_matCountDataProc.RData")
+load("ImpulseDE2_dfAnnotationProc.RData")
+load("ImpulseDE2_dfImpulseResults.RData")
+load("ImpulseDE2_vecDEGenes.RData")
+load("ImpulseDE2_lsImpulseFits.RData")
+load("ImpulseDE2_dfDESeq2Results.RData")
+load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_matSizeFactors.RData")
+
+Q <- 10^(-3)
+Qdelta <- 10^(2) # difference factor required to be plotted
+
+# Load run data ImpulseDE2, ImpulseDE, DESeq2
+load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/output_no12h/lsResDEcomparison_RNAseqdata.RData")
+matQval <- lsResDEcomparison_RNAseqdata$matQval_RNAseqData
+matRunTime <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
+
+colnames(matQval) <- c("Gene", sapply(colnames(matQval),function(str){unlist(strsplit(str,"A_"))[2]})[2:5])
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs/no12h")
 
 compareDEMethods(matQval,
   strMethod2="DESeq2",
