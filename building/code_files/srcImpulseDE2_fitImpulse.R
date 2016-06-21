@@ -566,7 +566,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
   NPARAM=6){
   
   # Maximum number of iterations for numerical optimisation of
-  # likelihood function in MLE fitting of Impulse model:
+  # likelihood function in MLE fitting of impulse model:
   MAXIT <- 1000
   
   if(nrow(matCountDataProcCondition) > max(2*nProc,10)){
