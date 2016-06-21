@@ -1,6 +1,6 @@
 # Local
 rm(list = ls())
-boolCluster <- TRUE
+boolCluster <- FALSE
 
 print("Process data RNAseq Jankovic")
 # Load Data set RNAseq
@@ -265,7 +265,7 @@ lsResDEcomparison_RNAseqdata <- list("matQval_RNAseqData"=matQval_RNAseqData,
   "matPval_RNAseqData"=matPval_RNAseqData, 
   "matRunTime_RNAseqData"=matRunTime_RNAseqData)
 
-save(lsResDEcomparison_RNAseqdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/lsResDEcomparison_RNAseqdata.RData"))
+save(lsResDEcomparison_RNAseqdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/edge/lsResDEcomparison_RNAseqdata.RData"))
 print("Finished edge.")
 #################################################
 #################################################
@@ -282,7 +282,7 @@ rm(list=ls())
 
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_plotDEGenes.R")
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ImpulseDE2")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/ImpulseDE2")
 load("ImpulseDE2_matCountDataProc.RData")
 load("ImpulseDE2_dfAnnotationProc.RData")
 load("ImpulseDE2_dfImpulseResults.RData")
@@ -324,7 +324,7 @@ plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes,
 ########################################
 rm(list=ls())
 library(gplots)
-load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/lsResDEcomparison_RNAseqdata.Rdata")
+load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/lsResDEcomparison_RNAseqdata.Rdata")
 matQval_RNAseqData <- lsResDEcomparison_RNAseqdata$matQval_RNAseqData
 matPval_RNAseqData <- lsResDEcomparison_RNAseqdata$matPval_RNAseqData
 matRunTime_RNAseqData <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
@@ -403,7 +403,7 @@ matRunTime_RNAseqData <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
 
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_plotDEGenes.R")
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ImpulseDE2")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/ImpulseDE2")
 load("ImpulseDE2_matCountDataProc.RData")
 load("ImpulseDE2_dfAnnotationProc.RData")
 load("ImpulseDE2_dfImpulseResults.RData")

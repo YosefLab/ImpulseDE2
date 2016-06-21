@@ -25,7 +25,7 @@ colnames(matDataA) <- vecSamples
 #matDataA <- matDataA[1:2000,]
 
 # 2. Annotation
-dfAnnotationRNA <- read.table("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/input/AnnotationTable_RNAseqJankovic.tab",header=T)
+dfAnnotationRNA <- read.table("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/input/AnnotationTable_RNAseqJankovic_no12h.tab",header=T)
 dfAnnotationRNA$TimeCateg <- paste0(rep("_",length(dfAnnotationRNA$Time)),dfAnnotationRNA$Time)
 dfAnnotationA <- dfAnnotationRNA
 
@@ -78,7 +78,7 @@ source("/data/yosef2/users/fischerd/code/ImpulseDE_v2/code_files/ImpulseDE2_main
 matDataA_ImpulseDE2 <- matDataA
 
 tm_ImpulseDE2A <- system.time({
-  setwd("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output/ImpulseDE2")
+  setwd("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output_no12h/ImpulseDE2")
   strControlName = NULL
   strCaseName = "case"
   lsImpulseDE_resultsA <- runImpulseDE2(matCountData=matDataA_ImpulseDE2, 
@@ -105,7 +105,7 @@ lsResDEcomparison_RNAseqdata <- list("matQval_RNAseqData"=matQval_RNAseqData,
   "matPval_RNAseqData"=matPval_RNAseqData, 
   "matRunTime_RNAseqData"=matRunTime_RNAseqData)
 
-save(lsResDEcomparison_RNAseqdata,file=file.path("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output/lsResDEcomparison_RNAseqdata.RData"))
+save(lsResDEcomparison_RNAseqdata,file=file.path("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output_no12h/lsResDEcomparison_RNAseqdata.RData"))
 print("Finished ImpulseDE2")
 
 ################################################################################
@@ -148,7 +148,7 @@ lsResDEcomparison_RNAseqdata <- list("matQval_RNAseqData"=matQval_RNAseqData,
   "matPval_RNAseqData"=matPval_RNAseqData, 
   "matRunTime_RNAseqData"=matRunTime_RNAseqData)
 
-save(lsResDEcomparison_RNAseqdata,file=file.path("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output/lsResDEcomparison_RNAseqdata.RData"))
+save(lsResDEcomparison_RNAseqdata,file=file.path("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output_no12h/lsResDEcomparison_RNAseqdata.RData"))
 print("Finished DESeq2.")
 
 ################################################################################
@@ -175,7 +175,7 @@ dfAnnotationA_ImpulseDE$Condition <- as.vector(dfAnnotationA_ImpulseDE$Condition
 dfAnnotationA_ImpulseDE$Time <- as.numeric(as.vector(dfAnnotationA_ImpulseDE$Time))
 rownames(dfAnnotationA_ImpulseDE) <- as.vector(dfAnnotationA$Sample)
 tm_ImpulseDEA <- system.time({
-  setwd("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output/ImpulseDE")
+  setwd("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output_no12h/ImpulseDE")
   strControlName = NULL
   strCaseName = "case"
   lsImpulseDE_resultsA <- impulse_DE(
@@ -206,5 +206,5 @@ lsResDEcomparison_RNAseqdata <- list("matQval_RNAseqData"=matQval_RNAseqData,
   "matPval_RNAseqData"=matPval_RNAseqData, 
   "matRunTime_RNAseqData"=matRunTime_RNAseqData)
 
-save(lsResDEcomparison_RNAseqdata,file=file.path("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output/lsResDEcomparison_RNAseqdata.RData"))
+save(lsResDEcomparison_RNAseqdata,file=file.path("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/output_no12h/lsResDEcomparison_RNAseqdata.RData"))
 print("Finished ImpulseDE")

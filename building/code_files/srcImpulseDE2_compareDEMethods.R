@@ -29,7 +29,7 @@
 library(gplots)
 
 compareDEMethods <- function(matQval,
-  strMethod1="A_ImpulseDE2",
+  strMethod1="ImpulseDE2",
   strMethod2="",
   Q = 10^(-3),
   Qdelta = 10^(2),
@@ -83,7 +83,26 @@ compareDEMethods <- function(matQval,
   dev.off()
   graphics.off()
   
-  # 2. Impulse fits of differentially called DE genes
+  # 2. CDF p-values
+  vecX <- seq(1,25,by=0.1)
+  vecCDF1 <- sapply(vecX, function(thres){sum(log(as.numeric(matQval[,strMethod1]))/log(10) >= -thres, na.rm=TRUE)})
+  vecCDF2 <- sapply(vecX, function(thres){sum(log(as.numeric(matQval[,strMethod2]))/log(10) >= -thres, na.rm=TRUE)})
+  pdf(paste0(strMethod1,"-",strMethod2,"_ECDF-pvalues.pdf"),width=7,height=7)
+  plot(vecX,vecCDF1,
+    col="black",pch=4,type="l",
+    ylim=c(0,max(max(vecCDF1,na.rm=TRUE),max(vecCDF2,na.rm=TRUE))),
+    xlab="-log_10(threshold p-value)", 
+    ylab=paste0("Number of accepted null\nhypothesis at threshold"),
+    main=paste0("Cumulative number of p-values larger than threshold\n",strMethod1," versus ",strMethod2))
+  points(vecX,vecCDF2,
+    col="red",pch=4,type="l")
+  legend(x="bottomright",
+    legend=c(strMethod1,strMethod2),
+    fill=c("black","red"))
+  dev.off()
+  graphics.off()
+  
+  # 3. Impulse fits of differentially called DE genes
   # Set detection and differential calling threshold
   
   # Note cannot plot genes which are NA in ImpulseDE2
