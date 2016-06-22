@@ -92,7 +92,7 @@ if(!boolCluster){
       dfAnnotation=dfAnnotationA,
       strCaseName = strCaseName, 
       strControlName=strControlName, 
-      strMode="batch",
+      strMode="longitudinal",
       nProc=3, 
       Q_value=10^(-3),
       boolPlotting=FALSE)

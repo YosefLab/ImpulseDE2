@@ -125,9 +125,6 @@ load("ImpulseDE2_dfDESeq2Results.RData")
 load("ImpulseDE2_lsMatTranslationFactors.RData")
 load("ImpulseDE2_matSizeFactors.RData")
 
-Q <- 10^(-3)
-Qdelta <- 10^(2) # difference factor required to be plotted
-
 # Load run data ImpulseDE2, ImpulseDE, DESeq2
 load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/output_no12h/lsResDEcomparison_RNAseqdata.RData")
 matQval <- lsResDEcomparison_RNAseqdata$matQval_RNAseqData
@@ -135,6 +132,9 @@ matRunTime <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
 
 colnames(matQval) <- c("Gene", sapply(colnames(matQval),function(str){unlist(strsplit(str,"A_"))[2]})[2:5])
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs/no12h")
+
+Q <- 10^(-3)
+Qdelta <- 10^(2) # difference factor required to be plotted
 
 compareDEMethods(matQval,
   strMethod2="DESeq2",

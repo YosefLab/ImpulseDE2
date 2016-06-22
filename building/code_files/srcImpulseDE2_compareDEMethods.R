@@ -10,20 +10,7 @@
 #' 
 #' @seealso Called separately by user.
 #' 
-#' @param matCountDataProc: (matrix genes x samples)
-#'    Count data: Reduced version of \code{matCountData}. 
-#'    For internal use.
-#' @param matProbNB: (probability matrix genes x samples) 
-#'    Probability of observations to come from negative binomial 
-#'    component of mixture model.
-#' @param strMode: (str) [Default "batch"] 
-#'    {"batch","longitudinal","singlecell"}
-#'    Mode of model fitting.
-#' 
-#' @return matSizeFactors: (numeric matrix genes x samples) 
-#'    Model scaling factors for each observation which take
-#'    sequencing depth into account (size factors). One size
-#'    factor per sample - rows of this matrix are equal.
+#' @return NULL
 #' @export
 
 library(gplots)
@@ -108,9 +95,9 @@ compareDEMethods <- function(matQval,
   # Note cannot plot genes which are NA in ImpulseDE2
   vecboolImpulseFitted <- !is.na(as.numeric(matQval[,strMethod2]))
   vecboolRefBeatsQ <- as.numeric(matQval[,strMethod2]) < Q & !is.na(as.numeric(matQval[,strMethod2]))
-  vecBoolRefBeatsImpulse <- as.numeric(matQval[,strMethod1]) >= Qdelta*as.numeric(matQval[,strMethod2]) | is.na(as.numeric(matQval[,strMethod2]))
+  vecBoolRefBeatsImpulse <- as.numeric(matQval[,strMethod1]) >= Qdelta*as.numeric(matQval[,strMethod2]) | (is.na(as.numeric(matQval[,strMethod1])) & !is.na(as.numeric(matQval[,strMethod2])))
   vecboolImpulseBeatsQ <- as.numeric(matQval[,strMethod1]) < Q & !is.na(as.numeric(matQval[,strMethod1]))
-  vecboolImpulseBeatsRef <- as.numeric(matQval[,strMethod2]) >= Qdelta*as.numeric(matQval[,strMethod1]) | is.na(as.numeric(matQval[,strMethod1]))
+  vecboolImpulseBeatsRef <- as.numeric(matQval[,strMethod2]) >= Qdelta*as.numeric(matQval[,strMethod1]) | (!is.na(as.numeric(matQval[,strMethod1])) & is.na(as.numeric(matQval[,strMethod2])))
   
   vecDEgenes_Ref_only <- as.vector(matQval[vecboolRefBeatsQ & vecBoolRefBeatsImpulse & vecboolImpulseFitted,"Gene"])
   print(head(vecDEgenes_Ref_only))

@@ -85,7 +85,7 @@ tm_ImpulseDE2A <- system.time({
     dfAnnotation=dfAnnotationA,
     strCaseName = strCaseName, 
     strControlName=strControlName, 
-    strMode="batch",
+    strMode="longitudinal",
     nProc=NCORES, 
     Q_value=10^(-3),
     boolPlotting=FALSE)
@@ -114,12 +114,12 @@ print("Run DESeq2")
 library(DESeq2)
 library(BiocParallel)
 # Parallelisation
-nProcessesAssigned <- NCORES
-register(MulticoreParam(nProcesses))
+register(MulticoreParam(NCORES))
 
 # Create input data set
 # Only retain non zero
 matDataA_DESeq2 <- matDataA
+matDataA_DESeq2[matDataA_DESeq2==0] <- 0
 
 tm_DESeq2A <- system.time({
   # Create DESeq2 data object

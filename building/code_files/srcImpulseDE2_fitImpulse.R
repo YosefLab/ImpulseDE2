@@ -81,7 +81,7 @@ computeLogLikNull <- function(vecCounts,
     scaMu <- sum(vecCounts/vecNormConst*vecProbNB, na.rm=TRUE)/sum(vecProbNB, na.rm=TRUE)
     
     scaLogLikNull <- evalLogLikZINB_comp(vecY=vecCounts,
-      vecMu=rep(scaMu, length(vecCounts)),
+      vecMu=scaMu*vecNormConst,
       scaDispEst=scaDispersionEstimate, 
       vecDropoutRateEst=vecDropoutRate, 
       vecboolNotZeroObserved=vecboolNotZeroObserved, 
@@ -100,7 +100,7 @@ computeLogLikNull <- function(vecCounts,
       size=scaDispersionEstimate, 
       log=TRUE))
   } else {
-    stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
+    stop(paste0("ERROR: Unrecognised strMode in fitImpulse::computeLogLikNull(): ",strMode))
   }
   return(list( scaMu=scaMu, 
     vecMuLongitudinalSeries=vecMuLongitudinalSeries,
