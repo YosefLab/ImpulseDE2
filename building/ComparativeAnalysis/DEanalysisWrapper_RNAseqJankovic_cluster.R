@@ -29,12 +29,7 @@ dfAnnotationRNA <- read.table("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic
 dfAnnotationRNA$TimeCateg <- paste0(rep("_",length(dfAnnotationRNA$Time)),dfAnnotationRNA$Time)
 dfAnnotationA <- dfAnnotationRNA
 
-# Expend 0h ctrl sample to both conditions
-vecExpanedSamples <- dfAnnotationA$Sample
-vecExpanedSamples[vecExpanedSamples=="SRR1525500cs"] <- "SRR1525500"
-vecExpanedSamples[vecExpanedSamples=="SRR1525513cs"] <- "SRR1525513"
-
-matDataA <- matDataA[,as.vector(vecExpanedSamples)]
+matDataA <- matDataA[,as.vector(dfAnnotationA$Sample)]
 colnames(matDataA) <- dfAnnotationA$Sample
 #only case
 matDataA <- matDataA[,dfAnnotationA$Condition=="case"]
