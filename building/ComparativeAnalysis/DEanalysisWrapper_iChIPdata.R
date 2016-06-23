@@ -49,51 +49,9 @@ matPval_iChIPData[,"Gene"] <- rownames(matDataA)
 names(matRunTime_iChIPData) <- c("ImpulseDE2", "ImpulseDE", "DESeq2", "edge")
 
 ################################################################################
-# DESeq2 for Gene-E
-print("Run DESeq2")
-library(DESeq2)
-library(BiocParallel)
-# Parallelisation
-nProcessesAssigned <- 3
-nProcesses <- min(detectCores() - 1, nProcessesAssigned)
-register(MulticoreParam(nProcesses))
-
-# Create input data set
-# Only retain non zero
-matDataA_DESeq2 <- matDataA
-
-# Create DESeq2 data object
-dds <- DESeqDataSetFromMatrix(countData = matDataA_DESeq2,
-  colData = dfAnnotationA,
-  design = ~TimeCateg)
-# Run DESeq2
-ddsDESeqObjectA <- DESeq(dds, test = "LRT", 
-  full = ~ TimeCateg, reduced = ~ 1,
-  parallel=TRUE)
-
-# DESeq results for comparison
-dds_resultsTableA <- results(ddsDESeqObjectA)
-qvals_A <- dds_resultsTableA$padj
-dfDESeq2DEgeneCounts <- matDataA[rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5),]),]
-rownames(dfDESeq2DEgeneCounts) <- rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5),])
-dfDESeq2DEgeneCountsNorm <- dfDESeq2DEgeneCounts/rep(sizeFactors(ddsDESeqObjectA), each = nrow(dfDESeq2DEgeneCounts))
-dfDESeq2DEgeneCountsNormMeans <- do.call(cbind, lapply(unique(dfAnnotationA$Time),function(t){
-  if(length(as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)) > 1 ){
-    apply(dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)],1,mean)
-  }else{
-    dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)]
-  }
-}))
-colnames(dfDESeq2DEgeneCountsNormMeans) <- unique(dfAnnotationA$TimeCateg)
-write.table(dfDESeq2DEgeneCountsNormMeans,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/matCounts_DESeq2_1e-5.tab",sep="\t",row.names=F,quote=FALSE)
-# retain only high variation
-dfDESeq2DEgeneCountsNormMeansFilt <- dfDESeq2DEgeneCountsNormMeans[2*apply(dfDESeq2DEgeneCountsNormMeans,1,min) <= apply(dfDESeq2DEgeneCountsNormMeans,1,max),]
-write.table(dfDESeq2DEgeneCountsNormMeansFilt,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/matCounts_DESeq2_1e-5_x1-5.tab",sep="\t",row.names=F,quote=FALSE)
-
-################################################################################
 # ImpulseDE2
 print("Run ImpulseDE2")
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files/ImpulseDE2_main.R")
 
 # Create input data set
 # Only retain non zero
@@ -254,253 +212,89 @@ if(FALSE){
   save(lsResDEcomparison_iChIPdataH3K4me1,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/lsResDEcomparison_iChIPdataH3K4me1.RData"))
   print("Finished edge.")
   
-  #################################################
-  #################################################
-  #################################################
-  # Graphical analysis
-  #################################################
-  #################################################
-  #################################################
-  
-  ########################################
-  # 1. Plot ImpulseDE2 DE genes
-  ########################################
-  rm(list=ls())
-  
-  source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
-  source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_plotDEGenes.R")
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/ImpulseDE2/H3K4me1")
-  load("ImpulseDE2_matCountDataProc.RData")
-  load("ImpulseDE2_dfAnnotationProc.RData")
-  load("ImpulseDE2_dfImpulseResults.RData")
-  load("ImpulseDE2_vecDEGenes.RData")
-  load("ImpulseDE2_lsImpulseFits.RData")
-  load("ImpulseDE2_dfDESeq2Results.RData")
-  load("ImpulseDE2_lsMatTranslationFactors.RData")
-  load("ImpulseDE2_matSizeFactors.RData")
-  
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/pdfs")
-  QplotImpulseDE2genes <- 10^(-3)
-  vecImpulse2_DEgenes <- dfImpulseResults[dfImpulseResults$padj <= QplotImpulseDE2genes,]$Gene 
-  strCaseName <- "case"
-  strControlName <- NULL
-  strMode <- "batch"
-  if(length(vecImpulse2_DEgenes)==0){
-    vecImpulse2_DEgenes <- rownames(matCountDataProc[1:32,])
-  }
-  plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes,
-    matCountDataProc=matCountDataProc,
-    lsMatTranslationFactors=lsMatTranslationFactors,
-    matSizeFactors=matSizeFactors,
-    dfAnnotation=dfAnnotationProc, 
-    lsImpulseFits=lsImpulseFits,
-    strCaseName=strCaseName, 
-    strControlName=strControlName, 
-    strFileNameSuffix="H4K3me1_ImpulseDE2_DEgenes", 
-    strPlotTitleSuffix="", 
-    strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,
-    vecRefPval=dfDESeq2Results$padj,
-    strMode=strMode, 
-    NPARAM=6)
-  
-  ########################################
-  # 2. Heatmap: Q-value thresholds
-  ########################################
-  rm(list=ls())
-  library(gplots)
-  load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/lsResDEcomparison_iChIPdataH3K4me1.Rdata")
-  matQval_iChIPData <- lsResDEcomparison_iChIPdataH3K4me1$matQval_iChIPData
-  matPval_iChIPData <- lsResDEcomparison_iChIPdataH3K4me1$matPval_iChIPData
-  matRunTime_iChIPData <- lsResDEcomparison_iChIPdataH3K4me1$matRunTime_iChIPData
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/pdfs")
-  ########################################
-  # DESeq2
-  mat_overlap <- array(NA,c(11,11))
-  for(i in 0:10){
-    for(j in 0:10){
-      sig_Impulse <- matQval_iChIPData[,"A_ImpulseDE2"] <= 10^(-j)
-      sig_Ref <- matQval_iChIPData[,"A_DESeq2"] <= 10^(-i)
-      mat_overlap[i+1,j+1] <- sum(sig_Ref & sig_Impulse)/sum(sig_Ref | sig_Impulse)
-    }
-  }
-  #mat_overlap[is.na(mat_overlap)] <- 0
-  rownames(mat_overlap) <- 0:-10
-  colnames(mat_overlap) <- 0:-10
-  
-  graphics.off()
-  heatmap(mat_overlap, keep.dendro = FALSE,Rowv=NA,Colv= "Rowv",symm=FALSE,
-    xlab =  paste0("ImpulseDE2 scores"), ylab = "edge scores")
-  breaks <- seq(0,1,by=0.01)
-  hm.colors <- colorpanel( length(breaks)-1, "yellow", "red" )
-  graphics.off()
-  pdf(paste('ImpulseDE2-DESeq2_JaccardCoeff_Heatmap.pdf',sep=''),width=7,height=7)
-  heatmap.2(mat_overlap, dendrogram="none", Rowv=FALSE,Colv=FALSE, 
-    xlab =  paste0("log(p-value) ImpulseDE2"), ylab = "log(p-value) DESeq2",
-    breaks=breaks,col=hm.colors, scale="none",
-    trace="none",density.info="none",
-    key.title = " ", key.xlab = paste0("Jaccard coefficient"), key.ylab = NULL,
-    symkey=FALSE,
-    cellnote=round(mat_overlap,digits=2),notecol="grey",
-    lmat=rbind( c(3,4),c(2,1) ),lhei=c(1,4), lwid=c(1,4), margins=c(5,5))
-  dev.off()
-  
-  ########################################
-  # edge
-  mat_overlap <- array(NA,c(11,11))
-  for(i in 0:10){
-    for(j in 0:10){
-      sig_Impulse <- matQval_iChIPData[,"A_ImpulseDE2"] <= 10^(-j)
-      sig_Ref <- matQval_iChIPData[,"A_edge"] <= 10^(-i)
-      mat_overlap[i+1,j+1] <- sum(sig_Ref & sig_Impulse)/sum(sig_Ref | sig_Impulse)
-    }
-  }
-  #mat_overlap[is.na(mat_overlap)] <- 0
-  rownames(mat_overlap) <- 0:-10
-  colnames(mat_overlap) <- 0:-10
-  
-  graphics.off()
-  heatmap(mat_overlap, keep.dendro = FALSE,Rowv=NA,Colv= "Rowv",symm=FALSE,
-    xlab =  paste0("ImpulseDE2 scores"), ylab = "edge scores")
-  breaks <- seq(0,1,by=0.01)
-  hm.colors <- colorpanel( length(breaks)-1, "yellow", "red" )
-  graphics.off()
-  pdf(paste('ImpulseDE2-edge_JaccardCoeff_Heatmap.pdf',sep=''),width=7,height=7)
-  heatmap.2(mat_overlap, dendrogram="none", Rowv=FALSE,Colv=FALSE, 
-    xlab =  paste0("log(p-value) ImpulseDE2"), ylab = "log(p-value) edge",
-    breaks=breaks,col=hm.colors, scale="none",
-    trace="none",density.info="none",
-    key.title = " ", key.xlab = paste0("Jaccard coefficient"), key.ylab = NULL,
-    symkey=FALSE,
-    cellnote=round(mat_overlap,digits=2),notecol="grey",
-    lmat=rbind( c(3,4),c(2,1) ),lhei=c(1,4), lwid=c(1,4), margins=c(5,5))
-  dev.off()
-  
-  ########################################
-  # 3. Impulse fits, differentially called DE genes
-  ########################################
-  rm(list=ls())
-  library(gplots)
-  load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/lsResDEcomparison_iChIPdataH3K4me1.Rdata")
-  matQval_iChIPData <- lsResDEcomparison_iChIPdataH3K4me1$matQval_iChIPData 
-  matPval_iChIPData <- lsResDEcomparison_iChIPdataH3K4me1$matPval_iChIPData
-  matRunTime_iChIPData <- lsResDEcomparison_iChIPdataH3K4me1$matRunTime_iChIPData
-  
-  source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
-  source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_plotDEGenes.R")
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/ImpulseDE2/H3K4me1")
-  load("ImpulseDE2_matCountDataProc.RData")
-  load("ImpulseDE2_dfAnnotationProc.RData")
-  load("ImpulseDE2_dfImpulseResults.RData")
-  load("ImpulseDE2_vecDEGenes.RData")
-  load("ImpulseDE2_lsImpulseFits.RData")
-  load("ImpulseDE2_dfDESeq2Results.RData")
-  load("ImpulseDE2_lsMatTranslationFactors.RData")
-  load("ImpulseDE2_matSizeFactors.RData")
-  
-  setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/pdfs")
-  
-  Q <- 10^(-3)
-  Qdelta <- 10^(2) # difference factor required to be plotted
-  
-  ########################################
-  # DESeq2
-  DEgenes_Ref_only <- matQval_iChIPData[(matQval_iChIPData[,"A_DESeq2"] < Q & matQval_iChIPData[,"A_ImpulseDE2"] >= Qdelta*Q),"Gene"]
-  DEgenes_Impulse_only <- matQval_iChIPData[(matQval_iChIPData[,"A_ImpulseDE2"] >= Qdelta*Q & matQval_iChIPData[,"A_DESeq2"] < Q),"Gene"]
-  graphics.off()
-  print(paste0("Number of significant DE genes at q-value of ",Q))
-  print(paste0("ImpulseDE only ",length(DEgenes_Impulse_only)))
-  print(paste0("DESeq2 only ",length(DEgenes_Ref_only,)))
-  
-  vecRefResults <- matQval_iChIPData[,"A_DESeq2"]
-  names(vecRefResults) <- matQval_iChIPData[,"Gene"]
-  strControlName <- NULL
-  strCaseName <- "case"
-  strMode="batch"
-  NPARAM <- 6
-  
-  # sort DESeq2 only genes by padj of DESeq2
-  dfDESeq_ImpulseDESeqOnly <- dfDESeq_Impulse[DEgenes_Ref_only,]
-  DEgenes_Ref_onlySorted <- dfDESeq_ImpulseDESeqOnly[order(dfDESeq_ImpulseDESeqOnly$DESeq),"Gene"]
-  plotDEGenes(vecGeneIDs=DEgenes_Ref_onlySorted,
-    matCountDataProc=matCountDataProc,
-    lsMatTranslationFactors=lsMatTranslationFactors,
-    matSizeFactors=matSizeFactors,
-    dfAnnotation=dfAnnotationProc, 
-    lsImpulseFits=lsImpulseFits,
-    strCaseName=strCaseName, 
-    strControlName=strControlName, 
-    strFileNameSuffix="H4K3me1_DESeq2BeatsImpulseDE2", 
-    strPlotTitleSuffix="", 
-    strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,
-    vecRefPval=dfDESeq2Results$padj,
-    strMode=strMode, 
-    NPARAM=NPARAM)
-  
-  plotDEGenes(vecGeneIDs=DEgenes_Impulse_only,
-    matCountDataProc=matCountDataProc,
-    lsMatTranslationFactors=lsMatTranslationFactors,
-    matSizeFactors=matSizeFactors,
-    dfAnnotation=dfAnnotationProc, 
-    lsImpulseFits=lsImpulseFits,
-    strCaseName=strCaseName, 
-    strControlName=strControlName, 
-    strFileNameSuffix="H4K3me1_ImpulseDE2BeatsDESeq2", 
-    strPlotTitleSuffix="", 
-    strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,
-    vecRefPval=dfDESeq2Results$padj,
-    strMode=strMode, 
-    NPARAM=NPARAM)
-  
-  ########################################
-  # edge
-  DEgenes_Ref_only <- matQval_iChIPData[(matQval_iChIPData[,"A_DESeq2"] < Q & matQval_iChIPData[,"A_ImpulseDE2"] >= Qdelta*Q),"Gene"]
-  DEgenes_Impulse_only <- matQval_iChIPData[(matQval_iChIPData[,"A_ImpulseDE2"] >= Qdelta*Q & matQval_iChIPData[,"A_DESeq2"] < Q),"Gene"]
-  graphics.off()
-  print(paste0("Number of significant DE genes at q-value of ",Q))
-  print(paste0("ImpulseDE only ",length(DEgenes_Impulse_only)))
-  print(paste0("edge only ",length(DEgenes_edge_only.RData)))
-  
-  vecRefResults <- matQval_iChIPData[,"A_edge"]
-  names(vecRefResults) <- matQval_iChIPData[,"Gene"]
-  strControlName <- NULL
-  strCaseName <- "case"
-  NPARAM <- 6
-  
-  # sort DESeq2 only genes by padj of DESeq2
-  dfDESeq_ImpulseDESeqOnly <- dfDESeq_Impulse[DEgenes_Ref_only,]
-  DEgenes_Ref_onlySorted <- dfDESeq_ImpulseDESeqOnly[order(dfDESeq_ImpulseDESeqOnly$DESeq),"Gene"]
-  plotDEGenes(vecGeneIDs=DEgenes_Ref_onlySorted,
-    matCountDataProc=matCountDataProc,
-    lsMatTranslationFactors=lsMatTranslationFactors,
-    matSizeFactors=matSizeFactors,
-    dfAnnotation=dfAnnotationProc, 
-    lsImpulseFits=lsImpulseFits,
-    strCaseName=strCaseName, 
-    strControlName=strControlName, 
-    strFileNameSuffix="H4K3me1_EdgeBeatsImpulseDE2", 
-    strPlotTitleSuffix="", 
-    strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,
-    vecRefPval=dfDESeq2Results$padj,
-    strMode=strMode, 
-    NPARAM=NPARAM)
-  
-  plotDEGenes(vecGeneIDs=DEgenes_Impulse_only,
-    matCountDataProc=matCountDataProc,
-    lsMatTranslationFactors=lsMatTranslationFactors,
-    matSizeFactors=matSizeFactors,
-    dfAnnotation=dfAnnotationProc, 
-    lsImpulseFits=lsImpulseFits,
-    strCaseName=strCaseName, 
-    strControlName=strControlName, 
-    strFileNameSuffix="H4K3me1_ImpulseDE2BeatsEdge", 
-    strPlotTitleSuffix="", 
-    strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,
-    vecRefPval=dfDESeq2Results$padj,
-    strMode=strMode, 
-    NPARAM=NPARAM)
 }
+
+# method comparison
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/ImpulseDE2/H3K4me1")
+load("ImpulseDE2_matCountDataProc.RData")
+load("ImpulseDE2_dfAnnotationProc.RData")
+load("ImpulseDE2_dfImpulseResults.RData")
+load("ImpulseDE2_vecDEGenes.RData")
+load("ImpulseDE2_lsImpulseFits.RData")
+load("ImpulseDE2_dfDESeq2Results.RData")
+load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_matSizeFactors.RData")
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
+source("ImpulseDE2_main.R")
+source("srcImpulseDE2_plotDEGenes.R")
+source("srcImpulseDE2_compareDEMethods.R")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/pdfs")
+
+Q <- 10^(-3)
+Qdelta <- 10^(2) # difference factor required to be plotted
+
+# Load run data ImpulseDE2, ImpulseDE, DESeq2
+matQval <- as.matrix(data.frame( Gene=rownames(dfImpulseResults), ImpulseDE2=dfImpulseResults$adj.p, DESeq2=NA))
+rownames(matQval) <- rownames(dfImpulseResults)
+matQval[,"DESeq2"] <- dfDESeq2Results[rownames(matQval),"padj"]
+matRunTime <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
+
+colnames(matQval) <- c("Gene", "ImpulseDE2", "DESeq2")
+
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/pdfs")
+compareDEMethods(matQval,
+  strMethod2="DESeq2",
+  Q = Q,
+  Qdelta = Qdelta,
+  matCountDataProc = matCountDataProc,
+  lsMatTranslationFactors = lsMatTranslationFactors,
+  matSizeFactors = matSizeFactors,
+  dfAnnotationProc = dfAnnotationProc, 
+  lsImpulseFits = lsImpulseFits,
+  dfImpulseResults = dfImpulseResults,
+  strCaseName="case", 
+  strControlName = NULL, 
+  strMode="batch",
+  strDataDescriptionFilename="")
+
+################################################################################
+# DESeq2 for Gene-E
+print("Run DESeq2")
+library(DESeq2)
+library(BiocParallel)
+# Parallelisation
+nProcessesAssigned <- 3
+nProcesses <- min(detectCores() - 1, nProcessesAssigned)
+register(MulticoreParam(nProcesses))
+
+# Create input data set
+# Only retain non zero
+matDataA_DESeq2 <- matDataA
+
+# Create DESeq2 data object
+dds <- DESeqDataSetFromMatrix(countData = matDataA_DESeq2,
+  colData = dfAnnotationA,
+  design = ~TimeCateg)
+# Run DESeq2
+ddsDESeqObjectA <- DESeq(dds, test = "LRT", 
+  full = ~ TimeCateg, reduced = ~ 1,
+  parallel=TRUE)
+
+# DESeq results for comparison
+dds_resultsTableA <- results(ddsDESeqObjectA)
+qvals_A <- dds_resultsTableA$padj
+dfDESeq2DEgeneCounts <- matDataA[rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5),]),]
+rownames(dfDESeq2DEgeneCounts) <- rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5),])
+dfDESeq2DEgeneCountsNorm <- dfDESeq2DEgeneCounts/rep(sizeFactors(ddsDESeqObjectA), each = nrow(dfDESeq2DEgeneCounts))
+dfDESeq2DEgeneCountsNormMeans <- do.call(cbind, lapply(unique(dfAnnotationA$Time),function(t){
+  if(length(as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)) > 1 ){
+    apply(dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)],1,mean)
+  }else{
+    dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)]
+  }
+}))
+colnames(dfDESeq2DEgeneCountsNormMeans) <- unique(dfAnnotationA$TimeCateg)
+write.table(dfDESeq2DEgeneCountsNormMeans,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/matCounts_DESeq2_1e-5.tab",sep="\t",row.names=F,quote=FALSE)
+# retain only high variation
+dfDESeq2DEgeneCountsNormMeansFilt <- dfDESeq2DEgeneCountsNormMeans[2*apply(dfDESeq2DEgeneCountsNormMeans,1,min) <= apply(dfDESeq2DEgeneCountsNormMeans,1,max),]
+write.table(dfDESeq2DEgeneCountsNormMeansFilt,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/matCounts_DESeq2_1e-5_x1-5.tab",sep="\t",row.names=F,quote=FALSE)

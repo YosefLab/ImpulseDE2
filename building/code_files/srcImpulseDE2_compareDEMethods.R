@@ -71,19 +71,19 @@ compareDEMethods <- function(matQval,
   graphics.off()
   
   # 2. CDF p-values
-  vecX <- seq(1,25,by=0.1)
-  vecCDF1 <- sapply(vecX, function(thres){sum(log(as.numeric(matQval[,strMethod1]))/log(10) >= -thres, na.rm=TRUE)})
-  vecCDF2 <- sapply(vecX, function(thres){sum(log(as.numeric(matQval[,strMethod2]))/log(10) >= -thres, na.rm=TRUE)})
+  vecX <- seq(-25,-1,by=0.1)
+  vecCDF1 <- sapply(vecX, function(thres){sum(log(as.numeric(matQval[,strMethod1]))/log(10) <= thres, na.rm=TRUE)})
+  vecCDF2 <- sapply(vecX, function(thres){sum(log(as.numeric(matQval[,strMethod2]))/log(10) <= thres, na.rm=TRUE)})
   pdf(paste0(strMethod1,"-",strMethod2,"_ECDF-pvalues.pdf"),width=7,height=7)
   plot(vecX,vecCDF1,
     col="black",pch=4,type="l",
     ylim=c(0,max(max(vecCDF1,na.rm=TRUE),max(vecCDF2,na.rm=TRUE))),
-    xlab="-log_10(threshold p-value)", 
-    ylab=paste0("Number of accepted null\nhypothesis at threshold"),
-    main=paste0("Cumulative number of p-values larger than threshold\n",strMethod1," versus ",strMethod2))
+    xlab="-log_10(p-value)", 
+    ylab=paste0("Cumulative p-value distribution"),
+    main=paste0("Cumulative p-values distribution\n",strMethod1," versus ",strMethod2))
   points(vecX,vecCDF2,
     col="red",pch=4,type="l")
-  legend(x="bottomright",
+  legend(x="topleft",
     legend=c(strMethod1,strMethod2),
     fill=c("black","red"))
   dev.off()
@@ -99,21 +99,23 @@ compareDEMethods <- function(matQval,
   vecboolImpulseBeatsQ <- as.numeric(matQval[,strMethod1]) < Q & !is.na(as.numeric(matQval[,strMethod1]))
   vecboolImpulseBeatsRef <- as.numeric(matQval[,strMethod2]) >= Qdelta*as.numeric(matQval[,strMethod1]) | (!is.na(as.numeric(matQval[,strMethod1])) & is.na(as.numeric(matQval[,strMethod2])))
   
-  vecDEgenes_Ref_only <- as.vector(matQval[vecboolRefBeatsQ & vecBoolRefBeatsImpulse & vecboolImpulseFitted,"Gene"])
-  print(head(vecDEgenes_Ref_only))
-  print(dim(lsImpulseFits$parameters_case))
-  print(rownames(lsImpulseFits$parameters_case))
-  vecDEgenes_Impulse_only <- as.vector(matQval[vecboolImpulseBeatsQ & vecboolImpulseBeatsRef & vecboolImpulseFitted,"Gene"])
+  vecRefOnly <- as.vector(matQval[vecboolRefBeatsQ & vecBoolRefBeatsImpulse & vecboolImpulseFitted,"Gene"])
+  vecRefOnlyPval <- as.numeric(matQval[vecRefOnly,strMethod2])
+  names(vecRefOnlyPval) <- vecRefOnly
+  vecRefOnly <- names(sort(vecRefOnlyPval)[1:min(100,length(vecRefOnly))])
+  vecImpulsOnly <- as.vector(matQval[vecboolImpulseBeatsQ & vecboolImpulseBeatsRef & vecboolImpulseFitted,"Gene"])
+  vecImpulsOnlyPval <- as.numeric(matQval[vecImpulsOnly,strMethod1])
+  names(vecImpulsOnlyPval) <- vecImpulsOnly
+  vecImpulsOnly <- names(sort(vecImpulsOnlyPval)[1:min(100,length(vecImpulsOnly))])
+  vecDEgenes_Ref_only <- vecRefOnly
+  vecDEgenes_Impulse_only <- vecImpulsOnly
   graphics.off()
   print(paste0("Number of significant DE genes at q-value of ",Q))
-  print(paste0(strMethod1," only ",length(vecDEgenes_Impulse_only)))
-  print(paste0(strMethod2," only ",length(vecDEgenes_Ref_only)))
+  print(paste0(strMethod1," only ",sum(vecboolImpulseBeatsQ & vecboolImpulseBeatsRef)))
+  print(paste0(strMethod2," only ",sum(vecboolRefBeatsQ & vecBoolRefBeatsImpulse)))
   
   vecRefResults <- as.numeric(matQval[,strMethod2])
   names(vecRefResults) <- matQval[,"Gene"]
-  strControlName <- NULL
-  strCaseName <- "case"
-  strMode="batch"
   NPARAM <- 6
   
   plotDEGenes(vecGeneIDs=vecDEgenes_Ref_only,

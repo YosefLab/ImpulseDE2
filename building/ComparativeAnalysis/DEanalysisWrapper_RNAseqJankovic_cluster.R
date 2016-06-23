@@ -120,10 +120,10 @@ tm_DESeq2A <- system.time({
   # Create DESeq2 data object
   dds <- DESeqDataSetFromMatrix(countData = matDataA_DESeq2,
     colData = dfAnnotationA,
-    design = ~TimeCateg)
+    design = ~TimeCateg + LongitudinalSeries)
   # Run DESeq2
   ddsDESeqObjectA <- DESeq(dds, test = "LRT", 
-    full = ~ TimeCateg, reduced = ~ 1,
+    full = ~ TimeCateg + LongitudinalSeries, reduced = ~ LongitudinalSeries,
     parallel=TRUE)
   
   # DESeq results for comparison
