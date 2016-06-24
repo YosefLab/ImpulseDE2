@@ -39,7 +39,7 @@ evalLogLikNBMean <- function(scaTheta,
   vecNormConst,
   vecboolObserved){
   
-  scaNBMean <- log(scaTheta)
+  scaNBMean <- exp(scaTheta)
   # Compute log likelihood under impulse model by
   # adding log likelihood of model at each timepoint.
   scaLogLik <- sum(dnbinom(
