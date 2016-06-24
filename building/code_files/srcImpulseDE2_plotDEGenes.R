@@ -292,16 +292,16 @@ plotDEGenes <- function(vecGeneIDs,
                   lines(x=ker+vecYCoordEDF,y=vecXCoordEDF,col="red")
                 }
               }
-            } else {
-              for(tp in vecTimepoints){
-                vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
-                  size=as.numeric(as.vector(dfImpulseResults[geneID,]$size)) )
-                # Scale Y_coord to uniform peak heights of 1
-                # This translates into width of one time unit in plot
-                vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
-                # Plot pdf vertically at time point
-                lines(x=tp+vecYCoordPDF,y=vecXCoordPDF,col="black")
-              }
+            }
+          } else {
+            for(tp in vecTimepoints){
+              vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
+                size=as.numeric(as.vector(dfImpulseResults[geneID,]$size)) )
+              # Scale Y_coord to uniform peak heights of 1
+              # This translates into width of one time unit in plot
+              vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
+              # Plot pdf vertically at time point
+              lines(x=tp+vecYCoordPDF,y=vecXCoordPDF,col="black")
             }
             
             # Plot inferred mean of each time point

@@ -78,7 +78,7 @@ compareDEMethods <- function(matQval,
   plot(vecX,vecCDF1,
     col="black",pch=4,type="l",
     ylim=c(0,max(max(vecCDF1,na.rm=TRUE),max(vecCDF2,na.rm=TRUE))),
-    xlab="-log_10(p-value)", 
+    xlab="log_10(p-value)", 
     ylab=paste0("Cumulative p-value distribution"),
     main=paste0("Cumulative p-values distribution\n",strMethod1," versus ",strMethod2))
   points(vecX,vecCDF2,
@@ -135,7 +135,7 @@ compareDEMethods <- function(matQval,
     strMode=strMode, 
     NPARAM=6)
   
-  if(length(vecDEgenes_Impulse_only)){
+  if(!is.na(vecDEgenes_Impulse_only)){
     plotDEGenes(vecGeneIDs=vecDEgenes_Impulse_only,
       matCountDataProc=matCountDataProc,
       lsMatTranslationFactors=lsMatTranslationFactors,

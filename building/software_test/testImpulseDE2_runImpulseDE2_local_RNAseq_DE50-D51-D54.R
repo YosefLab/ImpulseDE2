@@ -26,7 +26,7 @@ colnames(matCountData) <- colnames(dfCountData)[2:dim(dfCountData)[2]]
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files/ImpulseDE2_main.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/software_test_out")
 strCaseName = "case"
-strControlName = NULL
+strControlName = "ctrl"
 if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 }else{dfAnnotation=dfAnnotationCase}
 n_process = 3

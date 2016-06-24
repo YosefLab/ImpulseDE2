@@ -221,7 +221,7 @@ computeTranslationFactors <- function(matCountDataProc,
     #}
     for(longser in vecLongitudinalSeriesCase){
       vecboolCurrentSer <- vecLongitudinalSeriesAssign==longser & vecboolindColsCase
-      matMuLongitudinalAll[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
+      matMuLongitudinalCase[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
         fitNBMean(vecCounts=matCountDataProc[i,vecLongitudinalSeriesAssign==longser],
           scaDispEst=vecDispersions[i],
           vecNormConst=matSizeFactors[i,vecLongitudinalSeriesAssign==longser])
@@ -257,7 +257,7 @@ computeTranslationFactors <- function(matCountDataProc,
     #}
     for(longser in vecLongitudinalSeriesCtrl){
       vecboolCurrentSer <- vecLongitudinalSeriesAssign==longser & vecboolindColsCtrl
-      matMuLongitudinalAll[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
+      matMuLongitudinalCtrl[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
         fitNBMean(vecCounts=matCountDataProc[i,vecLongitudinalSeriesAssign==longser],
           scaDispEst=vecDispersions[i],
           vecNormConst=matSizeFactors[i,vecLongitudinalSeriesAssign==longser])
@@ -275,7 +275,8 @@ computeTranslationFactors <- function(matCountDataProc,
     matTranslationFactorsCtrl[,!vecboolindColsCtrl] <- NA
     
     lsMatTranslationFactors <- list(matTranslationFactorsAll,
-      matTranslationFactorsCase, matTranslationFactorsCtrl)
+      matTranslationFactorsCase, 
+      matTranslationFactorsCtrl)
     names(lsMatTranslationFactors) <- c("combined","case","control")
     return(lsMatTranslationFactors)
   } else {

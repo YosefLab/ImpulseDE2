@@ -66,7 +66,7 @@ tm_ImpulseDE2A <- system.time({
     strCaseName = strCaseName, 
     strControlName=strControlName, 
     strMode="batch",
-    nProc=3, 
+    nProc=1, 
     Q_value=10^(-3),
     boolPlotting=TRUE)
   dfImpulseResultsA <- lsImpulseDE_resultsA$dfImpulseResults

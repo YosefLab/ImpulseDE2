@@ -88,7 +88,7 @@ setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_f
 source("ImpulseDE2_main.R")
 source("srcImpulseDE2_plotDEGenes.R")
 source("srcImpulseDE2_compareDEMethods.R")
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/case/ImpulseDE2")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/output/ImpulseDE2")
 load("ImpulseDE2_matCountDataProc.RData")
 load("ImpulseDE2_dfAnnotationProc.RData")
 load("ImpulseDE2_dfImpulseResults.RData")
@@ -99,7 +99,7 @@ load("ImpulseDE2_lsMatTranslationFactors.RData")
 load("ImpulseDE2_matSizeFactors.RData")
 
 Q <- 10^(-3)
-Qdelta <- 10^(2) # difference factor required to be plotted
+Qdelta <- 10^2 # difference factor required to be plotted
 
 # Load run data ImpulseDE2, ImpulseDE, DESeq2
 load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/output/lsResDEcomparison_RNAseqdata.RData")
@@ -122,7 +122,7 @@ compareDEMethods(matQval,
   dfImpulseResults = dfImpulseResults,
   strCaseName="case", 
   strControlName = NULL, 
-  strMode="batch",
+  strMode="longitudinal",
   strDataDescriptionFilename="")
 
 compareDEMethods(matQval,
@@ -137,12 +137,12 @@ compareDEMethods(matQval,
   dfImpulseResults = dfImpulseResults,
   strCaseName="case", 
   strControlName = NULL, 
-  strMode="batch",
+  strMode="longitudinal",
   strDataDescriptionFilename="")
 
 strMethod1="ImpulseDE2"
 strMethod2="DESeq2"
-Q <- 10^(-2)
+Q <- 10^(-3)
 Qdelta <- 2 # difference factor required
 # Note cannot plot genes which are NA in ImpulseDE2
 vecboolImpulseFitted <- !is.na(as.numeric(matQval[,strMethod2]))
