@@ -76,6 +76,7 @@ runDESeq2 <- function(dfAnnotationProc,
     # DESeq2 dispersion is 1/size used dnbinom (used in cost function
     # for evaluation of likelihood)
     dds_dispersions <- 1/dispersions(ddsDESeqObject) 
+    names(dds_dispersions) <- rownames(ddsDESeqObject)
     # DESeq results for comparison
     dds_resultsTable <- results(ddsDESeqObject)
   } else {
@@ -101,7 +102,8 @@ runDESeq2 <- function(dfAnnotationProc,
       # var = mean + alpha * mean^2, alpha is dispersion
       # DESeq2 dispersion is 1/size used dnbinom (used in cost function
       # for evaluation of likelihood)
-      dds_dispersions <- 1/dispersions(ddsDESeqObject) 
+      dds_dispersions <- 1/dispersions(ddsDESeqObject)
+      names(dds_dispersions) <- rownames(ddsDESeqObject)
       # DESeq results for comparison
       dds_resultsTable <- results(ddsDESeqObject)
       
@@ -132,7 +134,8 @@ runDESeq2 <- function(dfAnnotationProc,
       # var = mean + alpha * mean^2, alpha is dispersion
       # DESeq2 dispersion is 1/size used dnbinom (used in cost function
       # for evaluation of likelihood)
-      dds_dispersions <- 1/dispersions(ddsDESeqObjectFit) 
+      dds_dispersions <- 1/dispersions(ddsDESeqObjectFit)
+      names(dds_dispersions) <- rownames(ddsDESeqObjectFit)
       
     } else {
       stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))

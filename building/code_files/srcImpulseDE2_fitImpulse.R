@@ -67,7 +67,17 @@ computeLogLikNull <- function(vecCounts,
   
   if(strMode=="batch"){
     # Fit null model:
-    scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
+    #scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
+    scaMu <- exp(unlist(optim(
+      par=log(mean(vecCounts/vecNormConst, na.rm=TRUE)+1),
+      fn=evalLogLikNBMean_comp,
+      vecCounts=vecCounts,
+      scaDispEst=scaDispersionEstimate, 
+      vecNormConst=vecNormConst,
+      vecboolObserved=vecboolObserved,
+      method="BFGS",
+      control=list(maxit=1000,fnscale=-1)
+    )["par"]))
     
     # Evaluate likelihood of null model:
     scaLogLikNull <- sum(dnbinom(
@@ -78,7 +88,13 @@ computeLogLikNull <- function(vecCounts,
     
   } else if(strMode=="singlecell"){
     # Fit null model:
-    scaMu <- sum(vecCounts/vecNormConst*vecProbNB, na.rm=TRUE)/sum(vecProbNB, na.rm=TRUE)
+    # Use closed form solution if no size factors used (i.e. all
+    # size factors are 1)
+    if(all(vecNormConst==1)){
+      scaMu <- sum(vecCounts*vecProbNB, na.rm=TRUE)/sum(vecProbNB, na.rm=TRUE)
+    } else {
+      stop("ERR")
+    }
     
     scaLogLikNull <- evalLogLikZINB_comp(vecY=vecCounts,
       vecMu=scaMu*vecNormConst,
@@ -88,9 +104,32 @@ computeLogLikNull <- function(vecCounts,
       vecboolZero=vecboolZero)
   } else if(strMode=="longitudinal"){
     # Fit null model:  
-    scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
-    vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,
-      function(longser){mean((vecCounts/vecNormConst)[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)})
+    #scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
+    scaMu <- exp(unlist(optim(
+      par=log(mean(vecCounts/vecNormConst, na.rm=TRUE)+1),
+      fn=evalLogLikNBMean_comp,
+      vecCounts=vecCounts,
+      scaDispEst=scaDispersionEstimate, 
+      vecNormConst=vecNormConst,
+      vecboolObserved=vecboolObserved,
+      method="BFGS",
+      control=list(maxit=1000,fnscale=-1)
+    )["par"]))
+    #vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,function(longser){
+    #  mean((vecCounts/vecNormConst)[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
+    #})
+    vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,function(longser){
+      exp(unlist(optim(
+        par=log(mean((vecCounts/vecNormConst)[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)+1),
+        fn=evalLogLikNBMean_comp,
+        vecCounts=vecCounts[vecLongitudinalSeriesAssign==longser],
+        scaDispEst=scaDispersionEstimate, 
+        vecNormConst=vecNormConst[vecLongitudinalSeriesAssign==longser],
+        vecboolObserved=vecboolObserved[vecLongitudinalSeriesAssign==longser],
+        method="BFGS",
+        control=list(maxit=1000,fnscale=-1)
+      )["par"]))
+    })
     names(vecMuLongitudinalSeries) <- vecLongitudinalSeries
     
     # Evaluate likelihood of null model
@@ -569,7 +608,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
   # likelihood function in MLE fitting of impulse model:
   MAXIT <- 1000
   
-  if(nrow(matCountDataProcCondition) > max(2*nProc,10)){
+  if(nrow(matCountDataProcCondition) > max(2*nProc,10) & FALSE){
     # Use parallelisation if number of genes/centroids to fit is large
     
     # Define partitioning of genes onto nodes: lsGeneIndexByCore
@@ -604,6 +643,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("fitImpulse_gene",fitImpulse_gene, envir = my.env)
     assign("fitImpulse_matrix",fitImpulse_matrix, envir = my.env)
     assign("calcImpulse_comp", calcImpulse_comp, envir = my.env)
+    assign("evalLogLikNBMean_comp", evalLogLikNBMean_comp, envir = my.env)
     assign("evalLogLikImpulseBatch_comp", evalLogLikImpulseBatch_comp, envir = my.env)
     assign("evalLogLikZINB_comp", evalLogLikZINB_comp, envir = my.env)
     assign("evalLogLikImpulseSC_comp", evalLogLikImpulseSC_comp, envir = my.env)
@@ -625,7 +665,8 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "strSCMode",
       "MAXIT",
       "NPARAM",
-      "calcImpulse_comp", 
+      "calcImpulse_comp",
+      "evalLogLikNBMean_comp",
       "evalLogLikImpulseBatch_comp",
       "evalLogLikZINB_comp",
       "evalLogLikImpulseSC_comp", 

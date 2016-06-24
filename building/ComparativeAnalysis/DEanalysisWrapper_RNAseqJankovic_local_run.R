@@ -1,6 +1,6 @@
 # Local
 rm(list = ls())
-boolCluster <- FALSE
+boolCluster <- TRUE
 
 print("Process data RNAseq Jankovic")
 # Load Data set RNAseq
@@ -29,18 +29,15 @@ dfAnnotationRNA <- read.table("/Users/davidsebastianfischer/MasterThesis/data/Im
 dfAnnotationRNA$TimeCateg <- paste0(rep("_",length(dfAnnotationRNA$Time)),dfAnnotationRNA$Time)
 dfAnnotationA <- dfAnnotationRNA
 
-# Expend 0h ctrl sample to both conditions
-vecExpanedSamples <- dfAnnotationA$Sample
-vecExpanedSamples[vecExpanedSamples=="SRR1525500cs"] <- "SRR1525500"
-vecExpanedSamples[vecExpanedSamples=="SRR1525513cs"] <- "SRR1525513"
-
-matDataA <- matDataA[,as.vector(vecExpanedSamples)]
+matDataA <- matDataA[,as.vector(dfAnnotationA$Sample)]
 colnames(matDataA) <- dfAnnotationA$Sample
 #only case
+if(FALSE){
 matDataA <- matDataA[,dfAnnotationA$Condition=="case"]
 colnames(matDataA) <- dfAnnotationA[dfAnnotationA$Condition=="case",]$Sample
 dfAnnotationA <- dfAnnotationA[dfAnnotationA$Condition=="case",]
 rownames(dfAnnotationA) <- dfAnnotationA$Sample
+}
 
 # All zero rows
 matDataA[!is.finite(matDataA)] <- NA
@@ -78,22 +75,22 @@ if(boolCluster){
 # ImpulseDE2
 if(!boolCluster){
   print("Run ImpulseDE2")
-  source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
+  source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files/ImpulseDE2_main.R")
   
   # Create input data set
   # Only retain non zero
   matDataA_ImpulseDE2 <- matDataA
   
   tm_ImpulseDE2A <- system.time({
-    setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ImpulseDE2")
+    setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ctrl/ImpulseDE2")
     strControlName = NULL
     strCaseName = "case"
     lsImpulseDE_resultsA <- runImpulseDE2(matCountData=matDataA_ImpulseDE2, 
       dfAnnotation=dfAnnotationA,
       strCaseName = strCaseName, 
       strControlName=strControlName, 
-      strMode="longitudinal",
-      nProc=3, 
+      strMode="batch",
+      nProc=2, 
       Q_value=10^(-3),
       boolPlotting=FALSE)
     dfImpulseResultsA <- lsImpulseDE_resultsA$dfImpulseResults

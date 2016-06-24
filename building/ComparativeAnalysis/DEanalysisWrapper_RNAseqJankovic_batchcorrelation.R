@@ -38,29 +38,32 @@ if(FALSE){
   rownames(dfAnnotationA) <- dfAnnotationA$Sample
 }
 
-matDataA <- matDataA[apply(matDataA,1,function(gene){!any(is.na(gene))}),]
+matDataARed <- matDataA[apply(matDataA,1,function(gene){!any(is.na(gene) | gene==0 )}),]
 #colnames(matDataA) <- c(paste0("A",dfAnnotationA[1:6,]$TimeCateg,"h"),paste0("B",dfAnnotationA[7:12,]$TimeCateg,"h"))
 #colnames(matDataA) <- c(paste0("A",dfAnnotationA[1:7,]$TimeCateg,"h"),paste0("B",dfAnnotationA[8:14,]$TimeCateg,"h"))
 vecSRRid <- sapply(as.vector(dfAnnotationA$Sample),function(x){unlist(strsplit(x,split="SRR15255"))[2]})
-colnames(matDataA) <- c(paste0(vecSRRid[1:7],"_",dfAnnotationA[1:7,]$Condition,"_A",dfAnnotationA[1:7,]$TimeCateg,"h"),
+colnames(matDataARed) <- c(paste0(vecSRRid[1:7],"_",dfAnnotationA[1:7,]$Condition,"_A",dfAnnotationA[1:7,]$TimeCateg,"h"),
   paste0(vecSRRid[8:13],"_",dfAnnotationA[8:13,]$Condition,"_A",dfAnnotationA[8:13,]$TimeCateg,"h"),
   paste0(vecSRRid[14:20],"_",dfAnnotationA[14:20,]$Condition,"_B",dfAnnotationA[14:20,]$TimeCateg,"h"),
   paste0(vecSRRid[21:26],"_",dfAnnotationA[21:26,]$Condition,"_B",dfAnnotationA[21:26,]$TimeCateg,"h"))
 library(ggplot2)
 library(reshape2)
 q <- qplot(x=Var1, y=Var2, 
-  data=melt(cor(matDataA)), 
+  data=melt(cor(matDataARed)), 
   fill=value, 
   geom="tile",
   xlab="",ylab="")
 q + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
+plot(log(matDataARed[,8])/log(2),log(matDataARed[,21])/log(2))
+
 pdf("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/batcheffect_analysis/correlation_heatmap_batcheffect.pdf")
 q <- qplot(x=Var1, y=Var2, 
-  data=melt(cor(matDataA)), 
+  data=melt(cor(matDataARed)), 
   fill=value, 
   geom="tile",
   xlab="",ylab="")
 q + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 graphics.off()
+

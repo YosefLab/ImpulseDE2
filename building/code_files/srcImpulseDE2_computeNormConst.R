@@ -38,14 +38,17 @@ computeSizeFactors <- function(matCountDataProc,
   
   if(strMode=="batch" | strMode=="longitudinal"){
     # Compute geometric count mean over replicates
-    # for each gene: Set zero counts to one
+    # for genes without zero observations: Samples
+    # with more than half zero observations receive 
+    # size factor =1 otherwise.
     # In the case of strMode=singlecell, this becomes
     # the weighted geometric count mean, weighted by
     # by the probability of each observation to come
     # from the negative binomial distribution.
     matCountDataProcNoZeros <- matCountDataProc
-    matCountDataProcNoZeros[matCountDataProcNoZeros==0] <- 0.1
-    matboolObserved <- !is.na(matCountDataProc)
+    vecboolZeroObs <- apply(matCountDataProcNoZeros,1,function(gene){!any(gene==0)})
+    matCountDataProcNoZeros <- matCountDataProcNoZeros[vecboolZeroObs,]
+    matboolObserved <- !is.na(matCountDataProcNoZeros) 
     # Take geometric mean
     vecGeomMean <- sapply(seq(1,dim(matCountDataProcNoZeros)[1]), 
       function(gene){
@@ -54,18 +57,18 @@ computeSizeFactors <- function(matCountDataProc,
       })
     
     matGeomMeans <- matrix(vecGeomMean, 
-      nrow=dim(matCountDataProc)[1], 
-      ncol=dim(matCountDataProc)[2], 
+      nrow=dim(matCountDataProcNoZeros)[1], 
+      ncol=dim(matCountDataProcNoZeros)[2], 
       byrow=FALSE)
     
     # Compute ratio of each observation to geometric
     # mean.
-    matSizeRatios <- matCountDataProc / matGeomMeans
+    matSizeRatios <- matCountDataProcNoZeros / matGeomMeans
     
     # Chose median of ratios over genes as size factor
     vecSizeFactors <- apply(matSizeRatios, 2,
-      function(replicate){
-        median(replicate, na.rm=TRUE)
+      function(sample){
+        median(sample, na.rm=TRUE)
       })
   } else if(strMode=="singlecell"){
     # Size factors directly represent sequencing depth:
@@ -145,14 +148,15 @@ computeSizeFactors <- function(matCountDataProc,
 
 computeTranslationFactors <- function(matCountDataProc,
   matSizeFactors,
+  vecDispersions,
   scaSmallRun=NULL,
   dfAnnotationProc,
   strCaseName,
   strControlName=NULL){
   
   # Compute size factor normalised count data
-  matCountDataProcNorm <- matCountDataProc/matSizeFactors
-  colnames(matCountDataProcNorm) <- colnames(matCountDataProc)
+  #matCountDataProcNorm <- matCountDataProc/matSizeFactors
+  #colnames(matCountDataProcNorm) <- colnames(matCountDataProc)
   
   vecLongitudinalSeriesAssign <- dfAnnotationProc[match(
     colnames(matCountDataProc),
@@ -166,14 +170,40 @@ computeTranslationFactors <- function(matCountDataProc,
   # Fit mean to normalised counts. Count normalisation 
   # corresponds to model normalisation in impulse model 
   # fitting.
-  vecMuAll <- apply(matCountDataProcNorm,1,function(gene){mean(gene, na.rm=TRUE)})
+  #vecMuAll <- apply(matCountDataProcNorm,1,function(gene){mean(gene, na.rm=TRUE)})
+  vecMuAll <- apply(seq(1,dim(matCountDataProc)[1]),1,function(i){
+    exp(unlist(optim(
+      par=log(mean(matCountDataProc[i,]/matSizeFactors[i,], na.rm=TRUE)+1),
+      fn=evalLogLikNBMean_comp,
+      vecCounts=matCountDataProc[i,],
+      scaDispEst=vecDispersions[i], 
+      vecNormConst=matSizeFactors[i,],
+      vecboolObserved=!is.na(matCountDataProc[i,]),
+      method="BFGS",
+      control=list(maxit=1000,fnscale=-1)
+    )["par"]))
+  })
   matMuAll <- matrix(vecMuAll,
     nrow=dim(matCountDataProc)[1],
     ncol=dim(matCountDataProc)[2],
     byrow=FALSE)
-  matMuLongitudinalAll <- t(apply(matCountDataProcNorm, 1, function(gene){
-    sapply(vecLongitudinalSeries, function(longser){
-      mean(gene[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
+  #matMuLongitudinalAll <- t(apply(matCountDataProcNorm, 1, function(gene){
+  #  sapply(vecLongitudinalSeries, function(longser){
+  #    mean(gene[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
+  #  })
+  #}))
+  matMuLongitudinalAll <- t(apply(seq(1,dim(matCountDataProc)[1]), 1, function(i){
+    sapply(vecLongitudinalSeries,function(longser){
+      exp(unlist(optim(
+        par=log(mean(matCountDataProc[i,vecLongitudinalSeriesAssign==longser]/matSizeFactors[i,vecLongitudinalSeriesAssign==longser], na.rm=TRUE)+1),
+        fn=evalLogLikNBMean_comp,
+        vecCounts=matCountDataProc[i,vecLongitudinalSeriesAssign==longser],
+        scaDispEst=vecDispersions[i], 
+        vecNormConst=matSizeFactors[i,vecLongitudinalSeriesAssign==longser],
+        vecboolObserved=!is.na(matCountDataProc[i,vecLongitudinalSeriesAssign==longser]),
+        method="BFGS",
+        control=list(maxit=1000,fnscale=-1)
+      )["par"]))
     })
   }))
   colnames(matMuLongitudinalAll) <- vecLongitudinalSeries
@@ -182,15 +212,30 @@ computeTranslationFactors <- function(matCountDataProc,
   matTranslationFactorsAll[matTranslationFactorsAll==0 | matMuAll==0] <- 1
   
   if(!is.null(strControlName)){
+    stop("meanfitting missing")
     # 2. Case
     vecboolindColsCase <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Sample)
-    vecMuCase <- apply(matCountDataProcNorm[,vecboolindColsCase],1,function(gene){mean(gene, na.rm=TRUE)})
+    #vecMuCase <- apply(matCountDataProcNorm[,vecboolindColsCase],1,function(gene){mean(gene, na.rm=TRUE)})
+    vecMuCase <- apply(matCountDataProc[,vecboolindColsCase], 1, function(gene){
+      glm.nb( gene[!is.na(gene)] ~ 1,
+        link = log,
+        control=list(maxit=1000)
+      )["fitted.values"]
+    })
     matMuLongitudinalCase <- matrix(NA,nrow=dim(matCountDataProc)[1],ncol=length(vecLongitudinalSeries))
     colnames(matMuLongitudinalCase) <- vecLongitudinalSeries
+    #for(longser in vecLongitudinalSeries){
+    #  matMuLongitudinalCase[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCase & vecLongitudinalSeriesAssign==longser], 1, 
+    #    function(gene){mean(gene, na.rm=TRUE)
+    #    })
+    #}
     for(longser in vecLongitudinalSeries){
-      matMuLongitudinalCase[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCase & vecLongitudinalSeriesAssign==longser], 1, 
-        function(gene){mean(gene, na.rm=TRUE)
-        })
+      matMuLongitudinalCase[,longser] <- apply(matCountDataProc[,vecboolindColsCase & vecLongitudinalSeriesAssign==longser], 1, function(gene){
+        glm.nb( gene[!is.na(gene)] ~ 1,
+          link = log,
+          control=list(maxit=1000)
+        )["fitted.values"]
+      })
     }
     colnames(matMuLongitudinalCase) <- vecLongitudinalSeries
     
@@ -206,13 +251,27 @@ computeTranslationFactors <- function(matCountDataProc,
     
     # 3. Control
     vecboolindColsCtrl <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Sample)
-    vecMuCtrl <- apply(matCountDataProcNorm[,vecboolindColsCtrl],1,function(gene){mean(gene, na.rm=TRUE)})
+    #vecMuCtrl <- apply(matCountDataProcNorm[,vecboolindColsCtrl],1,function(gene){mean(gene, na.rm=TRUE)})
+    vecMuCtrl <- apply(matCountDataProc[,vecboolindColsCtrl], 1, function(gene){
+      glm.nb( gene[!is.na(gene)] ~ 1,
+        link = log,
+        control=list(maxit=1000)
+      )["fitted.values"]
+    })
     matMuLongitudinalCtrl <- matrix(NA,nrow=dim(matCountDataProc)[1],ncol=length(vecLongitudinalSeries))
     colnames(matMuLongitudinalCtrl) <- vecLongitudinalSeries
+    #for(longser in vecLongitudinalSeries){
+    #  matMuLongitudinalCtrl[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCtrl & vecLongitudinalSeriesAssign==longser], 1, 
+    #    function(gene){mean(gene, na.rm=TRUE)
+    #    })
+    #}
     for(longser in vecLongitudinalSeries){
-      matMuLongitudinalCtrl[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCtrl & vecLongitudinalSeriesAssign==longser], 1, 
-        function(gene){mean(gene, na.rm=TRUE)
-        })
+      matMuLongitudinalCtrl[,longser] <- apply(matCountDataProc[,vecboolindColsCtrl & vecLongitudinalSeriesAssign==longser], 1, function(gene){
+        glm.nb( gene[!is.na(gene)] ~ 1,
+          link = log,
+          control=list(maxit=1000)
+        )["fitted.values"]
+      })
     }
     colnames(matMuLongitudinalCtrl) <- vecLongitudinalSeries
     
@@ -307,6 +366,7 @@ computeTranslationFactors <- function(matCountDataProc,
 
 computeNormConst <- function(matCountDataProcFull,
   matCountDataProc,
+  vecDispersions,
   scaSmallRun=NULL,
   dfAnnotationProc,
   strCaseName,
@@ -342,6 +402,7 @@ computeNormConst <- function(matCountDataProcFull,
   if(strMode=="longitudinal"){
     lsMatTranslationFactors <- computeTranslationFactors(matCountDataProc=matCountDataProc,
       matSizeFactors=matSizeFactors,
+      vecDispersions=vecDispersions,
       scaSmallRun=scaSmallRun,
       dfAnnotationProc=dfAnnotationProc,
       strCaseName=strCaseName,

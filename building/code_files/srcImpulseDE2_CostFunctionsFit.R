@@ -2,6 +2,56 @@
 #++++++++++++++++++++++++++     Cost Functions    +++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+#' Cost function mean model fit
+#' 
+#' Log likelihood cost function for numerical optimisation of mean model fit 
+#' based on negative binomial model. Note that the closed form solution
+#' of the negative binomial mean parameter only holds if all normalisation
+#' factors are 1.
+#' In analogy to generalised linear models, a log linker
+#' function is used for the mean. The inferred negative
+#' binomial mean model is scaled by the factors in vecNormConst,
+#' which represent size factors (and translation factors),
+#' for evaluation of the likelihood on the data. Note that 
+#' 
+#' @aliases evalLogLikNBMean_comp
+#' 
+#' @seealso
+#' 
+#' @param scaTheta (vector number of parameters [6]) 
+#'    Negative binomial mean parameter.
+#' @param vecCounts (count vector samples) 
+#'    Observed expression values for given gene.
+#' @param scaDispEst: (scalar) Dispersion estimate for given gene.
+#' @param vecNormConst: (numeric vector number of samples) 
+#'    Normalisation constants for each sample.
+#' @param vecWeights: (probability vector number of samples) 
+#'    Weights for inference on mixture models.
+#' @param vecboolObserved: (bool vector number of samples)
+#'    Stores bool of sample being not NA (observed).
+#'     
+#' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
+#' @export
+
+evalLogLikNBMean <- function(scaTheta,
+  vecCounts,
+  scaDispEst, 
+  vecNormConst,
+  vecboolObserved){
+  
+  scaNBMean <- exp(scaTheta)
+  # Compute log likelihood under impulse model by
+  # adding log likelihood of model at each timepoint.
+  scaLogLik <- sum(dnbinom(
+    vecCounts[vecboolObserved], 
+    mu=scaNBMean*vecNormConst[vecboolObserved], 
+    size=scaDispEst, 
+    log=TRUE))
+  
+  # Maximise log likelihood: Return likelihood as value to optimisation routine
+  return(scaLogLik)
+}
+
 #' Cost function impulse model fit - Batch mode
 #' 
 #' Log likelihood cost function for impulse model fit based on negative 

@@ -88,7 +88,7 @@ setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_f
 source("ImpulseDE2_main.R")
 source("srcImpulseDE2_plotDEGenes.R")
 source("srcImpulseDE2_compareDEMethods.R")
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/output/ImpulseDE2")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/case/ImpulseDE2")
 load("ImpulseDE2_matCountDataProc.RData")
 load("ImpulseDE2_dfAnnotationProc.RData")
 load("ImpulseDE2_dfImpulseResults.RData")
@@ -107,6 +107,7 @@ matQval <- lsResDEcomparison_RNAseqdata$matQval_RNAseqData
 matRunTime <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
 
 colnames(matQval) <- c("Gene", sapply(colnames(matQval),function(str){unlist(strsplit(str,"A_"))[2]})[2:5])
+matQval[as.vector(dfImpulseResults$Gene),"ImpulseDE2"] <- dfImpulseResults$adj.p
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs/full")
 
 compareDEMethods(matQval,
@@ -121,7 +122,7 @@ compareDEMethods(matQval,
   dfImpulseResults = dfImpulseResults,
   strCaseName="case", 
   strControlName = NULL, 
-  strMode="longitudinal",
+  strMode="batch",
   strDataDescriptionFilename="")
 
 compareDEMethods(matQval,
@@ -136,7 +137,7 @@ compareDEMethods(matQval,
   dfImpulseResults = dfImpulseResults,
   strCaseName="case", 
   strControlName = NULL, 
-  strMode="longitudinal",
+  strMode="batch",
   strDataDescriptionFilename="")
 
 strMethod1="ImpulseDE2"
@@ -210,3 +211,45 @@ graphics.off()
 
 # Find lowest p-value in DESeq2 which is significantly higher than ImpulseDE2
 
+### CTRL
+rm(list=ls())
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ctrl/ImpulseDE2")
+load("ImpulseDE2_matCountDataProc.RData")
+load("ImpulseDE2_dfAnnotationProc.RData")
+load("ImpulseDE2_dfImpulseResults.RData")
+load("ImpulseDE2_vecDEGenes.RData")
+load("ImpulseDE2_lsImpulseFits.RData")
+load("ImpulseDE2_dfDESeq2Results.RData")
+load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_matSizeFactors.RData")
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
+source("ImpulseDE2_main.R")
+source("srcImpulseDE2_plotDEGenes.R")
+source("srcImpulseDE2_compareDEMethods.R")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ctrl/pdfs")
+
+Q <- 10^(-3)
+Qdelta <- 10^(2) # difference factor required to be plotted
+
+# Load run data ImpulseDE2, ImpulseDE, DESeq2
+matQval <- as.matrix(data.frame( Gene=rownames(dfImpulseResults), ImpulseDE2=dfImpulseResults$adj.p, DESeq2=NA))
+rownames(matQval) <- rownames(dfImpulseResults)
+matQval[,"DESeq2"] <- dfDESeq2Results[rownames(matQval),"padj"]
+
+colnames(matQval) <- c("Gene", "ImpulseDE2", "DESeq2")
+
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ctrl/pdfs")
+compareDEMethods(matQval,
+  strMethod2="DESeq2",
+  Q = Q,
+  Qdelta = Qdelta,
+  matCountDataProc = matCountDataProc,
+  lsMatTranslationFactors = lsMatTranslationFactors,
+  matSizeFactors = matSizeFactors,
+  dfAnnotationProc = dfAnnotationProc, 
+  lsImpulseFits = lsImpulseFits,
+  dfImpulseResults = dfImpulseResults,
+  strCaseName="case", 
+  strControlName = "ctrl", 
+  strMode="longitudinal",
+  strDataDescriptionFilename="")

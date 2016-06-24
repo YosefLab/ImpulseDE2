@@ -237,7 +237,6 @@ Qdelta <- 10^(2) # difference factor required to be plotted
 matQval <- as.matrix(data.frame( Gene=rownames(dfImpulseResults), ImpulseDE2=dfImpulseResults$adj.p, DESeq2=NA))
 rownames(matQval) <- rownames(dfImpulseResults)
 matQval[,"DESeq2"] <- dfDESeq2Results[rownames(matQval),"padj"]
-matRunTime <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
 
 colnames(matQval) <- c("Gene", "ImpulseDE2", "DESeq2")
 
