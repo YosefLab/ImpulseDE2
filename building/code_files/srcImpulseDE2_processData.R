@@ -358,19 +358,30 @@ processData <- function(dfAnnotation=NULL,
     return(NULL)
   }
   
-  # Add categorial time variable to annotation table.
+  # Add categorial time variable to annotation table which
+  # differentiates case and control time points (given to DESeq2).
   # Add column with time scalars with underscore prefix.
-  procAnnotation <- function(dfAnnotation, strCaseName, strControlName){
-    dfAnnotationProc <- dfAnnotation
-    dfAnnotationProc$TimeCateg <- paste0(
-      rep("_",length(dfAnnotation$Time)), 
-      dfAnnotation$Time )
+  procAnnotation <- function(dfAnnotation,
+    strMode,
+    strCaseName, 
+    strControlName){
+    
     if(is.null(strControlName)){
-      dfAnnotationProc <- dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]
+      dfAnnotationProc <- dfAnnotation[dfAnnotation$Condition==strCaseName,]
     } else {
-      dfAnnotationProc <- dfAnnotationProc[dfAnnotationProc$Condition==strCaseName | 
-          dfAnnotationProc$Condition==strControlName,]
+      dfAnnotationProc <- dfAnnotation[dfAnnotation$Condition==strCaseName | 
+          dfAnnotation$Condition==strControlName,]
+      #vecLongSersCase <- unique(dfAnnotationProc[dfAnnotation$Condition==strCaseName,]$LongitudinalSeries)
+      #vecLongSersCtrl <- unique(dfAnnotationProc[dfAnnotation$Condition==strControlName,]$LongitudinalSeries)
+      #vecindLongSerNested <- array(NA, dim(dfAnnotationProc)[1])
+      #vecindLongSerNested[dfAnnotation$Condition==strCaseName] <- 
+      #  match(dfAnnotationProc$LongitudinalSeries, vecLongSersCase)[dfAnnotation$Condition==strCaseName]
+      #vecindLongSerNested[dfAnnotation$Condition==strControlName] <- 
+      #  match(dfAnnotationProc$LongitudinalSeries, vecLongSersCtrl)[dfAnnotation$Condition==strControlName]
+      #dfAnnotationProc$LongSerNested <- paste0("_", vecindLongSerNested)
     }
+    dfAnnotationProc$TimeCateg <- paste0(
+      "_", dfAnnotationProc$Time)
     return(dfAnnotationProc)
   }
   
@@ -458,7 +469,8 @@ processData <- function(dfAnnotation=NULL,
     boolRunDESeq2=boolRunDESeq2 )
   
   # Process annotation table
-  dfAnnotationProc <- procAnnotation(dfAnnotation=dfAnnotation, 
+  dfAnnotationProc <- procAnnotation(dfAnnotation=dfAnnotation,
+    strMode=strMode,
     strCaseName=strCaseName, 
     strControlName=strControlName )
   

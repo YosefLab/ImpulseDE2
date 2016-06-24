@@ -82,12 +82,6 @@ runDESeq2 <- function(dfAnnotationProc,
   } else {
     # With control data:
     
-    # Hypothesis testing operates under the same model
-    # for batch, singlecell and longitudinal: Condition
-    # is a predictor included in LongitudinalSeries and therefore
-    # not allowed by DESeq2. Note that that the dispersions
-    # are fit on the more exact full model for LongitudinalSeries
-    
     if(strMode=="batch" | strMode=="singlecell"){
       # Create DESeq2 data object
       dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,

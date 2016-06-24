@@ -2,7 +2,7 @@
 #++++++++++++++++++++++++++     Cost Functions    +++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Cost function mean model fit
+#' Cost function for negative binomial mean parameter fit
 #' 
 #' Log likelihood cost function for numerical optimisation of mean model fit 
 #' based on negative binomial model. Note that the closed form solution
@@ -12,7 +12,7 @@
 #' function is used for the mean. The inferred negative
 #' binomial mean model is scaled by the factors in vecNormConst,
 #' which represent size factors (and translation factors),
-#' for evaluation of the likelihood on the data. Note that 
+#' for evaluation of the likelihood on the data. 
 #' 
 #' @aliases evalLogLikNBMean_comp
 #' 
@@ -50,6 +50,49 @@ evalLogLikNBMean <- function(scaTheta,
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)
+}
+
+#' Fit negative binomial mean parameter
+#' 
+#' Numerical optimisation of negative binomial mean model fit.
+#' Note that the closed form solution of the maximum likelihood 
+#' estimator of the negative binomial mean parameter 
+#' (the weighted average) only holds if all normalisation
+#' factors are 1.
+#' 
+#' 
+#' @seealso
+#' 
+#' @param vecCounts (count vector samples) 
+#'    Observed expression values for given gene.
+#' @param scaDispEst: (scalar) Dispersion estimate for given gene.
+#' @param vecNormConst: (numeric vector number of samples) 
+#'    Normalisation constants for each sample.
+#' @param vecWeights: (probability vector number of samples) 
+#'    Weights for inference on mixture models.
+#' @param vecboolObserved: (bool vector number of samples)
+#'    Stores bool of sample being not NA (observed).
+#'     
+#' @return scaMu: (scalar) Maximum likelihood estimator of
+#'    negative binomial mean parameter.
+#' @export
+
+fitNBMean <- function(vecCounts,
+  scaDispEst,
+  vecNormConst){
+  
+  scaMu <- exp(unlist(optim(
+    par=log(mean(vecCounts/vecNormConst, na.rm=TRUE)+1),
+    fn=evalLogLikNBMean_comp,
+    vecCounts=vecCounts,
+    scaDispEst=scaDispEst, 
+    vecNormConst=vecNormConst,
+    vecboolObserved=!is.na(vecCounts),
+    method="BFGS",
+    control=list(maxit=1000,fnscale=-1)
+  )["par"]))
+  
+  return(scaMu)
 }
 
 #' Cost function impulse model fit - Batch mode

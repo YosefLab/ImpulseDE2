@@ -172,16 +172,9 @@ computeTranslationFactors <- function(matCountDataProc,
   # fitting.
   #vecMuAll <- apply(matCountDataProcNorm,1,function(gene){mean(gene, na.rm=TRUE)})
   vecMuAll <- sapply(seq(1,dim(matCountDataProc)[1]),function(i){
-    exp(unlist(optim(
-      par=log(mean(matCountDataProc[i,]/matSizeFactors[i,], na.rm=TRUE)+1),
-      fn=evalLogLikNBMean_comp,
-      vecCounts=matCountDataProc[i,],
-      scaDispEst=vecDispersions[i], 
-      vecNormConst=matSizeFactors[i,],
-      vecboolObserved=!is.na(matCountDataProc[i,]),
-      method="BFGS",
-      control=list(maxit=1000,fnscale=-1)
-    )["par"]))
+    fitNBMean(vecCounts=matCountDataProc[i,],
+      scaDispEst=vecDispersions[i],
+      vecNormConst=matSizeFactors[i,])
   })
   matMuAll <- matrix(vecMuAll,
     nrow=dim(matCountDataProc)[1],
@@ -198,16 +191,9 @@ computeTranslationFactors <- function(matCountDataProc,
   for(longser in vecLongitudinalSeries){
     vecboolCurrentSer <- vecLongitudinalSeriesAssign==longser
     matMuLongitudinalAll[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
-      exp(unlist(optim(
-        par=log(mean(matCountDataProc[i,vecboolCurrentSer]/matSizeFactors[i,vecboolCurrentSer], na.rm=TRUE)+1),
-        fn=evalLogLikNBMean_comp,
-        vecCounts=matCountDataProc[i,vecboolCurrentSer],
-        scaDispEst=vecDispersions[i], 
-        vecNormConst=matSizeFactors[i,vecboolCurrentSer],
-        vecboolObserved=!is.na(matCountDataProc[i,vecboolCurrentSer]),
-        method="BFGS",
-        control=list(maxit=1000,fnscale=-1)
-      )["par"]))
+      fitNBMean(vecCounts=matCountDataProc[i,vecLongitudinalSeriesAssign==longser],
+        scaDispEst=vecDispersions[i],
+        vecNormConst=matSizeFactors[i,vecLongitudinalSeriesAssign==longser])
     })
   }
   
@@ -215,22 +201,15 @@ computeTranslationFactors <- function(matCountDataProc,
   matTranslationFactorsAll[matTranslationFactorsAll==0 | matMuAll==0] <- 1
   
   if(!is.null(strControlName)){
-    warning("not tested: control translation factors computation")
     # 2. Case
+    print("case")
     vecboolindColsCase <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Sample)
-    vecLongitudinalSeriesCase <- unique(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$LongitudinalSeries)
+    vecLongitudinalSeriesCase <- unique(as.vector(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$LongitudinalSeries))
     #vecMuCase <- apply(matCountDataProcNorm[,vecboolindColsCase],1,function(gene){mean(gene, na.rm=TRUE)})
     vecMuCase <- sapply(seq(1,dim(matCountDataProc)[1]),function(i){
-      exp(unlist(optim(
-        par=log(mean(matCountDataProc[i,vecboolindColsCase]/matSizeFactors[i,vecboolindColsCase], na.rm=TRUE)+1),
-        fn=evalLogLikNBMean_comp,
-        vecCounts=matCountDataProc[i,vecboolindColsCase],
-        scaDispEst=vecDispersions[i], 
-        vecNormConst=matSizeFactors[i,vecboolindColsCase],
-        vecboolObserved=!is.na(matCountDataProc[i,vecboolindColsCase]),
-        method="BFGS",
-        control=list(maxit=1000,fnscale=-1)
-      )["par"]))
+      fitNBMean(vecCounts=matCountDataProc[i,vecboolindColsCase],
+        scaDispEst=vecDispersions[i],
+        vecNormConst=matSizeFactors[i,vecboolindColsCase])
     })
     matMuLongitudinalCase <- matrix(NA,nrow=dim(matCountDataProc)[1],ncol=length(vecLongitudinalSeries))
     rownames(matMuLongitudinalCase) <- rownames(matCountDataProc)
@@ -241,18 +220,11 @@ computeTranslationFactors <- function(matCountDataProc,
     #    })
     #}
     for(longser in vecLongitudinalSeriesCase){
-      vecboolCurrentSer <- vecboolindColsCase & vecLongitudinalSeriesAssign==longser
-      matMuLongitudinalCase[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
-        exp(unlist(optim(
-          par=log(mean(matCountDataProc[i,vecboolCurrentSer]/matSizeFactors[i,vecboolCurrentSer], na.rm=TRUE)+1),
-          fn=evalLogLikNBMean_comp,
-          vecCounts=matCountDataProc[i,vecboolCurrentSer],
-          scaDispEst=vecDispersions[i], 
-          vecNormConst=matSizeFactors[i,vecboolCurrentSer],
-          vecboolObserved=!is.na(matCountDataProc[i,vecboolCurrentSer]),
-          method="BFGS",
-          control=list(maxit=1000,fnscale=-1)
-        )["par"]))
+      vecboolCurrentSer <- vecLongitudinalSeriesAssign==longser & vecboolindColsCase
+      matMuLongitudinalAll[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
+        fitNBMean(vecCounts=matCountDataProc[i,vecLongitudinalSeriesAssign==longser],
+          scaDispEst=vecDispersions[i],
+          vecNormConst=matSizeFactors[i,vecLongitudinalSeriesAssign==longser])
       })
     }
     
@@ -268,19 +240,12 @@ computeTranslationFactors <- function(matCountDataProc,
     
     # 3. Control
     vecboolindColsCtrl <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Sample)
-    vecLongitudinalSeriesCtrl <- unique(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$LongitudinalSeries)
+    vecLongitudinalSeriesCtrl <- unique(as.vector(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$LongitudinalSeries))
     #vecMuCtrl <- apply(matCountDataProcNorm[,vecboolindColsCtrl],1,function(gene){mean(gene, na.rm=TRUE)})
     vecMuCtrl <- sapply(seq(1,dim(matCountDataProc)[1]),function(i){
-      exp(unlist(optim(
-        par=log(mean(matCountDataProc[i,vecboolindColsCtrl]/matSizeFactors[i,vecboolindColsCtrl], na.rm=TRUE)+1),
-        fn=evalLogLikNBMean_comp,
-        vecCounts=matCountDataProc[i,vecboolindColsCtrl],
-        scaDispEst=vecDispersions[i], 
-        vecNormConst=matSizeFactors[i,vecboolindColsCtrl],
-        vecboolObserved=!is.na(matCountDataProc[i,vecboolindColsCtrl]),
-        method="BFGS",
-        control=list(maxit=1000,fnscale=-1)
-      )["par"]))
+      fitNBMean(vecCounts=matCountDataProc[i,vecboolindColsCtrl],
+        scaDispEst=vecDispersions[i],
+        vecNormConst=matSizeFactors[i,vecboolindColsCtrl])
     })
     matMuLongitudinalCtrl <- matrix(NA,nrow=dim(matCountDataProc)[1],ncol=length(vecLongitudinalSeries))
     rownames(matMuLongitudinalCtrl) <- rownames(matCountDataProc)
@@ -291,18 +256,11 @@ computeTranslationFactors <- function(matCountDataProc,
     #    })
     #}
     for(longser in vecLongitudinalSeriesCtrl){
-      vecboolCurrentSer <- vecboolindColsCtrl & vecLongitudinalSeriesAssign==longser
-      matMuLongitudinalCtrl[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
-        exp(unlist(optim(
-          par=log(mean(matCountDataProc[i,vecboolCurrentSer]/matSizeFactors[i,vecboolCurrentSer], na.rm=TRUE)+1),
-          fn=evalLogLikNBMean_comp,
-          vecCounts=matCountDataProc[i,vecboolCurrentSer],
-          scaDispEst=vecDispersions[i], 
-          vecNormConst=matSizeFactors[i,vecboolCurrentSer],
-          vecboolObserved=!is.na(matCountDataProc[i,vecboolCurrentSer]),
-          method="BFGS",
-          control=list(maxit=1000,fnscale=-1)
-        )["par"]))
+      vecboolCurrentSer <- vecLongitudinalSeriesAssign==longser & vecboolindColsCtrl
+      matMuLongitudinalAll[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
+        fitNBMean(vecCounts=matCountDataProc[i,vecLongitudinalSeriesAssign==longser],
+          scaDispEst=vecDispersions[i],
+          vecNormConst=matSizeFactors[i,vecLongitudinalSeriesAssign==longser])
       })
     }
     

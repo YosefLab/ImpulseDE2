@@ -68,16 +68,9 @@ computeLogLikNull <- function(vecCounts,
   if(strMode=="batch"){
     # Fit null model:
     #scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
-    scaMu <- exp(unlist(optim(
-      par=log(mean(vecCounts/vecNormConst, na.rm=TRUE)+1),
-      fn=evalLogLikNBMean_comp,
-      vecCounts=vecCounts,
-      scaDispEst=scaDispersionEstimate, 
-      vecNormConst=vecNormConst,
-      vecboolObserved=vecboolObserved,
-      method="BFGS",
-      control=list(maxit=1000,fnscale=-1)
-    )["par"]))
+    scaMu <- fitNBMean(vecCounts=vecCounts,
+      scaDispEst=scaDispersionEstimate,
+      vecNormConst=vecNormConst)
     
     # Evaluate likelihood of null model:
     scaLogLikNull <- sum(dnbinom(
@@ -105,30 +98,16 @@ computeLogLikNull <- function(vecCounts,
   } else if(strMode=="longitudinal"){
     # Fit null model:  
     #scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
-    scaMu <- exp(unlist(optim(
-      par=log(mean(vecCounts/vecNormConst, na.rm=TRUE)+1),
-      fn=evalLogLikNBMean_comp,
-      vecCounts=vecCounts,
-      scaDispEst=scaDispersionEstimate, 
-      vecNormConst=vecNormConst,
-      vecboolObserved=vecboolObserved,
-      method="BFGS",
-      control=list(maxit=1000,fnscale=-1)
-    )["par"]))
+    scaMu <- fitNBMean(vecCounts=vecCounts,
+      scaDispEst=scaDispersionEstimate,
+      vecNormConst=vecNormConst)
     #vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,function(longser){
     #  mean((vecCounts/vecNormConst)[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
     #})
     vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,function(longser){
-      exp(unlist(optim(
-        par=log(mean((vecCounts/vecNormConst)[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)+1),
-        fn=evalLogLikNBMean_comp,
-        vecCounts=vecCounts[vecLongitudinalSeriesAssign==longser],
-        scaDispEst=scaDispersionEstimate, 
-        vecNormConst=vecNormConst[vecLongitudinalSeriesAssign==longser],
-        vecboolObserved=vecboolObserved[vecLongitudinalSeriesAssign==longser],
-        method="BFGS",
-        control=list(maxit=1000,fnscale=-1)
-      )["par"]))
+      fitNBMean(vecCounts=vecCounts[vecLongitudinalSeriesAssign==longser],
+        scaDispEst=scaDispersionEstimate,
+        vecNormConst=vecNormConst[vecLongitudinalSeriesAssign==longser])
     })
     names(vecMuLongitudinalSeries) <- vecLongitudinalSeries
     
@@ -316,7 +295,6 @@ optimiseImpulseModelFit <- function(vecParamGuess,
   
   # Chose the cost function for optimisation according
   # to the mode strMode.
-  # David: call these as one, assign the extra param as dummies?
   if(strMode=="batch" | strMode=="longitudinal"){
     vecFit <- unlist( optim(
       par=vecParamGuess,
@@ -364,8 +342,7 @@ optimiseImpulseModelFit <- function(vecParamGuess,
 #' which are exclusively called by this function.
 #' 
 #' @seealso Called by \code{fitImpulse_matrix}. This function
-#' calls \code{computeTranslationFactors}, 
-#' \code{computeLogLikNull}, \code{estimateImpulseParam} and
+#' calls \code{computeLogLikNull}, \code{estimateImpulseParam} and
 #' \code{optimiseImpulseModelFit}.
 #' 
 #' @param vecCounts: (count vector number of samples) Count data.
@@ -623,7 +600,6 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     }
     
     cl <- makeCluster(nProc, outfile = "ImpulseDE2_ClusterOut.txt")
-    #DAVID take fitImpulse out?
     my.env <- new.env()
     # Variables
     assign("matCountDataProcCondition", matCountDataProcCondition, envir = my.env)
@@ -639,15 +615,13 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("NPARAM", NPARAM, envir = my.env)
     assign("MAXIT", MAXIT, envir = my.env)
     # Functions
-    assign("fitImpulse", fitImpulse, envir = my.env)
     assign("fitImpulse_gene",fitImpulse_gene, envir = my.env)
-    assign("fitImpulse_matrix",fitImpulse_matrix, envir = my.env)
     assign("calcImpulse_comp", calcImpulse_comp, envir = my.env)
+    assign("fitNBMean", fitNBMean, envir = my.env)
     assign("evalLogLikNBMean_comp", evalLogLikNBMean_comp, envir = my.env)
     assign("evalLogLikImpulseBatch_comp", evalLogLikImpulseBatch_comp, envir = my.env)
     assign("evalLogLikZINB_comp", evalLogLikZINB_comp, envir = my.env)
     assign("evalLogLikImpulseSC_comp", evalLogLikImpulseSC_comp, envir = my.env)
-    assign("computeTranslationFactors", computeTranslationFactors, envir = my.env)
     assign("computeLogLikNull", computeLogLikNull, envir = my.env)
     assign("estimateImpulseParam", estimateImpulseParam, envir = my.env)
     assign("optimiseImpulseModelFit", optimiseImpulseModelFit, envir = my.env)
@@ -666,14 +640,12 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "MAXIT",
       "NPARAM",
       "calcImpulse_comp",
+      "fitNBMean",
       "evalLogLikNBMean_comp",
       "evalLogLikImpulseBatch_comp",
       "evalLogLikZINB_comp",
       "evalLogLikImpulseSC_comp", 
-      "fitImpulse", 
-      "fitImpulse_matrix", 
       "fitImpulse_gene",
-      "computeTranslationFactors",
       "computeLogLikNull",
       "estimateImpulseParam",
       "optimiseImpulseModelFit"
@@ -686,35 +658,39 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       # Call fitting with single cell parameters
       lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore),
         function(z){ t(sapply( lsGeneIndexByCore[[z]],
-          function(x){fitImpulse_gene(
-            vecCounts=matCountDataProcCondition[x,],
-            scaDispersionEstimate=vecDispersions[x],
-            vecDropoutRate=matDropoutRate[x,],
-            vecProbNB=matProbNB[x,],
-            vecNormConst=matNormConst[x,],
-            vecTimepointAssign=vecTimepointAssign,
-            vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
-            dfAnnotationProc=dfAnnotationProc,
-            strMode=strMode,
-            strSCMode=strSCMode,
-            NPARAM=NPARAM,
-            MAXIT=MAXIT )}
-        ))})
+          function(x){
+            fitImpulse_gene(
+              vecCounts=matCountDataProcCondition[x,],
+              scaDispersionEstimate=vecDispersions[x],
+              vecDropoutRate=matDropoutRate[x,],
+              vecProbNB=matProbNB[x,],
+              vecNormConst=matNormConst[x,],
+              vecTimepointAssign=vecTimepointAssign,
+              vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
+              dfAnnotationProc=dfAnnotationProc,
+              strMode=strMode,
+              strSCMode=strSCMode,
+              NPARAM=NPARAM,
+              MAXIT=MAXIT )
+          }))
+        })
     } else {
       # Call fitting without single cell parameters
       lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore),
         function(z){ t(sapply( lsGeneIndexByCore[[z]],
-          function(x){fitImpulse_gene(
-            vecCounts=matCountDataProcCondition[x,],
-            scaDispersionEstimate=vecDispersions[x],
-            vecNormConst=matNormConst[x,],
-            vecTimepointAssign=vecTimepointAssign,
-            vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
-            dfAnnotationProc=dfAnnotationProc,
-            strMode=strMode,
-            NPARAM=NPARAM,
-            MAXIT=MAXIT )}
-        ))})
+          function(x){
+            fitImpulse_gene(
+              vecCounts=matCountDataProcCondition[x,],
+              scaDispersionEstimate=vecDispersions[x],
+              vecNormConst=matNormConst[x,],
+              vecTimepointAssign=vecTimepointAssign,
+              vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
+              dfAnnotationProc=dfAnnotationProc,
+              strMode=strMode,
+              NPARAM=NPARAM,
+              MAXIT=MAXIT )
+          }))
+        })
     }
     # Give output rownames again, which are lost above
     for(i in 1:length(lsGeneIndexByCore)){

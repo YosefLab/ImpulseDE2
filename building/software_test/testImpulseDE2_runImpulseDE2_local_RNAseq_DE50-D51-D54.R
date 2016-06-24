@@ -26,7 +26,7 @@ colnames(matCountData) <- colnames(dfCountData)[2:dim(dfCountData)[2]]
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files/ImpulseDE2_main.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/software_test_out")
 strCaseName = "case"
-strControlName = "ctrl"
+strControlName = NULL
 if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 }else{dfAnnotation=dfAnnotationCase}
 n_process = 3
@@ -42,7 +42,7 @@ lsImpulseDE_results <- runImpulseDE2(
   nProc=n_process, 
   Q_value=Q_value, 
   boolPlotting=boolPlotting,
-  scaSmallRun=5000)
+  scaSmallRun=100)
 
 lsDEGenes <- lsImpulseDE_results$lsDEGenes
 dfImpulseResults <- lsImpulseDE_results$dfImpulseResults
