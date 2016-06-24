@@ -24,7 +24,6 @@ colnames(matCountData) <- colnames(dfCountData)[2:dim(dfCountData)[2]]
 #expression_table <- expression_table[apply(expression_table,1,function(gene){max(gene,na.rm=TRUE)}>500),]
 
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files/ImpulseDE2_main.R")
-
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/software_test_out")
 strCaseName = "case"
 strControlName = "ctrl"
@@ -43,7 +42,7 @@ lsImpulseDE_results <- runImpulseDE2(
   nProc=n_process, 
   Q_value=Q_value, 
   boolPlotting=boolPlotting,
-  scaSmallRun=100)
+  scaSmallRun=5000)
 
 lsDEGenes <- lsImpulseDE_results$lsDEGenes
 dfImpulseResults <- lsImpulseDE_results$dfImpulseResults

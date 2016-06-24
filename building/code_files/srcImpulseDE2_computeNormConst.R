@@ -218,6 +218,7 @@ computeTranslationFactors <- function(matCountDataProc,
     warning("not tested: control translation factors computation")
     # 2. Case
     vecboolindColsCase <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Sample)
+    vecLongitudinalSeriesCase <- unique(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$LongitudinalSeries)
     #vecMuCase <- apply(matCountDataProcNorm[,vecboolindColsCase],1,function(gene){mean(gene, na.rm=TRUE)})
     vecMuCase <- sapply(seq(1,dim(matCountDataProc)[1]),function(i){
       exp(unlist(optim(
@@ -239,9 +240,9 @@ computeTranslationFactors <- function(matCountDataProc,
     #    function(gene){mean(gene, na.rm=TRUE)
     #    })
     #}
-    for(longser in vecLongitudinalSeries){
+    for(longser in vecLongitudinalSeriesCase){
       vecboolCurrentSer <- vecboolindColsCase & vecLongitudinalSeriesAssign==longser
-      matMuLongitudinalCtrl[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
+      matMuLongitudinalCase[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
         exp(unlist(optim(
           par=log(mean(matCountDataProc[i,vecboolCurrentSer]/matSizeFactors[i,vecboolCurrentSer], na.rm=TRUE)+1),
           fn=evalLogLikNBMean_comp,
@@ -267,6 +268,7 @@ computeTranslationFactors <- function(matCountDataProc,
     
     # 3. Control
     vecboolindColsCtrl <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Sample)
+    vecLongitudinalSeriesCtrl <- unique(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$LongitudinalSeries)
     #vecMuCtrl <- apply(matCountDataProcNorm[,vecboolindColsCtrl],1,function(gene){mean(gene, na.rm=TRUE)})
     vecMuCtrl <- sapply(seq(1,dim(matCountDataProc)[1]),function(i){
       exp(unlist(optim(
@@ -288,7 +290,7 @@ computeTranslationFactors <- function(matCountDataProc,
     #    function(gene){mean(gene, na.rm=TRUE)
     #    })
     #}
-    for(longser in vecLongitudinalSeries){
+    for(longser in vecLongitudinalSeriesCtrl){
       vecboolCurrentSer <- vecboolindColsCtrl & vecLongitudinalSeriesAssign==longser
       matMuLongitudinalCtrl[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
         exp(unlist(optim(
