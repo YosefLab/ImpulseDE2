@@ -223,6 +223,7 @@ load("ImpulseDE2_vecDEGenes.RData")
 load("ImpulseDE2_lsImpulseFits.RData")
 load("ImpulseDE2_dfDESeq2Results.RData")
 load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_vecDispersions.RData")
 load("ImpulseDE2_matSizeFactors.RData")
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
 source("ImpulseDE2_main.R")
@@ -232,6 +233,14 @@ setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_W
 
 Q <- 10^(-3)
 Qdelta <- 10^(2) # difference factor required to be plotted
+
+t <- system.time({
+for(i in seq(1,100)){
+  a <- fitNBMean(vecCounts=matCountDataProc[i,],
+      scaDispEst=vecDispersions,
+      vecNormConst=matSizeFactors[1,])
+}
+})
 
 # Load run data ImpulseDE2, ImpulseDE, DESeq2
 matQval <- as.matrix(data.frame( Gene=rownames(dfImpulseResults), ImpulseDE2=dfImpulseResults$adj.p, DESeq2=NA))

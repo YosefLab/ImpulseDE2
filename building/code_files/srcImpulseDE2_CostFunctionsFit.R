@@ -39,7 +39,7 @@ evalLogLikNBMean <- function(scaTheta,
   vecNormConst,
   vecboolObserved){
   
-  scaNBMean <- exp(scaTheta)
+  scaNBMean <- log(scaTheta)
   # Compute log likelihood under impulse model by
   # adding log likelihood of model at each timepoint.
   scaLogLik <- sum(dnbinom(
@@ -81,16 +81,15 @@ fitNBMean <- function(vecCounts,
   scaDispEst,
   vecNormConst){
   
-  scaMu <- exp(unlist(optim(
-    par=log(mean(vecCounts/vecNormConst, na.rm=TRUE)+1),
-    fn=evalLogLikNBMean_comp,
+  scaMu <- exp(unlist(optimise(
+    evalLogLikNBMean_comp,
     vecCounts=vecCounts,
     scaDispEst=scaDispEst, 
     vecNormConst=vecNormConst,
     vecboolObserved=!is.na(vecCounts),
-    method="BFGS",
-    control=list(maxit=1000,fnscale=-1)
-  )["par"]))
+    lower = log(.Machine$double.eps),
+    upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
+    maximum = TRUE)["maximum"]))
   
   return(scaMu)
 }
