@@ -66,7 +66,7 @@ tm_ImpulseDE2A <- system.time({
     strCaseName = strCaseName, 
     strControlName=strControlName, 
     strMode="batch",
-    nProc=1, 
+    nProc=3, 
     Q_value=10^(-3),
     boolPlotting=TRUE)
   dfImpulseResultsA <- lsImpulseDE_resultsA$dfImpulseResults
@@ -233,14 +233,6 @@ setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_W
 
 Q <- 10^(-3)
 Qdelta <- 10^(2) # difference factor required to be plotted
-
-t <- system.time({
-for(i in seq(1,100)){
-  a <- fitNBMean(vecCounts=matCountDataProc[i,],
-      scaDispEst=vecDispersions,
-      vecNormConst=matSizeFactors[1,])
-}
-})
 
 # Load run data ImpulseDE2, ImpulseDE, DESeq2
 matQval <- as.matrix(data.frame( Gene=rownames(dfImpulseResults), ImpulseDE2=dfImpulseResults$adj.p, DESeq2=NA))

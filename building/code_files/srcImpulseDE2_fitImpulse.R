@@ -68,9 +68,17 @@ computeLogLikNull <- function(vecCounts,
   if(strMode=="batch"){
     # Fit null model:
     #scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
-    scaMu <- fitNBMean(vecCounts=vecCounts,
-      scaDispEst=scaDispersionEstimate,
-      vecNormConst=vecNormConst)
+    scaMu <- tryCatch({
+      fitNBMean(vecCounts=vecCounts,
+        scaDispEst=scaDispersionEstimate,
+        vecNormConst=vecNormConst)
+    }, error=function(strErrorMsg){
+      print("ERROR: Fitting mean model: computeLogLikNull()")
+      print(paste0("vecCounts ", vecCounts))
+      print(paste0("scaDispersionEstimate ", scaDispersionEstimate))
+      print(paste0("vecNormConst ", vecNormConst))
+      stop(strErrorMsg)
+    })
     
     # Evaluate likelihood of null model:
     scaLogLikNull <- sum(dnbinom(
@@ -96,18 +104,33 @@ computeLogLikNull <- function(vecCounts,
       vecboolNotZeroObserved=vecboolNotZeroObserved, 
       vecboolZero=vecboolZero)
   } else if(strMode=="longitudinal"){
-    # Fit null model:  
-    #scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
-    scaMu <- fitNBMean(vecCounts=vecCounts,
-      scaDispEst=scaDispersionEstimate,
-      vecNormConst=vecNormConst)
+    # Fit null model: 
+    scaMu <- tryCatch({
+      fitNBMean(vecCounts=vecCounts,
+        scaDispEst=scaDispersionEstimate,
+        vecNormConst=vecNormConst)
+    }, error=function(strErrorMsg){
+      print("ERROR: Fitting mean model: computeLogLikNull()")
+      print(paste0("vecCounts ", vecCounts))
+      print(paste0("scaDispersionEstimate ", scaDispersionEstimate))
+      print(paste0("vecNormConst ", vecNormConst))
+      stop(strErrorMsg)
+    })
     #vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,function(longser){
     #  mean((vecCounts/vecNormConst)[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
     #})
     vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,function(longser){
-      fitNBMean(vecCounts=vecCounts[vecLongitudinalSeriesAssign==longser],
-        scaDispEst=scaDispersionEstimate,
-        vecNormConst=vecNormConst[vecLongitudinalSeriesAssign==longser])
+      tryCatch({ 
+        fitNBMean(vecCounts=vecCounts[vecLongitudinalSeriesAssign==longser],
+          scaDispEst=scaDispersionEstimate,
+          vecNormConst=vecNormConst[vecLongitudinalSeriesAssign==longser])
+      }, error=function(strErrorMsg){
+        print("ERROR: Fitting mean model: computeLogLikNull()")
+        print(paste0("vecCounts ", vecCounts))
+        print(paste0("scaDispersionEstimate ", scaDispersionEstimate))
+        print(paste0("vecNormConst ", vecNormConst))
+        stop(strErrorMsg)
+      })
     })
     names(vecMuLongitudinalSeries) <- vecLongitudinalSeries
     
@@ -296,33 +319,63 @@ optimiseImpulseModelFit <- function(vecParamGuess,
   # Chose the cost function for optimisation according
   # to the mode strMode.
   if(strMode=="batch" | strMode=="longitudinal"){
-    vecFit <- unlist( optim(
-      par=vecParamGuess,
-      fn=evalLogLikImpulseBatch_comp,
-      vecX=vecTimepoints,
-      vecY=vecCounts,
-      scaDispEst=scaDispersionEstimate,
-      vecNormConst=vecNormConst,
-      vecindTimepointAssign=vecindTimepointAssign,
-      vecboolObserved=vecboolObserved,
-      method="BFGS",
-      control=list(maxit=MAXIT,fnscale=-1)
-    )[c("par","value","convergence")] )
+    vecFit <- tryCatch({
+      unlist( optim(
+        par=vecParamGuess,
+        fn=evalLogLikImpulseBatch_comp,
+        vecX=vecTimepoints,
+        vecY=vecCounts,
+        scaDispEst=scaDispersionEstimate,
+        vecNormConst=vecNormConst,
+        vecindTimepointAssign=vecindTimepointAssign,
+        vecboolObserved=vecboolObserved,
+        method="BFGS",
+        control=list(maxit=MAXIT,fnscale=-1)
+      )[c("par","value","convergence")] )
+    }, error=function(strErrorMsg){
+      print("ERROR: Fitting impulse model: optimiseImpulseModelFit()")
+      print(paste0("vecParamGuess ", vecParamGuess))
+      print(paste0("vecTimepoints ", vecTimepoints))
+      print(paste0("vecCounts ", vecCounts))
+      print(paste0("scaDispersionEstimate ", scaDispersionEstimate))
+      print(paste0("vecNormConst ", vecNormConst))
+      print(paste0("vecindTimepointAssign ", vecindTimepointAssign))
+      print(paste0("vecboolObserved ", vecboolObserved))
+      print(paste0("strMode ", strMode))
+      print(paste0("MAXIT ", MAXIT))
+      stop(strErrorMsg)
+    })
   }else if(strMode=="singlecell"){
-    vecFit <- unlist( optim(
-      par=vecParamGuess, 
-      fn=evalLogLikImpulseSC_comp, 
-      vecX=vecTimepoints,
-      vecY=vecCounts, 
-      scaDispEst=scaDispersionEstimate,
-      vecDropoutRateEst=vecDropoutRate,
-      vecNormConst=vecNormConst,
-      vecindTimepointAssign=vecindTimepointAssign,
-      vecboolNotZeroObserved=vecboolNotZeroObserved, 
-      vecboolZero=vecboolZero,
-      method="BFGS", 
-      control=list(maxit=MAXIT,fnscale=-1)
-    )[c("par","value","convergence")] )
+    vecFit <- tryCatch({
+      unlist( optim(
+        par=vecParamGuess, 
+        fn=evalLogLikImpulseSC_comp, 
+        vecX=vecTimepoints,
+        vecY=vecCounts, 
+        scaDispEst=scaDispersionEstimate,
+        vecDropoutRateEst=vecDropoutRate,
+        vecNormConst=vecNormConst,
+        vecindTimepointAssign=vecindTimepointAssign,
+        vecboolNotZeroObserved=vecboolNotZeroObserved, 
+        vecboolZero=vecboolZero,
+        method="BFGS", 
+        control=list(maxit=MAXIT,fnscale=-1)
+      )[c("par","value","convergence")] )
+    }, error=function(strErrorMsg){
+      print("ERROR: Fitting impulse model: optimiseImpulseModelFit()")
+      print(paste0("vecParamGuess ", vecParamGuess))
+      print(paste0("vecTimepoints ", vecTimepoints))
+      print(paste0("vecCounts ", vecCounts))
+      print(paste0("scaDispersionEstimate ", scaDispersionEstimate))
+      print(paste0("vecDropoutRate ", vecDropoutRate))
+      print(paste0("vecNormConst ", vecNormConst))
+      print(paste0("vecindTimepointAssign ", vecindTimepointAssign))
+      print(paste0("vecboolObserved ", vecboolObserved))
+      print(paste0("vecboolNotZeroObserved ", vecboolNotZeroObserved))
+      print(paste0("strMode ", strMode))
+      print(paste0("MAXIT ", MAXIT))
+      stop(strErrorMsg)
+    })
   } else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
@@ -396,9 +449,7 @@ fitImpulse_gene <- function(vecCounts,
   NPARAM=6, 
   MAXIT=1000){
   
-  optim_method <- "optim"
-  #optim_method <- "nlminb"
-  #optim_method <- c("optim","nlminb")
+  print(paste0(vecCounts,scaDispersionEstimate))
   
   # (I) Process data
   # Get boolean observation vectors:
@@ -460,7 +511,7 @@ fitImpulse_gene <- function(vecCounts,
     vecboolObserved=vecboolObserved, 
     vecboolNotZeroObserved=vecboolNotZeroObserved,
     strMode=strMode, 
-    MAXIT=MAXIT)
+      MAXIT=MAXIT)
   # 2. Initialisation: Valley
   vecFitValley <- optimiseImpulseModelFit(
     vecParamGuess=vecParamGuessValley,
