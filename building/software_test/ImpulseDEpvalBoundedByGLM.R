@@ -85,10 +85,10 @@ scaDegFreedomFull <- 7
 scaDegFreedomRed <- 2
 scaDeltaDegFreedom <- scaDegFreedomFull - scaDegFreedomRed
 
+matDataProc <- matDataA[,as.vector(dfAnnotationA[dfAnnotationA$Condition=="case",]$Sample)]
 vecDisp <- as.numeric(as.vector(lsImpulseDE_resultsA$dfImpulseResults$size))
 names(vecDisp) <- as.vector(lsImpulseDE_resultsA$dfImpulseResults$Gene)
 vecDisp <- vecDisp[rownames(matDataProc[1:scaSmallRun,])]
-matDataProc <- matDataA[,as.vector(dfAnnotationA[dfAnnotationA$Condition=="case",]$Sample)]
 dfAnnotationProc <- dfAnnotationA[dfAnnotationA$Condition=="case",]
 
 vecMeans <- sapply(seq(1,scaSmallRun),function(i){
@@ -128,9 +128,12 @@ for(i in seq(1,scaSmallRun)){
   # Get p-values from Chi-square distribution (assumption about null model)
   vecPvalue[i] <- pchisq(scaDeviance,df=scaDeltaDegFreedom,lower.tail=FALSE) 
 }
+vecPvalueImp <- as.numeric(as.vector(dfImpulseResultsA[rownames(matDataProc)[1:scaSmallRun],"p"]))
+vecPvalueDES <- dfDESeq2ResultsA[rownames(matDataProc)[1:scaSmallRun],"pvalue"]
 dfLL <- data.frame(
-  imppvalbiggerdeseq2=dfDESeq2ResultsA[rownames(matDataProc)[1:scaSmallRun],"pvalue"]<=as.numeric(as.vector(dfImpulseResultsA[rownames(matDataProc)[1:scaSmallRun],"p"])),
-  glmpvalbiggerdeseq2=dfDESeq2ResultsA[rownames(matDataProc)[1:scaSmallRun],"pvalue"]<=vecPvalue,
+  imppvalbiggerglm=vecPvalue<=vecPvalueImp+vecPvalueImp/10^3,
+  imppvalbiggerdeseq2=vecPvalueDES<=vecPvalueImp+vecPvalueImp/10^3,
+  deseq2pvalbiggerglm=vecPvalue<=vecPvalueDES+vecPvalueDES/10^3,
   ratioimppvaltoglm=round(as.numeric(as.vector(dfImpulseResultsA[rownames(matDataProc)[1:scaSmallRun],"p"]))/vecPvalue,4),
   nullLLequal=(vecLogLikRed >= 1.0000001*as.numeric(as.vector(dfImpulseResultsA[rownames(matDataProc)[1:scaSmallRun],"loglik_red"])) &
       vecLogLikRed <= 0.999999*as.numeric(as.vector(dfImpulseResultsA[rownames(matDataProc)[1:scaSmallRun],"loglik_red"]))),
@@ -142,14 +145,20 @@ dfLL <- data.frame(
   glmmean=vecMeans,
   impfull=as.numeric(as.vector(dfImpulseResultsA[rownames(matDataProc)[1:scaSmallRun],"loglik_full"])),
   impred=as.numeric(as.vector(dfImpulseResultsA[rownames(matDataProc)[1:scaSmallRun],"loglik_red"])),
-  impmean=as.numeric(as.vector(dfImpulseResultsA[rownames(matDataProc)[1:scaSmallRun],"mean"])))
-dfLL
+  impmean=as.numeric(as.vector(dfImpulseResultsA[rownames(matDataProc)[1:scaSmallRun],"mean"])),
+  zeros=apply(matDataProc[1:scaSmallRun,],1,function(gene){sum(gene==0)}))
+head(dfLL)
 
-# Look at ImpulseDE2 p-values breaking bound: only small means? -> numeric error?
-min(dfLL[dfLL$imppvalbiggerglm==FALSE,]$ratioimppvaltodeseq2)
-dfViolations <- data.frame(
-  gene=rownames(dfLL[dfLL$imppvalbiggerglm==FALSE,]),
-  glmpval=dfLL[dfLL$imppvalbiggerglm==FALSE,]$glmpval,
-  ratio=dfLL[dfLL$imppvalbiggerglm==FALSE,]$ratioimppvaltoglm,
-  mean=dfLL[dfLL$imppvalbiggerglm==FALSE,]$glmmean)
-
+print("ImpulseDE2 pval bigger than optimal GLM - always - bound fulfilled")
+all(dfLL$imppvalbiggerglm)
+print("ImpulseDE2 pval bigger than DESeq2 - not always - DESeq2 failures?")
+all(dfLL$imppvalbiggerdeseq2)
+print("Failures all involve zero observations")
+all(dfLL[!dfLL$imppvalbiggerdeseq2,]$zeros>0)
+print("all violations have a time point completely zero - this seems to break deseq2")
+min(dfLL[!dfLL$imppvalbiggerdeseq2,]$zeros)
+all(apply(matDataProc[rownames(dfLL[!dfLL$imppvalbiggerdeseq2,]),],1,function(gene){
+  any(sapply(unique(dfAnnotationProc$TimeCateg),function(tp){
+    all(gene[dfAnnotationProc$TimeCateg==tp]==0)
+  }))
+}))
