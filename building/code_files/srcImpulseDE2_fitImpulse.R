@@ -449,8 +449,6 @@ fitImpulse_gene <- function(vecCounts,
   NPARAM=6, 
   MAXIT=1000){
   
-  print(paste0(vecCounts,scaDispersionEstimate))
-  
   # (I) Process data
   # Get boolean observation vectors:
   vecboolObserved <- !is.na(vecCounts)
