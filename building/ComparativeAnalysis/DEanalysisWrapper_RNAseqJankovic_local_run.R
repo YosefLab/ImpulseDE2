@@ -1,6 +1,6 @@
 # Local
 rm(list = ls())
-boolCluster <- TRUE
+boolCluster <- FALSE
 
 print("Process data RNAseq Jankovic")
 # Load Data set RNAseq

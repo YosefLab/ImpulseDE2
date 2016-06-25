@@ -56,7 +56,7 @@ source("/data/yosef2/users/fischerd/code/ImpulseDE2/building/code_files/ImpulseD
 
 # Create input data set
 # Only retain non zero
-matDataA_ImpulseDE2 <- matDataA
+matDataA_ImpulseDE2 <- matDataAA
 
 tm_ImpulseDE2A <- system.time({
   setwd("/data/yosef2/users/fischerd/data/iChIP_Friedman/comparative_analysis")

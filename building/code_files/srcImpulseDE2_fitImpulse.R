@@ -536,13 +536,11 @@ fitImpulse_gene <- function(vecCounts,
     names(vecBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1","mu","logL_H0")
   } else if(strMode=="longitudinal") {
-    #vecTranslationFactorsUnique <- vecTranslationFactors[as.vector(vecLongitudinalSeries)]
     vecBestFitSummary <- c(dfFitsByInitialisation[,indBestFit],
       scaMu,
       scaLogLikNull,
       vecMuLongitudinalSeries)
     vecColnamesMubyLongitudinalSeries <- paste0(rep("mu_",length(vecMuLongitudinalSeries)), names(vecMuLongitudinalSeries))
-    #vecColnameTranslationFactors <- paste0(rep("TranslationFac_",length(vecTranslationFactorsUnique)), names(vecTranslationFactorsUnique))
     names(vecBestFitSummary) <- c("beta","h0","h1","h2","t1","t2",
       "logL_H1","converge_H1", "mu", "logL_H0", vecColnamesMubyLongitudinalSeries)
   }  else {

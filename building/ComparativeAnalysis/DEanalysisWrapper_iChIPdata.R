@@ -68,7 +68,8 @@ tm_ImpulseDE2A <- system.time({
     strMode="batch",
     nProc=3, 
     Q_value=10^(-3),
-    boolPlotting=TRUE)
+    boolPlotting=TRUE,
+    scaSmallRun=100)
   dfImpulseResultsA <- lsImpulseDE_resultsA$dfImpulseResults
   qvals_A <- dfImpulseResultsA$adj.p
   pvals_A <- dfImpulseResultsA$p

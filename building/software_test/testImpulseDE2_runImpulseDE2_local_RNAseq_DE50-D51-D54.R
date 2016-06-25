@@ -26,12 +26,12 @@ colnames(matCountData) <- colnames(dfCountData)[2:dim(dfCountData)[2]]
 source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files/ImpulseDE2_main.R")
 setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/software_test_out")
 strCaseName = "case"
-strControlName = "ctrl"
+strControlName = NULL
 if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 }else{dfAnnotation=dfAnnotationCase}
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "longitudinal"
+strMode <- "batch"
 boolPlotting <- TRUE
 lsImpulseDE_results <- runImpulseDE2(
   matCountData=matCountData, 
