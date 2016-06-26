@@ -58,10 +58,10 @@ evalLogLikNBMean <- function(scaTheta,
 #' Note that the closed form solution of the maximum likelihood 
 #' estimator of the negative binomial mean parameter 
 #' (the weighted average) only holds if all normalisation
-#' factors are 1.
+#' factors are 1. Catches numerical errors.
 #' 
-#' 
-#' @seealso
+#' @seealso Called by \code{computeTranslationFactors()}
+#' and \code{computeLogLikNull()}.
 #' 
 #' @param vecCounts (count vector samples) 
 #'    Observed expression values for given gene.
@@ -81,15 +81,27 @@ fitNBMean <- function(vecCounts,
   scaDispEst,
   vecNormConst){
   
-  scaMu <- exp(unlist(optimise(
-    evalLogLikNBMean_comp,
-    vecCounts=vecCounts,
-    scaDispEst=scaDispEst, 
-    vecNormConst=vecNormConst,
-    vecboolObserved=!is.na(vecCounts),
-    lower = log(.Machine$double.eps),
-    upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
-    maximum = TRUE)["maximum"]))
+  scaMu <- tryCatch({
+    exp(unlist(optimise(
+      evalLogLikNBMean_comp,
+      vecCounts=vecCounts,
+      scaDispEst=scaDispEst, 
+      vecNormConst=vecNormConst,
+      vecboolObserved=!is.na(vecCounts),
+      lower = log(.Machine$double.eps),
+      upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
+      maximum = TRUE)["maximum"]))
+  }, error=function(strErrorMsg){
+    print(paste0("ERROR: Fitting negative binomial mean parameter: fitNBMean().",
+      " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
+    print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
+    print(paste0("scaDispEst ", paste(scaDispEst,sep=" ")))
+    print(paste0("vecNormConst ", paste(vecNormConst,sep=" ")))
+    lsErrorCausingGene <- list(vecCounts, scaDispEst, vecNormConst)
+    names(lsErrorCausingGene) <- c("vecCounts", "scaDispEst", "vecNormConst")
+    save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
+    stop(strErrorMsg)
+  })
   
   return(scaMu)
 }
@@ -142,6 +154,11 @@ evalLogLikImpulseBatch <- function(vecTheta,
   # scaled by normalisation factor of each sample.
   vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
     vecNormConst
+  
+  # Catch cases in which entire sample is zero observation
+  # and impulse value is pushed to close to zero to be evaluated
+  # as a negative binomial mean without numerical error.
+  vecImpulseValue[vecImpulseValue < .Machine$double.eps] <- .Machine$double.eps
   
   # Compute log likelihood under impulse model by
   # adding log likelihood of model at each timepoint.
@@ -232,7 +249,7 @@ evalLogLikZINB <- function(vecY,
 #' Cost function impulse model fit - Single cell mode
 #' 
 #' Log likelihood cost function for impulse model fit based on zero inflated  
-#' negative binomial model ("hurdle model"). This cost function is appropriate
+#' negative binomial mode. This cost function is appropriate
 #' for sequencing data with high drop out rate, commonly observed in single
 #' cell data (e.g. scRNA-seq).
 #' In analogy to generalised linear models, a log linker
@@ -276,7 +293,8 @@ evalLogLikImpulseSC <- function(vecTheta,
   vecNormConst,
   vecindTimepointAssign, 
   vecboolNotZeroObserved, 
-  vecboolZero){  
+  vecboolZero,
+  scaWindowRadius=NULL){  
 
   # Generate negative binomial mean parameters from impulse model:
   # This links the parameters vecTheta which are changed in optimisation
@@ -284,13 +302,37 @@ evalLogLikImpulseSC <- function(vecTheta,
   vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
     vecNormConst
   
-  # Evaluate likelihood (this is the cost function):  
-  scaLogLik <- evalLogLikZINB_comp(vecY=vecY,
-    vecMu=vecImpulseValue,
-    scaDispEst=scaDispEst, 
-    vecDropoutRateEst=vecDropoutRateEst, 
-    vecboolNotZeroObserved=vecboolNotZeroObserved, 
-    vecboolZero=vecboolZero)
+  # Catch cases in which entire sample is zero observation
+  # and impulse value is pushed to close to zero to be evaluated
+  # as a negative binomial mean without numerical error.
+  vecImpulseValue[vecImpulseValue < .Machine$double.eps] <- .Machine$double.eps
+  
+  # Evaluate likelihood (this is the cost function): 
+  if(is.null(scaWindowRadius)){
+    # Evaluate likelihood on individual cells.  
+    scaLogLik <- evalLogLikZINB_comp(vecY=vecY,
+      vecMu=vecImpulseValue,
+      scaDispEst=scaDispEst, 
+      vecDropoutRateEst=vecDropoutRateEst, 
+      vecboolNotZeroObserved=vecboolNotZeroObserved, 
+      vecboolZero=vecboolZero)
+    
+  } else {
+    # Evaluate likelihood on window of cells for each impulse value at a cell.
+    # This is a local smoothing penalty added to the cost function.
+    scaLogLik <- 0
+    for(indcell in seq(1,length(vecY))){
+      scaWindowStart <- max(0,indcell-scaWindowRadius)
+      scaWindowEnd <- min(length(vecY),indcell+scaWindowRadius)
+      scaLogLik <- scaLogLik + evalLogLikZINB_comp(
+        vecY=vecY[scaWindowStart:scaWindowEnd],
+        vecMu=vecImpulseValue[scaWindowStart:scaWindowEnd],
+        scaDispEst=scaDispEst, 
+        vecDropoutRateEst=vecDropoutRateEst[scaWindowStart:scaWindowEnd], 
+        vecboolNotZeroObserved=vecboolNotZeroObserved[scaWindowStart:scaWindowEnd], 
+        vecboolZero=vecboolZero[scaWindowStart:scaWindowEnd])
+    }
+  }
   
   return(scaLogLik)
 }

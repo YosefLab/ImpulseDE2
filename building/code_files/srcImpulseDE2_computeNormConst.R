@@ -154,10 +154,6 @@ computeTranslationFactors <- function(matCountDataProc,
   strCaseName,
   strControlName=NULL){
   
-  # Compute size factor normalised count data
-  #matCountDataProcNorm <- matCountDataProc/matSizeFactors
-  #colnames(matCountDataProcNorm) <- colnames(matCountDataProc)
-  
   vecLongitudinalSeriesAssign <- dfAnnotationProc[match(
     colnames(matCountDataProc),
     dfAnnotationProc$Sample),]$LongitudinalSeries
@@ -170,7 +166,6 @@ computeTranslationFactors <- function(matCountDataProc,
   # Fit mean to normalised counts. Count normalisation 
   # corresponds to model normalisation in impulse model 
   # fitting.
-  #vecMuAll <- apply(matCountDataProcNorm,1,function(gene){mean(gene, na.rm=TRUE)})
   vecMuAll <- sapply(seq(1,dim(matCountDataProc)[1]),function(i){
     fitNBMean(vecCounts=matCountDataProc[i,],
       scaDispEst=vecDispersions[i],
@@ -180,11 +175,6 @@ computeTranslationFactors <- function(matCountDataProc,
     nrow=dim(matCountDataProc)[1],
     ncol=dim(matCountDataProc)[2],
     byrow=FALSE)
-  #matMuLongitudinalAll <- t(apply(matCountDataProcNorm, 1, function(gene){
-  #  sapply(vecLongitudinalSeries, function(longser){
-  #    mean(gene[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
-  #  })
-  #}))
   matMuLongitudinalAll <- array(NA,c(dim(matCountDataProc)[1],length(vecLongitudinalSeries)))
   rownames(matMuLongitudinalAll) <- rownames(matCountDataProc)
   colnames(matMuLongitudinalAll) <- vecLongitudinalSeries
@@ -202,10 +192,8 @@ computeTranslationFactors <- function(matCountDataProc,
   
   if(!is.null(strControlName)){
     # 2. Case
-    print("case")
     vecboolindColsCase <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Sample)
     vecLongitudinalSeriesCase <- unique(as.vector(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$LongitudinalSeries))
-    #vecMuCase <- apply(matCountDataProcNorm[,vecboolindColsCase],1,function(gene){mean(gene, na.rm=TRUE)})
     vecMuCase <- sapply(seq(1,dim(matCountDataProc)[1]),function(i){
       fitNBMean(vecCounts=matCountDataProc[i,vecboolindColsCase],
         scaDispEst=vecDispersions[i],
@@ -214,11 +202,6 @@ computeTranslationFactors <- function(matCountDataProc,
     matMuLongitudinalCase <- matrix(NA,nrow=dim(matCountDataProc)[1],ncol=length(vecLongitudinalSeries))
     rownames(matMuLongitudinalCase) <- rownames(matCountDataProc)
     colnames(matMuLongitudinalCase) <- vecLongitudinalSeries
-    #for(longser in vecLongitudinalSeries){
-    #  matMuLongitudinalCase[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCase & vecLongitudinalSeriesAssign==longser], 1, 
-    #    function(gene){mean(gene, na.rm=TRUE)
-    #    })
-    #}
     for(longser in vecLongitudinalSeriesCase){
       vecboolCurrentSer <- vecLongitudinalSeriesAssign==longser & vecboolindColsCase
       matMuLongitudinalCase[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
@@ -241,7 +224,6 @@ computeTranslationFactors <- function(matCountDataProc,
     # 3. Control
     vecboolindColsCtrl <- c(colnames(matCountDataProc) %in% dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Sample)
     vecLongitudinalSeriesCtrl <- unique(as.vector(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$LongitudinalSeries))
-    #vecMuCtrl <- apply(matCountDataProcNorm[,vecboolindColsCtrl],1,function(gene){mean(gene, na.rm=TRUE)})
     vecMuCtrl <- sapply(seq(1,dim(matCountDataProc)[1]),function(i){
       fitNBMean(vecCounts=matCountDataProc[i,vecboolindColsCtrl],
         scaDispEst=vecDispersions[i],
@@ -250,11 +232,6 @@ computeTranslationFactors <- function(matCountDataProc,
     matMuLongitudinalCtrl <- matrix(NA,nrow=dim(matCountDataProc)[1],ncol=length(vecLongitudinalSeries))
     rownames(matMuLongitudinalCtrl) <- rownames(matCountDataProc)
     colnames(matMuLongitudinalCtrl) <- vecLongitudinalSeries
-    #for(longser in vecLongitudinalSeries){
-    #  matMuLongitudinalCtrl[,longser] <- apply(matCountDataProcNorm[,vecboolindColsCtrl & vecLongitudinalSeriesAssign==longser], 1, 
-    #    function(gene){mean(gene, na.rm=TRUE)
-    #    })
-    #}
     for(longser in vecLongitudinalSeriesCtrl){
       vecboolCurrentSer <- vecLongitudinalSeriesAssign==longser & vecboolindColsCtrl
       matMuLongitudinalCtrl[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){

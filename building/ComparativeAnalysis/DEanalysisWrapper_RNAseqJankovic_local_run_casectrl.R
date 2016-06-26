@@ -58,7 +58,6 @@ matPval[,"Gene"] <- rownames(matDataA)
 
 names(matRunTime_RNAseqData) <- c("ImpulseDE2", "ImpulseDE", "DESeq2", "edge")
 
-
 ################################################################################
 # ImpulseDE2
 print("Run ImpulseDE2")
@@ -77,7 +76,7 @@ tm_ImpulseDE2A <- system.time({
     strCaseName = strCaseName, 
     strControlName=strControlName, 
     strMode="longitudinal",
-    nProc=2, 
+    nProc=3, 
     Q_value=10^(-3),
     boolPlotting=FALSE)
   dfImpulseResultsA <- lsImpulseDE_resultsA$dfImpulseResults

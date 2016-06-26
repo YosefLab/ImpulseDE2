@@ -221,6 +221,7 @@ runImpulseDE2 <- function(matCountData=NULL,
   strControlName=NULL, 
   strMode="batch",
   strSCMode="clustered",
+  scaWindowRadius=NULL,
   nProc=1, 
   Q_value=0.01,
   scaSmallRun=NULL,
@@ -246,6 +247,8 @@ runImpulseDE2 <- function(matCountData=NULL,
       strControlName=strControlName, 
       strCaseName=strCaseName,
       strMode=strMode,
+      strSCMode=strSCMode,
+      scaWindowRadius=scaWindowRadius,
       lsPseudoDE=lsPseudoDE,
       vecDispersionsExternal=vecDispersionsExternal,
       vecSizeFactorsExternal=vecSizeFactorsExternal,
@@ -323,8 +326,8 @@ runImpulseDE2 <- function(matCountData=NULL,
     save(lsMatTranslationFactors,file=file.path(getwd(),"ImpulseDE2_lsMatTranslationFactors.RData"))
     save(matSizeFactors,file=file.path(getwd(),"ImpulseDE2_matSizeFactors.RData"))
     
-    ###  4. Fit Impule model to each gene 
-    print("4. Fitting Impulse model to the genes")
+    ###  4. Fit impule model to each gene 
+    print("4. Fitting impulse model to the genes")
     tm_fitImpulse <- system.time({
       lsImpulseFits <- fitImpulse(
         matCountDataProc=matCountDataProc, 
@@ -339,6 +342,7 @@ runImpulseDE2 <- function(matCountData=NULL,
         strControlName=strControlName,
         strMode=strMode,
         strSCMode=strSCMode,
+        scaWindowRadius=scaWindowRadius,
         nProc=nProc, 
         NPARAM=NPARAM)
     })

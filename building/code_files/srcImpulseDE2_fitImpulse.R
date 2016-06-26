@@ -67,18 +67,9 @@ computeLogLikNull <- function(vecCounts,
   
   if(strMode=="batch"){
     # Fit null model:
-    #scaMu <- mean(vecCounts/vecNormConst, na.rm=TRUE)
-    scaMu <- tryCatch({
-      fitNBMean(vecCounts=vecCounts,
-        scaDispEst=scaDispersionEstimate,
-        vecNormConst=vecNormConst)
-    }, error=function(strErrorMsg){
-      print("ERROR: Fitting mean model: computeLogLikNull()")
-      print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
-      print(paste0("scaDispersionEstimate ", paste(scaDispersionEstimate,sep=" ")))
-      print(paste0("vecNormConst ", paste(vecNormConst,sep=" ")))
-      stop(strErrorMsg)
-    })
+    scaMu <- fitNBMean(vecCounts=vecCounts,
+      scaDispEst=scaDispersionEstimate,
+      vecNormConst=vecNormConst)
     
     # Evaluate likelihood of null model:
     scaLogLikNull <- sum(dnbinom(
@@ -105,32 +96,13 @@ computeLogLikNull <- function(vecCounts,
       vecboolZero=vecboolZero)
   } else if(strMode=="longitudinal"){
     # Fit null model: 
-    scaMu <- tryCatch({
-      fitNBMean(vecCounts=vecCounts,
+    scaMu <- fitNBMean(vecCounts=vecCounts,
+      scaDispEst=scaDispersionEstimate,
+      vecNormConst=vecNormConst)
+    vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,function(longser){ 
+      fitNBMean(vecCounts=vecCounts[vecLongitudinalSeriesAssign==longser],
         scaDispEst=scaDispersionEstimate,
-        vecNormConst=vecNormConst)
-    }, error=function(strErrorMsg){
-      print("ERROR: Fitting mean model: computeLogLikNull()")
-      print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
-      print(paste0("scaDispersionEstimate ", paste(scaDispersionEstimate,sep=" ")))
-      print(paste0("vecNormConst ", paste(vecNormConst,sep=" ")))
-      stop(strErrorMsg)
-    })
-    #vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,function(longser){
-    #  mean((vecCounts/vecNormConst)[vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
-    #})
-    vecMuLongitudinalSeries <- sapply(vecLongitudinalSeries,function(longser){
-      tryCatch({ 
-        fitNBMean(vecCounts=vecCounts[vecLongitudinalSeriesAssign==longser],
-          scaDispEst=scaDispersionEstimate,
-          vecNormConst=vecNormConst[vecLongitudinalSeriesAssign==longser])
-      }, error=function(strErrorMsg){
-        print("ERROR: Fitting mean model: computeLogLikNull()")
-        print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
-        print(paste0("scaDispersionEstimate ", paste(scaDispersionEstimate,sep=" ")))
-        print(paste0("vecNormConst ", paste(vecNormConst,sep=" ")))
-        stop(strErrorMsg)
-      })
+        vecNormConst=vecNormConst[vecLongitudinalSeriesAssign==longser])
     })
     names(vecMuLongitudinalSeries) <- vecLongitudinalSeries
     
@@ -179,6 +151,7 @@ estimateImpulseParam <- function(vecTimepoints,
   vecDropoutRate=NULL,
   vecProbNB=NULL,
   strSCMode="clustered",
+  scaWindowRadius=NULL,
   vecTimepointAssign, 
   vecNormConst,
   strMode){
@@ -196,21 +169,20 @@ estimateImpulseParam <- function(vecTimepoints,
       # Catch exception: sum(vecProbNB[vecTimepointAssign==tp])==0
       vecExpressionMeans[is.na(vecExpressionMeans)] <- 0
       vecTimepointAssign <- vecTimepoints
-    } else if(strSCMode=="continuous"){    
-      scaSmoothingK <- 10
+    } else if(strSCMode=="continuous"){
       vecTimepointAssignSort <- sort(vecTimepointAssign, index.return=TRUE)
       vecCountsSort <- vecCounts[vecTimepointAssignSort$ix]
       vecProbNBSort <- vecProbNB[vecTimepointAssignSort$ix]
-      scaCellsPerClus <- round(length(vecCountsSort)/scaSmoothingK)
-      vecExpressionMeans <- array(NA, scaSmoothingK)
-      vecTimepoints <- array(NA, scaSmoothingK)
+      scaCellsPerClus <- round(length(vecCountsSort)/scaWindowRadius)
+      vecExpressionMeans <- array(NA, scaWindowRadius)
+      vecTimepoints <- array(NA, scaWindowRadius)
       scaidxNew <- 0
-      for(k in seq(1,scaSmoothingK)){
+      for(k in seq(1,scaWindowRadius)){
         # Define clusters as groups of cells of uniform size
         scaidxLast <- scaidxNew + 1
         scaidxNew <- scaidxLast + scaCellsPerClus
         # Pick up remaining cells in last cluster
-        if(k==scaSmoothingK){scaidxNew=length(vecCountsSort)}
+        if(k==scaWindowRadius){scaidxNew=length(vecCountsSort)}
         vecidxK <- seq(scaidxLast, scaidxNew)
         # Infer negative binomial mean parameter: weighted mean
         vecExpressionMeans[k] <- sum((vecCountsSort/vecNormConst*vecProbNBSort)[vecidxK], na.rm=TRUE)/
@@ -313,6 +285,7 @@ optimiseImpulseModelFit <- function(vecParamGuess,
   vecboolObserved,
   vecboolZero=NULL,
   vecboolNotZeroObserved=NULL,
+  scaWindowRadius=NULL,
   strMode="batch", 
   MAXIT=100){
   
@@ -333,7 +306,8 @@ optimiseImpulseModelFit <- function(vecParamGuess,
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )
     }, error=function(strErrorMsg){
-      print("ERROR: Fitting impulse model: optimiseImpulseModelFit()")
+      print(paste0("ERROR: Fitting impulse model: optimiseImpulseModelFit().",
+        " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
       print(paste0("vecParamGuess ", paste(vecParamGuess,sep=" ")))
       print(paste0("vecTimepoints ", paste(vecTimepoints,sep=" ")))
       print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
@@ -343,6 +317,13 @@ optimiseImpulseModelFit <- function(vecParamGuess,
       print(paste0("vecboolObserved ", paste(vecboolObserved,sep=" ")))
       print(paste0("strMode ", strMode))
       print(paste0("MAXIT ", MAXIT))
+      lsErrorCausingGene <- list(vecParamGuess, vecTimepoints, vecCounts, 
+        scaDispersionEstimate, vecNormConst, vecindTimepointAssign, vecboolObserved,
+        strMode, MAXIT)
+      names(lsErrorCausingGene) <- c("vecParamGuess","vecTimepoints","vecCounts", 
+        "scaDispersionEstimate", "vecNormConst", "vecindTimepointAssign", "vecboolObserved",
+        "strMode", "MAXIT")
+      save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
       stop(strErrorMsg)
     })
   }else if(strMode=="singlecell"){
@@ -358,11 +339,13 @@ optimiseImpulseModelFit <- function(vecParamGuess,
         vecindTimepointAssign=vecindTimepointAssign,
         vecboolNotZeroObserved=vecboolNotZeroObserved, 
         vecboolZero=vecboolZero,
+        scaWindowRadius=scaWindowRadius,
         method="BFGS", 
         control=list(maxit=MAXIT,fnscale=-1)
       )[c("par","value","convergence")] )
     }, error=function(strErrorMsg){
-      print("ERROR: Fitting impulse model: optimiseImpulseModelFit()")
+      print(paste0("ERROR: Fitting impulse model: optimiseImpulseModelFit().",
+        " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
       print(paste0("vecParamGuess ", paste(vecParamGuess,sep=" ")))
       print(paste0("vecTimepoints ", paste(vecTimepoints,sep=" ")))
       print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
@@ -372,8 +355,16 @@ optimiseImpulseModelFit <- function(vecParamGuess,
       print(paste0("vecindTimepointAssign ", paste(vecindTimepointAssign,sep=" ")))
       print(paste0("vecboolObserved ", paste(vecboolObserved,sep=" ")))
       print(paste0("vecboolNotZeroObserved ", paste(vecboolNotZeroObserved,sep=" ")))
+      print(paste0("scaWindowRadius", paste(scaWindowRadius,sep=" ")))
       print(paste0("strMode ", strMode))
       print(paste0("MAXIT ", MAXIT))
+      lsErrorCausingGene <- list(vecParamGuess, vecTimepoints, vecCounts, 
+        scaDispersionEstimate, vecDropoutRate, vecNormConst, vecindTimepointAssign, 
+        vecboolObserved, scaWindowRadius, strMode, MAXIT)
+      names(lsErrorCausingGene) <- c("vecParamGuess","vecTimepoints","vecCounts", 
+        "scaDispersionEstimate", "vecDropoutRate", "vecNormConst", "vecindTimepointAssign", 
+        "vecboolObserved", "scaWindowRadius", "strMode", "MAXIT")
+      save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
       stop(strErrorMsg)
     })
   } else {
@@ -446,6 +437,7 @@ fitImpulse_gene <- function(vecCounts,
   dfAnnotationProc,
   strMode="batch",
   strSCMode="clustered",
+  scaWindowRadius=NULL,
   NPARAM=6, 
   MAXIT=1000){
   
@@ -464,7 +456,7 @@ fitImpulse_gene <- function(vecCounts,
   if(strMode=="longitudinal"){
     vecLongitudinalSeries <- unique( vecLongitudinalSeriesAssign )
   }
-
+  
   # (II) Fit null model and compute likelihood of null model
   lsNullModel <- computeLogLikNull(
     vecCounts=vecCounts, 
@@ -493,7 +485,7 @@ fitImpulse_gene <- function(vecCounts,
     vecTimepointAssign=vecTimepointAssign, 
     vecNormConst=vecNormConst,
     strMode=strMode,
-    strSCMode=strSCMode)
+    strSCMode=strSCMode )
   vecParamGuessPeak <- lsParamGuesses$peak
   vecParamGuessValley <- lsParamGuesses$valley
   
@@ -508,8 +500,9 @@ fitImpulse_gene <- function(vecCounts,
     vecindTimepointAssign=vecindTimepointAssign,
     vecboolObserved=vecboolObserved, 
     vecboolNotZeroObserved=vecboolNotZeroObserved,
+    scaWindowRadius=scaWindowRadius,
     strMode=strMode, 
-      MAXIT=MAXIT)
+    MAXIT=MAXIT)
   # 2. Initialisation: Valley
   vecFitValley <- optimiseImpulseModelFit(
     vecParamGuess=vecParamGuessValley,
@@ -521,6 +514,7 @@ fitImpulse_gene <- function(vecCounts,
     vecindTimepointAssign=vecindTimepointAssign,
     vecboolObserved=vecboolObserved, 
     vecboolNotZeroObserved=vecboolNotZeroObserved,
+    scaWindowRadius=scaWindowRadius,
     strMode=strMode, 
     MAXIT=MAXIT)
   
@@ -625,6 +619,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
   strControlName=NULL, 
   strMode="batch",
   strSCMode="clustered",
+  scaWindowRadius=NULL,
   nProc=1, 
   NPARAM=6){
   
@@ -659,6 +654,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("dfAnnotationProc", dfAnnotationProc, envir = my.env)
     assign("strMode", strMode, envir = my.env)
     assign("strSCMode", strMode, envir = my.env)
+    assign("scaWindowRadius", scaWindowRadius, envir = my.env)
     assign("NPARAM", NPARAM, envir = my.env)
     assign("MAXIT", MAXIT, envir = my.env)
     # Functions
@@ -684,6 +680,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "dfAnnotationProc",
       "strMode",
       "strSCMode",
+      "scaWindowRadius",
       "MAXIT",
       "NPARAM",
       "calcImpulse_comp",
@@ -717,6 +714,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
               dfAnnotationProc=dfAnnotationProc,
               strMode=strMode,
               strSCMode=strSCMode,
+              scaWindowRadius=scaWindowRadius,
               NPARAM=NPARAM,
               MAXIT=MAXIT )
           }))
@@ -767,6 +765,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
           dfAnnotationProc=dfAnnotationProc,
           strMode=strMode,
           strSCMode=strSCMode,
+          scaWindowRadius=scaWindowRadius,
           NPARAM=NPARAM,
           MAXIT=MAXIT )})
     } else {
@@ -890,6 +889,7 @@ fitImpulse <- function(matCountDataProc,
   strControlName=NULL, 
   strMode="batch",
   strSCMode="clustered",
+  scaWindowRadius=NULL,
   nProc=1, 
   NPARAM=6){
   
@@ -961,6 +961,7 @@ fitImpulse <- function(matCountDataProc,
         strControlName=strControlName,
         strMode=strMode,
         strSCMode=strSCMode,
+        scaWindowRadius=scaWindowRadius,
         nProc=nProc,
         NPARAM=NPARAM )
     } else {

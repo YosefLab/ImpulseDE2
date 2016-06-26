@@ -215,6 +215,7 @@ graphics.off()
 rm(list=ls())
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ctrl/ImpulseDE2")
 load("ImpulseDE2_matCountDataProc.RData")
+load("ImpulseDE2_vecDispersions.RData")
 load("ImpulseDE2_dfAnnotationProc.RData")
 load("ImpulseDE2_dfImpulseResults.RData")
 load("ImpulseDE2_vecDEGenes.RData")
@@ -228,6 +229,57 @@ source("srcImpulseDE2_plotDEGenes.R")
 source("srcImpulseDE2_compareDEMethods.R")
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ctrl/pdfs")
 
+#---
+if(FALSE){
+# bug fixing: reproduce error produced in optimisation in run on single gene
+rownames(matCountDataProc)[which(apply(matCountDataProc[,dfAnnotationProc$Condition=="case"],1,function(gene){all(gene==c(4,0,1,1,0,0,0,0,0,0,0,12))}))]
+# LOC102634617
+strProblem <- "LOC102634617"
+vecCounts <- matCountDataProc[strProblem,dfAnnotationProc$Condition=="case"]
+scaDispersionEstimate <- vecDispersions[strProblem]
+vecDropoutRate=NULL
+vecProbNB=NULL
+vecNormConst <- (matSizeFactors[strProblem,]*(lsMatTranslationFactors[["case"]])[strProblem,])[dfAnnotationProc$Condition=="case"]
+vecTimepointAssign <- (dfAnnotationProc[match(
+  colnames(matCountDataProc),
+  dfAnnotationProc$Sample),]$Time)[dfAnnotationProc$Condition=="case"]
+names(vecTimepointAssign) <- colnames(matCountDataProc[,dfAnnotationProc$Condition=="case"])
+vecLongitudinalSeriesAssign <- (dfAnnotationProc[match(
+  colnames(matCountDataProc),
+  dfAnnotationProc$Sample),]$LongitudinalSeries)[dfAnnotationProc$Condition=="case"]
+names(vecLongitudinalSeriesAssign) <- colnames(matCountDataProc[,dfAnnotationProc$Condition=="case"])
+strMode="batch"
+strSCMode="clustered"
+NPARAM=6
+MAXIT=1000
+
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
+source("ImpulseDE2_main.R")
+source("srcImpulseDE2_plotDEGenes.R")
+source("srcImpulseDE2_compareDEMethods.R")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ctrl/ImpulseDE2")
+vecFit <- fitImpulse_gene(vecCounts=vecCounts, 
+  scaDispersionEstimate=scaDispersionEstimate,
+  vecDropoutRate=NULL, 
+  vecProbNB=NULL,
+  vecNormConst=vecNormConst,
+  vecTimepointAssign=vecTimepointAssign, 
+  vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign, 
+  dfAnnotationProc=dfAnnotationProc,
+  strMode="batch",
+  strSCMode="clustered",
+  NPARAM=6, 
+  MAXIT=1000)
+
+vecFitParam <- vecFit
+vecFitParam[2:4] <- log(vecFitParam[2:4])
+vecImpulseValue <- calcImpulse_comp(vecFitParam[1:6],vecTimepointAssign)
+vecImpulseValue
+vecCounts
+plot(vecTimepointAssign,vecCounts,col="red",pch=3,)
+points(vecTimepointAssign,vecImpulseValue*vecNormConst)
+}
+#---
 Q <- 10^(-3)
 Qdelta <- 10^(2) # difference factor required to be plotted
 

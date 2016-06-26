@@ -56,6 +56,8 @@ processData <- function(dfAnnotation=NULL,
   strCaseName=NULL, 
   strControlName=NULL, 
   strMode=NULL,
+  strSCMode=NULL,
+  scaWindowRadius=NULL,
   lsPseudoDE=NULL, 
   vecDispersionsExternal=NULL,
   vecSizeFactorsExternal=NULL,
@@ -68,6 +70,12 @@ processData <- function(dfAnnotation=NULL,
   checkNull <- function(objectInput,strObjectInput){
     if(is.null(objectInput)){
       stop(paste0( "ERROR: ", strObjectInput," was not given as input." ))
+    }
+  }
+  # Check whether object does not have NA elements.
+  checkNA <- function(objectInput,strObjectInput){
+    if(is.na(objectInput)){
+      stop(paste0( "ERROR: ", strObjectInput," is NA and needs to be specifief." ))
     }
   }
   # Checks whether dimensions of matrices agree.
@@ -96,7 +104,8 @@ processData <- function(dfAnnotation=NULL,
     }
   }
   # Checks whether elements are count data: non-negative integer finite numeric elements.
-  # Note that NA are allowed.
+  # Note that NA are allowed. Can be used to check whether element is integer if NA 
+  # is checked separately.
   checkCounts <- function(matInput, strMatInput){
     checkNumeric(matInput, strMatInput)
     if(any(matInput[!is.na(matInput)] %% 1 != 0)){
@@ -117,6 +126,8 @@ processData <- function(dfAnnotation=NULL,
     strCaseName=NULL, 
     strControlName=NULL, 
     strMode=NULL,
+    strSCMode=NULL,
+    scaWindowRadius=NULL,
     lsPseudoDE=NULL, 
     vecDispersionsExternal=NULL,
     vecSizeFactorsExternal=NULL,
@@ -130,9 +141,16 @@ processData <- function(dfAnnotation=NULL,
     
     ### 2. Check mode
     lsAllowedModes <- c("batch", "longitudinal", "singlecell")
-    if(sum(strMode==lsAllowedModes) != 1){
+    if(!(strMode %in% lsAllowedModes)){
       stop(paste0( "ERROR: ImpulseDE2 mode given as input, strMode=", strMode,
         ", is not recognised. Chose from {", paste0(lsAllowedModes, collapse=","), "}." ))
+    }
+    if(strMode=="singlecell"){
+      lsAllowedSCModes <- c("clustered", "continuous")
+      if(!(strSCMode %in% lsAllowedSCModes)){
+        stop(paste0( "ERROR: ImpulseDE2 mode given as input, strSCMode=", strSCMode,
+          ", is not recognised. Chose from {", paste0(lsAllowedSCModes, collapse=","), "}." ))
+      }
     }
     
     ### 3. Check annotation table content
@@ -296,6 +314,29 @@ processData <- function(dfAnnotation=NULL,
       }
     }
     
+    ### 10. Check strSCMode
+    if(strMode=="singlecell"){
+      if(!is.null(strSCMode)){
+        if(strSCMode=="continuous"){
+          if(is.null(scaWindowRadius)){
+            stop(paste0( "ERROR: scaWindowRadius has to supplied in strSCMode==continuous."))
+          }
+        }
+        if(strSCMode=="clustered"){
+          if(!is.null(scaWindowRadius)){
+            warning(paste0( "ERROR: scaWindowRadius ignored in strSCMode==clustered"))
+          }
+        }
+      }
+    }
+    
+    ### 11. Check scaWindowRadius
+    if(strMode=="singlecell"){
+      if(!is.null(scaWindowRadius)){
+        checkNA(scaWindowRadius)
+        checkCounts(scaWindowRadius)
+      }
+    }
     
     ### Summarise which mode, conditions, samples and
     ### longitudinal series were found
@@ -353,6 +394,14 @@ processData <- function(dfAnnotation=NULL,
               dfAnnotation$Sample %in% colnames(matCountData),
             ]$Sample,collapse=",") ))
       }
+    }
+    if(strMode=="singlecell"){
+      print(paste0("Fitting impulse model in negative binomial mean mode ",
+        strSCMode))
+    }
+    if(!is.null(scaWindowRadius)){
+      print(paste0("Fitting impulse model with local smoothness constraint: ",
+        " Windows of length ", scaWindowRadius))
     }
     
     return(NULL)
