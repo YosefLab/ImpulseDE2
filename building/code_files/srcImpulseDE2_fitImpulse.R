@@ -828,20 +828,10 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and LongitudinalSeries). For internal use.
-#' @param lsMatTranslationFactors 
-#'      (list {case} or {case, ctrl, combined}) List of
-#'      translation factor matrices. NULL if strMode not
-#'      "longitudinal".
-#'      \itemize{
-#'        \item matTranslationFactorsAll: (numeric matrix genes x samples) 
-#'      Model scaling factors for each observation which take
-#'      longitudinal time series mean within a gene into account 
-#'      (translation factors). Computed based based on all samples.
-#'        \item matTranslationFactorsCase: As matTranslationFactorsAll
-#'        for case samples only, non-case samples set NA.
-#'        \item matTranslationFactorsCtrl: As matTranslationFactorsAll
-#'        for control samples only, non-control samples set NA.
-#'      }
+#' @param matTranslationFactors: (numeric matrix genes x samples) 
+#'    Model scaling factors for each observation which take
+#'    longitudinal time series mean within a gene into account 
+#'    (translation factors). Computed based based on all samples.
 #' @param matSizeFactors: (numeric matrix genes x samples) 
 #'    Model scaling factors for each observation which take
 #'    sequencing depth into account (size factors). One size
@@ -879,7 +869,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
 
 fitImpulse <- function(matCountDataProc, 
   dfAnnotationProc, 
-  lsMatTranslationFactors, 
+  matTranslationFactors, 
   matSizeFactors,
   vecDispersions, 
   matDropoutRate, 
@@ -938,14 +928,14 @@ fitImpulse <- function(matCountDataProc,
     colnames(matCountDataProc),
     dfAnnotationProc$Sample),]$Time
   names(vecTimepointAssign) <- colnames(matCountDataProc)
+  if(strMode=="longitudinal"){
+    matNormConst <- matSizeFactors*matTranslationFactors
+  } else {
+    matNormConst <- matSizeFactors
+  }
   
   # Fitting for different runs
   for (label in lsLabels){
-    if(strMode=="longitudinal"){
-      matNormConst <- matSizeFactors*lsMatTranslationFactors[[label]]
-    } else {
-      matNormConst <- matSizeFactors
-    }
     if(strMode=="singlecell"){
       # Call fitting with single cell parameters
       lsFitResults_run <- fitImpulse_matrix(

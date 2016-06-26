@@ -215,6 +215,50 @@ if(FALSE){
   
 }
 
+# plot DE genes
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/ImpulseDE2/H3K4me1")
+load("ImpulseDE2_matCountDataProc.RData")
+load("ImpulseDE2_dfAnnotationProc.RData")
+load("ImpulseDE2_dfImpulseResults.RData")
+load("ImpulseDE2_vecDEGenes.RData")
+load("ImpulseDE2_lsImpulseFits.RData")
+load("ImpulseDE2_dfDESeq2Results.RData")
+load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_vecDispersions.RData")
+load("ImpulseDE2_matSizeFactors.RData")
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
+source("ImpulseDE2_main.R")
+source("srcImpulseDE2_plotDEGenes.R")
+source("srcImpulseDE2_compareDEMethods.R")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/pdfs")
+
+QplotImpulseDE2genes <- 10^(-3)
+vecImpulse2_DEgenes <- as.vector(dfImpulseResults[dfImpulseResults$adj.p <= QplotImpulseDE2genes,]$Gene)
+strCaseName <- "case"
+strControlName <- NULL
+strMode <- "batch"
+if(length(vecImpulse2_DEgenes)==0){
+  vecImpulse2_DEgenes <- rownames(matCountDataProc[1:32,])
+}
+vecRefResults <- dfDESeq2Results$padj
+names(vecRefResults) <- rownames(dfDESeq2Results)
+plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes[42186:42386],
+  matCountDataProc=matCountDataProc,
+  lsMatTranslationFactors=lsMatTranslationFactors,
+  matSizeFactors=matSizeFactors,
+  dfAnnotation=dfAnnotationProc, 
+  lsImpulseFits=lsImpulseFits,
+  strCaseName=strCaseName, 
+  strControlName=strControlName, 
+  strFileNameSuffix="DEgenes_lowp", 
+  strPlotTitleSuffix="", 
+  strPlotSubtitle="",
+  dfImpulseResults=dfImpulseResults,
+  vecRefPval=vecRefResults,
+  strMode=strMode, 
+  NPARAM=6)
+
+
 # method comparison
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/ImpulseDE2/H3K4me1")
 load("ImpulseDE2_matCountDataProc.RData")
@@ -281,11 +325,10 @@ ddsDESeqObjectA <- DESeq(dds, test = "LRT",
   full = ~ TimeCateg, reduced = ~ 1,
   parallel=TRUE)
 
-# DESeq results for comparison
 dds_resultsTableA <- results(ddsDESeqObjectA)
 qvals_A <- dds_resultsTableA$padj
-dfDESeq2DEgeneCounts <- matDataA[rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5),]),]
-rownames(dfDESeq2DEgeneCounts) <- rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5),])
+dfDESeq2DEgeneCounts <- matDataA_DESeq2[rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5) & !is.na(dds_resultsTableA$padj),]),]
+rownames(dfDESeq2DEgeneCounts) <- rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5) & !is.na(dds_resultsTableA$padj),])
 dfDESeq2DEgeneCountsNorm <- dfDESeq2DEgeneCounts/rep(sizeFactors(ddsDESeqObjectA), each = nrow(dfDESeq2DEgeneCounts))
 dfDESeq2DEgeneCountsNormMeans <- do.call(cbind, lapply(unique(dfAnnotationA$Time),function(t){
   if(length(as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)) > 1 ){
@@ -299,3 +342,46 @@ write.table(dfDESeq2DEgeneCountsNormMeans,"/Users/davidsebastianfischer/MasterTh
 # retain only high variation
 dfDESeq2DEgeneCountsNormMeansFilt <- dfDESeq2DEgeneCountsNormMeans[2*apply(dfDESeq2DEgeneCountsNormMeans,1,min) <= apply(dfDESeq2DEgeneCountsNormMeans,1,max),]
 write.table(dfDESeq2DEgeneCountsNormMeansFilt,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/matCounts_DESeq2_1e-5_x1-5.tab",sep="\t",row.names=F,quote=FALSE)
+
+# Select gene of non-impulse cluster:
+vecNonImpulse <- rownames(dfDESeq2DEgeneCountsNormMeans)[which(apply(dfDESeq2DEgeneCountsNormMeans,1,function(gene){
+  gene[5]>gene[6] & gene[7]>gene[6] & all(gene[7]>gene[1:6])
+}))]
+
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/ImpulseDE2/H3K4me1")
+load("ImpulseDE2_matCountDataProc.RData")
+load("ImpulseDE2_dfAnnotationProc.RData")
+load("ImpulseDE2_dfImpulseResults.RData")
+load("ImpulseDE2_vecDEGenes.RData")
+load("ImpulseDE2_lsImpulseFits.RData")
+load("ImpulseDE2_dfDESeq2Results.RData")
+load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_vecDispersions.RData")
+load("ImpulseDE2_matSizeFactors.RData")
+setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
+source("ImpulseDE2_main.R")
+source("srcImpulseDE2_plotDEGenes.R")
+source("srcImpulseDE2_compareDEMethods.R")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/pdfs")
+
+strCaseName <- "case"
+strControlName <- NULL
+strMode <- "batch"
+vecRefResults <- dfDESeq2Results$padj
+names(vecRefResults) <- rownames(dfDESeq2Results)
+plotDEGenes(vecGeneIDs=vecNonImpulse,
+  matCountDataProc=matCountDataProc,
+  lsMatTranslationFactors=lsMatTranslationFactors,
+  matSizeFactors=matSizeFactors,
+  dfAnnotation=dfAnnotationProc, 
+  lsImpulseFits=lsImpulseFits,
+  strCaseName=strCaseName, 
+  strControlName=strControlName, 
+  strFileNameSuffix="DEgenes_NonImpulse", 
+  strPlotTitleSuffix="", 
+  strPlotSubtitle="",
+  dfImpulseResults=dfImpulseResults,
+  vecRefPval=vecRefResults,
+  strMode=strMode, 
+  NPARAM=6)
+

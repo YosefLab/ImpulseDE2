@@ -8,7 +8,7 @@ load("ImpulseDE2_dfImpulseResults.RData")
 load("ImpulseDE2_vecDEGenes.RData")
 load("ImpulseDE2_lsImpulseFits.RData")
 load("ImpulseDE2_dfDESeq2Results.RData")
-load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_matTranslationFactors.RData")
 load("ImpulseDE2_matSizeFactors.RData")
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs")
 # DESeq2 for Gene-E
@@ -44,7 +44,7 @@ load("ImpulseDE2_dfImpulseResults.RData")
 load("ImpulseDE2_vecDEGenes.RData")
 load("ImpulseDE2_lsImpulseFits.RData")
 load("ImpulseDE2_dfDESeq2Results.RData")
-load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_matTranslationFactors.RData")
 load("ImpulseDE2_matSizeFactors.RData")
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs")
 
@@ -60,7 +60,7 @@ vecRefResults <- dfDESeq2Results$padj
 names(vecRefResults) <- rownames(dfDESeq2Results)
 plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes,
   matCountDataProc=matCountDataProc,
-  lsMatTranslationFactors=lsMatTranslationFactors,
+  matTranslationFactors=matTranslationFactors,
   matSizeFactors=matSizeFactors,
   dfAnnotation=dfAnnotationProc, 
   lsImpulseFits=lsImpulseFits,
@@ -95,7 +95,7 @@ load("ImpulseDE2_dfImpulseResults.RData")
 load("ImpulseDE2_vecDEGenes.RData")
 load("ImpulseDE2_lsImpulseFits.RData")
 load("ImpulseDE2_dfDESeq2Results.RData")
-load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_matTranslationFactors.RData")
 load("ImpulseDE2_matSizeFactors.RData")
 
 Q <- 10^(-3)
@@ -115,7 +115,7 @@ compareDEMethods(matQval,
   Q = Q,
   Qdelta = Qdelta,
   matCountDataProc = matCountDataProc,
-  lsMatTranslationFactors = lsMatTranslationFactors,
+  matTranslationFactors = matTranslationFactors,
   matSizeFactors = matSizeFactors,
   dfAnnotationProc = dfAnnotationProc, 
   lsImpulseFits = lsImpulseFits,
@@ -130,7 +130,7 @@ compareDEMethods(matQval,
   Q = Q,
   Qdelta = Qdelta,
   matCountDataProc = matCountDataProc,
-  lsMatTranslationFactors = lsMatTranslationFactors,
+  matTranslationFactors = matTranslationFactors,
   matSizeFactors = matSizeFactors,
   dfAnnotationProc = dfAnnotationProc, 
   lsImpulseFits = lsImpulseFits,
@@ -221,13 +221,40 @@ load("ImpulseDE2_dfImpulseResults.RData")
 load("ImpulseDE2_vecDEGenes.RData")
 load("ImpulseDE2_lsImpulseFits.RData")
 load("ImpulseDE2_dfDESeq2Results.RData")
-load("ImpulseDE2_lsMatTranslationFactors.RData")
+load("ImpulseDE2_matTranslationFactors.RData")
 load("ImpulseDE2_matSizeFactors.RData")
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
 source("ImpulseDE2_main.R")
 source("srcImpulseDE2_plotDEGenes.R")
 source("srcImpulseDE2_compareDEMethods.R")
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ctrl/pdfs")
+
+# Plot DE genes
+QplotImpulseDE2genes <- 10^(-3)
+vecImpulse2_DEgenes <- as.vector(dfImpulseResults[dfImpulseResults$adj.p <= QplotImpulseDE2genes,]$Gene)
+strCaseName <- "case"
+strControlName <- "ctrl"
+strMode <- "longitudinal"
+if(length(vecImpulse2_DEgenes)==0){
+  vecImpulse2_DEgenes <- rownames(matCountDataProc[1:32,])
+}
+vecRefResults <- dfDESeq2Results$padj
+names(vecRefResults) <- rownames(dfDESeq2Results)
+plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes,
+  matCountDataProc=matCountDataProc,
+  matTranslationFactors=matTranslationFactors,
+  matSizeFactors=matSizeFactors,
+  dfAnnotation=dfAnnotationProc, 
+  lsImpulseFits=lsImpulseFits,
+  strCaseName=strCaseName, 
+  strControlName=strControlName, 
+  strFileNameSuffix="DEgenes_lowp", 
+  strPlotTitleSuffix="", 
+  strPlotSubtitle="",
+  dfImpulseResults=dfImpulseResults,
+  vecRefPval=vecRefResults,
+  strMode=strMode, 
+  NPARAM=6)
 
 #---
 if(FALSE){
@@ -239,7 +266,7 @@ vecCounts <- matCountDataProc[strProblem,dfAnnotationProc$Condition=="case"]
 scaDispersionEstimate <- vecDispersions[strProblem]
 vecDropoutRate=NULL
 vecProbNB=NULL
-vecNormConst <- (matSizeFactors[strProblem,]*(lsMatTranslationFactors[["case"]])[strProblem,])[dfAnnotationProc$Condition=="case"]
+vecNormConst <- (matSizeFactors[strProblem,]*matTranslationFactors[strProblem,])[dfAnnotationProc$Condition=="case"]
 vecTimepointAssign <- (dfAnnotationProc[match(
   colnames(matCountDataProc),
   dfAnnotationProc$Sample),]$Time)[dfAnnotationProc$Condition=="case"]
@@ -296,7 +323,7 @@ compareDEMethods(matQval,
   Q = Q,
   Qdelta = Qdelta,
   matCountDataProc = matCountDataProc,
-  lsMatTranslationFactors = lsMatTranslationFactors,
+  matTranslationFactors = matTranslationFactors,
   matSizeFactors = matSizeFactors,
   dfAnnotationProc = dfAnnotationProc, 
   lsImpulseFits = lsImpulseFits,

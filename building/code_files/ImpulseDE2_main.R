@@ -170,20 +170,10 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'        Model scaling factors for each observation which take
 #'        sequencing depth into account (size factors). One size
 #'        factor per sample - rows of this matrix are equal.
-#'    \item \code{ImpulseDE2_lsMatTranslationFactors.RData} 
-#'      (list {case} or {case, ctrl, combined}) List of
-#'      translation factor matrices. NULL if strMode not
-#'      "longitudinal".
-#'      \itemize{
-#'        \item matTranslationFactorsAll: (numeric matrix genes x samples) 
-#'        Model scaling factors for each observation which take
-#'        longitudinal time series mean within a gene into account 
+#'    \item \code{ImpulseDE2_matTranslationFactors.RData} 
+#'        (numeric matrix genes x samples) Model scaling factors for each observation 
+#'        which take longitudinal time series mean within a gene into account 
 #'        (translation factors). Computed based based on all samples.
-#'        \item matTranslationFactorsCase: As matTranslationFactorsAll
-#'        for case samples only, non-case samples set NA.
-#'        \item matTranslationFactorsCtrl: As matTranslationFactorsAll
-#'        for control samples only, non-control samples set NA.
-#'      }
 #'    \item \code{ImpulseDE2_vecDispersions.RData} (vector number of genes) Inverse 
 #'        of gene-wise negative binomial dispersion coefficients computed by DESeq2.
 #'    \item \code{ImpulseDE2_dfDESeq2Results.RData} (data frame) DESeq2 results.
@@ -321,9 +311,9 @@ runImpulseDE2 <- function(matCountData=NULL,
       strControlName=strControlName, 
       strMode=strMode,
       vecSizeFactorsExternal=vecSizeFactorsExternal)
-    lsMatTranslationFactors <- lsNormConst$lsMatTranslationFactors
+    matTranslationFactors <- lsNormConst$matTranslationFactors
     matSizeFactors <- lsNormConst$matSizeFactors
-    save(lsMatTranslationFactors,file=file.path(getwd(),"ImpulseDE2_lsMatTranslationFactors.RData"))
+    save(matTranslationFactors,file=file.path(getwd(),"ImpulseDE2_matTranslationFactors.RData"))
     save(matSizeFactors,file=file.path(getwd(),"ImpulseDE2_matSizeFactors.RData"))
     
     ###  4. Fit impule model to each gene 
@@ -336,7 +326,7 @@ runImpulseDE2 <- function(matCountData=NULL,
         matProbNB=matProbNB,
         vecClusterAssignments=vecClusterAssignments,
         matSizeFactors=matSizeFactors,
-        lsMatTranslationFactors=lsMatTranslationFactors,
+        matTranslationFactors=matTranslationFactors,
         dfAnnotationProc=dfAnnotationProc, 
         strCaseName=strCaseName, 
         strControlName=strControlName,
@@ -375,7 +365,7 @@ runImpulseDE2 <- function(matCountData=NULL,
         plotDEGenes(
           vecGeneIDs=vecDEGenes,
           matCountDataProc=matCountDataProc,
-          lsMatTranslationFactors=lsMatTranslationFactors,
+          matTranslationFactors=matTranslationFactors,
           matSizeFactors=matSizeFactors,
           dfAnnotationProc=dfAnnotationProc, 
           lsImpulseFits=lsImpulseFits,

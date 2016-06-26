@@ -65,7 +65,21 @@ source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_
 
 # Create input data set
 # Only retain non zero
-matDataA_ImpulseDE2 <- matDataA
+if(FALSE){
+  # Look at correlation by gene:
+  vecCorr <- apply(matDataA, 1, function(gene){
+    cor(gene[dfAnnotationA$LongitudinalSeries=="A"],
+      gene[dfAnnotationA$LongitudinalSeries=="B"])
+  })
+  hist(vecCorr)
+  vecindHighCorr <- vecCorr > 0.5
+  vecindHighCorr[is.na(vecindHighCorr)] <- FALSE
+  print(sum(vecindHighCorr))
+  
+  matDataA_ImpulseDE2 <- matDataA[vecindHighCorr,]
+} else {
+  matDataA_ImpulseDE2 <- matDataA
+}
 
 tm_ImpulseDE2A <- system.time({
   setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/ctrl/ImpulseDE2")
@@ -75,10 +89,11 @@ tm_ImpulseDE2A <- system.time({
     dfAnnotation=dfAnnotationA,
     strCaseName = strCaseName, 
     strControlName=strControlName, 
-    strMode="longitudinal",
+    strMode="batch",
     nProc=3, 
     Q_value=10^(-3),
-    boolPlotting=FALSE)
+    boolPlotting=FALSE,
+    scaSmallRun=500)
   dfImpulseResultsA <- lsImpulseDE_resultsA$dfImpulseResults
   qvals_A <- dfImpulseResultsA$adj.p
   pvals_A <- dfImpulseResultsA$p

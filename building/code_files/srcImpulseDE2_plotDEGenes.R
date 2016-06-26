@@ -13,20 +13,10 @@
 #' @param matCountDataProc: (matrix genes x samples)
 #'    Count data: Reduced version of \code{matCountData}. 
 #'    For internal use.
-#' @param lsMatTranslationFactors 
-#'      (list {case} or {case, ctrl, combined}) List of
-#'      translation factor matrices. NULL if strMode not
-#'      "longitudinal".
-#'      \itemize{
-#'        \item matTranslationFactorsAll: (numeric matrix genes x samples) 
-#'      Model scaling factors for each observation which take
-#'      longitudinal time series mean within a gene into account 
-#'      (translation factors). Computed based based on all samples.
-#'        \item matTranslationFactorsCase: As matTranslationFactorsAll
-#'        for case samples only, non-case samples set NA.
-#'        \item matTranslationFactorsCtrl: As matTranslationFactorsAll
-#'        for control samples only, non-control samples set NA.
-#'      }
+#' @param matTranslationFactors: (numeric matrix genes x samples) 
+#'    Model scaling factors for each observation which take
+#'    longitudinal time series mean within a gene into account 
+#'    (translation factors). Computed based based on all samples.
 #' @param matSizeFactors: (numeric matrix genes x samples) 
 #'    Model scaling factors for each observation which take
 #'    sequencing depth into account (size factors). One size
@@ -66,7 +56,7 @@
 
 plotDEGenes <- function(vecGeneIDs, 
   matCountDataProc, 
-  lsMatTranslationFactors=NULL, 
+  matTranslationFactors=NULL, 
   matSizeFactors,
   dfAnnotationProc, 
   lsImpulseFits, 
@@ -307,7 +297,7 @@ plotDEGenes <- function(vecGeneIDs,
             # Plot inferred mean of each time point
             if(strMode=="batch" | strMode=="longitudinal") {
               points(vecTimepoints,
-                matMuTimepoints[geneID, match(vecTimepoints,vecTimepointAssign)],
+                matMuTimepoints[geneID,],
                 col="black",pch=1)
             }
           }
@@ -324,7 +314,7 @@ plotDEGenes <- function(vecGeneIDs,
             inset=c(0,scaLegendInset))
           
         } else if(strMode=="longitudinal"){
-          vecTranslationFactors <- (lsMatTranslationFactors[["case"]])[geneID,vecindLongitudinalSeriesAssignUnique]
+          vecTranslationFactors <- matTranslationFactors[geneID,vecindLongitudinalSeriesAssignUnique]
           
           # Create colour vector
           vecCol <- rainbow(n=length(vecLongitudinalSeries))
@@ -377,7 +367,7 @@ plotDEGenes <- function(vecGeneIDs,
           
           # Plot mean of each time point
           points(vecTimepoints,
-            matMuTimepoints[geneID, match(vecTimepoints,vecTimepointAssign)],
+            matMuTimepoints[geneID,],
             col="black",pch=1)
           
           legend(x="bottomright",
@@ -465,7 +455,7 @@ plotDEGenes <- function(vecGeneIDs,
       
       # Plot mean of each time point
       points(vecTimepoints,
-        matMuTimepoints[geneID, match(vecTimepoints,vecTimepointAssign)],
+        matMuTimepoints[geneID,],
         col="black",pch=1)
       
       legend(x="bottomright",
