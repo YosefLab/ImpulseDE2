@@ -216,14 +216,13 @@ if(FALSE){
 }
 
 # plot DE genes
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/ImpulseDE2/H3K4me1")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/cluster_out/ImpulseDE2")
 load("ImpulseDE2_matCountDataProc.RData")
 load("ImpulseDE2_dfAnnotationProc.RData")
 load("ImpulseDE2_dfImpulseResults.RData")
 load("ImpulseDE2_vecDEGenes.RData")
 load("ImpulseDE2_lsImpulseFits.RData")
 load("ImpulseDE2_dfDESeq2Results.RData")
-load("ImpulseDE2_lsMatTranslationFactors.RData")
 load("ImpulseDE2_vecDispersions.RData")
 load("ImpulseDE2_matSizeFactors.RData")
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
@@ -242,15 +241,30 @@ if(length(vecImpulse2_DEgenes)==0){
 }
 vecRefResults <- dfDESeq2Results$padj
 names(vecRefResults) <- rownames(dfDESeq2Results)
-plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes[42186:42386],
+plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes[1:200],
   matCountDataProc=matCountDataProc,
-  lsMatTranslationFactors=lsMatTranslationFactors,
+  matTranslationFactors=NULL,
   matSizeFactors=matSizeFactors,
   dfAnnotation=dfAnnotationProc, 
   lsImpulseFits=lsImpulseFits,
   strCaseName=strCaseName, 
   strControlName=strControlName, 
-  strFileNameSuffix="DEgenes_lowp", 
+  strFileNameSuffix="DEgenes_lowq", 
+  strPlotTitleSuffix="", 
+  strPlotSubtitle="",
+  dfImpulseResults=dfImpulseResults,
+  vecRefPval=vecRefResults,
+  strMode=strMode, 
+  NPARAM=6)
+plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes[43105:43305],
+  matCountDataProc=matCountDataProc,
+  matTranslationFactors=NULL,
+  matSizeFactors=matSizeFactors,
+  dfAnnotation=dfAnnotationProc, 
+  lsImpulseFits=lsImpulseFits,
+  strCaseName=strCaseName, 
+  strControlName=strControlName, 
+  strFileNameSuffix="DEgenes_highq", 
   strPlotTitleSuffix="", 
   strPlotSubtitle="",
   dfImpulseResults=dfImpulseResults,
@@ -260,7 +274,7 @@ plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes[42186:42386],
 
 
 # method comparison
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/ImpulseDE2/H3K4me1")
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/cluster_out/ImpulseDE2")
 load("ImpulseDE2_matCountDataProc.RData")
 load("ImpulseDE2_dfAnnotationProc.RData")
 load("ImpulseDE2_dfImpulseResults.RData")
@@ -270,6 +284,11 @@ load("ImpulseDE2_dfDESeq2Results.RData")
 load("ImpulseDE2_lsMatTranslationFactors.RData")
 load("ImpulseDE2_vecDispersions.RData")
 load("ImpulseDE2_matSizeFactors.RData")
+
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/cluster_out/ImpulseDE")
+load("impulse_fit_genes.RData")
+load("impulse_DE_genes.RData")
+
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files")
 source("ImpulseDE2_main.R")
 source("srcImpulseDE2_plotDEGenes.R")
@@ -280,11 +299,13 @@ Q <- 10^(-3)
 Qdelta <- 10^(2) # difference factor required to be plotted
 
 # Load run data ImpulseDE2, ImpulseDE, DESeq2
-matQval <- as.matrix(data.frame( Gene=rownames(dfImpulseResults), ImpulseDE2=dfImpulseResults$adj.p, DESeq2=NA))
+matQval <- as.matrix(data.frame( Gene=rownames(dfImpulseResults), 
+  ImpulseDE2=dfImpulseResults$adj.p, 
+  DESeq2=NA,
+  ImpulseDE=NA))
 rownames(matQval) <- rownames(dfImpulseResults)
 matQval[,"DESeq2"] <- dfDESeq2Results[rownames(matQval),"padj"]
-
-colnames(matQval) <- c("Gene", "ImpulseDE2", "DESeq2")
+matQval[as.vector(impulse_DE_genes$Gene),"ImpulseDE"] <- impulse_DE_genes$adj.p
 
 setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/pdfs")
 compareDEMethods(matQval,
@@ -292,7 +313,22 @@ compareDEMethods(matQval,
   Q = Q,
   Qdelta = Qdelta,
   matCountDataProc = matCountDataProc,
-  lsMatTranslationFactors = lsMatTranslationFactors,
+  matTranslationFactors = NULL,
+  matSizeFactors = matSizeFactors,
+  dfAnnotationProc = dfAnnotationProc, 
+  lsImpulseFits = lsImpulseFits,
+  dfImpulseResults = dfImpulseResults,
+  strCaseName="case", 
+  strControlName = NULL, 
+  strMode="batch",
+  strDataDescriptionFilename="")
+
+compareDEMethods(matQval,
+  strMethod2="ImpulseDE",
+  Q = Q,
+  Qdelta = Qdelta,
+  matCountDataProc = matCountDataProc,
+  matTranslationFactors = NULL,
   matSizeFactors = matSizeFactors,
   dfAnnotationProc = dfAnnotationProc, 
   lsImpulseFits = lsImpulseFits,
