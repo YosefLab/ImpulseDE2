@@ -71,6 +71,33 @@ if(boolCluster){
   matRunTime <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
 }
 
+# Batch correction
+matDataA_noNA <- matDataA[apply(matDataA,1,function(gene){!any(is.na(gene)) & any(gene>0)}),]
+condition <- dfAnnotationA$Condition
+time <- dfAnnotationA$TimeCateg
+batch <- array(NA,dim(dfAnnotationA)[1])
+batch[dfAnnotationA$LongitudinalSeries=="A"] <- 1
+batch[dfAnnotationA$LongitudinalSeries=="B"] <- 2
+mm <- model.matrix(~time + condition + batch)
+pheno <- data.frame(
+  sample=seq(1,dim(dfAnnotationA)[1]),
+  batch=batch,
+  time=dfAnnotationA$TimeCateg,
+  cond=dfAnnotationA$Condition )
+rownames(pheno) <- dfAnnotationA$Sample
+modcombat <- model.matrix(~1, data=pheno)
+matCountsNobatch <- ComBat(dat=matDataA_noNA, batch=batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+# get subsero: set to 0]
+matCountsNobatch[matCountsNobatch<0] <- 0
+matCountsNobatch <- round(matCountsNobatch[apply(matCountsNobatch,1,function(gene){any(gene>0)}),])
+write.table(matCountsNobatch, row.names = FALSE, col.names = FALSE, sep="\t",
+  file="/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/rsem_readCountsTable_BatchCorrected.txt")
+write.table(as.vector(rownames(matCountsNobatch)), sep="\t",  row.names = FALSE, col.names = FALSE,
+  file="/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/rsem_readCountsTable_BatchCorrected_genes.txt")
+write.table(as.vector(colnames(matCountsNobatch)), sep="\t", row.names = FALSE, col.names = FALSE,
+  file="/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/rsem_readCountsTable_BatchCorrected_samples.txt")
+
+
 ################################################################################
 # ImpulseDE2
 if(!boolCluster){
@@ -264,269 +291,3 @@ lsResDEcomparison_RNAseqdata <- list("matQval"=matQval,
 
 save(lsResDEcomparison_RNAseqdata,file=file.path("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/edge/lsResDEcomparison_RNAseqdata.RData"))
 print("Finished edge.")
-#################################################
-#################################################
-#################################################
-# Graphical analysis
-#################################################
-#################################################
-#################################################
-
-########################################
-# 1. Plot ImpulseDE2 DE genes
-########################################
-rm(list=ls())
-
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_plotDEGenes.R")
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/ImpulseDE2")
-load("ImpulseDE2_matCountDataProc.RData")
-load("ImpulseDE2_dfAnnotationProc.RData")
-load("ImpulseDE2_dfImpulseResults.RData")
-load("ImpulseDE2_vecDEGenes.RData")
-load("ImpulseDE2_lsImpulseFits.RData")
-load("ImpulseDE2_dfDESeq2Results.RData")
-load("ImpulseDE2_lsMatTranslationFactors.RData")
-load("ImpulseDE2_matSizeFactors.RData")
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs")
-
-QplotImpulseDE2genes <- 10^(-3)
-vecImpulse2_DEgenes <- as.vector(dfImpulseResults[dfImpulseResults$adj.p <= QplotImpulseDE2genes,]$Gene)
-strCaseName <- "case"
-strControlName <- NULL
-strMode <- "batch"
-if(length(vecImpulse2_DEgenes)==0){
-  vecImpulse2_DEgenes <- rownames(matCountDataProc[1:32,])
-}
-vecRefResults <- dfDESeq2Results$padj
-names(vecRefResults) <- rownames(dfDESeq2Results)
-plotDEGenes(vecGeneIDs=vecImpulse2_DEgenes,
-  matCountDataProc=matCountDataProc,
-  lsMatTranslationFactors=lsMatTranslationFactors,
-  matSizeFactors=matSizeFactors,
-  dfAnnotation=dfAnnotationProc, 
-  lsImpulseFits=lsImpulseFits,
-  strCaseName=strCaseName, 
-  strControlName=strControlName, 
-  strFileNameSuffix="DEgenes", 
-  strPlotTitleSuffix="", 
-  strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,
-  vecRefPval=vecRefResults,
-  strMode=strMode, 
-  NPARAM=6)
-
-########################################
-# 2. Heatmap: Q-value thresholds
-########################################
-rm(list=ls())
-library(gplots)
-load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/lsResDEcomparison_RNAseqdata.Rdata")
-matQval <- lsResDEcomparison_RNAseqdata$matQval
-matPval <- lsResDEcomparison_RNAseqdata$matPval
-matRunTime_RNAseqData <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs")
-########################################
-# DESeq2
-mat_overlap <- array(NA,c(11,11))
-for(i in 0:10){
-  for(j in 0:10){
-    sig_Impulse <- as.numeric(matQval[,"A_ImpulseDE2"]) <= 10^(-j) & !is.na(as.numeric(matQval[,"A_ImpulseDE2"]))
-    sig_Ref <- as.numeric(matQval[,"A_DESeq2"]) <= 10^(-i) & !is.na(as.numeric(matQval[,"A_DESeq2"]))
-    mat_overlap[i+1,j+1] <- sum(sig_Ref & sig_Impulse)/sum(sig_Ref | sig_Impulse)
-  }
-}
-#mat_overlap[is.na(mat_overlap)] <- 0
-rownames(mat_overlap) <- 0:-10
-colnames(mat_overlap) <- 0:-10
-
-graphics.off()
-heatmap(mat_overlap, keep.dendro = FALSE,Rowv=NA,Colv= "Rowv",symm=FALSE,
-  xlab =  paste0("ImpulseDE2 scores"), ylab = "edge scores")
-breaks <- seq(0,1,by=0.01)
-hm.colors <- colorpanel( length(breaks)-1, "yellow", "red" )
-graphics.off()
-pdf(paste('ImpulseDE2-DESeq2_JaccardCoeff_Heatmap.pdf',sep=''),width=7,height=7)
-heatmap.2(mat_overlap, dendrogram="none", Rowv=FALSE,Colv=FALSE, 
-  xlab =  paste0("log(p-value) ImpulseDE2"), ylab = "log(p-value) DESeq2",
-  breaks=breaks,col=hm.colors, scale="none",
-  trace="none",density.info="none",
-  key.title = " ", key.xlab = paste0("Jaccard coefficient"), key.ylab = NULL,
-  symkey=FALSE,
-  cellnote=round(mat_overlap,digits=2),notecol="grey",
-  lmat=rbind( c(3,4),c(2,1) ),lhei=c(1,4), lwid=c(1,4), margins=c(5,5))
-dev.off()
-
-########################################
-# edge
-mat_overlap <- array(NA,c(11,11))
-for(i in 0:10){
-  for(j in 0:10){
-    sig_Impulse <- as.numeric(matQval[,"A_ImpulseDE2"]) <= 10^(-j) & !is.na(as.numeric(matQval[,"A_ImpulseDE2"]))
-    sig_Ref <- as.numeric(matQval[,"A_edge"]) <= 10^(-i) & !is.na(as.numeric(matQval[,"A_edge"]))
-    mat_overlap[i+1,j+1] <- sum(sig_Ref & sig_Impulse)/sum(sig_Ref | sig_Impulse)
-  }
-}
-#mat_overlap[is.na(mat_overlap)] <- 0
-rownames(mat_overlap) <- 0:-10
-colnames(mat_overlap) <- 0:-10
-
-graphics.off()
-heatmap(mat_overlap, keep.dendro = FALSE,Rowv=NA,Colv= "Rowv",symm=FALSE,
-  xlab =  paste0("ImpulseDE2 scores"), ylab = "edge scores")
-breaks <- seq(0,1,by=0.01)
-hm.colors <- colorpanel( length(breaks)-1, "yellow", "red" )
-graphics.off()
-pdf(paste('ImpulseDE2-edge_JaccardCoeff_Heatmap.pdf',sep=''),width=7,height=7)
-heatmap.2(mat_overlap, dendrogram="none", Rowv=FALSE,Colv=FALSE, 
-  xlab =  paste0("log(p-value) ImpulseDE2"), ylab = "log(p-value) edge",
-  breaks=breaks,col=hm.colors, scale="none",
-  trace="none",density.info="none",
-  key.title = " ", key.xlab = paste0("Jaccard coefficient"), key.ylab = NULL,
-  symkey=FALSE,
-  cellnote=round(mat_overlap,digits=2),notecol="grey",
-  lmat=rbind( c(3,4),c(2,1) ),lhei=c(1,4), lwid=c(1,4), margins=c(5,5))
-dev.off()
-
-########################################
-# 3. Impulse fits, differentially called DE genes
-########################################
-rm(list=ls())
-library(gplots)
-load("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/lsResDEcomparison_RNAseqdata.Rdata")
-matQval <- lsResDEcomparison_RNAseqdata$matQval 
-matPval <- lsResDEcomparison_RNAseqdata$matPval
-matRunTime_RNAseqData <- lsResDEcomparison_RNAseqdata$matRunTime_RNAseqData
-
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/srcImpulseDE2_plotDEGenes.R")
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/ImpulseDE2")
-load("ImpulseDE2_matCountDataProc.RData")
-load("ImpulseDE2_dfAnnotationProc.RData")
-load("ImpulseDE2_dfImpulseResults.RData")
-load("ImpulseDE2_vecDEGenes.RData")
-load("ImpulseDE2_lsImpulseFits.RData")
-load("ImpulseDE2_dfDESeq2Results.RData")
-load("ImpulseDE2_lsMatTranslationFactors.RData")
-load("ImpulseDE2_matSizeFactors.RData")
-
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs")
-
-Q <- 10^(-3)
-Qdelta <- 10^(2) # difference factor required to be plotted
-
-########################################
-# DESeq2
-# Note cannot plot genes which are NA in ImpulseDE2
-vecboolImpulseFitted <- !is.na(as.numeric(matQval[,"A_DESeq2"]))
-vecboolRefBeatsQ <- as.numeric(matQval[,"A_DESeq2"]) < Q & !is.na(as.numeric(matQval[,"A_DESeq2"]))
-vecBoolRefBeatsImpulse <- as.numeric(matQval[,"A_ImpulseDE2"]) >= Qdelta*as.numeric(matQval[,"A_DESeq2"]) | is.na(as.numeric(matQval[,"A_DESeq2"]))
-vecboolImpulseBeatsQ <- as.numeric(matQval[,"A_ImpulseDE2"]) < Q & !is.na(as.numeric(matQval[,"A_ImpulseDE2"]))
-vecboolImpulseBeatsRef <- as.numeric(matQval[,"A_DESeq2"]) >= Qdelta*as.numeric(matQval[,"A_ImpulseDE2"]) | is.na(as.numeric(matQval[,"A_ImpulseDE2"]))
-
-vecDEgenes_Ref_only <- as.vector(matQval[vecboolRefBeatsQ & vecBoolRefBeatsImpulse & vecboolImpulseFitted,"Gene"])
-vecDEgenes_Impulse_only <- as.vector(matQval[vecboolImpulseBeatsQ & vecboolImpulseBeatsRef & vecboolImpulseFitted,"Gene"])
-graphics.off()
-print(paste0("Number of significant DE genes at q-value of ",Q))
-print(paste0("ImpulseDE only ",length(vecDEgenes_Impulse_only)))
-print(paste0("DESeq2 only ",length(vecDEgenes_Ref_only)))
-
-vecRefResults <- as.numeric(matQval[,"A_DESeq2"])
-names(vecRefResults) <- matQval[,"Gene"]
-strControlName <- NULL
-strCaseName <- "case"
-strMode="batch"
-NPARAM <- 6
-
-plotDEGenes(vecGeneIDs=vecDEgenes_Ref_only,
-  matCountDataProc=matCountDataProc,
-  lsMatTranslationFactors=lsMatTranslationFactors,
-  matSizeFactors=matSizeFactors,
-  dfAnnotation=dfAnnotationProc, 
-  lsImpulseFits=lsImpulseFits,
-  strCaseName=strCaseName, 
-  strControlName=strControlName, 
-  strFileNameSuffix="RNAseq_DESeq2BeatsImpulseDE2", 
-  strPlotTitleSuffix="", 
-  strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,
-  vecRefPval=vecRefResults,
-  strNameMethod2="DESeq2",
-  strMode=strMode, 
-  NPARAM=NPARAM)
-
-if(length(vecDEgenes_Impulse_only)){
-  plotDEGenes(vecGeneIDs=vecDEgenes_Impulse_only,
-    matCountDataProc=matCountDataProc,
-    lsMatTranslationFactors=lsMatTranslationFactors,
-    matSizeFactors=matSizeFactors,
-    dfAnnotation=dfAnnotationProc, 
-    lsImpulseFits=lsImpulseFits,
-    strCaseName=strCaseName, 
-    strControlName=strControlName, 
-    strFileNameSuffix="RNAseq_ImpulseDE2BeatsDESeq2", 
-    strPlotTitleSuffix="", 
-    strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,
-    vecRefPval=vecRefResults,
-    strNameMethod2="DESeq2",
-    strMode=strMode, 
-    NPARAM=NPARAM)
-}
-########################################
-# edge
-vecboolImpulseFitted <- !is.na(as.numeric(matQval[,"A_edge"]))
-vecboolRefBeatsQ <- as.numeric(matQval[,"A_edge"]) < Q & !is.na(as.numeric(matQval[,"A_edge"]))
-vecBoolRefBeatsImpulse <- as.numeric(matQval[,"A_ImpulseDE2"]) >= Qdelta*as.numeric(matQval[,"A_edge"]) | is.na(as.numeric(matQval[,"A_DESeq2"]))
-vecboolImpulseBeatsQ <- as.numeric(matQval[,"A_ImpulseDE2"]) < Q & !is.na(as.numeric(matQval[,"A_ImpulseDE2"]))
-vecboolImpulseBeatsRef <- as.numeric(matQval[,"A_edge"]) >= Qdelta*as.numeric(matQval[,"A_ImpulseDE2"]) | is.na(as.numeric(matQval[,"A_ImpulseDE2"]))
-
-vecDEgenes_Ref_only <- as.vector(matQval[vecboolRefBeatsQ & vecBoolRefBeatsImpulse & vecboolImpulseFitted,"Gene"])
-vecDEgenes_Impulse_only <- as.vector(matQval[vecboolImpulseBeatsQ & vecboolImpulseBeatsRef & vecboolImpulseFitted,"Gene"])
-graphics.off()
-print(paste0("Number of significant DE genes at q-value of ",Q))
-print(paste0("ImpulseDE only ",length(vecDEgenes_Impulse_only)))
-print(paste0("Edge only ",length(vecDEgenes_Ref_only)))
-
-vecRefResults <- as.numeric(matQval[,"A_edge"])
-names(vecRefResults) <- matQval[,"Gene"]
-strControlName <- NULL
-strCaseName <- "case"
-strMode="batch"
-NPARAM <- 6
-
-plotDEGenes(vecGeneIDs=vecDEgenes_Ref_only,
-  matCountDataProc=matCountDataProc,
-  lsMatTranslationFactors=lsMatTranslationFactors,
-  matSizeFactors=matSizeFactors,
-  dfAnnotation=dfAnnotationProc, 
-  lsImpulseFits=lsImpulseFits,
-  strCaseName=strCaseName, 
-  strControlName=strControlName, 
-  strFileNameSuffix="RNAseq_EdgeBeatsImpulseDE2", 
-  strPlotTitleSuffix="", 
-  strPlotSubtitle="",
-  dfImpulseResults=dfImpulseResults,
-  vecRefPval=vecRefResults,
-  strNameMethod2="edge",
-  strMode=strMode, 
-  NPARAM=NPARAM)
-
-if(length(vecDEgenes_Impulse_only)){
-  plotDEGenes(vecGeneIDs=vecDEgenes_Impulse_only,
-    matCountDataProc=matCountDataProc,
-    lsMatTranslationFactors=lsMatTranslationFactors,
-    matSizeFactors=matSizeFactors,
-    dfAnnotation=dfAnnotationProc, 
-    lsImpulseFits=lsImpulseFits,
-    strCaseName=strCaseName, 
-    strControlName=strControlName, 
-    strFileNameSuffix="RNAseq_ImpulseDE2BeatsEdge", 
-    strPlotTitleSuffix="", 
-    strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,
-    vecRefPval=vecRefResults,
-    strNameMethod2="edge",
-    strMode=strMode, 
-    NPARAM=NPARAM)
-}

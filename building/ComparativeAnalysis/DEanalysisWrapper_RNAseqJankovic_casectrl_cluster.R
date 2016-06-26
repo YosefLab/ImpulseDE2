@@ -1,6 +1,6 @@
 # Cluster
 rm(list = ls())
-NCORES <- 8
+NCORES <- 16
 
 print("Process data RNAseq Jankovic")
 # Load Data set RNAseq
@@ -22,7 +22,15 @@ if(sum(vecboolidxDupIDs)>0){
 }
 rownames(matDataA) <- vecGeneIDs
 colnames(matDataA) <- vecSamples
-#matDataA <- matDataA[1:2000,]
+
+# batch corrected counts
+dfRNAbc <- read.table("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/input/rsem_readCountsTable_BatchCorrected.txt",
+  sep="\t", header=F)
+dfGeneIDs <- read.table("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/input/rsem_readCountsTable_BatchCorrected_genes.txt",sep="\t",header=F)
+dfCellIDs <- read.table("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/input/rsem_readCountsTable_BatchCorrected_samples.txt",sep="\t",header=F)
+matDataAbc <- dfRNAbc
+rownames(matDataAbc) <- dfGeneIDs$V1
+colnames(matDataAbc) <- dfCellIDs$V1
 
 # 2. Annotation
 dfAnnotationRNA <- read.table("/data/yosef2/users/fischerd/data/RNAseq_Jovanovic/comparative_analysis/input/AnnotationTable_RNAseqJankovic.tab",header=T)
@@ -31,9 +39,13 @@ dfAnnotationA <- dfAnnotationRNA
 
 matDataA <- matDataA[,as.vector(dfAnnotationA$Sample)]
 colnames(matDataA) <- dfAnnotationA$Sample
+
+matDataAbc <- matDataAbc[,as.vector(dfAnnotationA$Sample)]
+colnames(matDataAbc) <- dfAnnotationA$Sample
+
 rownames(dfAnnotationA) <- dfAnnotationA$Sample
 
-# All zero rows
+# All zero rows - already handled in batch corrected
 matDataA[!is.finite(matDataA)] <- NA
 vecboolNonzeroA <- apply(matDataA,1,function(gene){any(gene>0 & !is.na(gene) & is.finite(gene))})
 matDataA <- matDataA[vecboolNonzeroA,]
@@ -162,9 +174,15 @@ library(utils)
 library(amap)
 library(ImpulseDE)
 
-# Create input data set
-# Only retain non zero, normalise and log transform
-matDataA_ImpulseDE <- matDataA/rep(sizeFactors(ddsDESeqObjectA), each = nrow(matDataA))
+# Create input data set: work with batch corrected
+# normalise and log transform
+# Formula doesnt matter, just want size factors
+ddsDESeqObjectAbc <- DESeqDataSetFromMatrix(countData = round(matDataAbc),
+  colData = dfAnnotationA,
+  design = ~TimeCateg)
+# Run DESeq2
+ddsDESeqObjectAbc <- estimateSizeFactors(ddsDESeqObjectAbc)
+matDataA_ImpulseDE <- matDataAbc/rep(sizeFactors(ddsDESeqObjectAbc), each = nrow(matDataAbc))
 matDataA_ImpulseDE <- log(matDataA_ImpulseDE+1)/log(2)
 
 dfAnnotationA_ImpulseDE <- dfAnnotationA[,c("Time","Condition")]

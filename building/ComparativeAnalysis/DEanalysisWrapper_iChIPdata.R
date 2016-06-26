@@ -338,6 +338,34 @@ compareDEMethods(matQval,
   strMode="batch",
   strDataDescriptionFilename="")
 
+# Plot CDF for 3
+# 2. CDF p-values
+setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/2014_Weiner_ChromatinHaematopeisis/pdfs")
+strMethod1="ImpulseDE2"
+strMethod2="ImpulseDE"
+strMethod3="DESeq2"
+vecX <- seq(-25,-1,by=0.1)
+vecCDF1 <- sapply(vecX, function(thres){sum(log(as.numeric(matQval[,strMethod1]))/log(10) <= thres, na.rm=TRUE)})
+vecCDF2 <- sapply(vecX, function(thres){sum(log(as.numeric(matQval[,strMethod2]))/log(10) <= thres, na.rm=TRUE)})
+vecCDF3 <- sapply(vecX, function(thres){sum(log(as.numeric(matQval[,strMethod3]))/log(10) <= thres, na.rm=TRUE)})
+pdf(paste0(strMethod1,"-",strMethod2,"-",strMethod3,"_ECDF-pvalues.pdf"),width=7,height=7)
+plot(vecX,vecCDF1,
+  col="black",pch=4,type="l",
+  ylim=c(0,max(max(vecCDF1,na.rm=TRUE),max(vecCDF2,na.rm=TRUE))),
+  xlab="-log_10(p-value)", 
+  ylab=paste0("Cumulative p-value distribution"),
+  main=paste0("Cumulative p-values distribution\n",strMethod1," versus ",strMethod2))
+points(vecX,vecCDF2,
+  col="red",pch=4,type="l")
+points(vecX,vecCDF3,
+  col="blue",pch=4,type="l")
+legend(x="topleft",
+  legend=c(strMethod1,strMethod2,strMethod3),
+  fill=c("black","red","blue"))
+dev.off()
+graphics.off()
+
+
 ################################################################################
 # DESeq2 for Gene-E
 print("Run DESeq2")

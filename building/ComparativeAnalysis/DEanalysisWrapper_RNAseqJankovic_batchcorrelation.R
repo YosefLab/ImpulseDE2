@@ -67,3 +67,64 @@ q + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 graphics.off()
 
+# batch correction
+
+# look at example data set
+library(sva)
+library(pamr)
+library(limma)
+library(bladderbatch)
+data(bladderdata)
+pheno = pData(bladderEset)
+edata = exprs(bladderEset)
+pheno
+head(edata)
+batch = pheno$batch
+modcombat = model.matrix(~1, data=pheno)
+combat_edata = ComBat(dat=edata, batch=batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+
+# on RNA data
+# filter out all zero and NA observations - ImpulseDE cannot handle NA anyway
+library(sva)
+library(pamr)
+library(limma)
+matDataA_noNA <- matDataA[apply(matDataA,1,function(gene){!any(is.na(gene)) & any(gene>0)}),]
+condition <- dfAnnotationA$Condition
+time <- dfAnnotationA$TimeCateg
+batch <- array(NA,dim(dfAnnotationA)[1])
+batch[dfAnnotationA$LongitudinalSeries=="A"] <- 1
+batch[dfAnnotationA$LongitudinalSeries=="B"] <- 2
+mm <- model.matrix(~time + condition + batch)
+pheno <- data.frame(
+  sample=seq(1,dim(dfAnnotationA)[1]),
+  batch=batch,
+  time=dfAnnotationA$TimeCateg,
+  cond=dfAnnotationA$Condition )
+rownames(pheno) <- dfAnnotationA$Sample
+modcombat <- model.matrix(~1, data=pheno)
+matCountsNobatch <- ComBat(dat=matDataA_noNA, batch=batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+
+matCountsNobatchRed <- matCountsNobatch[apply(matCountsNobatch,1,function(gene){!any(is.na(gene) | gene==0 )}),]
+vecSRRid <- sapply(as.vector(dfAnnotationA$Sample),function(x){unlist(strsplit(x,split="SRR15255"))[2]})
+colnames(matCountsNobatchRed) <- c(paste0(vecSRRid[1:7],"_",dfAnnotationA[1:7,]$Condition,"_A",dfAnnotationA[1:7,]$TimeCateg,"h"),
+  paste0(vecSRRid[8:13],"_",dfAnnotationA[8:13,]$Condition,"_A",dfAnnotationA[8:13,]$TimeCateg,"h"),
+  paste0(vecSRRid[14:20],"_",dfAnnotationA[14:20,]$Condition,"_B",dfAnnotationA[14:20,]$TimeCateg,"h"),
+  paste0(vecSRRid[21:26],"_",dfAnnotationA[21:26,]$Condition,"_B",dfAnnotationA[21:26,]$TimeCateg,"h"))
+library(ggplot2)
+library(reshape2)
+q <- qplot(x=Var1, y=Var2, 
+  data=melt(cor(matCountsNobatchRed)), 
+  fill=value, 
+  geom="tile",
+  xlab="",ylab="")
+q + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+pdf("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/batcheffect_analysis/correlation_heatmap_CombatCorrected.pdf")
+q <- qplot(x=Var1, y=Var2, 
+  data=melt(cor(matDataARed)), 
+  fill=value, 
+  geom="tile",
+  xlab="",ylab="")
+q + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+dev.off()
+graphics.off()

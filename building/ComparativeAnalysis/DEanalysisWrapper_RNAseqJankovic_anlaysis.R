@@ -1,32 +1,100 @@
 ### GENE-E clustering
 # Dont do this - the data set is to confounded to look at means?
 rm(list=ls())
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/clusterruns/output/ImpulseDE2")
-load("ImpulseDE2_matCountDataProc.RData")
-load("ImpulseDE2_dfAnnotationProc.RData")
-load("ImpulseDE2_dfImpulseResults.RData")
-load("ImpulseDE2_vecDEGenes.RData")
-load("ImpulseDE2_lsImpulseFits.RData")
-load("ImpulseDE2_dfDESeq2Results.RData")
-load("ImpulseDE2_matTranslationFactors.RData")
-load("ImpulseDE2_matSizeFactors.RData")
-setwd("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/pdfs")
+################################################################################
 # DESeq2 for Gene-E
-dfDESeq2DEgeneCounts <- matCountDataProc[rownames(dfDESeq2Results[dfDESeq2Results$padj < 10^(-5) & !is.na(dfDESeq2Results$padj),]),]
-dfDESeq2DEgeneCountsNorm <- dfDESeq2DEgeneCounts/rep(matSizeFactors[1,], each = nrow(dfDESeq2DEgeneCounts))
-dfDESeq2DEgeneCountsNormMeans <- do.call(cbind, lapply(unique(dfAnnotationProc$Time),function(t){
-  if(length(as.vector(dfAnnotationProc[dfAnnotationProc$Time==t,]$Sample)) > 1 ){
-    apply(dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationProc[dfAnnotationProc$Time==t,]$Sample)],1,mean)
+print("Process data RNAseq Jankovic")
+# Load Data set RNAseq
+print("Run DESeq2")
+library(DESeq2)
+library(BiocParallel)
+# Parallelisation
+nProcesses <- 2
+register(MulticoreParam(nProcesses))
+
+# 1. batch corrected counts
+dfRNAbc <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/rsem_readCountsTable_BatchCorrected.txt",
+  sep="\t", header=F)
+dfGeneIDs <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/rsem_readCountsTable_BatchCorrected_genes.txt",sep="\t",header=F)
+dfCellIDs <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/rsem_readCountsTable_BatchCorrected_samples.txt",sep="\t",header=F)
+matDataAbc <- dfRNAbc
+rownames(matDataAbc) <- dfGeneIDs$V1
+colnames(matDataAbc) <- dfCellIDs$V1
+
+# 2. Counts - for DESeq2
+dfRNA <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/rsem_readCountsTable.txt",
+  sep="\t",header=F,colClasses=c(
+    "numeric","numeric","numeric","numeric","numeric","numeric","numeric",
+    "numeric","numeric","numeric","numeric","numeric","numeric","numeric",
+    "numeric","numeric","numeric","numeric","numeric","numeric","numeric"))
+dfGeneIDs <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/gene_list.txt",sep="\t",header=F)
+dfCellIDs <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/cell_list.txt",sep="\t",header=F)
+vecSamples <- apply(dfCellIDs, 1, function(name){ unlist(strsplit(unlist(strsplit(name,"_1"))[1],"/"))[2] })
+
+matDataA <- round(t(apply(dfRNA,1,as.numeric)))
+vecGeneIDs <- as.vector(dfGeneIDs[,2])
+vecboolidxDupIDs <- duplicated(vecGeneIDs)
+if(sum(vecboolidxDupIDs)>0){
+  vecGeneIDs[vecboolidxDupIDs] <- paste0(rep("DuplicatedGene_",sum(vecboolidxDupIDs)),seq(1,sum(vecboolidxDupIDs)))
+}
+rownames(matDataA) <- vecGeneIDs
+colnames(matDataA) <- vecSamples
+matDataA <- matDataA
+matDataA[!is.finite(matDataA)] <- NA
+vecboolNonzeroA <- apply(matDataA,1,function(gene){any(gene>0 & !is.na(gene) & is.finite(gene))})
+matDataA <- matDataA[vecboolNonzeroA,]
+
+# 3. Annotation
+dfAnnotationRNA <- read.table("/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/AnnotationTable_RNAseqJankovic.tab",header=T)
+dfAnnotationRNA$TimeCateg <- paste0(rep("_",length(dfAnnotationRNA$Time)),dfAnnotationRNA$Time)
+dfAnnotationA <- dfAnnotationRNA
+
+# Create input data set
+# Only retain non zero case, impulses are only in case!
+matDataAbc_case <- matDataAbc[,dfAnnotationA[dfAnnotationA$Condition=="case",]$Sample]
+matDataA_DESeq2 <- matDataA[,dfAnnotationA[dfAnnotationA$Condition=="case",]$Sample]
+dfAnnotationAcase <- dfAnnotationA[dfAnnotationA$Condition=="case",]
+
+write.table(matDataAbc_case, row.names = FALSE, col.names = FALSE, sep="\t",
+  file="/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/rsem_readCountsTable_BatchCorrectedCase.txt")
+# Select only on rep A based on fold change
+vecSamples <- as.vector(dfAnnotationAcase[dfAnnotationAcase$LongitudinalSeries=="A",]$Sample)
+matDataAbc_caseFC <- matDataAbc_case[apply(matDataAbc_case[,vecSamples],1,function(gene){
+  (max(gene)-min(gene))/min(gene)>1.5 & max(gene)>=20
+}),vecSamples]
+write.table(matDataAbc_caseFC, row.names = FALSE, col.names = FALSE, sep="\t",
+  file="/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/rsem_readCountsTable_BatchCorrectedCaseA-FC.txt")
+
+
+# Create DESeq2 data object
+dds <- DESeqDataSetFromMatrix(countData = matDataA_DESeq2,
+  colData = dfAnnotationAcase,
+  design = ~LongitudinalSeries)
+# Run DESeq2
+ddsDESeqObjectA <- DESeq(dds, test = "LRT", 
+  full = ~LongitudinalSeries, reduced = ~ 1,
+  parallel=TRUE)
+
+dds_resultsTableA <- results(ddsDESeqObjectA)
+qvals_A <- dds_resultsTableA$padj
+hist(log(qvals_A)/log(10))
+vecDEgenes <- rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5) & !is.na(dds_resultsTableA$padj),])
+vecDEgenes <- vecDEgenes[vecDEgenes %in% ]
+dfDESeq2DEgeneCounts <- matDataA_DESeq2[vecDEgenes,]
+rownames(dfDESeq2DEgeneCounts) <- rownames(dds_resultsTableA[dds_resultsTableA$padj < 10^(-5) & !is.na(dds_resultsTableA$padj),])
+dfDESeq2DEgeneCountsNorm <- dfDESeq2DEgeneCounts/rep(sizeFactors(ddsDESeqObjectA), each = nrow(dfDESeq2DEgeneCounts))
+dfDESeq2DEgeneCountsNormMeans <- do.call(cbind, lapply(unique(dfAnnotationA$Time),function(t){
+  if(length(as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)) > 1 ){
+    apply(dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)],1,mean)
   }else{
-    dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationProc[dfAnnotationProc$Time==t,]$Sample)]
+    dfDESeq2DEgeneCountsNorm[,as.vector(dfAnnotationA[dfAnnotationA$Time==t,]$Sample)]
   }
 }))
-colnames(dfDESeq2DEgeneCountsNormMeans) <- unique(dfAnnotationProc$TimeCateg)
+colnames(dfDESeq2DEgeneCountsNormMeans) <- unique(dfAnnotationA$TimeCateg)
 write.table(dfDESeq2DEgeneCountsNormMeans,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/matCounts_DESeq2_1e-5.tab",sep="\t",row.names=F,quote=FALSE)
 # retain only high variation
 dfDESeq2DEgeneCountsNormMeansFilt <- dfDESeq2DEgeneCountsNormMeans[2*apply(dfDESeq2DEgeneCountsNormMeans,1,min) <= apply(dfDESeq2DEgeneCountsNormMeans,1,max),]
 write.table(dfDESeq2DEgeneCountsNormMeansFilt,"/Users/davidsebastianfischer/MasterThesis/data/ImpulseDE2_datasets/RNAseqJankovic/matCounts_DESeq2_1e-5_x1-5.tab",sep="\t",row.names=F,quote=FALSE)
-
 
 ########################################
 # 1. Plot ImpulseDE2 DE genes
