@@ -60,15 +60,14 @@ matPval_RNAseqData[,"Gene"] <- rownames(matDataA)
 names(matRunTime_RNAseqData) <- c("ImpulseDE2", "ImpulseDE", "DESeq2", "edge")
 
 # Create input data set
-# Look at correlation by gene:
-vecCorr <- apply(matDataA, 1, function(gene){
-  cor(gene[dfAnnotationA$LongitudinalSeries=="A"],
-    gene[dfAnnotationA$LongitudinalSeries=="B"])
-})
-vecindHighCorr <- vecCorr > 0.5
-vecindHighCorr[is.na(vecindHighCorr)] <- FALSE
-
-matDataA <- matDataA[vecindHighCorr,]
+# only keep genes with high correlation to avoid batch effect
+#vecCorr <- apply(matDataA, 1, function(gene){
+#  cor(gene[dfAnnotationA$LongitudinalSeries=="A"],
+#    gene[dfAnnotationA$LongitudinalSeries=="B"])
+#})
+#vecindHighCorr <- vecCorr > 0.5
+#vecindHighCorr[is.na(vecindHighCorr)] <- FALSE
+#matDataA <- matDataA[vecindHighCorr,]
 
 ################################################################################
 # ImpulseDE2
@@ -86,7 +85,7 @@ tm_ImpulseDE2A <- system.time({
     dfAnnotation=dfAnnotationA,
     strCaseName = strCaseName, 
     strControlName=strControlName, 
-    strMode="batch",
+    strMode="longitudinal",
     nProc=NCORES, 
     Q_value=10^(-3),
     boolPlotting=FALSE)
@@ -125,10 +124,10 @@ tm_DESeq2A <- system.time({
   # Create DESeq2 data object
   dds <- DESeqDataSetFromMatrix(countData = matDataA_DESeq2,
     colData = dfAnnotationA,
-    design = ~TimeCateg + Condition)
+    design = ~TimeCateg + Condition + LongitudinalSeries)
   # Run DESeq2
   ddsDESeqObjectA <- DESeq(dds, test = "LRT", 
-    full = ~ TimeCateg + Condition, reduced = ~ TimeCateg,
+    full = ~ TimeCateg + Condition + LongitudinalSeries, reduced = ~ TimeCateg + LongitudinalSeries,
     parallel=TRUE)
   
   # DESeq results for comparison

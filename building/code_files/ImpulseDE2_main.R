@@ -269,6 +269,7 @@ runImpulseDE2 <- function(matCountData=NULL,
           dfAnnotationProc=dfAnnotationProc,
           matCountDataProc=matCountDataProcFull,
           nProc=nProc,
+          strCaseName=strCaseName,
           strControlName=strControlName,
           strMode=strMode)
       })

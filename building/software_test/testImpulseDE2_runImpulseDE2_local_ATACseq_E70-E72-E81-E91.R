@@ -4,11 +4,11 @@ rm(list = ls())
 ### LOAD DATA
 ### Load annotation
 # With control
-dfAnnotationCtrl <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_ATACseq_E70-E72-E81-E91_E81-E91control.tab",header=T)
-rownames(dfAnnotationCase) <- dfAnnotationCase$Sample
-# Without control
-dfAnnotationCase <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/software_test/annotation_table_ATACseq_E70-E72-E81-E91.tab",header=T)
+dfAnnotationCtrl <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/software_test/annotation_table_ATACseq_E70-E72-E81-E91_E81-E91control.tab",header=T)
 rownames(dfAnnotationCtrl) <- dfAnnotationCtrl$Sample
+# Without control
+dfAnnotationCase <- read.table("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/software_test/annotation_table_ATACseq_E70-E72-E81-E91.tab",header=T)
+rownames(dfAnnotationCase) <- dfAnnotationCase$Sample
 
 ### Load count data
 # All genes
@@ -32,8 +32,8 @@ lsPeaksIDs <- paste0(rep("Region_",length(lsPeaksIDs)),c(1:length(lsPeaksIDs)))
 rownames(matCountData) <- lsPeaksIDs
 colnames(matCountData) <- colnames(dfCountData)[4:dim(dfCountData)[2]]
 
-source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/building/code_files/ImpulseDE2_main.R")
-setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE/software_test_out")
+source("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/building/code_files/ImpulseDE2_main.R")
+setwd( "/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/software_test_out")
 
 strCaseName = "case"
 strControlName = "ctrl"
@@ -42,15 +42,17 @@ if(!is.null(strControlName)){dfAnnotation=dfAnnotationCtrl
 
 n_process = 3
 Q_value = 10^(-2)
-strMode <- "batch"
+strMode <- "longitudinal"
 lsImpulseDE_results <- runImpulseDE2(
   matCountData=matCountData, 
   dfAnnotation=dfAnnotation,
   strCaseName = strCaseName, 
   strControlName=strControlName, 
   strMode=strMode,
-  nProc=n_process,
-  Q_value=Q_value)
+  nProc=n_process, 
+  Q_value=Q_value, 
+  boolPlotting=boolPlotting,
+  scaSmallRun=100)
 
 lsDEGenes <- lsImpulseDE_results$lsDEGenes
 dfImpulseResults <- lsImpulseDE_results$dfImpulseResults

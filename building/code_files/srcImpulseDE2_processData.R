@@ -420,14 +420,17 @@ processData <- function(dfAnnotation=NULL,
     } else {
       dfAnnotationProc <- dfAnnotation[dfAnnotation$Condition==strCaseName | 
           dfAnnotation$Condition==strControlName,]
-      #vecLongSersCase <- unique(dfAnnotationProc[dfAnnotation$Condition==strCaseName,]$LongitudinalSeries)
-      #vecLongSersCtrl <- unique(dfAnnotationProc[dfAnnotation$Condition==strControlName,]$LongitudinalSeries)
-      #vecindLongSerNested <- array(NA, dim(dfAnnotationProc)[1])
-      #vecindLongSerNested[dfAnnotation$Condition==strCaseName] <- 
-      #  match(dfAnnotationProc$LongitudinalSeries, vecLongSersCase)[dfAnnotation$Condition==strCaseName]
-      #vecindLongSerNested[dfAnnotation$Condition==strControlName] <- 
-      #  match(dfAnnotationProc$LongitudinalSeries, vecLongSersCtrl)[dfAnnotation$Condition==strControlName]
-      #dfAnnotationProc$LongSerNested <- paste0("_", vecindLongSerNested)
+      # The following is used to build full-rank model matrices
+      # for DESeq2 even though conditions are a linear combination of
+      # longitudinal time series.
+      vecLongSersCase <- unique(dfAnnotationProc[dfAnnotation$Condition==strCaseName,]$LongitudinalSeries)
+      vecLongSersCtrl <- unique(dfAnnotationProc[dfAnnotation$Condition==strControlName,]$LongitudinalSeries)
+      vecindLongSerNested <- array(NA, dim(dfAnnotationProc)[1])
+      vecindLongSerNested[dfAnnotation$Condition==strCaseName] <- 
+        match(dfAnnotationProc$LongitudinalSeries, vecLongSersCase)[dfAnnotation$Condition==strCaseName]
+      vecindLongSerNested[dfAnnotation$Condition==strControlName] <- 
+        match(dfAnnotationProc$LongitudinalSeries, vecLongSersCtrl)[dfAnnotation$Condition==strControlName]
+      dfAnnotationProc$LongSerNested <- paste0("_", vecindLongSerNested)
     }
     dfAnnotationProc$TimeCateg <- paste0(
       "_", dfAnnotationProc$Time)

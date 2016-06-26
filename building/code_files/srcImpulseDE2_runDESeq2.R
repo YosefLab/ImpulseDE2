@@ -18,6 +18,10 @@
 #'    (and Timecourse). For internal use.
 #' @param nProc: (scalar) [Default 1] 
 #'    Number of processes for parallelisation.
+#' @param strCaseName: (str) [Default NULL] 
+#'    Name of the case condition in \code{dfAnnotation}.
+#' @param strControlName: (str) [Default NULL] 
+#'    Name of the control condition in \code{dfAnnotation}.
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
@@ -32,7 +36,8 @@
 
 runDESeq2 <- function(dfAnnotationProc, 
   matCountDataProc,
-  nProc=1, 
+  nProc=1,
+  strCaseName=NULL,
   strControlName=NULL, 
   strMode="batch"){
   
@@ -82,14 +87,15 @@ runDESeq2 <- function(dfAnnotationProc,
   } else {
     # With control data:
     
-    if(strMode=="batch" | strMode=="singlecell"){
+    if(strMode=="batch"){
       # Create DESeq2 data object
       dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
         colData = dfAnnotationProc,
-        design = ~ TimeCateg + Condition) )
+        design = ~Condition + Condition:TimeCateg) )
       # Run DESeq2
       ddsDESeqObject <- DESeq(dds, test = "LRT", 
-        full = ~ TimeCateg + Condition, reduced = ~ TimeCateg,
+        full = ~Condition + Condition:TimeCateg,
+        reduced = ~ TimeCateg,
         parallel=TRUE)
       
       # Get gene-wise dispersion estimates
@@ -102,34 +108,51 @@ runDESeq2 <- function(dfAnnotationProc,
       dds_resultsTable <- results(ddsDESeqObject)
       
     } else if(strMode=="longitudinal"){
-      # Create DESeq2 data object
-      # Define linear model suited to hypothesis testing
-      dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
-        colData = dfAnnotationProc,
-        design = ~ TimeCateg + Condition) )
-      # Run DESeq2
-      ddsDESeqObjectTest <- DESeq(dds, test = "LRT", 
-        full = ~ TimeCateg + Condition, reduced = ~ TimeCateg,
-        parallel=TRUE)
-      # DESeq results for comparison
-      dds_resultsTable <- results(ddsDESeqObjectTest)
-      
-      # Define linear model suited to overdispersion fitting
-      # Only need dispersions now, but the run time of the rest
-      # of DESeq2 is negligible.
-      dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
-        colData = dfAnnotationProc,
-        design = ~ TimeCateg + LongitudinalSeries) )
-      # Run DESeq2
-      ddsDESeqObjectFit <- DESeq(dds, test = "LRT", 
-        full = ~ TimeCateg + LongitudinalSeries, reduced = ~ TimeCateg,
-        parallel=TRUE)
+      # Note: Have to distinguish model formula between
+      # 1. One condition only has one series (i.e. that condition is 
+      # a linear combination of that series)
+      # 2. Both conditions have multiple series and are not linear
+      # combinations of any one series.
+      # Note that Condition is in both null models as it complements
+      # the longitudinal series information in LSnested.
+      boolSingleSeriesCond <- FALSE
+      if(length(unique( dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$LongSerNested ))==1){
+        boolSingleSeriesCond <- TRUE
+      }
+      if(length(unique( dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$LongSerNested ))==1){
+        boolSingleSeriesCond <- TRUE
+      }
+      if(boolSingleSeriesCond){
+        # Create DESeq2 data object: Don't need interaction of
+        # Condition and LongSerNested as longitudinal label is irrelevant
+        # for one condition as it covers the same sample range as this
+        # condition.
+        dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+          colData = dfAnnotationProc,
+          design = ~Condition + LongSerNested + Condition:TimeCateg) )
+        # Run DESeq2
+        ddsDESeqObject <- DESeq(dds, test = "LRT", 
+          full = ~Condition + LongSerNested + Condition:TimeCateg,
+          reduced = ~Condition + LongSerNested + TimeCateg,
+          parallel=TRUE)
+      } else {
+        # Create DESeq2 data object: Need interaction between 
+        # Condition and LongSerNested if each condition has multiple series.
+        dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+          colData = dfAnnotationProc,
+          design = ~Condition + Condition:LongSerNested + Condition:TimeCateg) )
+        # Run DESeq2
+        ddsDESeqObject <- DESeq(dds, test = "LRT", 
+          full = ~Condition + Condition:LongSerNested + Condition:TimeCateg,
+          reduced = ~Condition + Condition:LongSerNested + TimeCateg,
+          parallel=TRUE)
+      }
       # Get gene-wise dispersion estimates
       # var = mean + alpha * mean^2, alpha is dispersion
       # DESeq2 dispersion is 1/size used dnbinom (used in cost function
       # for evaluation of likelihood)
-      dds_dispersions <- 1/dispersions(ddsDESeqObjectFit)
-      names(dds_dispersions) <- rownames(ddsDESeqObjectFit)
+      dds_dispersions <- 1/dispersions(ddsDESeqObject)
+      names(dds_dispersions) <- rownames(ddsDESeqObject)
       
     } else {
       stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))

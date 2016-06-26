@@ -155,7 +155,7 @@ tm_ImpulseDEA <- system.time({
   strCaseName = "case"
   lsImpulseDE_resultsA <- impulse_DE(
     expression_table = matDataA_ImpulseDE, 
-    annotation_table = dfAnnotationA,
+    annotation_table = dfAnnotationA_ImpulseDE,
     colname_time = "Time", colname_condition = "Condition", 
     control_timecourse = FALSE,
     control_name = strControlName, case_name = strCaseName, 
