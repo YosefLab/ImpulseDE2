@@ -2,6 +2,9 @@
 #+++++++++++++++++++++++     Compare DE methods    ++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+library(gplots)
+library(ggplot2)
+
 #' Compare ImpulseDE2 output against other differential expression method
 #' 
 #' The comparison is performed based on the adjusted p-values of differential
@@ -11,11 +14,11 @@
 #' @seealso Auxillary method not called during ImpulseDE2 running.
 #' Called separately by user.
 #' 
+#' @param matQval: matrix with p-values by methods
+#' 
 #' @return NULL
+#' 
 #' @export
-
-library(gplots)
-library(ggplot2)
 
 compareDEMethods <- function(matQval,
   strMethod1="ImpulseDE2",
@@ -116,7 +119,7 @@ compareDEMethods <- function(matQval,
   # Set detection and differential calling threshold
   
   # Note cannot plot genes which are NA in ImpulseDE2
-  vecboolImpulseFitted <- !is.na(as.numeric(matQval[,strMethod2]))
+  vecboolImpulseFitted <- !is.na(as.numeric(matQval[,"ImpulseDE2"]))
   vecboolRefBeatsQ <- as.numeric(matQval[,strMethod2]) < Q & !is.na(as.numeric(matQval[,strMethod2]))
   vecBoolRefBeatsImpulse <- as.numeric(matQval[,strMethod1]) >= Qdelta*as.numeric(matQval[,strMethod2]) | (is.na(as.numeric(matQval[,strMethod1])) & !is.na(as.numeric(matQval[,strMethod2])))
   vecboolImpulseBeatsQ <- as.numeric(matQval[,strMethod1]) < Q & !is.na(as.numeric(matQval[,strMethod1]))
@@ -141,24 +144,26 @@ compareDEMethods <- function(matQval,
   names(vecRefResults) <- matQval[,"Gene"]
   NPARAM <- 6
   
-  plotDEGenes(vecGeneIDs=vecDEgenes_Ref_only,
-    matCountDataProc=matCountDataProc,
-    matTranslationFactors=matTranslationFactors,
-    matSizeFactors=matSizeFactors,
-    dfAnnotationProc=dfAnnotationProc, 
-    lsImpulseFits=lsImpulseFits,
-    strCaseName=strCaseName, 
-    strControlName=strControlName, 
-    strFileNameSuffix=paste0(strDataDescriptionFilename,"_",strMethod2,"Beats",strMethod1), 
-    strPlotTitleSuffix="", 
-    strPlotSubtitle="",
-    dfImpulseResults=dfImpulseResults,
-    vecRefPval=vecRefResults,
-    strNameMethod2=strMethod2,
-    strMode=strMode, 
-    NPARAM=6)
+  if(!is.na(vecDEgenes_Ref_only[1])){
+    plotDEGenes(vecGeneIDs=vecDEgenes_Ref_only,
+      matCountDataProc=matCountDataProc,
+      matTranslationFactors=matTranslationFactors,
+      matSizeFactors=matSizeFactors,
+      dfAnnotationProc=dfAnnotationProc, 
+      lsImpulseFits=lsImpulseFits,
+      strCaseName=strCaseName, 
+      strControlName=strControlName, 
+      strFileNameSuffix=paste0(strDataDescriptionFilename,"_",strMethod2,"Beats",strMethod1), 
+      strPlotTitleSuffix="", 
+      strPlotSubtitle="",
+      dfImpulseResults=dfImpulseResults,
+      vecRefPval=vecRefResults,
+      strNameMethod2=strMethod2,
+      strMode=strMode, 
+      NPARAM=6)
+  }
   
-  if(!is.na(vecDEgenes_Impulse_only)){
+  if(!is.na(vecDEgenes_Impulse_only[1])){
     plotDEGenes(vecGeneIDs=vecDEgenes_Impulse_only,
       matCountDataProc=matCountDataProc,
       matTranslationFactors=matTranslationFactors,
@@ -176,4 +181,6 @@ compareDEMethods <- function(matQval,
       strMode=strMode, 
       NPARAM=NPARAM)
   }
+  
+  return(NULL)
 }

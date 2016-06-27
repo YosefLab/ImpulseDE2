@@ -152,16 +152,14 @@ computeTranslationFactors <- function(matCountDataProc,
   names(vecLongitudinalSeriesAssign) <- colnames(matCountDataProc)
   vecLongitudinalSeries <- unique( vecLongitudinalSeriesAssign )
   
-  # 1. All data: This is case with a single condition and 
-  # combined with control condition.
-  
   # Fit mean to normalised counts. Count normalisation 
   # corresponds to model normalisation in impulse model 
   # fitting.
   vecMu <- sapply(seq(1,dim(matCountDataProc)[1]),function(i){
-    fitNBMean(vecCounts=matCountDataProc[i,],
-      scaDispEst=vecDispersions[i],
-      vecNormConst=matSizeFactors[i,])
+    mean(matCountDataProc[i,]/matSizeFactors[i,], na.rm=TRUE)
+    #fitNBMean(vecCounts=matCountDataProc[i,],
+    #  scaDispEst=vecDispersions[i],
+    #  vecNormConst=matSizeFactors[i,])
   })
   matMu <- matrix(vecMu,
     nrow=dim(matCountDataProc)[1],
@@ -173,9 +171,11 @@ computeTranslationFactors <- function(matCountDataProc,
   for(longser in vecLongitudinalSeries){
     vecboolCurrentSer <- vecLongitudinalSeriesAssign==longser
     matMuLongitudinal[,longser] <- sapply(seq(1,dim(matCountDataProc)[1]), function(i){
-      fitNBMean(vecCounts=matCountDataProc[i,vecLongitudinalSeriesAssign==longser],
-        scaDispEst=vecDispersions[i],
-        vecNormConst=matSizeFactors[i,vecLongitudinalSeriesAssign==longser])
+      mean(matCountDataProc[i,vecLongitudinalSeriesAssign==longser]/
+          matSizeFactors[i,vecLongitudinalSeriesAssign==longser], na.rm=TRUE)
+      #fitNBMean(vecCounts=matCountDataProc[i,vecLongitudinalSeriesAssign==longser],
+      #  scaDispEst=vecDispersions[i],
+      #  vecNormConst=matSizeFactors[i,vecLongitudinalSeriesAssign==longser])
     })
   }
   
