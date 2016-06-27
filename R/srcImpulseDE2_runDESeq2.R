@@ -28,9 +28,9 @@
 #'    
 #' @return (list length 2) with the following elements:
 #' \itemize{
-#'  \item \code{dds_dispersions} (vector number of genes) Inverse of gene-wise 
+#'  \item \code{vecDispersions} (vector number of genes) Inverse of gene-wise 
 #'      negative binomial dispersion coefficients computed by DESeq2.
-#'  \item \code{dds_resultsTable} (data frame) DESeq2 results.
+#'  \item \code{ddsResults} (data frame) DESeq2 results.
 #' }
 #' @export
 
@@ -76,14 +76,6 @@ runDESeq2 <- function(dfAnnotationProc,
     } else {
       stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
     }
-    # Get gene-wise dispersion estimates
-    # var = mean + alpha * mean^2, alpha is dispersion
-    # DESeq2 dispersion is 1/size used dnbinom (used in cost function
-    # for evaluation of likelihood)
-    dds_dispersions <- 1/dispersions(ddsDESeqObject) 
-    names(dds_dispersions) <- rownames(ddsDESeqObject)
-    # DESeq results for comparison
-    dds_resultsTable <- results(ddsDESeqObject)
   } else {
     # With control data:
     
@@ -97,15 +89,6 @@ runDESeq2 <- function(dfAnnotationProc,
         full = ~Condition + Condition:TimeCateg,
         reduced = ~ TimeCateg,
         parallel=TRUE)
-      
-      # Get gene-wise dispersion estimates
-      # var = mean + alpha * mean^2, alpha is dispersion
-      # DESeq2 dispersion is 1/size used dnbinom (used in cost function
-      # for evaluation of likelihood)
-      dds_dispersions <- 1/dispersions(ddsDESeqObject)
-      names(dds_dispersions) <- rownames(ddsDESeqObject)
-      # DESeq results for comparison
-      dds_resultsTable <- results(ddsDESeqObject)
       
     } else if(strMode=="longitudinal"){
       # Note: Have to distinguish model formula between
@@ -147,17 +130,20 @@ runDESeq2 <- function(dfAnnotationProc,
           reduced = ~Condition + Condition:LongSerNested + TimeCateg,
           parallel=TRUE)
       }
-      # Get gene-wise dispersion estimates
-      # var = mean + alpha * mean^2, alpha is dispersion
-      # DESeq2 dispersion is 1/size used dnbinom (used in cost function
-      # for evaluation of likelihood)
-      dds_dispersions <- 1/dispersions(ddsDESeqObject)
-      names(dds_dispersions) <- rownames(ddsDESeqObject)
       
     } else {
       stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
     }
   }
+  # Get gene-wise dispersion estimates
+  # var = mean + alpha * mean^2, alpha is dispersion
+  # DESeq2 dispersion is 1/size used dnbinom (used in cost function
+  # for evaluation of likelihood)
+  vecDispersions <- 1/dispersions(ddsDESeqObject)
+  names(vecDispersions) <- rownames(ddsDESeqObject)
+  # DESeq results for comparison
+  ddsResults <- results(ddsDESeqObject)
   
-  return(list(dds_dispersions,dds_resultsTable))
+  return(list(vecDispersions=vecDispersions,
+    ddsResults=ddsResults))
 }
