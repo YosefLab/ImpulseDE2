@@ -8,7 +8,8 @@
 #' expression. This methods allows the user to explore visually how 
 #' ImpulseDE2 output differs from similar methods.
 #' 
-#' @seealso Called separately by user.
+#' @seealso Auxillary method not called during ImpulseDE2 running.
+#' Called separately by user.
 #' 
 #' @return NULL
 #' @export
