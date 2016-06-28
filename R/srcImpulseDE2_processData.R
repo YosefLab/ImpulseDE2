@@ -147,6 +147,7 @@ processData <- function(dfAnnotation=NULL,
     }
     if(strMode=="singlecell"){
       lsAllowedSCModes <- c("clustered", "continuous")
+      checkNull(strSCMode,"strSCMode")
       if(!(strSCMode %in% lsAllowedSCModes)){
         stop(paste0( "ERROR: ImpulseDE2 mode given as input, strSCMode=", strSCMode,
           ", is not recognised. Chose from {", paste0(lsAllowedSCModes, collapse=","), "}." ))
@@ -515,6 +516,7 @@ processData <- function(dfAnnotation=NULL,
     strControlName=strControlName,
     strCaseName=strCaseName,
     strMode=strMode,
+    strSCMode=strSCMode,
     lsPseudoDE=lsPseudoDE,
     vecDispersionsExternal=vecDispersionsExternal,
     vecSizeFactorsExternal=vecSizeFactorsExternal,
