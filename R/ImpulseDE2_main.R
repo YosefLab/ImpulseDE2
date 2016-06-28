@@ -362,9 +362,11 @@ runImpulseDE2 <- function(matCountData=NULL,
     ### 6. Plot differentially expressed genes
     if(boolPlotting){
       print("6. Plot differentially expressed genes")
+      if(length(vecDEGenes) > 500){vecDEGenesPlot <- vecDEGenes[1:500]
+      } else {vecDEGenesPlot <- vecDEGenes}
       tm_plotDEGenes <- system.time({
         plotDEGenes(
-          vecGeneIDs=vecDEGenes,
+          vecGeneIDs=vecDEGenesPlot,
           matCountDataProc=matCountDataProc,
           matTranslationFactors=matTranslationFactors,
           matSizeFactors=matSizeFactors,
