@@ -367,6 +367,21 @@ optimiseImpulseModelFit <- function(vecParamGuess,
       save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
       stop(strErrorMsg)
     })
+    # Correct likelihood: Ignore smooting penalty from now on 
+    # for comparison against null model.
+    if(!is.null(scaWindowRadius)){
+      vecFit["value"] <- evalLogLikImpulseSC_comp(
+        vecTheta=vecFit[1:6],
+        vecX=vecTimepoints,
+        vecY=vecCounts, 
+        scaDispEst=scaDispersionEstimate,
+        vecDropoutRateEst=vecDropoutRate,
+        vecNormConst=vecNormConst,
+        vecindTimepointAssign=vecindTimepointAssign,
+        vecboolNotZeroObserved=vecboolNotZeroObserved, 
+        vecboolZero=vecboolZero,
+        scaWindowRadius=NULL )
+    }
   } else {
     stop(paste0("ERROR: Unrecognised strMode in fitImpulse(): ",strMode))
   }
@@ -485,7 +500,8 @@ fitImpulse_gene <- function(vecCounts,
     vecTimepointAssign=vecTimepointAssign, 
     vecNormConst=vecNormConst,
     strMode=strMode,
-    strSCMode=strSCMode )
+    strSCMode=strSCMode,
+    scaWindowRadius=scaWindowRadius )
   vecParamGuessPeak <- lsParamGuesses$peak
   vecParamGuessValley <- lsParamGuesses$valley
   
