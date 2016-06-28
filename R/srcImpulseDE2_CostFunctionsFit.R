@@ -246,8 +246,8 @@ evalLogLikZINB <- function(vecY,
   # for taking log.
   #scaLogLikNonzeros <- sum( vecLogLikNonzeros[is.finite(vecLogLikNonzeros)]) +
   #    sum(!is.finite(vecLogLikNonzeros))*log(.Machine$double.eps)
-  scaLogLikNonzeros <- sum( vecLogLikNonzeros[vecLogLik > log(.Machine$double.eps)] ) +
-    sum(vecLogLik <= log(.Machine$double.eps))*log(.Machine$double.eps)
+  scaLogLikNonzeros <- sum( vecLogLikNonzeros[scaLogLikNonzeros > log(.Machine$double.eps)] ) +
+    sum(scaLogLikNonzeros <= log(.Machine$double.eps))*log(.Machine$double.eps)
   # Compute likelihood of all data:
   scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
   # Maximise log likelihood: Return likelihood as value to optimisation routine
