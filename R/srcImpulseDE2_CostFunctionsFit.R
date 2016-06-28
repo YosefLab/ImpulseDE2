@@ -218,19 +218,25 @@ evalLogLikZINB <- function(vecY,
   # machine precision.
   
   # Likelihood of zero counts:
+  #vecLikZeros <- (1-vecDropoutRateEst[vecboolZero])*
+  #  dnbinom(
+  #    vecY[vecboolZero], 
+  #    mu=vecMu[vecboolZero], 
+  #    size=scaDispEst, 
+  #    log=FALSE) +
+  #  vecDropoutRateEst[vecboolZero]
+  # Use closed form solution to negative binomial likelihood at zero here.
   vecLikZeros <- (1-vecDropoutRateEst[vecboolZero])*
-    dnbinom(
-      vecY[vecboolZero], 
-      mu=vecMu[vecboolZero], 
-      size=scaDispEst, 
-      log=FALSE) +
+    (scaDispEst/(scaDispEst + vecMu[vecboolZero]))^scaDispEst +
     vecDropoutRateEst[vecboolZero]
   # Replace zero likelihood observation with machine precision
   # for taking log.
-  scaLogLikZeros <- sum( log(vecLikZeros[vecLikZeros!=0]) +
-      sum(vecLikZeros==0)*log(.Machine$double.eps) )
+  scaLogLikZeros <- sum( log(vecLikZeros[vecLikZeros > .Machine$double.eps]) +
+      sum(vecLikZeros <= .Machine$double.eps)*log(.Machine$double.eps) )
+  #scaLogLikZeros <- sum( log(vecLikZeros[vecLikZeros!=0]) +
+  #    sum(vecLikZeros==0)*log(.Machine$double.eps) )
   # Likelihood of non-zero counts:
-  vecLikNonzeros <- log(1-vecDropoutRateEst[vecboolNotZeroObserved]) +
+  vecLogLikNonzeros <- log(1-vecDropoutRateEst[vecboolNotZeroObserved]) +
     dnbinom(
       vecY[vecboolNotZeroObserved], 
       mu=vecMu[vecboolNotZeroObserved], 
@@ -238,8 +244,10 @@ evalLogLikZINB <- function(vecY,
       log=TRUE)
   # Replace zero likelihood observation with machine precision
   # for taking log.
-  scaLogLikNonzeros <- sum( vecLikNonzeros[is.finite(vecLikNonzeros)]) +
-      sum(!is.finite(vecLikNonzeros))*log(.Machine$double.eps)
+  #scaLogLikNonzeros <- sum( vecLogLikNonzeros[is.finite(vecLogLikNonzeros)]) +
+  #    sum(!is.finite(vecLogLikNonzeros))*log(.Machine$double.eps)
+  scaLogLikNonzeros <- sum( vecLogLikNonzeros[vecLogLik > log(.Machine$double.eps)] ) +
+    sum(vecLogLik <= log(.Machine$double.eps))*log(.Machine$double.eps)
   # Compute likelihood of all data:
   scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
   # Maximise log likelihood: Return likelihood as value to optimisation routine
