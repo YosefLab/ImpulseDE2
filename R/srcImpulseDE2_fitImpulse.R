@@ -151,7 +151,6 @@ estimateImpulseParam <- function(vecTimepoints,
   vecDropoutRate=NULL,
   vecProbNB=NULL,
   strSCMode="clustered",
-  scaWindowRadius=NULL,
   vecTimepointAssign, 
   vecNormConst,
   strMode){
@@ -168,30 +167,31 @@ estimateImpulseParam <- function(vecTimepoints,
       } ))
       # Catch exception: sum(vecProbNB[vecTimepointAssign==tp])==0
       vecExpressionMeans[is.na(vecExpressionMeans)] <- 0
-      vecTimepointAssign <- vecTimepoints
     } else if(strSCMode=="continuous"){
       vecTimepointAssignSort <- sort(vecTimepointAssign, index.return=TRUE)
       vecCountsSort <- vecCounts[vecTimepointAssignSort$ix]
       vecProbNBSort <- vecProbNB[vecTimepointAssignSort$ix]
-      scaCellsPerClus <- round(length(vecCountsSort)/scaWindowRadius)
-      vecExpressionMeans <- array(NA, scaWindowRadius)
-      vecTimepoints <- array(NA, scaWindowRadius)
+      scaWindows <- 10
+      scaCellsPerClus <- round(length(vecCountsSort)/scaWindows)
+      vecExpressionMeans <- array(NA, scaWindows)
+      vecTimepoints <- array(NA, scaWindows)
       scaidxNew <- 0
-      for(k in seq(1,scaWindowRadius)){
+      for(k in seq(1,scaWindows)){
         # Define clusters as groups of cells of uniform size
         scaidxLast <- scaidxNew + 1
         scaidxNew <- scaidxLast + scaCellsPerClus
         # Pick up remaining cells in last cluster
-        if(k==scaWindowRadius){scaidxNew=length(vecCountsSort)}
+        if(k==scaWindows){scaidxNew=length(vecCountsSort)}
         vecidxK <- seq(scaidxLast, scaidxNew)
-        # Infer negative binomial mean parameter: weighted mean
-        vecExpressionMeans[k] <- sum((vecCountsSort/vecNormConst*vecProbNBSort)[vecidxK], na.rm=TRUE)/
+        # Infer negative binomial mean parameter
+        # Mean estimation here has to be replaced if size factors
+        # are used.
+        vecExpressionMeans[k] <- sum((vecCountsSort*vecProbNBSort)[vecidxK], na.rm=TRUE)/
           sum(vecProbNBSort[vecidxK], na.rm=TRUE)
         vecTimepoints[k] <- mean((vecTimepointAssignSort$x)[vecidxK], na.rm=TRUE)
       }
       # Catch exception: sum(vecProbNB[vecTimepointAssign==tp])==0
       vecExpressionMeans[is.na(vecExpressionMeans)] <- 0
-      vecTimepointAssign <- vecTimepoints
     } else {
       stop(paste0("ERROR: Unrecognised strSCMode in fitImpulse(): ",strSCMode))
     }
@@ -500,8 +500,7 @@ fitImpulse_gene <- function(vecCounts,
     vecTimepointAssign=vecTimepointAssign, 
     vecNormConst=vecNormConst,
     strMode=strMode,
-    strSCMode=strSCMode,
-    scaWindowRadius=scaWindowRadius )
+    strSCMode=strSCMode )
   vecParamGuessPeak <- lsParamGuesses$peak
   vecParamGuessValley <- lsParamGuesses$valley
   
