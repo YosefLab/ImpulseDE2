@@ -121,9 +121,9 @@ compareDEMethods <- function(matQval,
   # Note cannot plot genes which are NA in ImpulseDE2
   vecboolImpulseFitted <- !is.na(as.numeric(matQval[,"ImpulseDE2"]))
   vecboolRefBeatsQ <- as.numeric(matQval[,strMethod2]) < Q & !is.na(as.numeric(matQval[,strMethod2]))
-  vecBoolRefBeatsImpulse <- as.numeric(matQval[,strMethod1]) >= Qdelta*as.numeric(matQval[,strMethod2]) | (is.na(as.numeric(matQval[,strMethod1])) & !is.na(as.numeric(matQval[,strMethod2])))
+  vecBoolRefBeatsImpulse <- as.numeric(matQval[,strMethod1]) > Qdelta*as.numeric(matQval[,strMethod2]) | (is.na(as.numeric(matQval[,strMethod1])) & !is.na(as.numeric(matQval[,strMethod2])))
   vecboolImpulseBeatsQ <- as.numeric(matQval[,strMethod1]) < Q & !is.na(as.numeric(matQval[,strMethod1]))
-  vecboolImpulseBeatsRef <- as.numeric(matQval[,strMethod2]) >= Qdelta*as.numeric(matQval[,strMethod1]) | (!is.na(as.numeric(matQval[,strMethod1])) & is.na(as.numeric(matQval[,strMethod2])))
+  vecboolImpulseBeatsRef <- as.numeric(matQval[,strMethod2]) > Qdelta*as.numeric(matQval[,strMethod1]) | (!is.na(as.numeric(matQval[,strMethod1])) & is.na(as.numeric(matQval[,strMethod2])))
   
   vecRefOnly <- as.vector(matQval[vecboolRefBeatsQ & vecBoolRefBeatsImpulse & vecboolImpulseFitted,"Gene"])
   vecRefOnlyPval <- as.numeric(matQval[vecRefOnly,strMethod2])

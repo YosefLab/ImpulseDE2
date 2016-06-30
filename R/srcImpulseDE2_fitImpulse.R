@@ -207,6 +207,7 @@ estimateImpulseParam <- function(vecTimepoints,
   # Gradients between neighbouring points
   vecGradients <- unlist( lapply(c(1:(nTimepts-1)),function(x){
     (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepoints[x+1]-vecTimepoints[x])}) )
+  vecGradients[is.na(vecGradients) | !is.finite(vecGradients)] <- 0
   
   # Compute peak initialisation
   # Beta: Has to be negative, Theta1: Low, Theta2: High, Theta3: Low
