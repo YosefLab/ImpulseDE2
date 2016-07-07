@@ -14,12 +14,12 @@
 #' which represent size factors (and translation factors),
 #' for evaluation of the likelihood on the data. 
 #' 
-#' @aliases evalLogLikNBMean_comp
+#' @aliases evalLogLikMuNB_comp
 #' 
 #' @seealso
 #' 
 #' @param scaTheta (vector number of parameters [6]) 
-#'    Negative binomial mean parameter.
+#'    Negative binomial mean parameter estimate (log).
 #' @param vecCounts (count vector samples) 
 #'    Observed expression values for given gene.
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
@@ -33,18 +33,23 @@
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
 
-evalLogLikNBMean <- function(scaTheta,
+evalLogLikMuNB <- function(scaTheta,
   vecCounts,
   scaDispEst, 
   vecNormConst,
   vecboolObserved){
   
-  scaNBMean <- exp(scaTheta)
+  scaMu <- exp(scaTheta)
+  
+  # Prevent means estimate from shrinking to zero
+  # to avoid numerical errors:
+  if(scaMu < .Machine$double.eps){ scaMu <- .Machine$double.eps }
+  
   # Compute log likelihood under impulse model by
   # adding log likelihood of model at each timepoint.
   scaLogLik <- sum(dnbinom(
     vecCounts[vecboolObserved], 
-    mu=scaNBMean*vecNormConst[vecboolObserved], 
+    mu=scaMu*vecNormConst[vecboolObserved], 
     size=scaDispEst, 
     log=TRUE))
   
@@ -58,7 +63,8 @@ evalLogLikNBMean <- function(scaTheta,
 #' Note that the closed form solution of the maximum likelihood 
 #' estimator of the negative binomial mean parameter 
 #' (the weighted average) only holds if all normalisation
-#' factors are 1. Catches numerical errors.
+#' factors are 1. Catches numerical errors. Fit in log space
+#' to guarantee positive mean paramter.
 #' 
 #' @seealso Called by \code{computeTranslationFactors()}
 #' and \code{computeLogLikNull()}.
@@ -77,31 +83,40 @@ evalLogLikNBMean <- function(scaTheta,
 #'    negative binomial mean parameter.
 #' @export
 
-fitNBMean <- function(vecCounts,
+fitMuNB <- function(vecCounts,
   scaDispEst,
   vecNormConst){
   
-  scaMu <- tryCatch({
-    exp(unlist(optimise(
-      evalLogLikNBMean_comp,
-      vecCounts=vecCounts,
-      scaDispEst=scaDispEst, 
-      vecNormConst=vecNormConst,
-      vecboolObserved=!is.na(vecCounts),
-      lower = log(.Machine$double.eps),
-      upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
-      maximum = TRUE)["maximum"]))
-  }, error=function(strErrorMsg){
-    print(paste0("ERROR: Fitting negative binomial mean parameter: fitNBMean().",
-      " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
-    print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
-    print(paste0("scaDispEst ", paste(scaDispEst,sep=" ")))
-    print(paste0("vecNormConst ", paste(vecNormConst,sep=" ")))
-    lsErrorCausingGene <- list(vecCounts, scaDispEst, vecNormConst)
-    names(lsErrorCausingGene) <- c("vecCounts", "scaDispEst", "vecNormConst")
-    save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
-    stop(strErrorMsg)
-  })
+  if(all(vecNormConst==1)){
+    # Closed form maximum likelihood estimator
+    scaMu <- mean(vecCounts, na.rm=TRUE)
+  } else {
+    # Numerical maximum likelihood estimator
+    scaMu <- tryCatch({
+      exp(unlist(optimise(
+        evalLogLikMuNB_comp,
+        vecCounts=vecCounts,
+        scaDispEst=scaDispEst, 
+        vecNormConst=vecNormConst,
+        vecboolObserved=!is.na(vecCounts),
+        lower = log(.Machine$double.eps),
+        upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
+        maximum = TRUE)["maximum"]))
+    }, error=function(strErrorMsg){
+      print(paste0("ERROR: Fitting negative binomial mean parameter: fitMuNB().",
+        " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
+      print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
+      print(paste0("scaDispEst ", paste(scaDispEst,sep=" ")))
+      print(paste0("vecNormConst ", paste(vecNormConst,sep=" ")))
+      lsErrorCausingGene <- list(vecCounts, scaDispEst, vecNormConst)
+      names(lsErrorCausingGene) <- c("vecCounts", "scaDispEst", "vecNormConst")
+      save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
+      stop(strErrorMsg)
+    })
+  }
+  
+  # Catch boundary of likelihood domain on mu space
+  if(scaMu < .Machine$double.eps){scaMu <- .Machine$double.eps}
   
   return(scaMu)
 }
@@ -148,7 +163,7 @@ evalLogLikImpulseBatch <- function(vecTheta,
   vecNormConst, 
   vecindTimepointAssign, 
   vecboolObserved){
-
+  
   # Compute normalised impulse function value: 
   # Mean of negative binomial density at each time point,
   # scaled by normalisation factor of each sample.
@@ -207,7 +222,7 @@ evalLogLikZINB <- function(vecY,
   vecDropoutRateEst, 
   vecboolNotZeroObserved, 
   vecboolZero){  
-
+  
   # Note on handling very low probabilities: vecLikZeros
   # typically does not have zero elements as it has the 
   # the summand drop-out rate. Also the log cannot be
@@ -218,13 +233,6 @@ evalLogLikZINB <- function(vecY,
   # machine precision.
   
   # Likelihood of zero counts:
-  #vecLikZeros <- (1-vecDropoutRateEst[vecboolZero])*
-  #  dnbinom(
-  #    vecY[vecboolZero], 
-  #    mu=vecMu[vecboolZero], 
-  #    size=scaDispEst, 
-  #    log=FALSE) +
-  #  vecDropoutRateEst[vecboolZero]
   # Use closed form solution to negative binomial likelihood at zero here.
   vecLikZeros <- (1-vecDropoutRateEst[vecboolZero])*
     (scaDispEst/(scaDispEst + vecMu[vecboolZero]))^scaDispEst +
@@ -233,8 +241,6 @@ evalLogLikZINB <- function(vecY,
   # for taking log.
   scaLogLikZeros <- sum( log(vecLikZeros[vecLikZeros > .Machine$double.eps]) +
       sum(vecLikZeros <= .Machine$double.eps)*log(.Machine$double.eps) )
-  #scaLogLikZeros <- sum( log(vecLikZeros[vecLikZeros!=0]) +
-  #    sum(vecLikZeros==0)*log(.Machine$double.eps) )
   # Likelihood of non-zero counts:
   vecLogLikNonzeros <- log(1-vecDropoutRateEst[vecboolNotZeroObserved]) +
     dnbinom(
@@ -244,14 +250,146 @@ evalLogLikZINB <- function(vecY,
       log=TRUE)
   # Replace zero likelihood observation with machine precision
   # for taking log.
-  #scaLogLikNonzeros <- sum( vecLogLikNonzeros[is.finite(vecLogLikNonzeros)]) +
-  #    sum(!is.finite(vecLogLikNonzeros))*log(.Machine$double.eps)
   scaLogLikNonzeros <- sum( vecLogLikNonzeros[vecLogLikNonzeros > log(.Machine$double.eps)] ) +
     sum(vecLogLikNonzeros <= log(.Machine$double.eps))*log(.Machine$double.eps)
   # Compute likelihood of all data:
   scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)
+}
+
+#' Cost function zero-inflated negative binomial model for mean fitting
+#' 
+#' Log likelihood of zero inflated  negative binomial model. 
+#' This function is designed to allow numerical optimisation
+#' of negative binomial mean paramater on single gene given
+#' the drop-out rate and negative binomial dispersion parameter. The
+#' mean parameter is fit in log space and is therefore fit
+#' as a positive scalar. The cost function is insensitive to the
+#' dispersion factor shrinking beyond a numerical threshold to zero
+#' to avoid shrinkage of the dispersion factor to zero which 
+#' may cause numerical errors. Accordingly, growth above a numerical
+#' threshold to infinity (this correponds to Poissonian noise) is 
+#' also guarded against.
+#' 
+#' @seealso Called by \code{fitZINB}.
+#' 
+#' @param scaTheta: (scalar) Log of mean parameter estimate.
+#' @param vecY: (vector number of cells) Observed expression values 
+#'    of gene in cells in cluster.
+#' @param scaDisp: (vector number of cells) Negative binomial
+#'    dispersion parameter estimate.
+#' @param vecSizeFactors: (numeric vector number of cells) 
+#'    Model scaling factors for each observation which take
+#'    sequencing depth into account (size factors). One size
+#'    factor per cell.
+#' @param vecDropoutRateEst: (vector number of cells) Dropout estimate of cell.
+#' @param vecboolObserved: (bool vector number of samples)
+#'    Whether sample is not NA (observed).
+#' @param vecboolZero: (bool vector number of samples)
+#'    Whether sample has zero count.
+#' 
+#' @return scaLogLik: (scalar) Value of cost function:
+#'    zero-inflated negative binomial likelihood.
+#' @export
+
+evalLogLikMuZINB <- function(scaTheta,
+  vecY,
+  scaDisp,
+  vecNormConst,
+  vecDropoutRateEst,
+  vecboolNotZeroObserved,
+  vecboolZero){ 
+  
+  # Log linker function to fit positive means
+  scaMu <- exp(scaTheta)
+  
+  # Prevent means estimate from shrinking to zero
+  # to avoid numerical errors:
+  if(scaMu < .Machine$double.eps){ scaMu <- .Machine$double.eps }
+  
+  scaLogLik <- evalLogLikZINB_comp( vecY=vecY,
+    vecMu=scaMu*vecNormConst,
+    vecDispEst=scaDisp, 
+    vecDropoutRateEst=vecDropoutRateEst,
+    vecboolNotZeroObserved=vecboolNotZeroObserved, 
+    vecboolZero=vecboolZero )
+  
+  # Maximise log likelihood: Return likelihood as value to optimisation routine
+  return(scaLogLik)
+}
+
+#' Cost function zero-inflated negative binomial model for mean fitting
+#' 
+#' Log likelihood of zero inflated  negative binomial model. 
+#' This function is designed to allow numerical optimisation
+#' of negative binomial mean paramater on single gene given
+#' the drop-out rate and negative binomial dispersion parameter. The
+#' mean parameter is fit in log space and is therefore fit
+#' as a positive scalar. The cost function is insensitive to the
+#' dispersion factor shrinking beyond a numerical threshold to zero
+#' to avoid shrinkage of the dispersion factor to zero which 
+#' may cause numerical errors. Accordingly, growth above a numerical
+#' threshold to infinity (this correponds to Poissonian noise) is 
+#' also guarded against.
+#' 
+#' @seealso Called by \code{computeLogLikNull}.
+#' 
+#' @param vecCounts: (vector number of cells) Observed expression values 
+#'    of gene in cells.
+#' @param scaDisp: (vector number of cells) Negative binomial
+#'    dispersion parameter estimate.
+#' @param vecNormConst: (numeric vector number of cells) 
+#'    Model scaling factors for each observation which take
+#'    sequencing depth into account (size factors). One size
+#'    factor per cell.
+#' @param vecDropoutRateEst: (vector number of cells) Dropout estimate of cell.
+#' 
+#' @return scaLogLik: (scalar) Value of cost function:
+#'    zero-inflated negative binomial likelihood.
+#' @export
+
+fitMuZINB <- function(vecCounts,
+  scaDisp,
+  vecNormConst,
+  vecDropoutRateEst,
+  vecProbNB){ 
+  
+  if(all(vecNormConst==1)){
+    # Closed form maximum likelihood estimator
+    scaMu <- sum(vecCounts*vecProbNB, na.rm=TRUE)/sum(vecProbNB, na.rm=TRUE)
+  } else {
+    # Numerical maximum likelihood estimator
+    scaMu <- tryCatch({
+      exp(unlist(optimise(
+        evalLogLikMuZINB_comp,
+        vecCounts=vecCounts,
+        scaDispEst=scaDispEst,
+        vecDropoutRateEst=vecDropoutRateEst,
+        vecNormConst=vecNormConst,
+        vecboolNotZeroObserved=!is.na(vecCounts) & vecCounts>0,
+        vecboolObserved=!is.na(vecCounts),
+        lower = log(.Machine$double.eps),
+        upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
+        maximum = TRUE)["maximum"]))
+    }, error=function(strErrorMsg){
+      print(paste0("ERROR: Fitting zero-inflated negative binomial mean parameter: fitMuZINB().",
+        " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
+      print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
+      print(paste0("scaDispEst ", paste(scaDispEst,collapse=" ")))
+      print(paste0("vecDropoutRateEst ", paste(vecDropoutRateEst,collapse=" ")))
+      print(paste0("vecNormConst ", paste(vecNormConst,collapse=" ")))
+      lsErrorCausingGene <- list(vecCounts, scaDispEst, vecDropoutRateEst, vecNormConst)
+      names(lsErrorCausingGene) <- c("vecCounts", "scaDispEst", "vecDropoutRateEst","vecNormConst")
+      save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
+      stop(strErrorMsg)
+    })
+  }
+  
+  # Catch boundary of likelihood domain on mu space
+  if(scaMu < .Machine$double.eps){scaMu <- .Machine$double.eps}
+  
+  return(scaMu)
 }
 
 #' Cost function impulse model fit - Single cell mode
@@ -303,7 +441,7 @@ evalLogLikImpulseSC <- function(vecTheta,
   vecboolNotZeroObserved, 
   vecboolZero,
   scaWindowRadius=NULL){  
-
+  
   # Generate negative binomial mean parameters from impulse model:
   # This links the parameters vecTheta which are changed in optimisation
   # to the cost function.

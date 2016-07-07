@@ -24,7 +24,7 @@ source("srcImpulseDE2_calcImpulse.R")
 calcImpulse_comp <- cmpfun(calcImpulse)
 source("srcImpulseDE2_CostFunctionsFit.R")
 # Compile functions
-evalLogLikNBMean_comp <- cmpfun(evalLogLikNBMean)
+evalLogLikMuNB_comp <- cmpfun(evalLogLikMuNB)
 evalLogLikImpulseBatch_comp <- cmpfun(evalLogLikImpulseBatch)
 evalLogLikZINB_comp <- cmpfun(evalLogLikZINB)
 evalLogLikImpulseSC_comp <- cmpfun(evalLogLikImpulseSC)
