@@ -63,7 +63,7 @@ computeLogLikNull <- function(vecCounts,
   vecboolNotZeroObserved=NULL,
   strMode,
   strSCMode=NULL,
-  scaWindowRadius=scaWindowRadius=NULL){
+  scaWindowRadius=NULL){
   
   vecMuLongitudinalSeries <- NULL
   
