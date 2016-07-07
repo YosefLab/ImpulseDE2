@@ -202,8 +202,8 @@ evalLogLikImpulseBatch <- function(vecTheta,
 #'
 #' @param vecY (count vector number of amples)
 #'    Observed expression values for  given gene.
-#' @param vecMu (vector number of samples) Negative binomial
-#'    mean parameter for each sample.
+#' @param vecMu (vector number of cell) Negative binomial
+#'    mean parameter for each cell.
 #' @param scaDispEst: (scalar) Negative binomial dispersion 
 #'    parameter for given gene.
 #' @param vecDropoutRateEst: (probability vector number of samples) 
@@ -310,7 +310,7 @@ evalLogLikMuZINB <- function(scaTheta,
   
   scaLogLik <- evalLogLikZINB_comp( vecY=vecY,
     vecMu=scaMu*vecNormConst,
-    vecDispEst=scaDisp, 
+    scaDispEst=scaDisp, 
     vecDropoutRateEst=vecDropoutRateEst,
     vecboolNotZeroObserved=vecboolNotZeroObserved, 
     vecboolZero=vecboolZero )
@@ -364,7 +364,7 @@ fitMuZINB <- function(vecCounts,
       exp(unlist(optimise(
         evalLogLikMuZINB_comp,
         vecCounts=vecCounts,
-        scaDispEst=scaDispEst,
+        scaDispEst=scaDisp,
         vecDropoutRateEst=vecDropoutRateEst,
         vecNormConst=vecNormConst,
         vecboolNotZeroObserved=!is.na(vecCounts) & vecCounts>0,
@@ -376,11 +376,11 @@ fitMuZINB <- function(vecCounts,
       print(paste0("ERROR: Fitting zero-inflated negative binomial mean parameter: fitMuZINB().",
         " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
       print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
-      print(paste0("scaDispEst ", paste(scaDispEst,collapse=" ")))
+      print(paste0("scaDisp ", paste(scaDisp,collapse=" ")))
       print(paste0("vecDropoutRateEst ", paste(vecDropoutRateEst,collapse=" ")))
       print(paste0("vecNormConst ", paste(vecNormConst,collapse=" ")))
-      lsErrorCausingGene <- list(vecCounts, scaDispEst, vecDropoutRateEst, vecNormConst)
-      names(lsErrorCausingGene) <- c("vecCounts", "scaDispEst", "vecDropoutRateEst","vecNormConst")
+      lsErrorCausingGene <- list(vecCounts, scaDisp, vecDropoutRateEst, vecNormConst)
+      names(lsErrorCausingGene) <- c("vecCounts", "scaDisp", "vecDropoutRateEst","vecNormConst")
       save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
       stop(strErrorMsg)
     })
