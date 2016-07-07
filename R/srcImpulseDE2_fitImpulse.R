@@ -671,7 +671,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("fitImpulse_gene",fitImpulse_gene, envir = my.env)
     assign("calcImpulse_comp", calcImpulse_comp, envir = my.env)
     assign("fitMuNB", fitMuNB, envir = my.env)
-    assign("evalLogLikMuNB_comp", evalLogLikNBMean_comp, envir = my.env)
+    assign("evalLogLikMuNB_comp", evalLogLikMuNB_comp, envir = my.env)
     assign("evalLogLikImpulseBatch_comp", evalLogLikImpulseBatch_comp, envir = my.env)
     assign("evalLogLikZINB_comp", evalLogLikZINB_comp, envir = my.env)
     assign("fitMuZINB", fitMuZINB, envir = my.env)
@@ -696,10 +696,12 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "MAXIT",
       "NPARAM",
       "calcImpulse_comp",
-      "fitNBMean",
-      "evalLogLikNBMean_comp",
+      "fitMuNB",
+      "evalLogLikMuNB_comp",
       "evalLogLikImpulseBatch_comp",
       "evalLogLikZINB_comp",
+      "fitMuZINB",
+      "evalLogLikMuZINB_comp",
       "evalLogLikImpulseSC_comp", 
       "fitImpulse_gene",
       "computeLogLikNull",
