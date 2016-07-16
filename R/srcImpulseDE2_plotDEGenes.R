@@ -60,7 +60,6 @@ plotDEGenes <- function(vecGeneIDs,
   matSizeFactors,
   dfAnnotationProc, 
   lsImpulseFits, 
-  matMuCluster=NULL,
   vecCentroids=NULL,
   vecClusterAssignments=NULL,
   dfImpulseResults, 
@@ -128,7 +127,6 @@ plotDEGenes <- function(vecGeneIDs,
     # Add pseudocounts for plotting convenience
     matCountDataProcNorm <- log(matCountDataProcNorm+1)/log(SCALOGBASE)
     matMuTimepoints <- log(matMuTimepoints+1)/log(SCALOGBASE)
-    if(!is.null(matMuCluster)){ matMuCluster <- log(matMuCluster+1)/log(SCALOGBASE) }
     strLogPlot <- paste0("log_",SCALOGBASE)
   } else {
     strLogPlot <- NULL

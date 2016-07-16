@@ -236,14 +236,14 @@ processData <- function(dfAnnotation=NULL,
       if(strSCMode=="clustered"){
         ### c) Inferred mean parameter of negative binomial component
         ### component in mixture model.
-        checkNull(lsPseudoDE$matMuCluster,"lsPseudoDE$matMuCluster")
-        checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matMuCluster),
-          "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matMuCluster]")
-        checkNumeric(lsPseudoDE$matMuCluster, "lsPseudoDE$matMuCluster")
-        if(any(lsPseudoDE$matMuCluster <= 0)){
-          stop(paste0("ERROR: Some elements of lsPseudoDE$matMuCluster are <=0",
-            " which cannot be the case for the mean parameter of a negative binomial distribution."))
-        }
+        #checkNull(lsPseudoDE$matMuCluster,"lsPseudoDE$matMuCluster")
+        #checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matMuCluster),
+        #  "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matMuCluster]")
+        #checkNumeric(lsPseudoDE$matMuCluster, "lsPseudoDE$matMuCluster")
+        #if(any(lsPseudoDE$matMuCluster <= 0)){
+        #  stop(paste0("ERROR: Some elements of lsPseudoDE$matMuCluster are <=0",
+        #    " which cannot be the case for the mean parameter of a negative binomial distribution."))
+        #}
         
         ### d) Cluster index of each cell
         checkNull(lsPseudoDE$vecClusterAssignments,"lsPseudoDE$vecClusterAssignments")
@@ -253,12 +253,12 @@ processData <- function(dfAnnotation=NULL,
           stop(paste0("ERROR: lsPseudoDE$vecClusterAssignments must contain integers from 1 to (number of clusters)",
             " as indeces."))
         }
-        if(length(unique(lsPseudoDE$vecClusterAssignments)) != dim(lsPseudoDE$matMuCluster)[2]){
-          stop(paste0("ERROR: The number of clusters indexed in lsPseudoDE$vecClusterAssignments (",
-            length(unique(lsPseudoDE$vecClusterAssignments)),
-            ") differs from the number of clusters in lsPseudoDE$matMuCluster (",
-            dim(lsPseudoDE$matMuCluster)[2], ")."))
-        }
+        #if(length(unique(lsPseudoDE$vecClusterAssignments)) != dim(lsPseudoDE$matMuCluster)[2]){
+        #  stop(paste0("ERROR: The number of clusters indexed in lsPseudoDE$vecClusterAssignments (",
+        #    length(unique(lsPseudoDE$vecClusterAssignments)),
+        #    ") differs from the number of clusters in lsPseudoDE$matMuCluster (",
+        #    dim(lsPseudoDE$matMuCluster)[2], ")."))
+        #}
       }
     }
     
@@ -554,19 +554,16 @@ processData <- function(dfAnnotation=NULL,
   if(strMode=="singlecell"){
     matProbNB <- lsPseudoDE$matProbNB
     matDropout <- lsPseudoDE$matDropout
-    matMuCluster <- lsPseudoDE$matMuCluster
     vecClusterAssignments <- lsPseudoDE$vecClusterAssignments
     vecCentroids <- lsPseudoDE$vecCentroids
     if(!is.null(scaSmallRun)){
       scaNRows <- min(scaSmallRun,dim(matCountDataProc)[1])
       matProbNB <- matProbNB[1:scaNRows,]
       matDropout <- matDropout[1:scaNRows,]
-      matMuCluster <- matMuCluster[1:scaNRows,]
     }
   } else {
     matProbNB <- NULL
     matDropout <- NULL
-    matMuCluster <- NULL
     vecClusterAssignments <- NULL
     vecCentroids <- NULL
   }
@@ -576,15 +573,13 @@ processData <- function(dfAnnotation=NULL,
     dfAnnotationProc,
     matProbNB, 
     matDropout, 
-    matMuCluster,
     vecClusterAssignments,
     vecCentroids)
   names(lsProcessedData) <- c("matCountDataProc",
     "matCountDataProcFull",
     "dfAnnotationProc",
     "matProbNB", 
-    "matDropout", 
-    "matMuCluster",
+    "matDropout",
     "vecClusterAssignments",
     "vecCentroids")
   return( lsProcessedData )

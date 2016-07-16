@@ -250,7 +250,6 @@ runImpulseDE2 <- function(matCountData=NULL,
     dfAnnotationProc <- lsProcessedData$dfAnnotationProc
     matProbNB <- lsProcessedData$matProbNB
     matDropoutRate <- lsProcessedData$matDropout
-    matMuCluster <- lsProcessedData$matMuCluster
     vecClusterAssignments <- lsProcessedData$vecClusterAssignments
     vecCentroids <- lsProcessedData$vecCentroids
     
@@ -373,7 +372,6 @@ runImpulseDE2 <- function(matCountData=NULL,
           matSizeFactors=matSizeFactors,
           dfAnnotationProc=dfAnnotationProc, 
           lsImpulseFits=lsImpulseFits,
-          matMuCluster=matMuCluster,
           vecCentroids=vecCentroids,
           vecClusterAssignments=vecClusterAssignments,
           dfImpulseResults=dfImpulseResults,
