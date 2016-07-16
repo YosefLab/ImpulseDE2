@@ -16,6 +16,7 @@ library(BiocParallel)
 
 # Source functions in .R files from same directory as this function.
 setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/R")
+#setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
 source("srcImpulseDE2_processData.R")
 source("srcImpulseDE2_computeNormConst.R")
 source("srcImpulseDE2_runDESeq2.R")
