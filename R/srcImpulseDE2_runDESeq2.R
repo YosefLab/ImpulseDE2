@@ -47,6 +47,8 @@ runDESeq2 <- function(dfAnnotationProc,
   # Catch specific scenarios in which DESeq2 p-values cannot
   # be generated automatically:
   boolDESeq2PvalValid <- TRUE
+  dds <- NULL
+  ddsDESeqObject <- NULL
   
   if(is.null(strControlName)){
     # Without control data:
@@ -85,16 +87,19 @@ runDESeq2 <- function(dfAnnotationProc,
           " Run DESeq2 externally if you wish to have p-values as reference."))
         print("Read srcImpulseDE2_runDESeq2.R for details.")
         print(paste0("WARNING: DESeq2 dispersions may be inaccurate."))
-        boolDESeq2PvalValid <- FALSE
-        # Create DESeq2 data object
-        dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
-          colData = dfAnnotationProc,
-          design = ~ TimeCateg) )
-        # Run DESeq2
-        ddsDESeqObject <- DESeq(dds, test = "LRT", 
-          full = ~ TimeCateg, 
-          reduced = ~ 1,
-          parallel=TRUE)
+      }, finally={
+        if(is.null(dds)){
+          boolDESeq2PvalValid <- FALSE
+          # Create DESeq2 data object
+          dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+            colData = dfAnnotationProc,
+            design = ~ TimeCateg) )
+          # Run DESeq2
+          ddsDESeqObject <- DESeq(dds, test = "LRT", 
+            full = ~ TimeCateg, 
+            reduced = ~ 1,
+            parallel=TRUE)
+        }
       })
       
     } else {
@@ -169,15 +174,18 @@ runDESeq2 <- function(dfAnnotationProc,
           print(paste0("WARNING: DESeq2 p-values differential expression cannot be generated.",
             " Run DESeq2 externally if you wish to have p-values as reference."))
           print("Read srcImpulseDE2_runDESeq2.R for details.")
-          boolDESeq2PvalValid <- FALSE
-          dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
-            colData = dfAnnotationProc,
-            design = ~Condition + Condition:LongSerNested + TimeCateg) )
-          # Run DESeq2
-          ddsDESeqObject <- DESeq(dds, test = "LRT", 
-            full = ~Condition + Condition:LongSerNested + TimeCateg,
-            reduced = ~1,
-            parallel=TRUE)
+        }, finally={
+          if(is.null(dds)){
+            boolDESeq2PvalValid <- FALSE
+            dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+              colData = dfAnnotationProc,
+              design = ~Condition + Condition:LongSerNested + TimeCateg) )
+            # Run DESeq2
+            ddsDESeqObject <- DESeq(dds, test = "LRT", 
+              full = ~Condition + Condition:LongSerNested + TimeCateg,
+              reduced = ~1,
+              parallel=TRUE)
+          }
         })
       }
       
