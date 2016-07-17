@@ -44,6 +44,10 @@ runDESeq2 <- function(dfAnnotationProc,
   # Set number of processes for parallelisation
   register(MulticoreParam(nProc))
   
+  # Catch specific scenarios in which DESeq2 p-values cannot
+  # be generated automatically:
+  boolDESeq2PvalValid <- TRUE
+  
   if(is.null(strControlName)){
     # Without control data:
     # The covariate LongitudinalSeries, indicating the time series
@@ -64,14 +68,34 @@ runDESeq2 <- function(dfAnnotationProc,
         parallel=TRUE)
       
     } else if(strMode=="longitudinal"){
-      # Create DESeq2 data object
-      dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
-        colData = dfAnnotationProc,
-        design = ~ TimeCateg + LongitudinalSeries) )
-      # Run DESeq2
-      ddsDESeqObject <- DESeq(dds, test = "LRT", 
-        full = ~ TimeCateg + LongitudinalSeries, reduced = ~ LongitudinalSeries,
-        parallel=TRUE)
+      # Catch case in which each longitudinal series has unique time points.
+      tryCatch({
+        # Create DESeq2 data object
+        dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+          colData = dfAnnotationProc,
+          design = ~ TimeCateg + LongitudinalSeries) )
+        # Run DESeq2
+        ddsDESeqObject <- DESeq(dds, test = "LRT", 
+          full = ~ TimeCateg + LongitudinalSeries, 
+          reduced = ~ LongitudinalSeries,
+          parallel=TRUE)
+      }, error=function(strErrorMsg){
+        print(strErrorMsg)
+        print(paste0("WARNING: DESeq2 p-values differential expression cannot be generated.",
+          " Run DESeq2 externally if you wish to have p-values as reference."))
+        print("Read srcImpulseDE2_runDESeq2.R for details.")
+        print(paste0("WARNING: DESeq2 dispersions may be inaccurate."))
+        boolDESeq2PvalValid <- FALSE
+        # Create DESeq2 data object
+        dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+          colData = dfAnnotationProc,
+          design = ~ TimeCateg) )
+        # Run DESeq2
+        ddsDESeqObject <- DESeq(dds, test = "LRT", 
+          full = ~ TimeCateg, 
+          reduced = ~ 1,
+          parallel=TRUE)
+      })
       
     } else {
       stop(paste0("ERROR: Unrecognised strMode in runDESeq2(): ",strMode))
@@ -131,21 +155,7 @@ runDESeq2 <- function(dfAnnotationProc,
         # be estimated with DESeq2 but the p-values do not probe differences between
         # case and control time course.
         # Test whether any time point is unique to a condition:
-        if(!all(unique(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Time) %in%
-            unique(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Time)) |
-            !all(unique(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Time) %in%
-            unique(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Time)) ){
-          print(paste0("WARNING: Time points differ between case and control condition and DESeq2 p-values for",
-            " differential expression cannot be generated."))
-          dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
-            colData = dfAnnotationProc,
-            design = ~Condition + Condition:LongSerNested + TimeCateg) )
-          # Run DESeq2
-          ddsDESeqObject <- DESeq(dds, test = "LRT", 
-            full = ~Condition + Condition:LongSerNested + TimeCateg,
-            reduced = ~Condition + Condition:LongSerNested + TimeCateg,
-            parallel=TRUE)
-        } else {        
+        tryCatch({
           dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
             colData = dfAnnotationProc,
             design = ~Condition + Condition:LongSerNested + Condition:TimeCateg) )
@@ -154,7 +164,21 @@ runDESeq2 <- function(dfAnnotationProc,
             full = ~Condition + Condition:LongSerNested + Condition:TimeCateg,
             reduced = ~Condition + Condition:LongSerNested + TimeCateg,
             parallel=TRUE)
-        }
+        }, error=function(strErrorMsg){
+          print(strErrorMsg)
+          print(paste0("WARNING: DESeq2 p-values differential expression cannot be generated.",
+            " Run DESeq2 externally if you wish to have p-values as reference."))
+          print("Read srcImpulseDE2_runDESeq2.R for details.")
+          boolDESeq2PvalValid <- FALSE
+          dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+            colData = dfAnnotationProc,
+            design = ~Condition + Condition:LongSerNested + TimeCateg) )
+          # Run DESeq2
+          ddsDESeqObject <- DESeq(dds, test = "LRT", 
+            full = ~Condition + Condition:LongSerNested + TimeCateg,
+            reduced = ~1,
+            parallel=TRUE)
+        })
       }
       
     } else {
@@ -169,6 +193,10 @@ runDESeq2 <- function(dfAnnotationProc,
   names(vecDispersions) <- rownames(ddsDESeqObject)
   # DESeq results for comparison
   ddsResults <- results(ddsDESeqObject)
+  if(boolDESeq2PvalValid){
+    ddsResults$pvalue <- NA
+    ddsResults$padj <- NA
+  }
   
   return(list(vecDispersions=vecDispersions,
     ddsResults=ddsResults))
