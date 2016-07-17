@@ -121,14 +121,40 @@ runDESeq2 <- function(dfAnnotationProc,
       } else {
         # Create DESeq2 data object: Need interaction between 
         # Condition and LongSerNested if each condition has multiple series.
-        dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
-          colData = dfAnnotationProc,
-          design = ~Condition + Condition:LongSerNested + Condition:TimeCateg) )
-        # Run DESeq2
-        ddsDESeqObject <- DESeq(dds, test = "LRT", 
-          full = ~Condition + Condition:LongSerNested + Condition:TimeCateg,
-          reduced = ~Condition + Condition:LongSerNested + TimeCateg,
-          parallel=TRUE)
+        print("Using nested longitudinal series to avoid full rank error.")
+        
+        # Catch case in which longitudinal series have unique time points,
+        # this occurs if samples come from very different time points. In this
+        # case, case-control comparison cannot be properly performed with DESeq2
+        # as time points were not observed both in case and control and have to 
+        # modelled separately in any case. In this case dispersions can still
+        # be estimated with DESeq2 but the p-values do not probe differences between
+        # case and control time course.
+        # Test whether any time point is unique to a condition:
+        if(!all(unique(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Time) %in%
+            unique(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Time)) |
+            !all(unique(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Time) %in%
+            unique(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Time)) ){
+          print(paste0("WARNING: Time points differ between case and control condition and DESeq2 p-values for",
+            " differential expression cannot be generated."))
+          dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+            colData = dfAnnotationProc,
+            design = ~Condition + Condition:LongSerNested + TimeCateg) )
+          # Run DESeq2
+          ddsDESeqObject <- DESeq(dds, test = "LRT", 
+            full = ~Condition + Condition:LongSerNested + TimeCateg,
+            reduced = ~Condition + Condition:LongSerNested + TimeCateg,
+            parallel=TRUE)
+        } else {        
+          dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+            colData = dfAnnotationProc,
+            design = ~Condition + Condition:LongSerNested + Condition:TimeCateg) )
+          # Run DESeq2
+          ddsDESeqObject <- DESeq(dds, test = "LRT", 
+            full = ~Condition + Condition:LongSerNested + Condition:TimeCateg,
+            reduced = ~Condition + Condition:LongSerNested + TimeCateg,
+            parallel=TRUE)
+        }
       }
       
     } else {
