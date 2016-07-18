@@ -204,8 +204,8 @@ evalLogLikImpulseBatch <- function(vecTheta,
 #'    Observed expression values for  given gene.
 #' @param vecMu (vector number of cell) Negative binomial
 #'    mean parameter for each cell.
-#' @param scaDispEst: (scalar) Negative binomial dispersion 
-#'    parameter for given gene.
+#' @param vecDispEst: (numerical vector number of samples) 
+#'    Negative binomial dispersion parameter estimates for given gene.
 #' @param vecDropoutRateEst: (probability vector number of samples) 
 #'    Dropout rate estimate for each cell for given gene.
 #' @param vecboolNotZeroObserved: (bool vector number of samples)
@@ -218,7 +218,7 @@ evalLogLikImpulseBatch <- function(vecTheta,
 
 evalLogLikZINB <- function(vecY,
   vecMu,
-  scaDispEst, 
+  vecDispEst, 
   vecDropoutRateEst, 
   vecboolNotZeroObserved, 
   vecboolZero){  
@@ -235,7 +235,7 @@ evalLogLikZINB <- function(vecY,
   # Likelihood of zero counts:
   # Use closed form solution to negative binomial likelihood at zero here.
   vecLikZeros <- (1-vecDropoutRateEst[vecboolZero])*
-    (scaDispEst/(scaDispEst + vecMu[vecboolZero]))^scaDispEst +
+    (vecDispEst[vecboolZero]/(vecDispEst[vecboolZero] + vecMu[vecboolZero]))^vecDispEst[vecboolZero] +
     vecDropoutRateEst[vecboolZero]
   # Replace zero likelihood observation with machine precision
   # for taking log.
@@ -246,7 +246,7 @@ evalLogLikZINB <- function(vecY,
     dnbinom(
       vecY[vecboolNotZeroObserved], 
       mu=vecMu[vecboolNotZeroObserved], 
-      size=scaDispEst, 
+      size=vecDispEst[vecboolNotZeroObserved], 
       log=TRUE)
   # Replace zero likelihood observation with machine precision
   # for taking log.
@@ -255,6 +255,66 @@ evalLogLikZINB <- function(vecY,
   # Compute likelihood of all data:
   scaLogLik <- scaLogLikZeros + scaLogLikNonzeros
   # Maximise log likelihood: Return likelihood as value to optimisation routine
+  return(scaLogLik)
+}
+
+#' Compute smoothed log likelihood of zero-inflated negative binomial model for one gene
+#' 
+#' This liklihood function is appropriate for sequencing data with high drop 
+#' out rate, commonly observed in single cell data (e.g. scRNA-seq). It includes
+#' a smoothin penalty on the means.
+#' 
+#' @aliases evalLogLikSmoothZINB_comp
+#' 
+#' @seealso Called by \code{fitZINB} and
+#' \code{runModelFreeDEAnalysis}.
+#'
+#' @param vecY (count vector number of amples)
+#'    Observed expression values for  given gene.
+#' @param vecMu (vector number of samples) Negative binomial
+#'    mean parameter for each sample.
+#' @param vecSizeFactors: (numeric vector number of cells) 
+#'    Model scaling factors for each observation which take
+#'    sequencing depth into account (size factors). One size
+#'    factor per cell.
+#' @param vecDispEst: (scalar vector number of samples) 
+#'    Negative binomial dispersion  parameter for given 
+#'    gene and observations.
+#' @param vecDropoutRateEst: (probability vector number of samples) 
+#'    Dropout rate estimate for each cell for given gene.
+#' @param vecboolNotZeroObserved: (bool vector number of samples)
+#'    Whether sample is not zero and observed (not NA).
+#' @param vecboolZero: (bool vector number of samples)
+#'    Whether sample has zero count.
+#' @param scaWindowRadius: (integer) 
+#'    Smoothing interval length.
+#'    
+#' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
+#' @export
+
+evalLogLikSmoothZINB <- function(vecY,
+  vecMu,
+  vecSizeFactors,
+  vecDispEst, 
+  vecDropoutRateEst, 
+  vecboolNotZeroObserved, 
+  vecboolZero,
+  scaWindowRadius=NULL ){
+  
+  scaNumCells <- length(vecY)
+  scaLogLik <- sum(sapply(seq(1,scaNumCells), 
+    function(j){
+      scaindIntervalStart <- max(1,j-scaWindowRadius)
+      scaindIntervalEnd <- min(scaNumCells,j+scaWindowRadius)
+      vecInterval <- seq(scaindIntervalStart,scaindIntervalEnd)
+      scaLogLikCell <- evalLogLikZINB_comp(vecY=vecY[vecInterval],
+        vecMu=vecMu[j]*vecSizeFactors[vecInterval],
+        vecDispEst=rep(vecDispEst[j], length(vecInterval)), 
+        vecDropoutRateEst=vecDropoutRateEst[vecInterval], 
+        vecboolNotZeroObserved[vecInterval], 
+        vecboolZero[vecInterval])
+      return(scaLogLikCell)
+    }))
   return(scaLogLik)
 }
 
@@ -271,14 +331,16 @@ evalLogLikZINB <- function(vecY,
 #' may cause numerical errors. Accordingly, growth above a numerical
 #' threshold to infinity (this correponds to Poissonian noise) is 
 #' also guarded against.
+#' Smoothing is applied if scaWindowRadius is handed as not NULL.
 #' 
 #' @seealso Called by \code{fitZINB}.
 #' 
 #' @param scaTheta: (scalar) Log of mean parameter estimate.
 #' @param vecY: (vector number of cells) Observed expression values 
 #'    of gene in cells in cluster.
-#' @param scaDisp: (vector number of cells) Negative binomial
-#'    dispersion parameter estimate.
+#' @param vecDispEst: (scalar vector number of samples) 
+#'    Negative binomial dispersion  parameter for given 
+#'    gene and observations.
 #' @param vecSizeFactors: (numeric vector number of cells) 
 #'    Model scaling factors for each observation which take
 #'    sequencing depth into account (size factors). One size
@@ -288,6 +350,8 @@ evalLogLikZINB <- function(vecY,
 #'    Whether sample is not NA (observed).
 #' @param vecboolZero: (bool vector number of samples)
 #'    Whether sample has zero count.
+#' @param scaWindowRadius: (integer) 
+#'    Smoothing interval length.
 #' 
 #' @return scaLogLik: (scalar) Value of cost function:
 #'    zero-inflated negative binomial likelihood.
@@ -295,11 +359,12 @@ evalLogLikZINB <- function(vecY,
 
 evalLogLikMuZINB <- function(scaTheta,
   vecY,
-  scaDisp,
+  vecDispEst,
   vecNormConst,
   vecDropoutRateEst,
   vecboolNotZeroObserved,
-  vecboolZero){ 
+  vecboolZero,
+  scaWindowRadius=NULL ){ 
   
   # Log linker function to fit positive means
   scaMu <- exp(scaTheta)
@@ -308,12 +373,23 @@ evalLogLikMuZINB <- function(scaTheta,
   # to avoid numerical errors:
   if(scaMu < .Machine$double.eps){ scaMu <- .Machine$double.eps }
   
-  scaLogLik <- evalLogLikZINB_comp( vecY=vecY,
-    vecMu=scaMu*vecNormConst,
-    scaDispEst=scaDisp, 
-    vecDropoutRateEst=vecDropoutRateEst,
-    vecboolNotZeroObserved=vecboolNotZeroObserved, 
-    vecboolZero=vecboolZero )
+  if(is.null(scaWindowRadius)){
+    scaLogLik <- evalLogLikZINB_comp( vecY=vecY,
+      vecMu=scaMu*vecNormConst,
+      vecDispEst=vecDispEst, 
+      vecDropoutRateEst=vecDropoutRateEst,
+      vecboolNotZeroObserved=vecboolNotZeroObserved, 
+      vecboolZero=vecboolZero )
+  } else {
+    scaLogLik <- evalLogLikSmoothZINB_comp( vecY=vecY,
+      vecMu=rep(scaMu, length(vecY)),
+      vecSizeFactors=vecNormConst,
+      vecDispEst=vecDispEst, 
+      vecDropoutRateEst=vecDropoutRateEst,
+      vecboolNotZeroObserved=vecboolNotZeroObserved, 
+      vecboolZero=vecboolZero,
+      scaWindowRadius=scaWindowRadius)
+  }
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)
@@ -337,23 +413,26 @@ evalLogLikMuZINB <- function(scaTheta,
 #' 
 #' @param vecCounts: (vector number of cells) Observed expression values 
 #'    of gene in cells.
-#' @param scaDisp: (vector number of cells) Negative binomial
+#' @param scaDispEst: (vector number of cells) Negative binomial
 #'    dispersion parameter estimate.
 #' @param vecNormConst: (numeric vector number of cells) 
 #'    Model scaling factors for each observation which take
 #'    sequencing depth into account (size factors). One size
 #'    factor per cell.
 #' @param vecDropoutRateEst: (vector number of cells) Dropout estimate of cell.
+#' @param scaWindowRadius: (integer) 
+#'    Smoothing interval length.
 #' 
 #' @return scaLogLik: (scalar) Value of cost function:
 #'    zero-inflated negative binomial likelihood.
 #' @export
 
 fitMuZINB <- function(vecCounts,
-  scaDisp,
+  scaDispEst,
   vecNormConst,
   vecDropoutRateEst,
-  vecProbNB){ 
+  vecProbNB,
+  scaWindowRadius){ 
   
   if(all(vecNormConst==1)){
     # Closed form maximum likelihood estimator
@@ -364,11 +443,12 @@ fitMuZINB <- function(vecCounts,
       exp(unlist(optimise(
         evalLogLikMuZINB_comp,
         vecCounts=vecCounts,
-        scaDispEst=scaDisp,
+        vecDispEst=rep(scaDispEst, length(vecCounts)),
         vecDropoutRateEst=vecDropoutRateEst,
         vecNormConst=vecNormConst,
         vecboolNotZeroObserved=!is.na(vecCounts) & vecCounts>0,
         vecboolObserved=!is.na(vecCounts),
+        scaWindowRadius=scaWindowRadius,
         lower = log(.Machine$double.eps),
         upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
         maximum = TRUE)["maximum"]))
@@ -376,11 +456,11 @@ fitMuZINB <- function(vecCounts,
       print(paste0("ERROR: Fitting zero-inflated negative binomial mean parameter: fitMuZINB().",
         " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
       print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
-      print(paste0("scaDisp ", paste(scaDisp,collapse=" ")))
+      print(paste0("scaDispEst ", paste(scaDispEst,collapse=" ")))
       print(paste0("vecDropoutRateEst ", paste(vecDropoutRateEst,collapse=" ")))
       print(paste0("vecNormConst ", paste(vecNormConst,collapse=" ")))
-      lsErrorCausingGene <- list(vecCounts, scaDisp, vecDropoutRateEst, vecNormConst)
-      names(lsErrorCausingGene) <- c("vecCounts", "scaDisp", "vecDropoutRateEst","vecNormConst")
+      lsErrorCausingGene <- list(vecCounts, scaDispEst, vecDropoutRateEst, vecNormConst)
+      names(lsErrorCausingGene) <- c("vecCounts", "scaDispEst", "vecDropoutRateEst","vecNormConst")
       save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
       stop(strErrorMsg)
     })
@@ -427,6 +507,8 @@ fitMuZINB <- function(vecCounts,
 #'    Whether sample is not zero and observed (not NA).
 #' @param vecboolZero: (bool vector number of samples)
 #'    Whether sample has zero count.
+#' @param scaWindowRadius: (integer) 
+#'    Smoothing interval length.
 #'    
 #' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
 #' @export
@@ -445,8 +527,7 @@ evalLogLikImpulseSC <- function(vecTheta,
   # Generate negative binomial mean parameters from impulse model:
   # This links the parameters vecTheta which are changed in optimisation
   # to the cost function.
-  vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]*
-    vecNormConst
+  vecImpulseValue <- calcImpulse_comp(vecTheta,vecX)[vecindTimepointAssign]
   
   # Catch cases in which entire sample is zero observation
   # and impulse value is pushed to close to zero to be evaluated
@@ -457,27 +538,21 @@ evalLogLikImpulseSC <- function(vecTheta,
   if(is.null(scaWindowRadius)){
     # Evaluate likelihood on individual cells.  
     scaLogLik <- evalLogLikZINB_comp(vecY=vecY,
-      vecMu=vecImpulseValue,
-      scaDispEst=scaDispEst, 
+      vecMu=vecImpulseValue*vecNormConst,
+      vecDispEst=rep(scaDispEst, length(vecY)), 
       vecDropoutRateEst=vecDropoutRateEst, 
       vecboolNotZeroObserved=vecboolNotZeroObserved, 
-      vecboolZero=vecboolZero)
-    
+      vecboolZero=vecboolZero)  
   } else {
-    # Evaluate likelihood on window of cells for each impulse value at a cell.
-    # This is a local smoothing penalty added to the cost function.
-    scaLogLik <- 0
-    for(indcell in seq(1,length(vecY))){
-      scaWindowStart <- max(0,indcell-scaWindowRadius)
-      scaWindowEnd <- min(length(vecY),indcell+scaWindowRadius)
-      scaLogLik <- scaLogLik + evalLogLikZINB_comp(
-        vecY=vecY[scaWindowStart:scaWindowEnd],
-        vecMu=vecImpulseValue[indcell]*vecNormConst[scaWindowStart:scaWindowEnd],
-        scaDispEst=scaDispEst, 
-        vecDropoutRateEst=vecDropoutRateEst[scaWindowStart:scaWindowEnd], 
-        vecboolNotZeroObserved=vecboolNotZeroObserved[scaWindowStart:scaWindowEnd], 
-        vecboolZero=vecboolZero[scaWindowStart:scaWindowEnd])
-    }
+    # Evaluate likelihood on individual cells.  
+    scaLogLik <- evalLogLikSmoothZINB_comp(vecY=vecY,
+      vecMu=vecImpulseValue,
+      vecSizeFactors=vecNormConst,
+      vecDispEst=rep(scaDispEst, length(vecY)), 
+      vecDropoutRateEst=vecDropoutRateEst, 
+      vecboolNotZeroObserved=vecboolNotZeroObserved, 
+      vecboolZero=vecboolZero,
+      scaWindowRadius=scaWindowRadius )
   }
   
   return(scaLogLik)

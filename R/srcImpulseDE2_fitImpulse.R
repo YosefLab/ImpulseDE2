@@ -53,7 +53,7 @@
 #'      }
 #' @export
 
-computeLogLikNull <- function(vecCounts, 
+fitNullModel <- function(vecCounts, 
   scaDispersionEstimate,
   vecDropoutRate=NULL, 
   vecProbNB=NULL,
@@ -101,12 +101,12 @@ computeLogLikNull <- function(vecCounts,
   } else if(strMode=="singlecell"){
     # Fit null model:
     scaMu <- fitMuZINB( vecCounts=vecCounts,
-      scaDisp=scaDispersionEstimate,
+      scaDispEst=scaDispersionEstimate,
       vecNormConst=vecNormConst,
       vecDropoutRateEst=vecDropoutRate,
-      vecProbNB=vecProbNB )
-    
-    if(is.null(scaWindowRadius)){
+      vecProbNB=vecProbNB,
+      scaWindowRadius=scaWindowRadius )
+    if(is.null(scaWindowRadius)){      
       scaLogLikNull <- evalLogLikZINB_comp(vecY=vecCounts,
         vecMu=scaMu*vecNormConst,
         scaDispEst=scaDispersionEstimate, 
@@ -116,22 +116,17 @@ computeLogLikNull <- function(vecCounts,
     } else {
       # Evaluate likelihood on window of cells for each impulse value at a cell.
       # This is a local smoothing penalty added to the cost function.
-      vecMu <- scaMu*vecNormConst
-      scaLogLikNull <- 0
-      for(indcell in seq(1,length(vecCounts))){
-        scaWindowStart <- max(0,indcell-scaWindowRadius)
-        scaWindowEnd <- min(length(vecCounts),indcell+scaWindowRadius)
-        scaLogLikNull <- scaLogLikNull + evalLogLikZINB_comp(
-          vecY=vecCounts[scaWindowStart:scaWindowEnd],
-          vecMu=vecMu[scaWindowStart:scaWindowEnd],
-          scaDispEst=scaDispersionEstimate, 
-          vecDropoutRateEst=vecDropoutRate[scaWindowStart:scaWindowEnd], 
-          vecboolNotZeroObserved=vecboolNotZeroObserved[scaWindowStart:scaWindowEnd], 
-          vecboolZero=vecboolZero[scaWindowStart:scaWindowEnd])
-      }
+      scaLogLikNull <- evalLogLikSmoothZINB_comp(vecY=vecCounts,
+        vecMu=scaMu,
+        vecSizeFactors=vecNormConst,
+        scaDispEst=scaDispersionEstimate, 
+        vecDropoutRateEst=vecDropoutRate, 
+        vecboolNotZeroObserved=vecboolNotZeroObserved, 
+        vecboolZero=vecboolZero,
+        scaWindowRadius=scaWindowRadius )
     }
   } else {
-    stop(paste0("ERROR: Unrecognised strMode in fitImpulse::computeLogLikNull(): ",strMode))
+    stop(paste0("ERROR: Unrecognised strMode in fitImpulse::fitNullModel(): ",strMode))
   }
   return(list( scaMu=scaMu, 
     vecMuLongitudinalSeries=vecMuLongitudinalSeries,
@@ -411,7 +406,7 @@ optimiseImpulseModelFit <- function(vecParamGuess,
 #' which are exclusively called by this function.
 #' 
 #' @seealso Called by \code{fitImpulse_matrix}. This function
-#' calls \code{computeLogLikNull}, \code{estimateImpulseParam} and
+#' calls \code{fitNullModel}, \code{estimateImpulseParam} and
 #' \code{optimiseImpulseModelFit}.
 #' 
 #' @param vecCounts: (count vector number of samples) Count data.
@@ -489,7 +484,7 @@ fitImpulse_gene <- function(vecCounts,
   }
   
   # (II) Fit null model and compute likelihood of null model
-  lsNullModel <- computeLogLikNull(
+  lsNullModel <- fitNullModel(
     vecCounts=vecCounts, 
     scaDispersionEstimate=scaDispersionEstimate,
     vecDropoutRate=vecDropoutRate, 
@@ -705,7 +700,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("fitMuZINB", fitMuZINB, envir = my.env)
     assign("evalLogLikMuZINB_comp", evalLogLikMuZINB_comp, envir = my.env)
     assign("evalLogLikImpulseSC_comp", evalLogLikImpulseSC_comp, envir = my.env)
-    assign("computeLogLikNull", computeLogLikNull, envir = my.env)
+    assign("fitNullModel", fitNullModel, envir = my.env)
     assign("estimateImpulseParam", estimateImpulseParam, envir = my.env)
     assign("optimiseImpulseModelFit", optimiseImpulseModelFit, envir = my.env)
     
@@ -732,7 +727,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "evalLogLikMuZINB_comp",
       "evalLogLikImpulseSC_comp", 
       "fitImpulse_gene",
-      "computeLogLikNull",
+      "fitNullModel",
       "estimateImpulseParam",
       "optimiseImpulseModelFit"
     ), envir = my.env)
