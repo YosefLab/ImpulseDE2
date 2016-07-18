@@ -117,7 +117,7 @@ fitNullModel <- function(vecCounts,
       # Evaluate likelihood on window of cells for each impulse value at a cell.
       # This is a local smoothing penalty added to the cost function.
       scaLogLikNull <- evalLogLikSmoothZINB_comp(vecY=vecCounts,
-        vecMu=scaMu,
+        vecMu=rep(scaMu,length(vecCounts)),
         vecSizeFactors=vecNormConst,
         vecDispEst=rep(scaDispersionEstimate,length(vecCounts)), 
         vecDropoutRateEst=vecDropoutRate, 
