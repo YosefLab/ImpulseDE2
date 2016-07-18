@@ -109,7 +109,7 @@ fitNullModel <- function(vecCounts,
     if(is.null(scaWindowRadius)){      
       scaLogLikNull <- evalLogLikZINB_comp(vecY=vecCounts,
         vecMu=scaMu*vecNormConst,
-        scaDispEst=scaDispersionEstimate, 
+        vecDispEst=rep(scaDispersionEstimate,length(vecCounts)),
         vecDropoutRateEst=vecDropoutRate, 
         vecboolNotZeroObserved=vecboolNotZeroObserved, 
         vecboolZero=vecboolZero )
@@ -119,7 +119,7 @@ fitNullModel <- function(vecCounts,
       scaLogLikNull <- evalLogLikSmoothZINB_comp(vecY=vecCounts,
         vecMu=scaMu,
         vecSizeFactors=vecNormConst,
-        scaDispEst=scaDispersionEstimate, 
+        vecDispEst=rep(scaDispersionEstimate,length(vecCounts)), 
         vecDropoutRateEst=vecDropoutRate, 
         vecboolNotZeroObserved=vecboolNotZeroObserved, 
         vecboolZero=vecboolZero,
@@ -697,6 +697,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("evalLogLikMuNB_comp", evalLogLikMuNB_comp, envir = my.env)
     assign("evalLogLikImpulseBatch_comp", evalLogLikImpulseBatch_comp, envir = my.env)
     assign("evalLogLikZINB_comp", evalLogLikZINB_comp, envir = my.env)
+    assign("evalLogLikSmoothZINB_comp", evalLogLikSmoothZINB_comp, envir = my.env)
     assign("fitMuZINB", fitMuZINB, envir = my.env)
     assign("evalLogLikMuZINB_comp", evalLogLikMuZINB_comp, envir = my.env)
     assign("evalLogLikImpulseSC_comp", evalLogLikImpulseSC_comp, envir = my.env)
@@ -723,6 +724,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "evalLogLikMuNB_comp",
       "evalLogLikImpulseBatch_comp",
       "evalLogLikZINB_comp",
+      "evalLogLikSmoothZINB_comp",
       "fitMuZINB",
       "evalLogLikMuZINB_comp",
       "evalLogLikImpulseSC_comp", 
