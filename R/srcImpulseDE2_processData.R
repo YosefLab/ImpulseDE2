@@ -36,6 +36,25 @@
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
+#' @param strSCMode: (str) {"clustered", "continuous"}
+#'    Mode in which singlecell data are fit: as clusters of
+#'    cells to pseudotime centroids or in continuous pseudotime
+#'    coordinates.
+#' @param scaWindowRadius: (integer) [Default NULL]
+#'    Smoothing interval radius.
+#' @param lsPseudoDE: (list) [Defaul NULL]
+#'    Hyperparameters and metadata used in impulse fitting
+#'    to scRNAseq data.
+#' @param vecDispersionsExternal: (vector length number of
+#'    genes in matCountData) [Default NULL]
+#'    Externally generated list of gene-wise dispersion factors
+#'    which overides DESeq2 generated dispersion factors.
+#' @param vecSizeFactorsExternal: (vector length number of
+#'    cells in matCountData) [Default NULL]
+#'    Externally generated list of size factors which override
+#'    size factor computation in ImpulseDE2.
+#' @param boolRunDESeq2: (bool) [Default TRUE]
+#'    Whether to run DESeq2.
 #'    
 #' @return (list length 3) with the following elements:
 #' \itemize{
@@ -322,7 +341,8 @@ processData <- function(dfAnnotation=NULL,
       if(!is.null(strSCMode)){
         if(strSCMode=="continuous"){
           if(is.null(scaWindowRadius)){
-            stop(paste0( "ERROR: scaWindowRadius has to supplied in strSCMode==continuous."))
+            print(paste0( "WARNING: No smooting penalty used in strSCMode==continuous.",
+              " Turn on by setting scaWindowRadius."))
           }
         }
         if(strSCMode=="clustered"){
@@ -338,6 +358,10 @@ processData <- function(dfAnnotation=NULL,
       if(!is.null(scaWindowRadius)){
         checkNA(scaWindowRadius)
         checkCounts(scaWindowRadius)
+        if(strSCMode!="continuous"){
+          stop(paste0("ImpulseDE2 ERROR: Smoothing is set by scaWindowRadius but fitting mode is",
+            " not continuous (strSCMode!=continuous)"))
+        }
       }
     }
     

@@ -472,7 +472,7 @@ evalLogLikImpulseSC <- function(vecTheta,
       scaWindowEnd <- min(length(vecY),indcell+scaWindowRadius)
       scaLogLik <- scaLogLik + evalLogLikZINB_comp(
         vecY=vecY[scaWindowStart:scaWindowEnd],
-        vecMu=vecImpulseValue[scaWindowStart:scaWindowEnd],
+        vecMu=vecImpulseValue[indcell]*vecNormConst[scaWindowStart:scaWindowEnd],
         scaDispEst=scaDispEst, 
         vecDropoutRateEst=vecDropoutRateEst[scaWindowStart:scaWindowEnd], 
         vecboolNotZeroObserved=vecboolNotZeroObserved[scaWindowStart:scaWindowEnd], 

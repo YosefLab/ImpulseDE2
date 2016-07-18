@@ -18,7 +18,7 @@
 #' @param vecDropoutRate: (probability vector number of samples) 
 #'    [Default NULL] Dropout rate/mixing probability of zero inflated 
 #'    negative binomial mixturemodel for each gene and cell.
-#' @param vecProbNB: (probability vector number of samples) 
+#' @param vecProbNB: (probability vector number of samples) [Default NULL] 
 #'    Probability of observations to come from negative binomial 
 #'    component of mixture model.
 #' @param vecNormConst: (numeric vector number of samples) 
@@ -37,6 +37,8 @@
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
+#' @param scaWindowRadius: (integer) [Default NULL]
+#'    Smoothing interval radius.
 #'    
 #' @return (list length 3)
 #'    \itemize{
@@ -62,7 +64,6 @@ computeLogLikNull <- function(vecCounts,
   vecboolZero=NULL,
   vecboolNotZeroObserved=NULL,
   strMode,
-  strSCMode=NULL,
   scaWindowRadius=NULL){
   
   vecMuLongitudinalSeries <- NULL
@@ -105,18 +106,28 @@ computeLogLikNull <- function(vecCounts,
       vecDropoutRateEst=vecDropoutRate,
       vecProbNB=vecProbNB )
     
-    scaLogLikNull <- evalLogLikZINB_comp(vecY=vecCounts,
-      vecMu=scaMu*vecNormConst,
-      scaDispEst=scaDispersionEstimate, 
-      vecDropoutRateEst=vecDropoutRate, 
-      vecboolNotZeroObserved=vecboolNotZeroObserved, 
-      vecboolZero=vecboolZero )
-    # The likelihood under the constant null model with smoothing
-    # likelihood is a multiple of the likelihood without the smoothing
-    # penalty:
-    if(strSCMode=="continuous"){
-      if(!is.null(scaWindowRadius)){
-        scaLogLikNull <- scaLogLikNull*scaWindowRadius
+    if(is.null(scaWindowRadius)){
+      scaLogLikNull <- evalLogLikZINB_comp(vecY=vecCounts,
+        vecMu=scaMu*vecNormConst,
+        scaDispEst=scaDispersionEstimate, 
+        vecDropoutRateEst=vecDropoutRate, 
+        vecboolNotZeroObserved=vecboolNotZeroObserved, 
+        vecboolZero=vecboolZero )
+    } else {
+      # Evaluate likelihood on window of cells for each impulse value at a cell.
+      # This is a local smoothing penalty added to the cost function.
+      vecMu <- scaMu*vecNormConst
+      scaLogLikNull <- 0
+      for(indcell in seq(1,length(vecCounts))){
+        scaWindowStart <- max(0,indcell-scaWindowRadius)
+        scaWindowEnd <- min(length(vecCounts),indcell+scaWindowRadius)
+        scaLogLikNull <- scaLogLikNull + evalLogLikZINB_comp(
+          vecY=vecCounts[scaWindowStart:scaWindowEnd],
+          vecMu=vecMu[scaWindowStart:scaWindowEnd],
+          scaDispEst=scaDispersionEstimate, 
+          vecDropoutRateEst=vecDropoutRate[scaWindowStart:scaWindowEnd], 
+          vecboolNotZeroObserved=vecboolNotZeroObserved[scaWindowStart:scaWindowEnd], 
+          vecboolZero=vecboolZero[scaWindowStart:scaWindowEnd])
       }
     }
   } else {
@@ -137,6 +148,12 @@ computeLogLikNull <- function(vecCounts,
 #' @param vecTimepoints: (numeric vector number of timepoints) 
 #'    Time-points at which gene was sampled.
 #' @param vecCounts: (count vector number of samples) Count data.
+#' #' @param vecDropoutRate: (probability vector number of samples) 
+#'    [Default NULL] Dropout rate/mixing probability of zero inflated 
+#'    negative binomial mixturemodel for each gene and cell.
+#' @param vecProbNB: (probability vector number of samples) [Default NULL]
+#'    Probability of observations to come from negative binomial 
+#'    component of mixture model.
 #' @param vecTimepointAssign: (numeric vector number samples) 
 #'    Timepoints assigned to samples.
 #' @param vecNormConst: (numeric vector number of samples) 
@@ -144,9 +161,6 @@ computeLogLikNull <- function(vecCounts,
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
-#' @param vecProbNB: (probability vector number of samples) 
-#'    Probability of observations to come from negative binomial 
-#'    component of mixture model.
 #'    
 #' @return vecParamGuessPeak: (numeric vector number of impulse
 #'    model parameters) Impulse model parameter initialisation 
@@ -258,7 +272,8 @@ estimateImpulseParam <- function(vecTimepoints,
 #     Observed expression values for  given gene.
 #' @param scaDispersionEstimate: (scalar) 
 #'    Dispersion estimate for given gene.
-#' @param vecDropoutRate: (probability vector number of samples) 
+#' @param vecDropoutRate: (probability vector number of samples)
+#'    [Default NULL]
 #'    Dropout rate estimate for each cell for given gene.
 #' @param vecNormConst: (numeric vector number of samples) 
 #'    Normalisation constants for each sample.
@@ -271,6 +286,8 @@ estimateImpulseParam <- function(vecTimepoints,
 #'    Whether sample has zero count.
 #' @param vecboolNotZeroObserved: (bool vector number of samples)
 #'    Whether sample is not zero and observed (not NA).
+#' @param scaWindowRadius: (integer) [Default NULL]
+#'    Smoothing interval radius.
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
@@ -316,13 +333,13 @@ optimiseImpulseModelFit <- function(vecParamGuess,
     }, error=function(strErrorMsg){
       print(paste0("ERROR: Fitting impulse model: optimiseImpulseModelFit().",
         " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
-      print(paste0("vecParamGuess ", paste(vecParamGuess,sep=" ")))
-      print(paste0("vecTimepoints ", paste(vecTimepoints,sep=" ")))
-      print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
-      print(paste0("scaDispersionEstimate ", paste(scaDispersionEstimate,sep=" ")))
-      print(paste0("vecNormConst ", paste(vecNormConst,sep=" ")))
-      print(paste0("vecindTimepointAssign ", paste(vecindTimepointAssign,sep=" ")))
-      print(paste0("vecboolObserved ", paste(vecboolObserved,sep=" ")))
+      print(paste0("vecParamGuess ", paste(vecParamGuess,collapse=" ")))
+      print(paste0("vecTimepoints ", paste(vecTimepoints,collapse=" ")))
+      print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
+      print(paste0("scaDispersionEstimate ", paste(scaDispersionEstimate,collapse=" ")))
+      print(paste0("vecNormConst ", paste(vecNormConst,collapse=" ")))
+      print(paste0("vecindTimepointAssign ", paste(vecindTimepointAssign,collapse=" ")))
+      print(paste0("vecboolObserved ", paste(vecboolObserved,collapse=" ")))
       print(paste0("strMode ", strMode))
       print(paste0("MAXIT ", MAXIT))
       lsErrorCausingGene <- list(vecParamGuess, vecTimepoints, vecCounts, 
@@ -354,16 +371,16 @@ optimiseImpulseModelFit <- function(vecParamGuess,
     }, error=function(strErrorMsg){
       print(paste0("ERROR: Fitting impulse model: optimiseImpulseModelFit().",
         " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
-      print(paste0("vecParamGuess ", paste(vecParamGuess,sep=" ")))
-      print(paste0("vecTimepoints ", paste(vecTimepoints,sep=" ")))
-      print(paste0("vecCounts ", paste(vecCounts,sep=" ")))
-      print(paste0("scaDispersionEstimate ", paste(scaDispersionEstimate,sep=" ")))
-      print(paste0("vecDropoutRate ", paste(vecDropoutRate,sep=" ")))
-      print(paste0("vecNormConst ", paste(vecNormConst,sep=" ")))
-      print(paste0("vecindTimepointAssign ", paste(vecindTimepointAssign,sep=" ")))
-      print(paste0("vecboolObserved ", paste(vecboolObserved,sep=" ")))
-      print(paste0("vecboolNotZeroObserved ", paste(vecboolNotZeroObserved,sep=" ")))
-      print(paste0("scaWindowRadius", paste(scaWindowRadius,sep=" ")))
+      print(paste0("vecParamGuess ", paste(vecParamGuess,collapse=" ")))
+      print(paste0("vecTimepoints ", paste(vecTimepoints,collapse=" ")))
+      print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
+      print(paste0("scaDispersionEstimate ", paste(scaDispersionEstimate,collapse=" ")))
+      print(paste0("vecDropoutRate ", paste(vecDropoutRate,collapse=" ")))
+      print(paste0("vecNormConst ", paste(vecNormConst,collapse=" ")))
+      print(paste0("vecindTimepointAssign ", paste(vecindTimepointAssign,collapse=" ")))
+      print(paste0("vecboolObserved ", paste(vecboolObserved,collapse=" ")))
+      print(paste0("vecboolNotZeroObserved ", paste(vecboolNotZeroObserved,collapse=" ")))
+      print(paste0("scaWindowRadius", paste(scaWindowRadius,collapse=" ")))
       print(paste0("strMode ", strMode))
       print(paste0("MAXIT ", MAXIT))
       lsErrorCausingGene <- list(vecParamGuess, vecTimepoints, vecCounts, 
@@ -402,7 +419,7 @@ optimiseImpulseModelFit <- function(vecParamGuess,
 #'    dispersion coefficients computed by DESeq2 for given gene.
 #' @param vecDropoutRate: (probability vector number of samples) 
 #'    [Default NULL] Dropout rate/mixing probability of zero inflated 
-#'    negative binomial mixturemodel for each gene and cell.
+#'    negative binomial mixturemodel.
 #' @param vecProbNB: (probability vector number of samples) [Default NULL]
 #'    Probability of observations to come from negative binomial 
 #'    component of mixture model.
@@ -423,6 +440,12 @@ optimiseImpulseModelFit <- function(vecParamGuess,
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
+#' @param strSCMode: (str) {"clustered", "continuous"}
+#'    Mode in which singlecell data are fit: as clusters of
+#'    cells to pseudotime centroids or in continuous pseudotime
+#'    coordinates.
+#' @param scaWindowRadius: (integer) [Default NULL]
+#'    Smoothing interval radius.
 #' @param NPARAM: (scalar) [Default 6] Number of impulse model parameters
 #' @param MAXIT: (scalar) [Default 100] Number of iterations, which are performed 
 #'    to fit the impulse model to the clusters.
@@ -478,7 +501,6 @@ fitImpulse_gene <- function(vecCounts,
     vecboolZero=vecboolZero,
     vecboolNotZeroObserved=vecboolNotZeroObserved,
     strMode=strMode,
-    strSCMode=strSCMode,
     scaWindowRadius=scaWindowRadius )
   
   scaMu <- lsNullModel$scaMu
@@ -598,6 +620,12 @@ fitImpulse_gene <- function(vecCounts,
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
+#' @param strSCMode: (str) {"clustered", "continuous"}
+#'    Mode in which singlecell data are fit: as clusters of
+#'    cells to pseudotime centroids or in continuous pseudotime
+#'    coordinates.
+#' @param scaWindowRadius: (integer) [Default NULL]
+#'    Smoothing interval radius.
 #' @param nProc: (scalar) [Default 3] Number of processes for parallelisation.
 #' @param NPARAM: (scalar) [Default 6] Number of parameters of impulse model.
 #' 
@@ -709,6 +737,14 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "optimiseImpulseModelFit"
     ), envir = my.env)
     
+    # Set default length of output vector for each gene,
+    # used upon encountering error in optimisation for gracefull exit.
+    # 6 parameteres, 4 meta, one mean for each longitudinal series
+    scaSizeReport <- 6 + 4
+    if(strMode=="longitudinal"){
+      scaNumberLongitudinalSeries <- length(unique( vecLongitudinalSeriesAssign ))
+      scaSizeReport <- scaSizeReport + scaNumberLongitudinalSeries
+    }
     # Fit impulse model to each gene of matrix and get impulse parameters:
     # clusterApply runs the function impulse_fit_gene_wise
     # The input data are distributed to nodes by lsGeneIndexByCore partitioning
@@ -717,20 +753,34 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore),
         function(z){ t(sapply( lsGeneIndexByCore[[z]],
           function(x){
-            fitImpulse_gene(
-              vecCounts=matCountDataProcCondition[x,],
-              scaDispersionEstimate=vecDispersions[x],
-              vecDropoutRate=matDropoutRate[x,],
-              vecProbNB=matProbNB[x,],
-              vecNormConst=matNormConst[x,],
-              vecTimepointAssign=vecTimepointAssign,
-              vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
-              dfAnnotationProc=dfAnnotationProc,
-              strMode=strMode,
-              strSCMode=strSCMode,
-              scaWindowRadius=scaWindowRadius,
-              NPARAM=NPARAM,
-              MAXIT=MAXIT )
+            impulsefitGene <- NULL
+            tryCatch({
+              impulsefitGene <- fitImpulse_gene(
+                vecCounts=matCountDataProcCondition[x,],
+                scaDispersionEstimate=vecDispersions[x],
+                vecDropoutRate=matDropoutRate[x,],
+                vecProbNB=matProbNB[x,],
+                vecNormConst=matNormConst[x,],
+                vecTimepointAssign=vecTimepointAssign,
+                vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
+                dfAnnotationProc=dfAnnotationProc,
+                strMode=strMode,
+                strSCMode=strSCMode,
+                scaWindowRadius=scaWindowRadius,
+                NPARAM=NPARAM,
+                MAXIT=MAXIT )
+            }, error=function(strErrorMsg){
+              print("ERROR: Impulse fitting failed in one instance with error message:")
+              print(strErrorMsg)
+              warning(paste0("Fitting of impuluse model failed for one gene.",
+                " Consider contacting developers if you care about all genes.",
+                " david.seb.fischer@gmail.com"))
+            }, finally={
+              if(is.null(impulsefitGene)){
+                impulsefitGene <- array(NA, scaSizeReport)
+              }
+            })
+            return(impulsefitGene)
           }))
         })
     } else {
@@ -738,18 +788,32 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       lsmatFits <- clusterApply(cl, 1:length(lsGeneIndexByCore),
         function(z){ t(sapply( lsGeneIndexByCore[[z]],
           function(x){
-            fitImpulse_gene(
-              vecCounts=matCountDataProcCondition[x,],
-              scaDispersionEstimate=vecDispersions[x],
-              vecNormConst=matNormConst[x,],
-              vecTimepointAssign=vecTimepointAssign,
-              vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
-              dfAnnotationProc=dfAnnotationProc,
-              strMode=strMode,
-              NPARAM=NPARAM,
-              MAXIT=MAXIT )
+            impulsefitGene <- NULL
+            tryCatch({
+              impulsefitGene <- fitImpulse_gene(
+                vecCounts=matCountDataProcCondition[x,],
+                scaDispersionEstimate=vecDispersions[x],
+                vecNormConst=matNormConst[x,],
+                vecTimepointAssign=vecTimepointAssign,
+                vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign,
+                dfAnnotationProc=dfAnnotationProc,
+                strMode=strMode,
+                NPARAM=NPARAM,
+                MAXIT=MAXIT )
+            }, error=function(strErrorMsg){
+              print("ERROR: Impulse fitting failed in one instance with error message:")
+              print(strErrorMsg)
+              warning(paste0("Fitting of impuluse model failed for one gene.",
+                " Consider contacting developers if you care about all genes.",
+                " david.seb.fischer@gmail.com"))
+            }, finally={
+              if(is.null(impulsefitGene)){
+                impulsefitGene <- array(NA, scaSizeReport)
+              }
+            })
+            return(impulsefitGene)
           }))
-        })
+        })      
     }
     # Give output rownames again, which are lost above
     for(i in 1:length(lsGeneIndexByCore)){
@@ -864,6 +928,12 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
 #' @param strMode: (str) [Default "batch"] 
 #'    {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
+#' @param strSCMode: (str) {"clustered", "continuous"}
+#'    Mode in which singlecell data are fit: as clusters of
+#'    cells to pseudotime centroids or in continuous pseudotime
+#'    coordinates.
+#' @param scaWindowRadius: (integer) [Default NULL]
+#'    Smoothing interval radius.
 #' @param nProc: (scalar) [Default 1] Number of processes for parallelisation.
 #' @param NPARAM: (scalar) [Default 6] Number of parameters of impulse model.
 #' 
