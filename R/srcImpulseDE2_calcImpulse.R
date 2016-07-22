@@ -4,6 +4,8 @@
 
 #' Compute value of impulse function given parameters.
 #' 
+#' Amplitude parameters are assumed to be in log space.
+#' 
 #' @aliases calcImpulse_comp
 #' 
 #' @seealso Called by \code{evalLogLikImpulse},\code{evalLogLikMean}, 

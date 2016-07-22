@@ -121,7 +121,7 @@ source("srcImpulseDE2_plotDEGenes.R")
 #' 
 #' @aliases ImpulseDE2
 #' 
-#' @param matCountData: (matrix genes x replicates) [Default NULL] 
+#' @param matCountData: (matrix genes x samples) [Default NULL] 
 #'    Count data of all conditions, unobserved entries are NA.
 #' @param dfAnnotation: (Table) [Default NULL] 
 #'    Lists co-variables of samples: 
@@ -145,6 +145,11 @@ source("srcImpulseDE2_plotDEGenes.R")
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
+#' @param matTranslationFactorsExternal: (numeric matrix genes x cells) 
+#'    [Default NULL] USE WITH CARE. THIS IS NOT INTENDED FOR
+#'    PUBLIC USE BECAUSE THIS HEAVILY AFFECTS THE FITTING
+#'    STATISTICS. Externally generated list of translation factors 
+#'    which override translation factor computation in ImpulseDE2.
 #' @param boolRunDESeq2: (bool) [Default TRUE]
 #'    Whether to run DESeq2.
 #' @param boolPlotting: (bool) [TRUE] 
@@ -242,6 +247,7 @@ runImpulseDE2 <- function(matCountData=NULL,
   Q_value=0.01,
   vecDispersionsExternal=NULL,
   vecSizeFactorsExternal=NULL,
+  matTranslationFactorsExternal=NULL,
   boolRunDESeq2=TRUE,
   boolPlotting=TRUE,
   boolSimplePlot=FALSE, 
@@ -271,6 +277,7 @@ runImpulseDE2 <- function(matCountData=NULL,
       lsPseudoDE=lsPseudoDE,
       vecDispersionsExternal=vecDispersionsExternal,
       vecSizeFactorsExternal=vecSizeFactorsExternal,
+      matTranslationFactorsExternal=matTranslationFactorsExternal,
       boolRunDESeq2=boolRunDESeq2 )
     
     matCountDataProc <- lsProcessedData$matCountDataProc
@@ -343,7 +350,8 @@ runImpulseDE2 <- function(matCountData=NULL,
       strCaseName=strCaseName,
       strControlName=strControlName, 
       strMode=strMode,
-      vecSizeFactorsExternal=vecSizeFactorsExternal)
+      vecSizeFactorsExternal=vecSizeFactorsExternal,
+      matTranslationFactorsExternal=matTranslationFactorsExternal )
     matTranslationFactors <- lsNormConst$matTranslationFactors
     matSizeFactors <- lsNormConst$matSizeFactors
     if(boolSaveTemp){

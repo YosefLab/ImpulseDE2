@@ -253,6 +253,9 @@ computeNormConst <- function(matCountDataProcFull,
   strMode="batch",
   vecSizeFactorsExternal=NULL){
   
+  # Row reduction if using externally supplied factors
+  if(!is.null(scaSmallRun)){ scaRows <- min(scaSmallRun,dim(matCountDataProc)[1])
+  } else {scaRows <- dim(matCountDataProc)[1] }
   # 1. Compute size factors
   # Size factors account for differential sequencing depth.
   if(is.null(vecSizeFactorsExternal)){
@@ -265,8 +268,6 @@ computeNormConst <- function(matCountDataProcFull,
     # Matrix size reduced according to scaSmallRun
     # if ImpulseDE2 is not run on entire data set.
     print("Using externally supplied size factors.")
-    if(!is.null(scaSmallRun)){ scaRows <- min(scaSmallRun,dim(matCountDataProc)[1])
-    } else {scaRows <- dim(matCountDataProc)[1] }
     matSizeFactors <- matrix(vecSizeFactorsExternal,
       nrow=scaRows,
       ncol=dim(matCountDataProc)[2],
@@ -279,13 +280,24 @@ computeNormConst <- function(matCountDataProcFull,
   # Translation factors account for different mean expression levels of a
   # gene between longitudinal sample series.
   if(strMode=="longitudinal"){
-    matTranslationFactors <- computeTranslationFactors(matCountDataProc=matCountDataProc,
-      matSizeFactors=matSizeFactors,
-      vecDispersions=vecDispersions,
-      scaSmallRun=scaSmallRun,
-      dfAnnotationProc=dfAnnotationProc,
-      strCaseName=strCaseName,
-      strControlName=strControlName)
+    if(is.null(matTranslationFactorsExternal)){
+       # Compute translation factors if not supplied to ImpulseDE2.
+      matTranslationFactors <- computeTranslationFactors(matCountDataProc=matCountDataProc,
+        matSizeFactors=matSizeFactors,
+        vecDispersions=vecDispersions,
+        scaSmallRun=scaSmallRun,
+        dfAnnotationProc=dfAnnotationProc,
+        strCaseName=strCaseName,
+        strControlName=strControlName)
+    } else {
+      # Chose externally supplied translation factors if supplied.
+      # Matrix size reduced according to scaSmallRun
+      # if ImpulseDE2 is not run on entire data set.
+      print("Using externally supplied translations factors.")
+      matTranslationFactors <- matTranslationFactorsExternal[
+        rownames(matCountDataProc[1:scaRows,]),
+        colnames(matCountDataProc)]
+    }
   } else {
     matTranslationFactors <- NULL
   }

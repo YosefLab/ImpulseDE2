@@ -37,7 +37,7 @@
 #'    \code{optim} from \code{stats}. Each value matrix is called
 #'    value_'condition' and has the form (genes x time points) and contains the
 #'    counts predicted by the impulse model at the observed time points.
-#' @param dfDEAnalysis (data frame genes x fitting characteristics) 
+#' @param dfImpulseResults (data frame genes x fitting characteristics) 
 #'    Summary of fitting procedure for each gene.
 #' @param vecRefPval (vec length genes) Method 2 (DESeq2) adjusted p-values
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationProcFull}.

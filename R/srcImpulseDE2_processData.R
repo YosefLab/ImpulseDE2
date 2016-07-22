@@ -53,6 +53,9 @@
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
+#' @param matTranslationFactorsExternal: (numeric matrix genes x cells) 
+#'    [Default NULL] Externally generated list of translation factors 
+#'    which override translation factor computation in ImpulseDE2.
 #' @param boolRunDESeq2: (bool) [Default TRUE]
 #'    Whether to run DESeq2.
 #'    
@@ -80,6 +83,7 @@ processData <- function(dfAnnotation=NULL,
   lsPseudoDE=NULL, 
   vecDispersionsExternal=NULL,
   vecSizeFactorsExternal=NULL,
+  matTranslationFactorsExternal=NULL,
   boolRunDESeq2=NULL){
   
   ###############################################################
@@ -150,6 +154,7 @@ processData <- function(dfAnnotation=NULL,
     lsPseudoDE=NULL, 
     vecDispersionsExternal=NULL,
     vecSizeFactorsExternal=NULL,
+    matTranslationFactorsExternal=NULL,
     boolRunDESeq2=NULL ){
     
     ### 1. Check that all necessary input was specified
@@ -365,6 +370,20 @@ processData <- function(dfAnnotation=NULL,
       }
     }
     
+    ### 12. Check matTranslationFactorsExternal
+    # Get the message accross that this really shouldn't be used in most cases.
+    if(!is.null(matTranslationFactorsExternal)){
+      print(paste0("matTranslationFactorsExternal IS SET AND OVERRIDES INTERNAL ",
+        "GENERATION OF TRANSLATION FACTORS.",
+        "USE WITH CARE. THIS IS NOT INTENDED FOR PUBLIC USE ",
+        "BECAUSE THIS HEAVILY AFFECTS THE FITTING STATISTICS."))
+      print("matTranslationFactorsExternal is not checked for format.")
+      warning(paste0("matTranslationFactorsExternal IS SET AND OVERRIDES INTERNAL ",
+        "GENERATION OF TRANSLATION FACTORS.",
+        "USE WITH CARE. THIS IS NOT INTENDED FOR PUBLIC USE ",
+        "BECAUSE THIS HEAVILY AFFECTS THE FITTING STATISTICS."))
+    }
+    
     ### Summarise which mode, conditions, samples and
     ### longitudinal series were found
     print(paste0("Found conditions: ",paste0(lsConditions,collapse=",")))
@@ -547,6 +566,7 @@ processData <- function(dfAnnotation=NULL,
     lsPseudoDE=lsPseudoDE,
     vecDispersionsExternal=vecDispersionsExternal,
     vecSizeFactorsExternal=vecSizeFactorsExternal,
+    matTranslationFactorsExternal=matTranslationFactorsExternal,
     boolRunDESeq2=boolRunDESeq2 )
   
   # Process annotation table
