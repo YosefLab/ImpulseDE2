@@ -229,6 +229,11 @@ computeTranslationFactors <- function(matCountDataProc,
 #'    sequencing depth into account (size factors). One size
 #'    factor per cell. These are supplied to ImpulseDE, if this variable
 #'    is not set, size factors are computed in this function.
+#' @param matTranslationFactorsExternal: (numeric matrix genes x cells) 
+#'    [Default NULL] USE WITH CARE. THIS IS NOT INTENDED FOR
+#'    PUBLIC USE BECAUSE THIS HEAVILY AFFECTS THE FITTING
+#'    STATISTICS. Externally generated list of translation factors 
+#'    which override translation factor computation in ImpulseDE2.
 #' 
 #' @return (list {lsMatTranslationFactors,matSizeFactors})
 #'    \itemize{
@@ -251,7 +256,8 @@ computeNormConst <- function(matCountDataProcFull,
   strCaseName,
   strControlName=NULL,
   strMode="batch",
-  vecSizeFactorsExternal=NULL){
+  vecSizeFactorsExternal=NULL,
+  matTranslationFactorsExternal=NULL){
   
   # Row reduction if using externally supplied factors
   if(!is.null(scaSmallRun)){ scaRows <- min(scaSmallRun,dim(matCountDataProc)[1])

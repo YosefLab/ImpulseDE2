@@ -171,8 +171,9 @@ imputeSamples <- function(dirTemp,
 #' @return NULL
 #' @export
 
-plotDEGenes <- function(vecGeneIDs, 
-  matCountDataProc, 
+plotImputedGenes <- function(vecGeneIDs, 
+  matCountDataProc,
+  matCountDataImputed,
   matTranslationFactors=NULL, 
   matSizeFactors,
   dfAnnotationProc, 
@@ -216,15 +217,7 @@ plotDEGenes <- function(vecGeneIDs,
   # count data and not the raw count data. However, 
   # fitting was still performed based on raw count data.
   matCountDataProcNorm <- matCountDataProc / matSizeFactors
-  matMuTimepoints <- matrix(NA, nrow=dim(matCountDataProc)[1],ncol=length(vecTimepoints))
-  rownames(matMuTimepoints) <- rownames(matCountDataProc)
-  for(tp in vecTimepoints){
-    if(sum(vecTimepointAssign==tp)>1){
-      matMuTimepoints[,match(tp,vecTimepoints)] <- rowMeans(matCountDataProcNorm[,vecTimepointAssign==tp],na.rm=TRUE)
-    } else {
-      matMuTimepoints[,match(tp,vecTimepoints)] <- matCountDataProcNorm[,vecTimepointAssign==tp]
-    }
-  }
+  matCountDataImputedNorm <- matCountDataImputed / matSizeFactors
   
   # Only for batch/singlecell plotting:
   # Width of negative binomial pdf (ylim) in time units for plotting
@@ -264,32 +257,19 @@ plotDEGenes <- function(vecGeneIDs,
     vecImpulseParamCaseLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
     vecImpulseParamCaseLog[c("h0","h1","h2")] <- log( vecImpulseParamCaseLog[c("h0","h1","h2")] )
     vecCaseValues <- calcImpulse_comp(vecImpulseParamCaseLog,vecX)
-    if(boolLogPlot){ vecCaseValues <- log(vecCaseValues+1)/log(SCALOGBASE) }
-    
-    # Prepare p-values to include in header
-    pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
-    if(!is.null(vecRefPval)){
-      pval_Method2 <- round( log(vecRefPval[geneID])/log(10), 2 )
-    }
     
     # Plot points, impulse trace and
     # batch: inferred negative binomials
     # longitudinal: longitudinal series scaled impulse traces
-    if(strMode=="batch" | strMode=="singlecell"){
+    if(strMode=="batch"){
       # Plot observed points in blue - all time courses in same colour
       scaYlim_lower <- min( min(matCountDataProcNorm[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
       scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
       if(max(vecCaseValues) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
-        if(boolLogPlot){ scaYlim_upper <- 1+max(matCountDataProcNorm[geneID,],na.rm=TRUE)
-        } else { scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE) }
-      }
-      strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
-      if(!is.null(vecRefPval)){
-        strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
-      } else {
-        strPvalMethod2 <- NULL
+        scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)
       }
       
+      # Plot observed values
       plot(vecTimepointAssign,
         matCountDataProcNorm[geneID,],
         col="blue",
@@ -298,68 +278,13 @@ plotDEGenes <- function(vecGeneIDs,
         ylim=c(scaYlim_lower,scaYlim_upper),
         xlab="Time",
         ylab=paste0(strLogPlot," Impulse fit and count data"),
-        main=paste0(geneID," ",strPlotTitleSuffix," log_10(Pval):\n ",strPvalImpulse,
-          strPvalMethod2 ),sub=strPlotSubtitle)
+        main=paste0(geneID," ",strPlotTitleSuffix),sub=strPlotSubtitle)
+      # Plot imputed values
+      points(vecTimepointAssign,
+        matCountDataImputedNorm[geneID,],
+        col="red",
+        pch=4)
       
-      # Add vertical density traces:
-      # Bulk: Plot inferred negative binomial pdf at each time point in black (vertical)
-      vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
-      # Mean parameter of negative binomial is value of inferred impulse model
-      vecCaseValueAtTP <- calcImpulse_comp(vecImpulseParamCaseLog,vecTimepoints)
-      # Single cell: Plot empirical density distribution
-      if(strMode=="singlecell"){
-        if(strSCMode=="clustered"){
-          for(tp in vecTimepoints){
-            # Plot kernel density estimate at each time point
-            vecKernelData <- matCountDataProcNorm[geneID,vecTimepointAssign==tp]
-            #vecKernelData <- vecKernelData[vecKernelData > 0]
-            if(length(vecKernelData)>5){
-              dfEDF <- density(x=vecKernelData)
-              vecXCoordEDF <- (dfEDF$x)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
-              vecYCoordEDF <- (dfEDF$y)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
-              vecYCoordEDF <- vecYCoordEDF * PDF_WIDTH/max(vecYCoordEDF)
-              lines(x=tp+vecYCoordEDF,y=vecXCoordEDF,col="blue")
-            }
-          }
-        }
-        if(strSCMode=="continuous"){
-          # Plot local kernel density estimate at each time point 
-          # equally spaced out.
-          scaKernels <- 10
-          vecDelta <- (max(vecTimepoints)-min(vecTimepoints))/scaKernels
-          vecKernels <- min(vecTimepoints) + vecDelta*(seq(0,scaKernels-1)+0.5)
-          for(ker in vecKernels){
-            vecboolRange <- vecTimepointAssign >= (ker-vecDelta) &
-              vecTimepointAssign <= (ker+vecDelta)
-            vecKernelData <- matCountDataProcNorm[geneID,vecboolRange]
-            #vecKernelData <- vecKernelData[vecKernelData > 0]
-            if(length(vecKernelData)>5){
-              dfEDF <- density(x=vecKernelData)
-              vecXCoordEDF <- (dfEDF$x)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
-              vecYCoordEDF <- (dfEDF$y)[dfEDF$x >= scaYlim_lower & dfEDF$x <= scaYlim_upper]
-              vecYCoordEDF <- vecYCoordEDF * PDF_WIDTH/max(vecYCoordEDF)
-              lines(x=ker+vecYCoordEDF,y=vecXCoordEDF,col="red")
-            }
-          }
-        }
-      } else {
-        for(tp in vecTimepoints){
-          vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
-            size=as.numeric(as.vector(dfImpulseResults[geneID,]$size)) )
-          # Scale Y_coord to uniform peak heights of 1
-          # This translates into width of one time unit in plot
-          vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
-          # Plot pdf vertically at time point
-          lines(x=tp+vecYCoordPDF,y=vecXCoordPDF,col="black")
-        }
-        
-        # Plot inferred mean of each time point
-        if(strMode=="batch" | strMode=="longitudinal") {
-          points(vecTimepoints,
-            matMuTimepoints[geneID,],
-            col="black",pch=1)
-        }
-      }
       # Plot impulse model within boundaries of observed points
       vecCaseValuesToPlot <- vecCaseValues
       indImpulseValToPlot <- vecCaseValuesToPlot >= scaYlim_lower & vecCaseValuesToPlot <= scaYlim_upper
@@ -367,8 +292,8 @@ plotDEGenes <- function(vecGeneIDs,
       points(vecX, vecCaseValuesToPlot,col="black", type="l")
       
       legend(x="bottomright",
-        legend=c(strCaseName),
-        fill=c("blue"), 
+        legend=c("observed", "imputed"),
+        fill=c("blue","red"), 
         cex=0.6, 
         inset=c(0,scaLegendInset))
       
@@ -384,15 +309,10 @@ plotDEGenes <- function(vecGeneIDs,
       scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), 
         max(vecCaseValues[indVecXObs]*max(vecTranslationFactors)) )
       if(max(vecCaseValues)*max(vecTranslationFactors) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
-        if(boolLogPlot){ scaYlim_upper <- 1+max(matCountDataProcNorm[geneID,],na.rm=TRUE)
-        } else { scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE) }
+        scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)
       }
-      strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
-      if(!is.null(vecRefPval)){
-        strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
-      } else {
-        strPvalMethod2 <- NULL
-      }
+
+      # Plot observed values
       plot(vecTimepointAssign[vecindLongitudinalSeriesAssign==1],
         matCountDataProcNorm[geneID, vecindLongitudinalSeriesAssign==1],
         col=vecCol[1],pch=3,
@@ -401,6 +321,11 @@ plotDEGenes <- function(vecGeneIDs,
         xlab="Time", ylab=paste0(strLogPlot," Impulse fit and count data"),
         main=paste0(geneID," ",strPlotTitleSuffix," log_10(Pval):\n ",strPvalImpulse,
           strPvalMethod2 ),sub=strPlotSubtitle)
+      # Plot imputed values
+      points(vecTimepointAssign,
+        matCountDataImputedNorm[geneID, vecindLongitudinalSeriesAssign==1],
+        col="black",
+        pch=4)
       # Plot impulse fit to time course
       vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[1]
       indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
@@ -411,9 +336,15 @@ plotDEGenes <- function(vecGeneIDs,
       if(length(vecLongitudinalSeries)>1){
         for(longser in 2:length(vecLongitudinalSeries)){
           # Plot data of time course
+          # Plot observed values
           points(x=vecTimepointAssign[vecindLongitudinalSeriesAssign==longser],
             y=matCountDataProcNorm[geneID, vecindLongitudinalSeriesAssign==longser],
             col=vecCol[longser],pch=3)
+          # Plot imputed values
+          points(vecTimepointAssign,
+            matCountDataImputedNorm[geneID, vecindLongitudinalSeriesAssign==longser],
+            col="black",
+            pch=4)
           # Plot impulse within boundaries of observed points
           vecCaseValuesToPlotTC <- vecCaseValues*vecTranslationFactors[longser]
           indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
@@ -424,14 +355,9 @@ plotDEGenes <- function(vecGeneIDs,
         }
       }
       
-      # Plot mean of each time point
-      points(vecTimepoints,
-        matMuTimepoints[geneID,],
-        col="black",pch=1)
-      
       legend(x="bottomright",
-        legend=vecLongitudinalSeries,
-        fill=vecCol, 
+        legend=c(vecLongitudinalSeries, "imputed"),
+        fill=c(vecCol,"black"), 
         cex=0.6, 
         inset=c(0,scaLegendInset-0.04*length(vecLongitudinalSeries)))
     } else {
@@ -472,7 +398,9 @@ plotDEGenes <- function(vecGeneIDs,
 #' @parma dirTemp: (directory) Give directory for temporary
 #'    data used for communicating translation factors.
 #' 
-#' @return NULL
+#' @return matImputedSamplewise: (numeric matrix genes x samples)
+#'    Imputed values based on values of drop-one-out impulse 
+#'    models.
 #' 
 #' @export
 
@@ -500,6 +428,43 @@ runImputation <- function(matCountData,
     stop(strErrorMsg)
   })
   
+  
+  # The first 3 steps of ImpulseDE2 have to be run
+  # to generate the translation factors:
+  print("1. Prepare data")
+  lsProcessedData <- processData(
+    dfAnnotation=dfAnnotation,
+    matCountData=matCountData,
+    scaSmallRun=NULL,
+    strControlName=strControlName, 
+    strCaseName=strCaseName,
+    strMode=strMode,
+    strSCMode=NULL,
+    scaWindowRadius=NULL,
+    lsPseudoDE=NULL,
+    vecDispersionsExternal=NULL,
+    vecSizeFactorsExternal=vecSizeFactors,
+    matTranslationFactorsExternal=NULL,
+    boolRunDESeq2=TRUE )
+  
+  matCountDataProc <- lsProcessedData$matCountDataProc
+  matCountDataProcFull <- lsProcessedData$matCountDataProcFull
+  dfAnnotationProc <- lsProcessedData$dfAnnotationProc
+  matProbNB <- lsProcessedData$matProbNB
+  matDropoutRate <- lsProcessedData$matDropout
+  vecClusterAssignments <- lsProcessedData$vecClusterAssignments
+  vecCentroids <- lsProcessedData$vecCentroids
+  
+  print("2. Run DESeq2")
+  lsDESeq2Results <- runDESeq2(
+    dfAnnotationProc=dfAnnotationProc,
+    matCountDataProc=matCountDataProcFull,
+    nProc=nProc,
+    strCaseName=strCaseName,
+    strControlName=strControlName,
+    strMode=strMode)
+  vecDispersions <- (lsDESeq2Results$vecDispersions)[rownames(matCountDataProc)]
+  
   # Generate scaling factors (need for imputation):
   # Note that all models are created and evaluated under the same
   # scaling factors fit to the entire data set. The rationale behind
@@ -513,42 +478,6 @@ runImputation <- function(matCountData,
     strMode=strMode)
   vecSizeFactors <- matSizeFactors[1,]
   if(strMode=="longitudinal"){
-    # The first 3 steps of ImpulseDE2 have to be run
-    # to generate the translation factors:
-    print("1. Prepare data")
-    lsProcessedData <- processData(
-      dfAnnotation=dfAnnotation,
-      matCountData=matCountData,
-      scaSmallRun=NULL,
-      strControlName=strControlName, 
-      strCaseName=strCaseName,
-      strMode=strMode,
-      strSCMode=NULL,
-      scaWindowRadius=NULL,
-      lsPseudoDE=NULL,
-      vecDispersionsExternal=NULL,
-      vecSizeFactorsExternal=vecSizeFactors,
-      matTranslationFactorsExternal=NULL,
-      boolRunDESeq2=TRUE )
-    
-    matCountDataProc <- lsProcessedData$matCountDataProc
-    matCountDataProcFull <- lsProcessedData$matCountDataProcFull
-    dfAnnotationProc <- lsProcessedData$dfAnnotationProc
-    matProbNB <- lsProcessedData$matProbNB
-    matDropoutRate <- lsProcessedData$matDropout
-    vecClusterAssignments <- lsProcessedData$vecClusterAssignments
-    vecCentroids <- lsProcessedData$vecCentroids
-    
-    print("2. Run DESeq2")
-    lsDESeq2Results <- runDESeq2(
-      dfAnnotationProc=dfAnnotationProc,
-      matCountDataProc=matCountDataProcFull,
-      nProc=nProc,
-      strCaseName=strCaseName,
-      strControlName=strControlName,
-      strMode=strMode)
-    vecDispersions <- (lsDESeq2Results$vecDispersions)[rownames(matCountDataProc)]
-    
     print("3. Compute translation factors")
     matTranslationFactors <- computeTranslationFactors(
       matCountDataProc=matCountData,
@@ -626,9 +555,74 @@ runImputation <- function(matCountData,
     matImputedSamplewise[,sample] <- vecImputedSample
   }
   
-  # Generate imputation error statistics
+  # Baseline imputation:
+  # Impute as average of neighbours (or as neighbour on ends).
+  matImputedBaseline <- matrix(NA, nrow=scaNumGenes, ncol=scaNumSamples)
+  matImputedBaseline[,1] = matCountData[,2]
+  for(sample in seq(2,scaNumSamples-1)){
+    matImputedBaseline[,sample] <- (matImputedBaseline[,sample-1]+
+        matImputedBaseline[,sample+1])/2
+  }
+  matImputedBaseline[,scaNumSamples] = matCountData[,scaNumSamples-1]
+  
+  # Generate imputation error statistics:
+  # Overall deviation comparison: LRT
+  # Compute loglikelihood of impulse imputed
+  matLLImpulseImputed <- dnbinom(x=matImputedSamplewise,
+    mu=matCountData,
+    size=matrix(vecDispersions,
+      nrow=dim(matCountData)[1],
+      ncol=dim(matCountData)[2],
+      byrow=FALSE),
+    log=TRUE)
+  vecLLImpulseImputedByGene <- apply(matLLImpulseImputed, 1, 
+    function(gene) sum(gene, na.rm=TRUE))
+  # Compute loglikelihood of baseline imputed
+  matLLBaselineImputed <- dnbinom(x=matImputedBaseline,
+    mu=matCountData,
+    size=matrix(vecDispersions,
+      nrow=dim(matCountData)[1],
+      ncol=dim(matCountData)[2],
+      byrow=FALSE),
+    log=TRUE)
+  vecLLBaselineImputedByGene <- apply(matLLBaselineImputed, 1, 
+    function(gene) sum(gene, na.rm=TRUE))
+  # LRT
+  vecLRT <- vecLLImpulseImputedByGene-vecLLBaselineImputedByGene
+  hist(vecLRT)
+  
+  # Look at absolute deviations
+  matAbsDevImpulseImputed <- abs(matCountData-matImputedSamplewise)
+  matAbsDevBaselineImputed <- abs(matCountData-matImputedBaseline)
+  # Plot histograms
+  matAbsDevImpulseImputedMolten <- melt(matAbsDevImpulseImputed)
+  matAbsDevImpulseImputedMolten$type <- "impulse"
+  matAbsDevBaselineImputedMolten <- melt(matAbsDevBaselineImputed)
+  matAbsDevBaselineImputedMolten$type <- "baseline"
+  dfAbsDev <- rbind(
+    matAbsDevImpulseImputedMolten,
+    matAbsDevBaselineImputedMolten )
+  gHistAbsDev <- ggplot( dfAbsDev, aes(value, fill = type)) +
+  	geom_histogram(alpha = 0.5, aes(y = ..density..), position = 'identity') +
+		ggtitle(paste0("Absolute deviation imputed from observed")) +
+		xlab("Absolute deviation") +
+		ylab("Density")
+  print(gHistAbsDev)
   
   # Plot data
-  currently rewriting plotting function
-  hand both actual counts and full imputed counts to function and plot both in different colours
+  plotImputedGenes(vecGeneIDs, 
+    matCountDataProc=matCountData,
+    matCountDataImputed=matImputedSamplewise,
+    matTranslationFactors=matTranslationFactorsExternal, 
+    matSizeFactors=matSizeFactors,
+    dfAnnotationProc=dfAnnotation, 
+    lsImpulseFits=lsImpulseDE_results$lsImpulseFits, 
+    strCaseName=strCaseName, 
+    strControlName=NULL, 
+    strMode=strMode,
+    strFileNameSuffix = "", 
+    strPlotTitleSuffix = "", 
+    strPlotSubtitle = "")
+  
+  return(matImputedSamplewise)
 }
