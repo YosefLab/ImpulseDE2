@@ -2,6 +2,9 @@
 #+++++++++++++++++++++++++     Impute Samples    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+library(reshape)
+library(ggplot2)
+
 #' Compute value of impulse function given parameters.
 #' 
 #' 
@@ -170,7 +173,6 @@ imputeSamples <- function(dirTemp,
 #'    \code{dfAnnotationProcFull}.
 #' @param strMode: (str) [Default "batch"] {"batch","longitudinal","singlecell"}
 #'    Mode of model fitting.
-#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
 #' @param strFileNameSuffix (character string) [Default ""] File extention.
 #' @param title_string (character string) [Default ""] Title for each plot.
 #' @param strPlotSubtitle (character string) [Default ""] Subtitle for each plot.
@@ -239,7 +241,7 @@ plotImputedGenes <- function(vecGeneIDs,
   pdf(paste("ImpulseDE2_",strFileNameSuffix,".pdf",sep=""),height=6.0,width=9.0)
   
   # Define grid for printing plots
-  if (length(vecGeneIDs) == 1 | boolPlotOnePerPage){
+  if (length(vecGeneIDs) == 1){
     par(mfrow=c(1,1), xpd=TRUE)
     scaLegendInset <- -0.15
   } else if (length(vecGeneIDs) <= 4){
@@ -261,7 +263,7 @@ plotImputedGenes <- function(vecGeneIDs,
   for (geneID in vecGeneIDs){
     # Compute impulse model values
     # Convert h0,h1,h2 to log space again
-    vecImpulseParamCaseLog <- lsImpulseFits$parameters_case[geneID,1:NPARAM]
+    vecImpulseParamCaseLog <- lsImpulseFits$parameters_case[geneID,1:6]
     vecImpulseParamCaseLog[c("h0","h1","h2")] <- log( vecImpulseParamCaseLog[c("h0","h1","h2")] )
     vecCaseValues <- calcImpulse_comp(vecImpulseParamCaseLog,vecX)
     
@@ -284,7 +286,7 @@ plotImputedGenes <- function(vecGeneIDs,
         xlim=c(0,max(vecTimepoints,na.rm=TRUE)+PDF_WIDTH), 
         ylim=c(scaYlim_lower,scaYlim_upper),
         xlab="Time",
-        ylab=paste0(strLogPlot," Impulse fit and count data"),
+        ylab=paste0("Impulse fit and count data"),
         main=paste0(geneID," ",strPlotTitleSuffix),sub=strPlotSubtitle)
       # Plot imputed values
       points(vecTimepointAssign,
@@ -325,11 +327,10 @@ plotImputedGenes <- function(vecGeneIDs,
         col=vecCol[1],pch=3,
         xlim=c(0,max(vecTimepoints,na.rm=TRUE)), 
         ylim=c(scaYlim_lower,scaYlim_upper),
-        xlab="Time", ylab=paste0(strLogPlot," Impulse fit and count data"),
-        main=paste0(geneID," ",strPlotTitleSuffix," log_10(Pval):\n ",strPvalImpulse,
-          strPvalMethod2 ),sub=strPlotSubtitle)
+        xlab="Time", ylab=paste0("Impulse fit and count data"),
+        main=paste0(geneID),sub=strPlotSubtitle)
       # Plot imputed values
-      points(vecTimepointAssign,
+      points(vecTimepointAssign[vecindLongitudinalSeriesAssign==1],
         matCountDataImputedNorm[geneID, vecindLongitudinalSeriesAssign==1],
         col="black",
         pch=4)
@@ -348,7 +349,7 @@ plotImputedGenes <- function(vecGeneIDs,
             y=matCountDataProcNorm[geneID, vecindLongitudinalSeriesAssign==longser],
             col=vecCol[longser],pch=3)
           # Plot imputed values
-          points(vecTimepointAssign,
+          points(vecTimepointAssign[vecindLongitudinalSeriesAssign==longser],
             matCountDataImputedNorm[geneID, vecindLongitudinalSeriesAssign==longser],
             col="black",
             pch=4)
@@ -504,9 +505,9 @@ runImputation <- function(matCountData,
   rownames(matImputedSamplewise) <- rownames(matCountDataProc)
   colnames(matImputedSamplewise) <- colnames(matCountDataProc)
   for(tp in vecTP){
+    indTP <- match(tp, vecTP)
     print(paste0("Imputation ", indTP, " out of ", scaNumTP))
     print(paste0("Training impulse model..."))
-    indTP <- match(tp, vecTP)
     # Set vector of indices of samples to used
     vecTrainSamples <- dfAnnotation[as.numeric(dfAnnotation$Time)!=tp,"Sample"]
     vecWithheldSamples <- dfAnnotation[as.numeric(dfAnnotation$Time)==tp,"Sample"]
@@ -547,7 +548,7 @@ runImputation <- function(matCountData,
     vecSamplesOfTP <- match(dfAnnotation[dfAnnotation$Sample %in% vecWithheldSamples,"Time"],vecTPtoImpute)
     matImputedSample <- matImputedSample[,vecSamplesOfTP]
     # b) Correct for size factor
-    matImputedSample <- matImputedSample*vecSizeFactors[vecWithheldSamples]
+    matImputedSample <- matImputedSample*matSizeFactors[,vecWithheldSamples]
     # c) Correct for longitudinal series
     if(strMode=="longitudinal"){
       # This code uses non-standardised translation factors: discouraged
@@ -571,12 +572,39 @@ runImputation <- function(matCountData,
   # Baseline imputation:
   # Impute as average of neighbours (or as neighbour on ends).
   matImputedBaseline <- matrix(NA, nrow=scaNumGenes, ncol=scaNumSamples)
-  matImputedBaseline[,1] = matCountDataProc[,2]
-  for(sample in seq(2,scaNumSamples-1)){
-    matImputedBaseline[,sample] <- (matImputedBaseline[,sample-1]+
-        matImputedBaseline[,sample+1])/2
+  rownames(matImputedBaseline) <- rownames(matCountDataProc)
+  colnames(matImputedBaseline) <- colnames(matCountDataProc)
+  # Impute by time point
+  for(tp in vecTP){
+    vecModelledSamples <- dfAnnotation[as.numeric(dfAnnotation$Time)==tp,"Sample"]
+    # Build imputation model from neighbouring time points
+    # Select model samples:
+    indTP <- match(tp, vecTP)
+    if(indTP==1){
+      vecSamplesTrain <- dfAnnotation[as.numeric(dfAnnotation$Time)==vecTP[2],"Sample"]
+    } else if(indTP==scaNumTP){
+      vecSamplesTrain <- dfAnnotation[as.numeric(dfAnnotation$Time)==vecTP[scaNumTP-1],"Sample"]
+    } else {
+      vecSamplesTrain <- dfAnnotation[as.numeric(dfAnnotation$Time)==vecTP[indTP-1] | 
+          as.numeric(dfAnnotation$Time)==vecTP[indTP+1],"Sample"]
+    }
+    matNormTrainData <- matCountDataProc[,vecSamplesTrain]/matSizeFactors[,vecSamplesTrain]
+    if(strMode=="longitudinal"){
+      matNormTrainData <- matNormTrainData/matTranslationFactors[,vecSamplesTrain]
+    }
+    # Perform imputation
+    vecImputedBaselineTemp <- apply(matNormTrainData, 1, function(gene){
+      sum(gene, na.rm=TRUE)/sum(!is.na(gene)) 
+    })
+    matImputedBaselineTemp <- matrix(vecImputedBaselineTemp, 
+      nrow=scaNumGenes, ncol=length(vecModelledSamples), byrow=FALSE)
+    # Scaled prediction from imputation
+    matImputedBaselineTemp <- matImputedBaselineTemp*matSizeFactors[,vecModelledSamples]
+    if(strMode=="longitudinal"){
+      matImputedBaselineTemp <- matImputedBaselineTemp*matTranslationFactors[,vecModelledSamples]
+    }
+    matImputedBaseline[,vecModelledSamples] <- matImputedBaselineTemp
   }
-  matImputedBaseline[,scaNumSamples] = matCountDataProc[,scaNumSamples-1]
   save(matImputedBaseline,file=file.path(getwd(),"ImpulseDE2_Impute_matImputedBaseline.RData"))
   
   # Generate imputation error statistics:
@@ -603,7 +631,10 @@ runImputation <- function(matCountData,
     function(gene) sum(gene, na.rm=TRUE))
   # LRT
   vecLRT <- vecLLImpulseImputedByGene-vecLLBaselineImputedByGene
+  graphics.off()
+  pdf("Hist_LRTvalues.pdf")
   hist(vecLRT)
+  dev.off()
   
   # Look at absolute deviations
   matAbsDevImpulseImputed <- abs(matCountDataProc-matImputedSamplewise)
@@ -621,10 +652,13 @@ runImputation <- function(matCountData,
 		ggtitle(paste0("Absolute deviation imputed from observed")) +
 		xlab("Absolute deviation") +
 		ylab("Density")
+  graphics.off()
+  pdf("Hist_AbsDev.pdf")
   print(gHistAbsDev)
+  dev.off()
   
   # Plot data
-  plotImputedGenes(vecGeneIDs, 
+  plotImputedGenes(vecGeneIDs=rownames(lsImpulseDE_results$lsImpulseFits$parameters_case)[1:500], 
     matCountDataProc=matCountDataProc,
     matCountDataImputed=matImputedSamplewise,
     matTranslationFactors=matTranslationFactorsExternal, 
@@ -634,7 +668,7 @@ runImputation <- function(matCountData,
     strCaseName=strCaseName, 
     strControlName=NULL, 
     strMode=strMode,
-    strFileNameSuffix = "", 
+    strFileNameSuffix = "ImputedGenes", 
     strPlotTitleSuffix = "", 
     strPlotSubtitle = "")
   
