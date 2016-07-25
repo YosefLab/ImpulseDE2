@@ -524,6 +524,7 @@ runImputation <- function(matCountData,
       boolPlotting=FALSE,
       scaSmallRun=NULL,
       boolSaveTemp=FALSE)
+    save(lsImpulseDE_results,file=file.path(getwd(),paste0("ImpulseDE2_Impute_lsImpulseDE_results_Sample",sample,".RData")))
     
     print("Imputing data...")
     # a) Generate raw model imputation
@@ -554,6 +555,7 @@ runImputation <- function(matCountData,
     }
     matImputedSamplewise[,sample] <- vecImputedSample
   }
+  save(matImputedSamplewise,file=file.path(getwd(),"ImpulseDE2_Impute_matImputedSamplewise.RData"))
   
   # Baseline imputation:
   # Impute as average of neighbours (or as neighbour on ends).
@@ -564,6 +566,7 @@ runImputation <- function(matCountData,
         matImputedBaseline[,sample+1])/2
   }
   matImputedBaseline[,scaNumSamples] = matCountData[,scaNumSamples-1]
+  save(matImputedBaseline,file=file.path(getwd(),"ImpulseDE2_Impute_matImputedBaseline.RData"))
   
   # Generate imputation error statistics:
   # Overall deviation comparison: LRT
