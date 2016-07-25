@@ -500,7 +500,9 @@ runImputation <- function(matCountData,
   # Sample wise imputation
   vecTP <- unique(as.numeric(dfAnnotation[,"Time"]))
   scaNumTP <- length(vecTP)
-  matImputedSamplewise <- matrix(NA, nrow=scaNumGenes, ncol=scaNumTP)
+  matImputedSamplewise <- matrix(NA, nrow=scaNumGenes, ncol=scaNumSamples)
+  rownames(matImputedSamplewise) <- rownames(matCountDataProc)
+  colnames(matImputedSamplewise) <- colnames(matCountDataProc)
   for(tp in vecTP){
     print(paste0("Imputation ", indTP, " out of ", scaNumTP))
     print(paste0("Training impulse model..."))
@@ -508,6 +510,7 @@ runImputation <- function(matCountData,
     # Set vector of indices of samples to used
     vecTrainSamples <- dfAnnotation[as.numeric(dfAnnotation$Time)!=tp,"Sample"]
     vecWithheldSamples <- dfAnnotation[as.numeric(dfAnnotation$Time)==tp,"Sample"]
+    vecTPtoImpute <- unique(as.numeric(dfAnnotation[dfAnnotation$Sample %in% vecWithheldSamples,"Time"]))
     if(strMode=="batch"){
       matTranslationFactorsExternal <- NULL
     } else if(strMode=="longitudinal"){
@@ -533,16 +536,18 @@ runImputation <- function(matCountData,
     print(paste0("Imputing data..."))
     # a) Generate raw model imputation
     # Non-modelled genes are all zero observations: set zero
-    vecImputedSample <- matrix(0, nrow=c(dim(matCountDataProc)[1]), ncol=1)
-    rownames(vecImputedSample) <- rownames(matCountDataProc)
-    vecImputedSampleTemp <- imputeSamples(dirTemp=NULL,
-        vecTPtoImpute=as.numeric(dfAnnotation[dfAnnotation$Sample %in% vecWithheldSamples,"Time"]),
+    matImputedSample <- matrix(0, nrow=c(dim(matCountDataProc)[1]), ncol=length(vecTPtoImpute))
+    rownames(matImputedSample) <- rownames(matCountDataProc)
+    matImputedSampleTemp <- imputeSamples(dirTemp=NULL,
+        vecTPtoImpute=vecTPtoImpute,
         strCaseName=NULL,
         strCtrlName=NULL,
         matModel=lsImpulseDE_results$lsImpulseFits$parameters_case)
-    vecImputedSample[names(vecImputedSampleTemp)] <- vecImputedSample
+    matImputedSample[rownames(matImputedSampleTemp),] <- matImputedSampleTemp
+    vecSamplesOfTP <- match(dfAnnotation[dfAnnotation$Sample %in% vecWithheldSamples,"Time"],vecTPtoImpute)
+    matImputedSample <- matImputedSample[,vecSamplesOfTP]
     # b) Correct for size factor
-    vecImputedSample <- vecImputedSample*vecSizeFactors[vecWithheldSamples]
+    matImputedSample <- matImputedSample*vecSizeFactors[vecWithheldSamples]
     # c) Correct for longitudinal series
     if(strMode=="longitudinal"){
       # This code uses non-standardised translation factors: discouraged
@@ -557,9 +562,9 @@ runImputation <- function(matCountData,
       #vecTranslationFactors <- matTranslationFactors[,strLongserSample]
       #vecImputedSample <- vecImputedSample*vecTranslationFactors
       
-      vecImputedSample <- vecImputedSample*matTranslationFactors[,vecWithheldSamples]
+      matImputedSample <- matImputedSample*matTranslationFactors[,vecWithheldSamples]
     }
-    matImputedSamplewise[,vecWithheldSamples] <- vecImputedSample
+    matImputedSamplewise[,vecWithheldSamples] <- matImputedSample
   }
   save(matImputedSamplewise,file=file.path(getwd(),"ImpulseDE2_Impute_matImputedSamplewise.RData"))
   
