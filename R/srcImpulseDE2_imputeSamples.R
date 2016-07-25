@@ -529,7 +529,7 @@ runImputation <- function(matCountData,
     print("Imputing data...")
     # a) Generate raw model imputation
     vecImputedSample <- as.vector( sapply(seq(1,scaNumSamples), function(sample){
-      imputeSamples <- function(dirTemp=NULL,
+      imputeSamples(dirTemp=NULL,
         vecTPtoImpute=as.numeric(dfAnnotation[dfAnnotation$Sample==strWithheldSample,"Time"]),
         strCaseName=NULL,
         strCtrlName=NULL,

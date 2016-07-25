@@ -34,6 +34,8 @@ evalLogLikImpulseSC_comp <- cmpfun(evalLogLikImpulseSC)
 source("srcImpulseDE2_fitImpulse.R")
 source("srcImpulseDE2_computePval.R")
 source("srcImpulseDE2_plotDEGenes.R")
+source("srcImpulseDE2_compareDEMethods.R")
+source("srcImpulseDE2_imputeSamples.R")
 
 ################################################################################
 ### Main function
