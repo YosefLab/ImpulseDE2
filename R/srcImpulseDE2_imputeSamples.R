@@ -114,10 +114,17 @@ imputeSamples <- function(dirTemp,
   }
   
   # 3) Impute time points
-  matImputed <- do.call(rbind, apply(matImputationModel, 1, function(genemodel){
+  lsImputed <- apply(matImputationModel, 1, function(genemodel){
     evaluateImpulseModel( vecTheta=as.numeric(as.vector(genemodel[1:6])), 
       vecTimepoints=vecTPtoImpute )
-  }))
+  })
+  if(length(vecTPtoImpute)==1){
+    matImputed <- matrix(as.vector(lsImputed), 
+      nrow=length(lsImputed), ncol=1, byrow=FALSE)
+  } else {
+    matImputed <- do.call(rbind, lsImputed)
+  }
+  rownames(matImputed) <- names(lsImputed)
   
   return(matImputed)
 }
@@ -428,7 +435,6 @@ runImputation <- function(matCountData,
     stop(strErrorMsg)
   })
   
-  
   # The first 3 steps of ImpulseDE2 have to be run
   # to generate the translation factors:
   print("1. Prepare data")
@@ -443,7 +449,7 @@ runImputation <- function(matCountData,
     scaWindowRadius=NULL,
     lsPseudoDE=NULL,
     vecDispersionsExternal=NULL,
-    vecSizeFactorsExternal=vecSizeFactors,
+    vecSizeFactorsExternal=NULL,
     matTranslationFactorsExternal=NULL,
     boolRunDESeq2=TRUE )
   
@@ -487,13 +493,14 @@ runImputation <- function(matCountData,
       dfAnnotationProc=dfAnnotationProc,
       strCaseName=strCaseName,
       strControlName=strControlName)
+    colnames(matTranslationFactors) <- colnames(matCountData)
   }
   
   # Sample wise imputation
   matImputedSamplewise <- matrix(NA, nrow=scaNumGenes, ncol=scaNumSamples)
   for(sample in seq(1,scaNumSamples)){
-    print("Imputation ", sample, " out of ", scaNumSamples)
-    print("Training impulse model...")
+    print(paste0("Imputation ", sample, " out of ", scaNumSamples))
+    print(paste0("Training impulse model..."))
     # Set vector of indices of samples to used
     if(sample==1){
       vecTrainSamples <- seq(2,scaNumSamples)
@@ -506,7 +513,7 @@ runImputation <- function(matCountData,
     matCountDataMissing <- matCountData[,vecTrainSamples]
     if(strMode=="batch"){
       matTranslationFactorsExternal <- NULL
-    } else if(strMode=="longirtudinal"){
+    } else if(strMode=="longitudinal"){
       matTranslationFactorsExternal <- matTranslationFactors[,vecTrainSamples]
     } else {
       stop("strMode not recognised in runImputation")
@@ -526,7 +533,7 @@ runImputation <- function(matCountData,
       boolSaveTemp=FALSE)
     save(lsImpulseDE_results,file=file.path(getwd(),paste0("ImpulseDE2_Impute_lsImpulseDE_results_Sample",sample,".RData")))
     
-    print("Imputing data...")
+    print(paste0("Imputing data..."))
     # a) Generate raw model imputation
     vecImputedSample <- as.vector( sapply(seq(1,scaNumSamples), function(sample){
       imputeSamples(dirTemp=NULL,
