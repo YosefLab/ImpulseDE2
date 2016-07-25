@@ -423,8 +423,6 @@ runImputation <- function(matCountData,
   if(strMode=="singlecell"){
     stop("Don't use strMode==singlecell.")
   }
-  scaNumGenes <- dim(matCountData)[1]
-  scaNumSamples <- dim(matCountData)[2]
   
   # 2. Run imputation on all possible sub-data sets missing one sample:
   
@@ -461,10 +459,13 @@ runImputation <- function(matCountData,
   vecClusterAssignments <- lsProcessedData$vecClusterAssignments
   vecCentroids <- lsProcessedData$vecCentroids
   
+  scaNumGenes <- dim(matCountDataProc)[1]
+  scaNumSamples <- dim(matCountDataProc)[2]
+  
   print("2. Run DESeq2")
   lsDESeq2Results <- runDESeq2(
     dfAnnotationProc=dfAnnotationProc,
-    matCountDataProc=matCountDataProcFull,
+    matCountDataProc=matCountDataProc,
     nProc=nProc,
     strCaseName=strCaseName,
     strControlName=strControlName,
@@ -479,38 +480,34 @@ runImputation <- function(matCountData,
   # has to be evaluated taking the scaling factors into consideration.
   # These are functions from ImpulseDE2
   # - Generate size factors
-  matSizeFactors <- computeSizeFactors(matCountDataProc=matCountData,
+  matSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc,
     scaSmallRun=NULL,
     strMode=strMode)
   vecSizeFactors <- matSizeFactors[1,]
   if(strMode=="longitudinal"){
     print("3. Compute translation factors")
     matTranslationFactors <- computeTranslationFactors(
-      matCountDataProc=matCountData,
+      matCountDataProc=matCountDataProc,
       matSizeFactors=matSizeFactors,
-      vecDispersions,
+      vecDispersions=vecDispersions,
       scaSmallRun=NULL,
       dfAnnotationProc=dfAnnotationProc,
       strCaseName=strCaseName,
       strControlName=strControlName)
-    colnames(matTranslationFactors) <- colnames(matCountData)
+    colnames(matTranslationFactors) <- colnames(matCountDataProc)
   }
   
   # Sample wise imputation
-  matImputedSamplewise <- matrix(NA, nrow=scaNumGenes, ncol=scaNumSamples)
-  for(sample in seq(1,scaNumSamples)){
-    print(paste0("Imputation ", sample, " out of ", scaNumSamples))
+  vecTP <- unique(as.numeric(dfAnnotation[,"Time"]))
+  scaNumTP <- length(vecTP)
+  matImputedSamplewise <- matrix(NA, nrow=scaNumGenes, ncol=scaNumTP)
+  for(tp in vecTP){
+    print(paste0("Imputation ", indTP, " out of ", scaNumTP))
     print(paste0("Training impulse model..."))
+    indTP <- match(tp, vecTP)
     # Set vector of indices of samples to used
-    if(sample==1){
-      vecTrainSamples <- seq(2,scaNumSamples)
-    } else if(sample==scaNumSamples){
-      vecTrainSamples <- seq(1,scaNumSamples-1)
-    } else {
-      vecTrainSamples <- c(seq(1,sample-1),seq(sample+1),scaNumSamples)
-    }
-    strWithheldSample <- (colnames(matCountData))[sample]
-    matCountDataMissing <- matCountData[,vecTrainSamples]
+    vecTrainSamples <- dfAnnotation[as.numeric(dfAnnotation$Time)!=tp,"Sample"]
+    vecWithheldSamples <- dfAnnotation[as.numeric(dfAnnotation$Time)==tp,"Sample"]
     if(strMode=="batch"){
       matTranslationFactorsExternal <- NULL
     } else if(strMode=="longitudinal"){
@@ -519,8 +516,8 @@ runImputation <- function(matCountData,
       stop("strMode not recognised in runImputation")
     }
     lsImpulseDE_results <- runImpulseDE2(
-      matCountData=matCountData[,vecTrainSamples], 
-      dfAnnotation=dfAnnotation[dfAnnotation$Sample!=strWithheldSample,],
+      matCountData=matCountDataProc[,vecTrainSamples], 
+      dfAnnotation=dfAnnotation[dfAnnotation$Sample %in% vecTrainSamples,],
       strCaseName = strCaseName, 
       strControlName=strControlName, 
       strMode=strMode,
@@ -535,15 +532,17 @@ runImputation <- function(matCountData,
     
     print(paste0("Imputing data..."))
     # a) Generate raw model imputation
-    vecImputedSample <- as.vector( sapply(seq(1,scaNumSamples), function(sample){
-      imputeSamples(dirTemp=NULL,
-        vecTPtoImpute=as.numeric(dfAnnotation[dfAnnotation$Sample==strWithheldSample,"Time"]),
+    # Non-modelled genes are all zero observations: set zero
+    vecImputedSample <- matrix(0, nrow=c(dim(matCountDataProc)[1]), ncol=1)
+    rownames(vecImputedSample) <- rownames(matCountDataProc)
+    vecImputedSampleTemp <- imputeSamples(dirTemp=NULL,
+        vecTPtoImpute=as.numeric(dfAnnotation[dfAnnotation$Sample %in% vecWithheldSamples,"Time"]),
         strCaseName=NULL,
         strCtrlName=NULL,
         matModel=lsImpulseDE_results$lsImpulseFits$parameters_case)
-    }))
+    vecImputedSample[names(vecImputedSampleTemp)] <- vecImputedSample
     # b) Correct for size factor
-    vecImputedSample <- vecImputedSample*vecSizeFactors[sample]
+    vecImputedSample <- vecImputedSample*vecSizeFactors[vecWithheldSamples]
     # c) Correct for longitudinal series
     if(strMode=="longitudinal"){
       # This code uses non-standardised translation factors: discouraged
@@ -558,41 +557,41 @@ runImputation <- function(matCountData,
       #vecTranslationFactors <- matTranslationFactors[,strLongserSample]
       #vecImputedSample <- vecImputedSample*vecTranslationFactors
       
-      vecImputedSample <- vecImputedSample*matTranslationFactors[,sample]
+      vecImputedSample <- vecImputedSample*matTranslationFactors[,vecWithheldSamples]
     }
-    matImputedSamplewise[,sample] <- vecImputedSample
+    matImputedSamplewise[,vecWithheldSamples] <- vecImputedSample
   }
   save(matImputedSamplewise,file=file.path(getwd(),"ImpulseDE2_Impute_matImputedSamplewise.RData"))
   
   # Baseline imputation:
   # Impute as average of neighbours (or as neighbour on ends).
   matImputedBaseline <- matrix(NA, nrow=scaNumGenes, ncol=scaNumSamples)
-  matImputedBaseline[,1] = matCountData[,2]
+  matImputedBaseline[,1] = matCountDataProc[,2]
   for(sample in seq(2,scaNumSamples-1)){
     matImputedBaseline[,sample] <- (matImputedBaseline[,sample-1]+
         matImputedBaseline[,sample+1])/2
   }
-  matImputedBaseline[,scaNumSamples] = matCountData[,scaNumSamples-1]
+  matImputedBaseline[,scaNumSamples] = matCountDataProc[,scaNumSamples-1]
   save(matImputedBaseline,file=file.path(getwd(),"ImpulseDE2_Impute_matImputedBaseline.RData"))
   
   # Generate imputation error statistics:
   # Overall deviation comparison: LRT
   # Compute loglikelihood of impulse imputed
   matLLImpulseImputed <- dnbinom(x=matImputedSamplewise,
-    mu=matCountData,
+    mu=matCountDataProc,
     size=matrix(vecDispersions,
-      nrow=dim(matCountData)[1],
-      ncol=dim(matCountData)[2],
+      nrow=dim(matCountDataProc)[1],
+      ncol=dim(matCountDataProc)[2],
       byrow=FALSE),
     log=TRUE)
   vecLLImpulseImputedByGene <- apply(matLLImpulseImputed, 1, 
     function(gene) sum(gene, na.rm=TRUE))
   # Compute loglikelihood of baseline imputed
   matLLBaselineImputed <- dnbinom(x=matImputedBaseline,
-    mu=matCountData,
+    mu=matCountDataProc,
     size=matrix(vecDispersions,
-      nrow=dim(matCountData)[1],
-      ncol=dim(matCountData)[2],
+      nrow=dim(matCountDataProc)[1],
+      ncol=dim(matCountDataProc)[2],
       byrow=FALSE),
     log=TRUE)
   vecLLBaselineImputedByGene <- apply(matLLBaselineImputed, 1, 
@@ -602,8 +601,8 @@ runImputation <- function(matCountData,
   hist(vecLRT)
   
   # Look at absolute deviations
-  matAbsDevImpulseImputed <- abs(matCountData-matImputedSamplewise)
-  matAbsDevBaselineImputed <- abs(matCountData-matImputedBaseline)
+  matAbsDevImpulseImputed <- abs(matCountDataProc-matImputedSamplewise)
+  matAbsDevBaselineImputed <- abs(matCountDataProc-matImputedBaseline)
   # Plot histograms
   matAbsDevImpulseImputedMolten <- melt(matAbsDevImpulseImputed)
   matAbsDevImpulseImputedMolten$type <- "impulse"
@@ -621,7 +620,7 @@ runImputation <- function(matCountData,
   
   # Plot data
   plotImputedGenes(vecGeneIDs, 
-    matCountDataProc=matCountData,
+    matCountDataProc=matCountDataProc,
     matCountDataImputed=matImputedSamplewise,
     matTranslationFactors=matTranslationFactorsExternal, 
     matSizeFactors=matSizeFactors,
