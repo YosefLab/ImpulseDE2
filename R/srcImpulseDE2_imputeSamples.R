@@ -418,12 +418,15 @@ runImputation <- function(matCountData,
   strControlName=NULL,
   strMode="batch",
   nProc=1,
-  dirTemp,
+  dirTemp=NULL,
   dirOut){
   
   # 1. Process Input
   if(strMode=="singlecell"){
     stop("Don't use strMode==singlecell.")
+  }
+  if(is.null(dirTemp)){
+    dirTemp <- paste0(dirOut,"/tmp")
   }
   
   # 2. Run imputation on all possible sub-data sets missing one sample:
@@ -435,6 +438,7 @@ runImputation <- function(matCountData,
     stop(strErrorMsg)
   })
   
+  print("Run ImpulseDE2 on full data.")
   lsImpulseDE_FullResults <- runImpulseDE2(
       matCountData=matCountData, 
       dfAnnotation=dfAnnotation,
@@ -449,8 +453,9 @@ runImputation <- function(matCountData,
   load("ImpulseDE2_matCountDataProc.RData")
   load("ImpulseDE2_dfAnnotationProc.RData")
   load("ImpulseDE2_vecDispersions.RData")
-  load("ImpulseDE2_vecSizeFactors.RData")
+  load("ImpulseDE2_matSizeFactors.RData")
   load("ImpulseDE2_matTranslationFactors.RData")
+  vecSizeFactors <- matSizeFactors[1,]
   
   # Go to temporary directory
   tryCatch({
