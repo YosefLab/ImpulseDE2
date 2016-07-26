@@ -456,6 +456,7 @@ runImputation <- function(matCountData,
   load("ImpulseDE2_matSizeFactors.RData")
   load("ImpulseDE2_matTranslationFactors.RData")
   vecSizeFactors <- matSizeFactors[1,]
+  colnames(matTranslationFactors) <- colnames(matCountDataProc)
   
   scaNumGenes <- dim(matCountDataProc)[1]
   scaNumSamples <- dim(matCountDataProc)[2]
