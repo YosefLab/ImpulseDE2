@@ -457,6 +457,9 @@ runImputation <- function(matCountData,
   load("ImpulseDE2_matTranslationFactors.RData")
   vecSizeFactors <- matSizeFactors[1,]
   
+  scaNumGenes <- dim(matCountDataProc)[1]
+  scaNumSamples <- dim(matCountDataProc)[2]
+  
   # Go to temporary directory
   tryCatch({
     setwd(dirTemp)
@@ -678,7 +681,12 @@ runImputation <- function(matCountData,
   # Look at absolute deviations
   matAbsDevImpulseImputed <- abs(matCountDataProc-matImputedSamplewise)
   matAbsDevBaselineImputed <- abs(matCountDataProc-matImputedBaseline)
+  vecAbsDevImpulseImputed <- apply(matAbsDevImpulseImputed, 1, function(gene) sum(gene, na.rm=TRUE) )
+  vecAbsDevBaselineImputed <- apply(matAbsDevBaselineImputed, 1, function(gene) sum(gene, na.rm=TRUE) )
   # Plot histograms
+  dfAbsDevImpulse <- data.frame(value=vecAbsDevImpulseImputed, type="impulse")
+  dfAbsDevBaseline <- data.frame(value=vecAbsDevBaselineImputed, type="baseline")
+  dfAbsDev <- rbind(dfAbsDevImpulse, dfAbsDevBaseline)
   matAbsDevImpulseImputedMolten <- melt(matAbsDevImpulseImputed)
   matAbsDevImpulseImputedMolten$type <- "impulse"
   matAbsDevBaselineImputedMolten <- melt(matAbsDevBaselineImputed)
@@ -687,10 +695,12 @@ runImputation <- function(matCountData,
     matAbsDevImpulseImputedMolten,
     matAbsDevBaselineImputedMolten )
   gHistAbsDev <- ggplot( dfAbsDev, aes(value, fill = type)) +
-  	geom_histogram(alpha = 0.5, aes(y = ..density..), position = 'identity') +
+  	geom_histogram(alpha = 0.5, position = 'identity') +
 		ggtitle(paste0("Absolute deviation imputed from observed")) +
 		xlab("Absolute deviation") +
-		ylab("Density")
+		ylab("Density") +
+    xlim(0,2500)
+  print(gHistAbsDev)
   graphics.off()
   pdf("Hist_AbsDev.pdf")
   print(gHistAbsDev)
