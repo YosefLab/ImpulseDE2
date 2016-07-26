@@ -418,7 +418,8 @@ runImputation <- function(matCountData,
   strControlName=NULL,
   strMode="batch",
   nProc=1,
-  dirTemp){
+  dirTemp,
+  dirOut){
   
   # 1. Process Input
   if(strMode=="singlecell"){
@@ -427,9 +428,9 @@ runImputation <- function(matCountData,
   
   # 2. Run imputation on all possible sub-data sets missing one sample:
   
-  # Go to temporary directory
+  # Go to out directory
   tryCatch({
-    setwd(dirTemp)
+    setwd(dirOut)
   }, error=function(strErrorMsg){
     stop(strErrorMsg)
   })
@@ -450,6 +451,13 @@ runImputation <- function(matCountData,
   load("ImpulseDE2_vecDispersions.RData")
   load("ImpulseDE2_vecSizeFactors.RData")
   load("ImpulseDE2_matTranslationFactors.RData")
+  
+  # Go to temporary directory
+  tryCatch({
+    setwd(dirTemp)
+  }, error=function(strErrorMsg){
+    stop(strErrorMsg)
+  })
   
   if(FALSE){
     # The first 3 steps of ImpulseDE2 have to be run
@@ -552,7 +560,7 @@ runImputation <- function(matCountData,
       boolPlotting=FALSE,
       scaSmallRun=NULL,
       boolSaveTemp=FALSE)
-    save(lsImpulseDE_results,file=file.path(getwd(),paste0("ImpulseDE2_Impute_lsImpulseDE_results_Sample",indTP,".RData")))
+    save(lsImpulseDE_results,file=file.path(dirOut,paste0("ImpulseDE2_Impute_lsImpulseDE_results_Sample",indTP,".RData")))
     
     print(paste0("Imputing data..."))
     # a) Generate raw model imputation
@@ -587,7 +595,7 @@ runImputation <- function(matCountData,
     }
     matImputedSamplewise[,vecWithheldSamples] <- matImputedSample
   }
-  save(matImputedSamplewise,file=file.path(getwd(),"ImpulseDE2_Impute_matImputedSamplewise.RData"))
+  save(matImputedSamplewise,file=file.path(dirOut,"ImpulseDE2_Impute_matImputedSamplewise.RData"))
   
   # Baseline imputation:
   # Impute as average of neighbours (or as neighbour on ends).
@@ -625,9 +633,15 @@ runImputation <- function(matCountData,
     }
     matImputedBaseline[,vecModelledSamples] <- matImputedBaselineTemp
   }
-  save(matImputedBaseline,file=file.path(getwd(),"ImpulseDE2_Impute_matImputedBaseline.RData"))
+  save(matImputedBaseline,file=file.path(dirOut,"ImpulseDE2_Impute_matImputedBaseline.RData"))
   
   # Generate imputation error statistics:
+  # Go to out directory
+  tryCatch({
+    setwd(dirOut)
+  }, error=function(strErrorMsg){
+    stop(strErrorMsg)
+  })
   # Overall deviation comparison: LRT
   # Compute loglikelihood of impulse imputed
   # Recover zero predictions:
