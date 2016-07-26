@@ -434,70 +434,89 @@ runImputation <- function(matCountData,
     stop(strErrorMsg)
   })
   
-  # The first 3 steps of ImpulseDE2 have to be run
-  # to generate the translation factors:
-  print("1. Prepare data")
-  lsProcessedData <- processData(
-    dfAnnotation=dfAnnotation,
-    matCountData=matCountData,
-    scaSmallRun=NULL,
-    strControlName=strControlName, 
-    strCaseName=strCaseName,
-    strMode=strMode,
-    strSCMode=NULL,
-    scaWindowRadius=NULL,
-    lsPseudoDE=NULL,
-    vecDispersionsExternal=NULL,
-    vecSizeFactorsExternal=NULL,
-    matTranslationFactorsExternal=NULL,
-    boolRunDESeq2=TRUE )
-  
-  matCountDataProc <- lsProcessedData$matCountDataProc
-  matCountDataProcFull <- lsProcessedData$matCountDataProcFull
-  dfAnnotationProc <- lsProcessedData$dfAnnotationProc
-  save(matCountDataProc,file=file.path(getwd(),"ImpulseDE2_Impute_matCountDataProc.RData"))
-  save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_Impute_dfAnnotationProc.RData"))
-  
-  scaNumGenes <- dim(matCountDataProc)[1]
-  scaNumSamples <- dim(matCountDataProc)[2]
-  
-  print("2. Run DESeq2")
-  lsDESeq2Results <- runDESeq2(
-    dfAnnotationProc=dfAnnotationProc,
-    matCountDataProc=matCountDataProc,
-    nProc=nProc,
-    strCaseName=strCaseName,
-    strControlName=strControlName,
-    strMode=strMode)
-  vecDispersions <- (lsDESeq2Results$vecDispersions)[rownames(matCountDataProc)]
-  save(vecDispersions,file=file.path(getwd(),"ImpulseDE2_Impute_vecDispersions.RData"))
-  
-  # Generate scaling factors (need for imputation):
-  # Note that all models are created and evaluated under the same
-  # scaling factors fit to the entire data set. The rationale behind
-  # this is that a de novo imputation does not assume any scaling effects.
-  # Therefore, if an imputation is evaluated with given data, it
-  # has to be evaluated taking the scaling factors into consideration.
-  # These are functions from ImpulseDE2
-  # - Generate size factors
-  matSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc,
-    scaSmallRun=NULL,
-    strMode=strMode)
-  vecSizeFactors <- matSizeFactors[1,]
-  if(strMode=="longitudinal"){
-    print("3. Compute translation factors")
-    matTranslationFactors <- computeTranslationFactors(
-      matCountDataProc=matCountDataProc,
-      matSizeFactors=matSizeFactors,
-      vecDispersions=vecDispersions,
+  lsImpulseDE_FullResults <- runImpulseDE2(
+      matCountData=matCountData, 
+      dfAnnotation=dfAnnotation,
+      strCaseName=strCaseName, 
+      strControlName=strControlName, 
+      strMode=strMode,
+      nProc=nProc,
+      Q_value=10^(-2),
+      boolPlotting=FALSE,
       scaSmallRun=NULL,
-      dfAnnotationProc=dfAnnotationProc,
+    boolSaveTemp=TRUE)
+  load("ImpulseDE2_matCountDataProc.RData")
+  load("ImpulseDE2_dfAnnotationProc.RData")
+  load("ImpulseDE2_vecDispersions.RData")
+  load("ImpulseDE2_vecSizeFactors.RData")
+  load("ImpulseDE2_matTranslationFactors.RData")
+  
+  if(FALSE){
+    # The first 3 steps of ImpulseDE2 have to be run
+    # to generate the translation factors:
+    print("1. Prepare data")
+    lsProcessedData <- processData(
+      dfAnnotation=dfAnnotation,
+      matCountData=matCountData,
+      scaSmallRun=NULL,
+      strControlName=strControlName, 
       strCaseName=strCaseName,
-      strControlName=strControlName)
-    colnames(matTranslationFactors) <- colnames(matCountDataProc)
+      strMode=strMode,
+      strSCMode=NULL,
+      scaWindowRadius=NULL,
+      lsPseudoDE=NULL,
+      vecDispersionsExternal=NULL,
+      vecSizeFactorsExternal=NULL,
+      matTranslationFactorsExternal=NULL,
+      boolRunDESeq2=TRUE )
+    
+    matCountDataProc <- lsProcessedData$matCountDataProc
+    matCountDataProcFull <- lsProcessedData$matCountDataProcFull
+    dfAnnotationProc <- lsProcessedData$dfAnnotationProc
+    save(matCountDataProc,file=file.path(getwd(),"ImpulseDE2_Impute_matCountDataProc.RData"))
+    save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_Impute_dfAnnotationProc.RData"))
+    
+    scaNumGenes <- dim(matCountDataProc)[1]
+    scaNumSamples <- dim(matCountDataProc)[2]
+    
+    print("2. Run DESeq2")
+    lsDESeq2Results <- runDESeq2(
+      dfAnnotationProc=dfAnnotationProc,
+      matCountDataProc=matCountDataProc,
+      nProc=nProc,
+      strCaseName=strCaseName,
+      strControlName=strControlName,
+      strMode=strMode)
+    vecDispersions <- (lsDESeq2Results$vecDispersions)[rownames(matCountDataProc)]
+    save(vecDispersions,file=file.path(getwd(),"ImpulseDE2_Impute_vecDispersions.RData"))
+    
+    # Generate scaling factors (need for imputation):
+    # Note that all models are created and evaluated under the same
+    # scaling factors fit to the entire data set. The rationale behind
+    # this is that a de novo imputation does not assume any scaling effects.
+    # Therefore, if an imputation is evaluated with given data, it
+    # has to be evaluated taking the scaling factors into consideration.
+    # These are functions from ImpulseDE2
+    # - Generate size factors
+    matSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc,
+      scaSmallRun=NULL,
+      strMode=strMode)
+    vecSizeFactors <- matSizeFactors[1,]
+    if(strMode=="longitudinal"){
+      print("3. Compute translation factors")
+      matTranslationFactors <- computeTranslationFactors(
+        matCountDataProc=matCountDataProc,
+        matSizeFactors=matSizeFactors,
+        vecDispersions=vecDispersions,
+        scaSmallRun=NULL,
+        dfAnnotationProc=dfAnnotationProc,
+        strCaseName=strCaseName,
+        strControlName=strControlName)
+      colnames(matTranslationFactors) <- colnames(matCountDataProc)
+    }
+    save(vecSizeFactors,file=file.path(getwd(),"ImpulseDE2_Impute_vecSizeFactors.RData"))
+    save(matTranslationFactors,file=file.path(getwd(),"ImpulseDE2_Impute_matTranslationFactors.RData"))
   }
-  save(vecSizeFactors,file=file.path(getwd(),"ImpulseDE2_Impute_vecSizeFactors.RData"))
-  save(matTranslationFactors,file=file.path(getwd(),"ImpulseDE2_Impute_matTranslationFactors.RData"))
   
   # Sample wise imputation
   vecTP <- unique(as.numeric(dfAnnotation[,"Time"]))
@@ -611,25 +630,25 @@ runImputation <- function(matCountData,
   # Generate imputation error statistics:
   # Overall deviation comparison: LRT
   # Compute loglikelihood of impulse imputed
-  matLLImpulseImputed <- dnbinom(x=matImputedSamplewise,
-    mu=matCountDataProc,
-    size=matrix(vecDispersions,
-      nrow=dim(matCountDataProc)[1],
-      ncol=dim(matCountDataProc)[2],
-      byrow=FALSE),
-    log=TRUE)
-  vecLLImpulseImputedByGene <- apply(matLLImpulseImputed, 1, 
-    function(gene) sum(gene, na.rm=TRUE))
+  # Recover zero predictions:
+  matImputedSamplewiseTemp <- matImputedSamplewise
+  matImputedSamplewiseTemp[matImputedSamplewiseTemp==0] <- 10^(-4)
+  vecLLImpulseImputedByGene <- sapply(seq(1,dim(matCountDataProc)[1]), function(gene){
+    sum(dnbinom(x=matCountDataProc[gene,],
+    mu=matImputedSamplewiseTemp[gene,],
+    size=vecDispersions[gene],
+    log=TRUE), na.rm=TRUE)
+  })
   # Compute loglikelihood of baseline imputed
-  matLLBaselineImputed <- dnbinom(x=matImputedBaseline,
-    mu=matCountDataProc,
-    size=matrix(vecDispersions,
-      nrow=dim(matCountDataProc)[1],
-      ncol=dim(matCountDataProc)[2],
-      byrow=FALSE),
-    log=TRUE)
-  vecLLBaselineImputedByGene <- apply(matLLBaselineImputed, 1, 
-    function(gene) sum(gene, na.rm=TRUE))
+  # Recover zero predictions:
+  matImputedBaselineTemp <- matImputedBaseline
+  matImputedBaselineTemp[matImputedBaselineTemp==0] <- 10^(-4)
+  vecLLBaselineImputedByGene <- sapply(seq(1,dim(matCountDataProc)[1]), function(gene){
+    sum(dnbinom(x=matCountDataProc[gene,],
+    mu=matImputedBaselineTemp[gene,],
+    size=vecDispersions[gene],
+    log=TRUE), na.rm=TRUE)
+  })
   # LRT
   vecLRT <- vecLLImpulseImputedByGene-vecLLBaselineImputedByGene
   graphics.off()
@@ -659,13 +678,13 @@ runImputation <- function(matCountData,
   dev.off()
   
   # Plot data
-  plotImputedGenes(vecGeneIDs=rownames(lsImpulseDE_results$lsImpulseFits$parameters_case)[1:500], 
+  plotImputedGenes(vecGeneIDs=rownames(lsImpulseDE_FullResults$lsImpulseFits$parameters_case)[1:500], 
     matCountDataProc=matCountDataProc,
     matCountDataImputed=matImputedSamplewise,
     matTranslationFactors=matTranslationFactorsExternal, 
     matSizeFactors=matSizeFactors,
     dfAnnotationProc=dfAnnotation, 
-    lsImpulseFits=lsImpulseDE_results$lsImpulseFits, 
+    lsImpulseFits=lsImpulseDE_FullResults$lsImpulseFits, 
     strCaseName=strCaseName, 
     strControlName=NULL, 
     strMode=strMode,
