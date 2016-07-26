@@ -455,10 +455,8 @@ runImputation <- function(matCountData,
   matCountDataProc <- lsProcessedData$matCountDataProc
   matCountDataProcFull <- lsProcessedData$matCountDataProcFull
   dfAnnotationProc <- lsProcessedData$dfAnnotationProc
-  matProbNB <- lsProcessedData$matProbNB
-  matDropoutRate <- lsProcessedData$matDropout
-  vecClusterAssignments <- lsProcessedData$vecClusterAssignments
-  vecCentroids <- lsProcessedData$vecCentroids
+  save(matCountDataProc,file=file.path(getwd(),"ImpulseDE2_Impute_matCountDataProc.RData"))
+  save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_Impute_dfAnnotationProc.RData"))
   
   scaNumGenes <- dim(matCountDataProc)[1]
   scaNumSamples <- dim(matCountDataProc)[2]
@@ -472,6 +470,7 @@ runImputation <- function(matCountData,
     strControlName=strControlName,
     strMode=strMode)
   vecDispersions <- (lsDESeq2Results$vecDispersions)[rownames(matCountDataProc)]
+  save(vecDispersions,file=file.path(getwd(),"ImpulseDE2_Impute_vecDispersions.RData"))
   
   # Generate scaling factors (need for imputation):
   # Note that all models are created and evaluated under the same
@@ -497,6 +496,8 @@ runImputation <- function(matCountData,
       strControlName=strControlName)
     colnames(matTranslationFactors) <- colnames(matCountDataProc)
   }
+  save(vecSizeFactors,file=file.path(getwd(),"ImpulseDE2_Impute_vecSizeFactors.RData"))
+  save(matTranslationFactors,file=file.path(getwd(),"ImpulseDE2_Impute_matTranslationFactors.RData"))
   
   # Sample wise imputation
   vecTP <- unique(as.numeric(dfAnnotation[,"Time"]))
@@ -532,7 +533,7 @@ runImputation <- function(matCountData,
       boolPlotting=FALSE,
       scaSmallRun=NULL,
       boolSaveTemp=FALSE)
-    save(lsImpulseDE_results,file=file.path(getwd(),paste0("ImpulseDE2_Impute_lsImpulseDE_results_Sample",sample,".RData")))
+    save(lsImpulseDE_results,file=file.path(getwd(),paste0("ImpulseDE2_Impute_lsImpulseDE_results_Sample",indTP,".RData")))
     
     print(paste0("Imputing data..."))
     # a) Generate raw model imputation
