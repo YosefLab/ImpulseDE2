@@ -511,7 +511,10 @@ processData <- function(dfAnnotation=NULL,
       matCountDataProc <- matCountDataProc[,c(vecSampleNames_Case,vecSampleNames_Ctrl)]
     } else {
       vecSampleNames_Case <- as.character(as.vector( 
-        dfAnnotation[dfAnnotation$Condition %in% strCaseName,]$Sample ))
+        dfAnnotation[ 
+          dfAnnotation$Condition %in% strCaseName &
+          dfAnnotation$Sample %in% colnames(matCountDataProc),
+          ]$Sample ))
       matCountDataProc <- matCountDataProc[,vecSampleNames_Case]
     }
     # Check that every sample contains at least one observed value (not NA)
