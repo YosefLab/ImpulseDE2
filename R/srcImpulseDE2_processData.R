@@ -499,9 +499,15 @@ processData <- function(dfAnnotation=NULL,
     # Reduce expression table to columns of considered conditions
     if(!is.null(strControlName)){
       vecSampleNames_Case <- as.character(as.vector( 
-        dfAnnotation[dfAnnotation$Condition %in% strCaseName,]$Sample ))
+        dfAnnotation[ 
+          dfAnnotation$Condition %in% strCaseName &
+          dfAnnotation$Sample %in% colnames(matCountDataProc),
+          ]$Sample ))
       vecSampleNames_Ctrl <- as.character(as.vector( 
-        dfAnnotation[dfAnnotation$Condition %in% strControlName,]$Sample ))
+        dfAnnotation[ 
+          dfAnnotation$Condition %in% strControlName &
+          dfAnnotation$Sample %in% colnames(matCountDataProc),
+          ]$Sample ))
       matCountDataProc <- matCountDataProc[,c(vecSampleNames_Case,vecSampleNames_Ctrl)]
     } else {
       vecSampleNames_Case <- as.character(as.vector( 
