@@ -651,14 +651,27 @@ runImputation <- function(matCountData,
   }, error=function(strErrorMsg){
     stop(strErrorMsg)
   })
+  # Only consider non-terminal samples
+  scaMinTP <- min(unique(as.numeric(dfAnnotation$Time)))
+  scaMaxTP <- max(unique(as.numeric(dfAnnotation$Time)))
+  vecboolEvaluateSamples <- colnames(matCountDataProc) %in% dfAnnotation[dfAnnotation$Time!=scaMinTP & dfAnnotation$Time!=scaMaxTP,"Sample"]
+  
   # Overall deviation comparison: LRT
   # Compute loglikelihood of impulse imputed
   # Recover zero predictions:
   matImputedSamplewiseTemp <- matImputedSamplewise
   matImputedSamplewiseTemp[matImputedSamplewiseTemp==0] <- 10^(-4)
+  # Correct outlier predictions
+  #for(gene in seq(1,dim(matImputedSamplewiseTemp)[1])){
+  #  vecImputed <- matImputedSamplewiseTemp[gene,]
+  #  vecObs <- matCountDataProc[gene,]
+  #  if(any(vecImputed>2*max(vecObs))){
+  #    matImputedSamplewiseTemp[gene,vecImputed>2*max(vecObs)] <- (2*vecObs)[vecImputed>2*max(vecObs)]
+  #  }
+  #}
   vecLLImpulseImputedByGene <- sapply(seq(1,dim(matCountDataProc)[1]), function(gene){
-    sum(dnbinom(x=matCountDataProc[gene,],
-    mu=matImputedSamplewiseTemp[gene,],
+    sum(dnbinom(x=matCountDataProc[gene,vecboolEvaluateSamples],
+    mu=matImputedSamplewiseTemp[gene,vecboolEvaluateSamples],
     size=vecDispersions[gene],
     log=TRUE), na.rm=TRUE)
   })
@@ -667,51 +680,64 @@ runImputation <- function(matCountData,
   matImputedBaselineTemp <- matImputedBaseline
   matImputedBaselineTemp[matImputedBaselineTemp==0] <- 10^(-4)
   vecLLBaselineImputedByGene <- sapply(seq(1,dim(matCountDataProc)[1]), function(gene){
-    sum(dnbinom(x=matCountDataProc[gene,],
-    mu=matImputedBaselineTemp[gene,],
+    sum(dnbinom(x=matCountDataProc[gene,vecboolEvaluateSamples],
+    mu=matImputedBaselineTemp[gene,vecboolEvaluateSamples],
     size=vecDispersions[gene],
     log=TRUE), na.rm=TRUE)
   })
   # LRT
-  vecLRT <- vecLLImpulseImputedByGene-vecLLBaselineImputedByGene
+  scaQThres <- 10^(-3)
+  vecIDs <- lsImpulseDE_FullResults$dfImpulseResults[
+    lsImpulseDE_FullResults$dfImpulseResults$adj.p <= scaQThres,"Gene"]
+  vecboolIDs <- rownames(matCountDataProc) %in% vecIDs
+  vecLRT <- vecLLImpulseImputedByGene[vecboolIDs]-vecLLBaselineImputedByGene[vecboolIDs]
+  dfLRT <- data.frame(value=vecLRT)
+  gHistLRT <- ggplot( dfLRT, aes(value)) +
+    geom_histogram(alpha = 1, position = 'identity') +
+		ggtitle(paste0("log LRT value")) +
+		xlab("Difference in loglikelihood") +
+		ylab("Frequency") + 
+    xlim(-20,10)
   graphics.off()
   pdf("Hist_LRTvalues.pdf")
-  hist(vecLRT)
+  print(gHistLRT)
   dev.off()
+  print(paste0("Mean logLRT value: ", mean(vecLRT)))
+  print(paste0("Stdv logLRT value: ", sd(vecLRT)))
   
   # Look at absolute deviations
+  scaQThres <- 10^(-3)
+  vecIDs <- lsImpulseDE_FullResults$dfImpulseResults[
+    lsImpulseDE_FullResults$dfImpulseResults$adj.p <= scaQThres,"Gene"]
+  vecboolIDs <- rownames(matCountDataProc) %in% vecIDs
   matAbsDevImpulseImputed <- abs(matCountDataProc-matImputedSamplewise)
   matAbsDevBaselineImputed <- abs(matCountDataProc-matImputedBaseline)
-  vecAbsDevImpulseImputed <- apply(matAbsDevImpulseImputed, 1, function(gene) sum(gene, na.rm=TRUE) )
-  vecAbsDevBaselineImputed <- apply(matAbsDevBaselineImputed, 1, function(gene) sum(gene, na.rm=TRUE) )
+  vecAbsDevImpulseImputed <- apply(matAbsDevImpulseImputed[,vecboolEvaluateSamples], 1, function(gene) sum(gene, na.rm=TRUE) )
+  vecAbsDevBaselineImputed <- apply(matAbsDevBaselineImputed[,vecboolEvaluateSamples], 1, function(gene) sum(gene, na.rm=TRUE) )
   # Plot histograms
-  dfAbsDevImpulse <- data.frame(value=vecAbsDevImpulseImputed, type="impulse")
-  dfAbsDevBaseline <- data.frame(value=vecAbsDevBaselineImputed, type="baseline")
+  dfAbsDevImpulse <- data.frame(value=vecAbsDevImpulseImputed[vecboolIDs], type="impulse")
+  dfAbsDevBaseline <- data.frame(value=vecAbsDevBaselineImputed[vecboolIDs], type="baseline")
   dfAbsDev <- rbind(dfAbsDevImpulse, dfAbsDevBaseline)
-  matAbsDevImpulseImputedMolten <- melt(matAbsDevImpulseImputed)
-  matAbsDevImpulseImputedMolten$type <- "impulse"
-  matAbsDevBaselineImputedMolten <- melt(matAbsDevBaselineImputed)
-  matAbsDevBaselineImputedMolten$type <- "baseline"
-  dfAbsDev <- rbind(
-    matAbsDevImpulseImputedMolten,
-    matAbsDevBaselineImputedMolten )
   gHistAbsDev <- ggplot( dfAbsDev, aes(value, fill = type)) +
   	geom_histogram(alpha = 0.5, position = 'identity') +
 		ggtitle(paste0("Absolute deviation imputed from observed")) +
 		xlab("Absolute deviation") +
 		ylab("Density") +
-    xlim(0,2500)
-  print(gHistAbsDev)
+    xlim(0,2000)
   graphics.off()
   pdf("Hist_AbsDev.pdf")
   print(gHistAbsDev)
   dev.off()
+  print(paste0("Mean absolute deviation Impulse: ", mean(vecAbsDevImpulseImputed[vecboolIDs])))
+  print(paste0("Mean absolute deviation Impulse: ", sd(vecAbsDevImpulseImputed[vecboolIDs])))
+  print(paste0("Mean absolute deviation Baseline: ", mean(vecAbsDevBaselineImputed[vecboolIDs])))
+  print(paste0("Mean absolute deviation Baseline: ", sd(vecAbsDevBaselineImputed[vecboolIDs])))
   
   # Plot data
-  plotImputedGenes(vecGeneIDs=rownames(lsImpulseDE_FullResults$lsImpulseFits$parameters_case)[1:500], 
+  plotImputedGenes(vecGeneIDs=as.vector(lsImpulseDE_FullResults$dfImpulseResults$Gene)[1:500], 
     matCountDataProc=matCountDataProc,
     matCountDataImputed=matImputedSamplewise,
-    matTranslationFactors=matTranslationFactorsExternal, 
+    matTranslationFactors=matTranslationFactors, 
     matSizeFactors=matSizeFactors,
     dfAnnotationProc=dfAnnotation, 
     lsImpulseFits=lsImpulseDE_FullResults$lsImpulseFits, 

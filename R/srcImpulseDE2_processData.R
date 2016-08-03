@@ -197,7 +197,7 @@ processData <- function(dfAnnotation=NULL,
     if(any(duplicated(dfAnnotation$Sample))){
       stop(paste0("ERROR: [Annotation table] ",
         "Sample names must be unique: Sample(s) ",
-        paste0((dfAnnotation$Sample)[vecboolDuplicates],collapse=","),
+        paste0((dfAnnotation$Sample)[duplicated(dfAnnotation$Sample)],collapse=","),
         " is/are duplicated."))
     }
     ### c) Time points
