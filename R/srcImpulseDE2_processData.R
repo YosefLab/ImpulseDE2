@@ -457,7 +457,7 @@ processData <- function(dfAnnotation=NULL,
   # differentiates case and control time points (given to DESeq2).
   # Add column with time scalars with underscore prefix.
   procAnnotation <- function(dfAnnotation,
-    matCountDataProc,
+    matCountData,
     strMode,
     strCaseName, 
     strControlName){
@@ -483,7 +483,7 @@ processData <- function(dfAnnotation=NULL,
       "_", dfAnnotationProc$Time)
     
     # Reduce to samples which occur in count table
-    dfAnnotationProc <- dfAnnotationProc[dfAnnotationProc$Sample %in% colnames(matCountDataProc)]
+    dfAnnotationProc <- dfAnnotationProc[dfAnnotationProc$Sample %in% colnames(matCountData)]
     
     return(dfAnnotationProc)
   }
@@ -585,6 +585,7 @@ processData <- function(dfAnnotation=NULL,
   
   # Process annotation table
   dfAnnotationProc <- procAnnotation(dfAnnotation=dfAnnotation,
+    matCountData=matCountData,
     strMode=strMode,
     strCaseName=strCaseName, 
     strControlName=strControlName )
