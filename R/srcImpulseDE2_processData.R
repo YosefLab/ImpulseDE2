@@ -483,6 +483,11 @@ processData <- function(dfAnnotation=NULL,
       "_", dfAnnotationProc$Time)
     
     # Reduce to samples which occur in count table
+    # This allows to represent entire library of samples in annotation
+    # file even if not all samples were measured yet. Not measured samples
+    # which are not mentioned in count table are ignored. Thereby, the same
+    # full annotation table can be used throughout sample collection on 
+    # incomplete data sets.
     dfAnnotationProc <- dfAnnotationProc[dfAnnotationProc$Sample %in% colnames(matCountData),]
     
     return(dfAnnotationProc)
