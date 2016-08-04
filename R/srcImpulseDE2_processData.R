@@ -483,7 +483,7 @@ processData <- function(dfAnnotation=NULL,
       "_", dfAnnotationProc$Time)
     
     # Reduce to samples which occur in count table
-    dfAnnotationProc <- dfAnnotationProc[dfAnnotationProc$Sample %in% colnames(matCountData)]
+    dfAnnotationProc <- dfAnnotationProc[dfAnnotationProc$Sample %in% colnames(matCountData),]
     
     return(dfAnnotationProc)
   }
