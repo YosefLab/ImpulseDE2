@@ -201,7 +201,7 @@ runDESeq2 <- function(dfAnnotationProc,
   names(vecDispersions) <- rownames(ddsDESeqObject)
   # DESeq results for comparison
   ddsResults <- results(ddsDESeqObject)
-  if(boolDESeq2PvalValid){
+  if(!boolDESeq2PvalValid){
     ddsResults$pvalue <- NA
     ddsResults$padj <- NA
   }

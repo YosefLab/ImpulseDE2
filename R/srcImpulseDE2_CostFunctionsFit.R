@@ -434,7 +434,7 @@ fitMuZINB <- function(vecCounts,
   vecProbNB,
   scaWindowRadius){ 
   
-  if(all(vecNormConst==1)){
+  if(all(vecNormConst==1) & is.null(scaWindowRadius)){
     # Closed form maximum likelihood estimator
     scaMu <- sum(vecCounts*vecProbNB, na.rm=TRUE)/sum(vecProbNB, na.rm=TRUE)
   } else {
@@ -517,7 +517,8 @@ evalLogLikImpulseSC <- function(vecTheta,
   vecX,
   vecY,
   scaDispEst, 
-  vecDropoutRateEst, 
+  vecDropoutRateEst,
+  matLinModelPi=NULL,
   vecNormConst,
   vecindTimepointAssign, 
   vecboolNotZeroObserved, 
@@ -533,6 +534,9 @@ evalLogLikImpulseSC <- function(vecTheta,
   # and impulse value is pushed to close to zero to be evaluated
   # as a negative binomial mean without numerical error.
   vecImpulseValue[vecImpulseValue < .Machine$double.eps] <- .Machine$double.eps
+  if(!is.null(matLinModelPi)){
+    vecDropoutRateEst <- matLinModelPi[1] + matLinModelPi[2]*log(vecImpulseValue)
+  }
   
   # Evaluate likelihood (this is the cost function): 
   if(is.null(scaWindowRadius)){
