@@ -2,7 +2,7 @@
 #+++++++++++++++++++++++++     Impute Samples    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-library(reshape)
+#library(reshape)
 library(ggplot2)
 
 #' Compute value of impulse function given parameters.
@@ -456,7 +456,9 @@ runImputation <- function(matCountData,
   load("ImpulseDE2_matSizeFactors.RData")
   load("ImpulseDE2_matTranslationFactors.RData")
   vecSizeFactors <- matSizeFactors[1,]
-  colnames(matTranslationFactors) <- colnames(matCountDataProc)
+  if(strMode=="longitudinal"){
+    colnames(matTranslationFactors) <- colnames(matCountDataProc)
+  }
   
   scaNumGenes <- dim(matCountDataProc)[1]
   scaNumSamples <- dim(matCountDataProc)[2]
@@ -467,74 +469,7 @@ runImputation <- function(matCountData,
   }, error=function(strErrorMsg){
     stop(strErrorMsg)
   })
-  
-  if(FALSE){
-    # The first 3 steps of ImpulseDE2 have to be run
-    # to generate the translation factors:
-    print("1. Prepare data")
-    lsProcessedData <- processData(
-      dfAnnotation=dfAnnotation,
-      matCountData=matCountData,
-      scaSmallRun=NULL,
-      strControlName=strControlName, 
-      strCaseName=strCaseName,
-      strMode=strMode,
-      strSCMode=NULL,
-      scaWindowRadius=NULL,
-      lsPseudoDE=NULL,
-      vecDispersionsExternal=NULL,
-      vecSizeFactorsExternal=NULL,
-      matTranslationFactorsExternal=NULL,
-      boolRunDESeq2=TRUE )
     
-    matCountDataProc <- lsProcessedData$matCountDataProc
-    matCountDataProcFull <- lsProcessedData$matCountDataProcFull
-    dfAnnotationProc <- lsProcessedData$dfAnnotationProc
-    save(matCountDataProc,file=file.path(getwd(),"ImpulseDE2_Impute_matCountDataProc.RData"))
-    save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_Impute_dfAnnotationProc.RData"))
-    
-    scaNumGenes <- dim(matCountDataProc)[1]
-    scaNumSamples <- dim(matCountDataProc)[2]
-    
-    print("2. Run DESeq2")
-    lsDESeq2Results <- runDESeq2(
-      dfAnnotationProc=dfAnnotationProc,
-      matCountDataProc=matCountDataProc,
-      nProc=nProc,
-      strCaseName=strCaseName,
-      strControlName=strControlName,
-      strMode=strMode)
-    vecDispersions <- (lsDESeq2Results$vecDispersions)[rownames(matCountDataProc)]
-    save(vecDispersions,file=file.path(getwd(),"ImpulseDE2_Impute_vecDispersions.RData"))
-    
-    # Generate scaling factors (need for imputation):
-    # Note that all models are created and evaluated under the same
-    # scaling factors fit to the entire data set. The rationale behind
-    # this is that a de novo imputation does not assume any scaling effects.
-    # Therefore, if an imputation is evaluated with given data, it
-    # has to be evaluated taking the scaling factors into consideration.
-    # These are functions from ImpulseDE2
-    # - Generate size factors
-    matSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc,
-      scaSmallRun=NULL,
-      strMode=strMode)
-    vecSizeFactors <- matSizeFactors[1,]
-    if(strMode=="longitudinal"){
-      print("3. Compute translation factors")
-      matTranslationFactors <- computeTranslationFactors(
-        matCountDataProc=matCountDataProc,
-        matSizeFactors=matSizeFactors,
-        vecDispersions=vecDispersions,
-        scaSmallRun=NULL,
-        dfAnnotationProc=dfAnnotationProc,
-        strCaseName=strCaseName,
-        strControlName=strControlName)
-      colnames(matTranslationFactors) <- colnames(matCountDataProc)
-    }
-    save(vecSizeFactors,file=file.path(getwd(),"ImpulseDE2_Impute_vecSizeFactors.RData"))
-    save(matTranslationFactors,file=file.path(getwd(),"ImpulseDE2_Impute_matTranslationFactors.RData"))
-  }
-  
   # Sample wise imputation
   vecTP <- unique(as.numeric(dfAnnotation[,"Time"]))
   scaNumTP <- length(vecTP)
