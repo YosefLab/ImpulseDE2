@@ -664,9 +664,9 @@ runImputation <- function(matCountData,
   print(gHistAbsDev)
   dev.off()
   print(paste0("Mean absolute deviation Impulse: ", mean(vecAbsDevImpulseImputed[vecboolIDs])))
-  print(paste0("Mean absolute deviation Impulse: ", sd(vecAbsDevImpulseImputed[vecboolIDs])))
+  print(paste0("SD absolute deviation Impulse: ", sd(vecAbsDevImpulseImputed[vecboolIDs])))
   print(paste0("Mean absolute deviation Baseline: ", mean(vecAbsDevBaselineImputed[vecboolIDs])))
-  print(paste0("Mean absolute deviation Baseline: ", sd(vecAbsDevBaselineImputed[vecboolIDs])))
+  print(paste0("SD absolute deviation Baseline: ", sd(vecAbsDevBaselineImputed[vecboolIDs])))
   
   # Plot data
   plotImputedGenes(vecGeneIDs=as.vector(lsImpulseDE_FullResults$dfImpulseResults$Gene)[1:500], 

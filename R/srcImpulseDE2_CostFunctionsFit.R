@@ -517,7 +517,7 @@ evalLogLikImpulseSC <- function(vecTheta,
   vecX,
   vecY,
   scaDispEst, 
-  vecDropoutRateEst,
+  vecDropoutRateEst=NULL,
   matLinModelPi=NULL,
   vecNormConst,
   vecindTimepointAssign, 
@@ -550,7 +550,7 @@ evalLogLikImpulseSC <- function(vecTheta,
       vecDispEst=rep(scaDispEst, length(vecY)), 
       vecDropoutRateEst=vecDropoutRateEst, 
       vecboolNotZeroObserved=vecboolNotZeroObserved, 
-      vecboolZero=vecboolZero)  
+      vecboolZero=vecboolZero)
   } else {
     # Evaluate likelihood on individual cells.  
     scaLogLik <- evalLogLikSmoothZINB_comp(vecY=vecY,
