@@ -319,7 +319,7 @@ runImpulseDE2 <- function(matCountData=NULL,
       names(vecRefPval) <- rownames(matCountDataProc)
       strRefMethod <- "DESeq2"
     } else { 
-      print("3. Not running DESeq2")
+      print("2. Not running DESeq2")
       dfDESeq2Results <- NULL
       vecRefPval <- NULL
       strRefMethod <- NULL

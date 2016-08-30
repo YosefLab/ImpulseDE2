@@ -362,6 +362,7 @@ evalLogLikMuZINB <- function(scaTheta,
   vecDispEst,
   vecNormConst,
   vecDropoutRateEst,
+  matLinModelPi=NULL,
   vecboolNotZeroObserved,
   vecboolZero,
   scaWindowRadius=NULL ){ 
@@ -372,6 +373,15 @@ evalLogLikMuZINB <- function(scaTheta,
   # Prevent means estimate from shrinking to zero
   # to avoid numerical errors:
   if(scaMu < .Machine$double.eps){ scaMu <- .Machine$double.eps }
+  
+  # Adjust drop-out rates if pi is dynamic in mu
+  if(!is.null(matLinModelPi)){
+    vecPredictors <- c(1,log(scaMu))
+    vecLinModelOut <- sapply(seq(1,length(vecY)), function(cell){
+      sum(matLinModelPi[cell,] * vecPredictors)
+    })
+    vecDropoutRateEst <- 1/(1+exp(-vecLinModelOut))
+  }
   
   if(is.null(scaWindowRadius)){
     scaLogLik <- evalLogLikZINB_comp( vecY=vecY,
@@ -431,40 +441,44 @@ fitMuZINB <- function(vecCounts,
   scaDispEst,
   vecNormConst,
   vecDropoutRateEst,
+  matLinModelPi=NULL,
   vecProbNB,
   scaWindowRadius){ 
   
-  if(all(vecNormConst==1) & is.null(scaWindowRadius)){
-    # Closed form maximum likelihood estimator
-    scaMu <- sum(vecCounts*vecProbNB, na.rm=TRUE)/sum(vecProbNB, na.rm=TRUE)
-  } else {
-    # Numerical maximum likelihood estimator
-    scaMu <- tryCatch({
-      exp(unlist(optimise(
-        evalLogLikMuZINB_comp,
-        vecCounts=vecCounts,
-        vecDispEst=rep(scaDispEst, length(vecCounts)),
-        vecDropoutRateEst=vecDropoutRateEst,
-        vecNormConst=vecNormConst,
-        vecboolNotZeroObserved=!is.na(vecCounts) & vecCounts>0,
-        vecboolObserved=!is.na(vecCounts),
-        scaWindowRadius=scaWindowRadius,
-        lower = log(.Machine$double.eps),
-        upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
-        maximum = TRUE)["maximum"]))
-    }, error=function(strErrorMsg){
-      print(paste0("ERROR: Fitting zero-inflated negative binomial mean parameter: fitMuZINB().",
-        " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
-      print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
-      print(paste0("scaDispEst ", paste(scaDispEst,collapse=" ")))
-      print(paste0("vecDropoutRateEst ", paste(vecDropoutRateEst,collapse=" ")))
-      print(paste0("vecNormConst ", paste(vecNormConst,collapse=" ")))
-      lsErrorCausingGene <- list(vecCounts, scaDispEst, vecDropoutRateEst, vecNormConst)
-      names(lsErrorCausingGene) <- c("vecCounts", "scaDispEst", "vecDropoutRateEst","vecNormConst")
-      save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
-      stop(strErrorMsg)
-    })
-  }
+  #if(all(vecNormConst==1) & is.null(scaWindowRadius)){
+  #  # Closed form maximum likelihood estimator
+  #  scaMu <- sum(vecCounts*vecProbNB, na.rm=TRUE)/sum(vecProbNB, na.rm=TRUE)
+  #} else {
+  # Numerical maximum likelihood estimator
+  scaMu <- tryCatch({
+    exp(unlist(optim(
+      scaTheta=mean(vecCounts, na.rm=TRUE),
+      evalLogLikMuZINB_comp,
+      vecCounts=vecCounts,
+      vecDispEst=rep(scaDispEst, length(vecCounts)),
+      vecDropoutRateEst=vecDropoutRateEst,
+      matLinModelPi=matLinModelPi,
+      vecNormConst=vecNormConst,
+      vecboolNotZeroObserved=!is.na(vecCounts) & vecCounts>0,
+      vecboolObserved=!is.na(vecCounts),
+      scaWindowRadius=scaWindowRadius,
+      #  lower = log(.Machine$double.eps),
+      #  upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
+      method="BFGS",
+      control=list(maxit=1000,fnscale=-1) )["par"]))
+      #  maximum = TRUE)["maximum"]))
+  }, error=function(strErrorMsg){
+    print(paste0("ERROR: Fitting zero-inflated negative binomial mean parameter: fitMuZINB().",
+      " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
+    print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
+    print(paste0("scaDispEst ", paste(scaDispEst,collapse=" ")))
+    print(paste0("vecDropoutRateEst ", paste(vecDropoutRateEst,collapse=" ")))
+    print(paste0("vecNormConst ", paste(vecNormConst,collapse=" ")))
+    lsErrorCausingGene <- list(vecCounts, scaDispEst, vecDropoutRateEst, vecNormConst)
+    names(lsErrorCausingGene) <- c("vecCounts", "scaDispEst", "vecDropoutRateEst","vecNormConst")
+    save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
+    stop(strErrorMsg)
+  })
   
   # Catch boundary of likelihood domain on mu space
   if(scaMu < .Machine$double.eps){scaMu <- .Machine$double.eps}

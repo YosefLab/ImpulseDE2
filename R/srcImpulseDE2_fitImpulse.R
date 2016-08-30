@@ -55,7 +55,8 @@
 
 fitNullModel <- function(vecCounts, 
   scaDispersionEstimate,
-  vecDropoutRate=NULL, 
+  vecDropoutRate=NULL,
+  matLinModelPi=NULL,
   vecProbNB=NULL,
   vecNormConst,
   vecLongitudinalSeries=NULL, 
@@ -104,6 +105,7 @@ fitNullModel <- function(vecCounts,
       scaDispEst=scaDispersionEstimate,
       vecNormConst=vecNormConst,
       vecDropoutRateEst=vecDropoutRate,
+      matLinModelPi=matLinModelPi,
       vecProbNB=vecProbNB,
       scaWindowRadius=scaWindowRadius )
     if(is.null(scaWindowRadius)){      
@@ -195,7 +197,7 @@ estimateImpulseParam <- function(vecTimepoints,
       for(k in seq(1,scaWindows)){
         # Define clusters as groups of cells of uniform size
         scaidxLast <- scaidxNew + 1
-        scaidxNew <- scaidxLast + scaCellsPerClus
+        scaidxNew <- scaidxLast + scaCellsPerClus - 1
         # Pick up remaining cells in last cluster
         if(k==scaWindows){scaidxNew=length(vecCountsSort)}
         vecidxK <- seq(scaidxLast, scaidxNew)
@@ -345,6 +347,7 @@ optimiseImpulseModelFit <- function(vecParamGuess,
         "scaDispersionEstimate", "vecNormConst", "vecindTimepointAssign", "vecboolObserved",
         "strMode", "MAXIT")
       save(lsErrorCausingGene,file=file.path(getwd(),"ImpulseDE2_lsErrorCausingGene.RData"))
+      print(strErrorMsg)
       stop(strErrorMsg)
     })
   }else if(strMode=="singlecell"){
@@ -372,6 +375,7 @@ optimiseImpulseModelFit <- function(vecParamGuess,
       print(paste0("vecTimepoints ", paste(vecTimepoints,collapse=" ")))
       print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
       print(paste0("scaDispersionEstimate ", paste(scaDispersionEstimate,collapse=" ")))
+      print(paste0("matLinModelPi ", paste(matLinModelPi,collapse=" ")))
       print(paste0("vecDropoutRate ", paste(vecDropoutRate,collapse=" ")))
       print(paste0("vecNormConst ", paste(vecNormConst,collapse=" ")))
       print(paste0("vecindTimepointAssign ", paste(vecindTimepointAssign,collapse=" ")))
@@ -486,11 +490,12 @@ fitImpulse_gene <- function(vecCounts,
     vecLongitudinalSeries <- unique( vecLongitudinalSeriesAssign )
   }
   
-  # (II) Fit null model and compute likelihood of null model
+  # (II) Fit null model and compute loglikelihood of null model
   lsNullModel <- fitNullModel(
     vecCounts=vecCounts, 
     scaDispersionEstimate=scaDispersionEstimate,
-    vecDropoutRate=vecDropoutRate, 
+    vecDropoutRate=vecDropoutRate,
+    matLinModelPi=matLinModelPi,
     vecProbNB=vecProbNB,
     vecNormConst=vecNormConst,
     vecLongitudinalSeries=vecLongitudinalSeries, 
