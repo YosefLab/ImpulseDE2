@@ -230,18 +230,28 @@ estimateImpulseParam <- function(vecTimepoints,
   # Compute peak initialisation
   # Beta: Has to be negative, Theta1: Low, Theta2: High, Theta3: Low
   # t1: Around first observed inflexion point, t2: Around second observed inflexion point
-  indLowerInflexionPoint <- match(max(vecGradients[1:(indMaxMiddleMean-1)], na.rm=TRUE), vecGradients[1:(indMaxMiddleMean-1)])
-  indUpperInflexionPoint <- indMaxMiddleMean - 1 + match(min(vecGradients[indMaxMiddleMean:length(vecGradients)], na.rm=TRUE), vecGradients[indMaxMiddleMean:length(vecGradients)])
-  vecParamGuessPeak <- c(1,log(vecExpressionMeans[1]+1),log(scaMaxMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
+  indLowerInflexionPoint <- match(
+    max(vecGradients[1:(indMaxMiddleMean-1)], na.rm=TRUE), 
+    vecGradients[1:(indMaxMiddleMean-1)])
+  indUpperInflexionPoint <- indMaxMiddleMean - 1 + match(
+    min(vecGradients[indMaxMiddleMean:length(vecGradients)], na.rm=TRUE), 
+    vecGradients[indMaxMiddleMean:length(vecGradients)])
+  vecParamGuessPeak <- c(1,log(vecExpressionMeans[1]+1),
+    log(scaMaxMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
     (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2)
   
   # Compute valley initialisation
   # Beta: Has to be negative, Theta1: High, Theta2: Low, Theta3: High
   # t1: Around first observed inflexion point, t2: Around second observed inflexion point
-  indLowerInflexionPoint <- match(min(vecGradients[1:(indMinMiddleMean-1)], na.rm=TRUE), vecGradients[1:(indMinMiddleMean-1)])
-  indUpperInflexionPoint <- indMinMiddleMean - 1 + match(max(vecGradients[indMinMiddleMean:(nTimepts-1)], na.rm=TRUE), vecGradients[indMinMiddleMean:(nTimepts-1)])
-  vecParamGuessValley <- c(1,log(vecExpressionMeans[1]+1),log(scaMinMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
+  indLowerInflexionPoint <- match(
+    min(vecGradients[1:(indMinMiddleMean-1)], na.rm=TRUE), 
+    vecGradients[1:(indMinMiddleMean-1)])
+  indUpperInflexionPoint <- indMinMiddleMean - 1 + match(
+    max(vecGradients[indMinMiddleMean:(nTimepts-1)], na.rm=TRUE), 
+    vecGradients[indMinMiddleMean:(nTimepts-1)])
+  vecParamGuessValley <- c(1,log(vecExpressionMeans[1]+1),
+    log(scaMinMiddleMean+1),log(vecExpressionMeans[nTimepts]+1),
     (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
     (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2 )
   
@@ -305,12 +315,15 @@ optimiseImpulseModelFit <- function(vecParamGuess,
   matLinModelPi=NULL,
   vecNormConst,
   vecindTimepointAssign,
-  vecboolObserved,
+  vecboolObserved=NULL,
   vecboolZero=NULL,
   vecboolNotZeroObserved=NULL,
   scaWindowRadius=NULL,
   strMode="batch", 
-  MAXIT=100){
+  MAXIT=100,
+  RELTOL=sqrt(.Machine$double.eps),
+  trace=0,
+  REPORT=10 ){
   
   # Chose the cost function for optimisation according
   # to the mode strMode.
@@ -326,7 +339,9 @@ optimiseImpulseModelFit <- function(vecParamGuess,
         vecindTimepointAssign=vecindTimepointAssign,
         vecboolObserved=vecboolObserved,
         method="BFGS",
-        control=list(maxit=MAXIT,fnscale=-1)
+        control=list(maxit=MAXIT,
+          reltol=RELTOL,
+          fnscale=-1)
       )[c("par","value","convergence")] )
     }, error=function(strErrorMsg){
       print(paste0("ERROR: Fitting impulse model: optimiseImpulseModelFit().",
@@ -366,7 +381,11 @@ optimiseImpulseModelFit <- function(vecParamGuess,
         vecboolZero=vecboolZero,
         scaWindowRadius=scaWindowRadius,
         method="BFGS", 
-        control=list(maxit=MAXIT,fnscale=-1)
+        control=list(maxit=MAXIT,
+          reltol=RELTOL,
+          fnscale=-1, 
+          trace=trace, 
+          REPORT=REPORT)
       )[c("par","value","convergence")] )
     }, error=function(strErrorMsg){
       print(paste0("ERROR: Fitting impulse model: optimiseImpulseModelFit().",
@@ -462,7 +481,7 @@ optimiseImpulseModelFit <- function(vecParamGuess,
 fitImpulse_gene <- function(vecCounts, 
   scaDispersionEstimate,
   vecDropoutRate=NULL,
-  matLinModelPi=NULL,
+  matDropoutLinModel=NULL,
   vecProbNB=NULL,
   vecNormConst,
   vecTimepointAssign, 
@@ -495,7 +514,7 @@ fitImpulse_gene <- function(vecCounts,
     vecCounts=vecCounts, 
     scaDispersionEstimate=scaDispersionEstimate,
     vecDropoutRate=vecDropoutRate,
-    matLinModelPi=matLinModelPi,
+    matLinModelPi=matDropoutLinModel,
     vecProbNB=vecProbNB,
     vecNormConst=vecNormConst,
     vecLongitudinalSeries=vecLongitudinalSeries, 
@@ -531,10 +550,11 @@ fitImpulse_gene <- function(vecCounts,
     vecCounts=vecCounts,
     scaDispersionEstimate=scaDispersionEstimate,
     vecDropoutRate=vecDropoutRate,
-    matLinModelPi=matLinModelPi,
+    matLinModelPi=matDropoutLinModel,
     vecNormConst=vecNormConst,
     vecindTimepointAssign=vecindTimepointAssign,
-    vecboolObserved=vecboolObserved, 
+    vecboolObserved=vecboolObserved,
+    vecboolZero=vecboolZero,
     vecboolNotZeroObserved=vecboolNotZeroObserved,
     scaWindowRadius=scaWindowRadius,
     strMode=strMode, 
@@ -546,10 +566,11 @@ fitImpulse_gene <- function(vecCounts,
     vecCounts=vecCounts,
     scaDispersionEstimate=scaDispersionEstimate,
     vecDropoutRate=vecDropoutRate,
-    matLinModelPi=matLinModelPi,
+    matLinModelPi=matDropoutLinModel,
     vecNormConst=vecNormConst,
     vecindTimepointAssign=vecindTimepointAssign,
-    vecboolObserved=vecboolObserved, 
+    vecboolObserved=vecboolObserved,
+    vecboolZero=vecboolZero,
     vecboolNotZeroObserved=vecboolNotZeroObserved,
     scaWindowRadius=scaWindowRadius,
     strMode=strMode, 
@@ -652,7 +673,8 @@ fitImpulse_gene <- function(vecCounts,
 
 fitImpulse_matrix <- function(matCountDataProcCondition, 
   vecDispersions, 
-  matDropoutRate=NULL, 
+  matDropoutRate=NULL,
+  matDropoutLinModel=NULL,
   matProbNB=NULL,
   matNormConst, 
   vecTimepointAssign, 
@@ -690,6 +712,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
     assign("matCountDataProcCondition", matCountDataProcCondition, envir = my.env)
     assign("vecDispersions", vecDispersions, envir = my.env)
     assign("matDropoutRate", matDropoutRate, envir = my.env)
+    assign("matDropoutLinModel", matDropoutLinModel, envir = my.env)
     assign("matProbNB", matProbNB, envir = my.env)
     assign("matNormConst", matNormConst, envir = my.env)
     assign("vecTimepointAssign", vecTimepointAssign, envir = my.env)
@@ -719,6 +742,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
       "matCountDataProcCondition",
       "vecDispersions",
       "matDropoutRate",
+      "matDropoutLinModel",
       "matProbNB",
       "matNormConst",
       "vecTimepointAssign",
@@ -766,6 +790,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
                 vecCounts=matCountDataProcCondition[x,],
                 scaDispersionEstimate=vecDispersions[x],
                 vecDropoutRate=matDropoutRate[x,],
+                matDropoutLinModel=matDropoutLinModel,
                 vecProbNB=matProbNB[x,],
                 vecNormConst=matNormConst[x,],
                 vecTimepointAssign=vecTimepointAssign,
@@ -843,6 +868,7 @@ fitImpulse_matrix <- function(matCountDataProcCondition,
           vecCounts=matCountDataProcCondition[x,],
           scaDispersionEstimate=vecDispersions[x],
           vecDropoutRate=matDropoutRate[x,],
+          matDropoutLinModel=matDropoutLinModel,
           vecProbNB=matProbNB[x,],
           vecNormConst=matNormConst[x,],
           vecTimepointAssign=vecTimepointAssign,
@@ -963,7 +989,8 @@ fitImpulse <- function(matCountDataProc,
   matTranslationFactors, 
   matSizeFactors,
   vecDispersions, 
-  matDropoutRate, 
+  matDropoutRate,
+  matDropoutLinModel,
   matProbNB,
   vecClusterAssignments,
   strCaseName, 
@@ -1034,6 +1061,7 @@ fitImpulse <- function(matCountDataProc,
         matNormConst=matNormConst[,lsSamplesByCond[[label]]],
         vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate[,lsSamplesByCond[[label]]],
+        matDropoutLinModel=matDropoutLinModel[lsSamplesByCond[[label]],],
         matProbNB=matProbNB[,lsSamplesByCond[[label]]],
         vecTimepointAssign=vecTimepointAssign[lsSamplesByCond[[label]]],
         vecLongitudinalSeriesAssign=vecLongitudinalSeriesAssign[lsSamplesByCond[[label]]],

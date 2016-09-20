@@ -287,6 +287,7 @@ runImpulseDE2 <- function(matCountData=NULL,
     dfAnnotationProc <- lsProcessedData$dfAnnotationProc
     matProbNB <- lsProcessedData$matProbNB
     matDropoutRate <- lsProcessedData$matDropout
+    matDropoutLinModel <- lsProcessedData$matDropoutLinModel
     vecClusterAssignments <- lsProcessedData$vecClusterAssignments
     vecCentroids <- lsProcessedData$vecCentroids
     
@@ -361,7 +362,7 @@ runImpulseDE2 <- function(matCountData=NULL,
       save(matSizeFactors,file=file.path(getwd(),"ImpulseDE2_matSizeFactors.RData"))
     }
     
-    ###  4. Fit impule model to each gene 
+    ###  4. Fit impulse model to each gene 
     print("4. Fitting impulse model to the genes")
     if(nProc > 1){print("Cluster output redirected to text file in this step.")}
     tm_fitImpulse <- system.time({
@@ -369,6 +370,7 @@ runImpulseDE2 <- function(matCountData=NULL,
         matCountDataProc=matCountDataProc, 
         vecDispersions=vecDispersions,
         matDropoutRate=matDropoutRate,
+        matDropoutLinModel=matDropoutLinModel,
         matProbNB=matProbNB,
         vecClusterAssignments=vecClusterAssignments,
         matSizeFactors=matSizeFactors,

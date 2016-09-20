@@ -238,14 +238,22 @@ processData <- function(dfAnnotation=NULL,
     if(strMode=="singlecell"){
       # Check that PseudoDE object was supplied
       checkNull(lsPseudoDE,"lsPseudoDE")
-      ### a) Dropout rates
-      checkNull(lsPseudoDE$matDropout,"lsPseudoDE$matDropout")
-      checkDimMatch(lsPseudoDE$matDropout,matCountData,"lsPseudoDE$matDropout","matCountData")
-      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matDropout), 
-        "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matDropout]")
-      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matDropout), 
-        "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matDropout]")
-      checkProbability(lsPseudoDE$matDropout, "lsPseudoDE$matDropout")
+      ### a) Dropout rates and linear model
+      # Use scalar dropout rates if no logistic model supplied
+      # for drop-out rates
+      if(is.null(lsPseudoDE$matDropoutLinModel)){
+        checkNull(lsPseudoDE$matDropout,"lsPseudoDE$matDropout")
+        checkDimMatch(lsPseudoDE$matDropout,matCountData,"lsPseudoDE$matDropout","matCountData")
+        checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matDropout), 
+          "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matDropout]")
+        checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matDropout), 
+          "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matDropout]")
+        checkProbability(lsPseudoDE$matDropout, "lsPseudoDE$matDropout")
+      } else {
+        checkNumeric(lsPseudoDE$matDropoutLinModel, "[lsPseudoDE$matDropoutLinModel]")
+        checkElementMatch(colnames(matCountData), rownames(lsPseudoDE$matDropoutLinModel), 
+          "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matDropoutLinModel]")
+      }
       
       ### b) Posterior of observation belonging to negative binomial
       ### component in mixture model.
@@ -618,6 +626,7 @@ processData <- function(dfAnnotation=NULL,
   if(strMode=="singlecell"){
     matProbNB <- lsPseudoDE$matProbNB
     matDropout <- lsPseudoDE$matDropout
+    matDropoutLinModel <- lsPseudoDE$matDropoutLinModel
     vecClusterAssignments <- lsPseudoDE$vecClusterAssignments
     vecCentroids <- lsPseudoDE$vecCentroids
     if(!is.null(scaSmallRun)){
@@ -628,6 +637,7 @@ processData <- function(dfAnnotation=NULL,
   } else {
     matProbNB <- NULL
     matDropout <- NULL
+    matDropoutLinModel <- NULL
     vecClusterAssignments <- NULL
     vecCentroids <- NULL
   }
@@ -636,7 +646,8 @@ processData <- function(dfAnnotation=NULL,
     matCountDataProcFull,
     dfAnnotationProc,
     matProbNB, 
-    matDropout, 
+    matDropout,
+    matDropoutLinModel,
     vecClusterAssignments,
     vecCentroids)
   names(lsProcessedData) <- c("matCountDataProc",
@@ -644,6 +655,7 @@ processData <- function(dfAnnotation=NULL,
     "dfAnnotationProc",
     "matProbNB", 
     "matDropout",
+    "matDropoutLinModel",
     "vecClusterAssignments",
     "vecCentroids")
   return( lsProcessedData )

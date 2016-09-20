@@ -450,29 +450,30 @@ fitMuZINB <- function(vecCounts,
   #  scaMu <- sum(vecCounts*vecProbNB, na.rm=TRUE)/sum(vecProbNB, na.rm=TRUE)
   #} else {
   # Numerical maximum likelihood estimator
+  scaMeanGuess <- mean(vecCounts, na.rm=TRUE)
   scaMu <- tryCatch({
     exp(unlist(optim(
-      scaTheta=mean(vecCounts, na.rm=TRUE),
+      par=scaMeanGuess,
       evalLogLikMuZINB_comp,
-      vecCounts=vecCounts,
+      vecY=vecCounts,
       vecDispEst=rep(scaDispEst, length(vecCounts)),
       vecDropoutRateEst=vecDropoutRateEst,
       matLinModelPi=matLinModelPi,
       vecNormConst=vecNormConst,
-      vecboolNotZeroObserved=!is.na(vecCounts) & vecCounts>0,
-      vecboolObserved=!is.na(vecCounts),
+      vecboolNotZeroObserved= !is.na(vecCounts) & vecCounts>0,
+      vecboolZero= vecCounts==0,
       scaWindowRadius=scaWindowRadius,
-      #  lower = log(.Machine$double.eps),
-      #  upper = log(max(vecNormConst*vecCounts, na.rm=TRUE)+1),
       method="BFGS",
       control=list(maxit=1000,fnscale=-1) )["par"]))
-      #  maximum = TRUE)["maximum"]))
   }, error=function(strErrorMsg){
     print(paste0("ERROR: Fitting zero-inflated negative binomial mean parameter: fitMuZINB().",
       " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
+    print(paste0("scaMeanGuess ",scaMeanGuess))
     print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
     print(paste0("scaDispEst ", paste(scaDispEst,collapse=" ")))
     print(paste0("vecDropoutRateEst ", paste(vecDropoutRateEst,collapse=" ")))
+    print("matLinModelPi")
+    print(matLinModelPi)
     print(paste0("vecNormConst ", paste(vecNormConst,collapse=" ")))
     lsErrorCausingGene <- list(vecCounts, scaDispEst, vecDropoutRateEst, vecNormConst)
     names(lsErrorCausingGene) <- c("vecCounts", "scaDispEst", "vecDropoutRateEst","vecNormConst")
