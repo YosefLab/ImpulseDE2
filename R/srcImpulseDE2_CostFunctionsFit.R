@@ -461,7 +461,7 @@ fitMuZINB <- function(vecCounts,
       matLinModelPi=matLinModelPi,
       vecNormConst=vecNormConst,
       vecboolNotZeroObserved= !is.na(vecCounts) & vecCounts>0,
-      vecboolZero= vecCounts==0,
+      vecboolZero= !is.na(vecCounts) & vecCounts==0,
       scaWindowRadius=scaWindowRadius,
       method="BFGS",
       control=list(maxit=1000,fnscale=-1) )["par"]))

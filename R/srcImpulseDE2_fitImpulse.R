@@ -496,7 +496,7 @@ fitImpulse_gene <- function(vecCounts,
   # (I) Process data
   # Get boolean observation vectors:
   vecboolObserved <- !is.na(vecCounts)
-  vecboolZero <- vecCounts == 0
+  vecboolZero <- !is.na(vecCounts) & vecCounts == 0
   vecboolNotZeroObserved <- !is.na(vecCounts) & vecCounts > 0
   
   # Compute time point specifc parameters
