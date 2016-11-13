@@ -15,27 +15,29 @@ library(DESeq2)
 library(BiocParallel)
 
 # Source functions in .R files from same directory as this function.
-setwd("/Users/davidsebastianfischer/MasterThesis/code/ImpulseDE2/R")
+setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
-source("srcImpulseDE2_processData.R")
-source("srcImpulseDE2_computeNormConst.R")
-source("srcImpulseDE2_runDESeq2.R")
+
 source("srcImpulseDE2_calcImpulse.R")
+source("srcImpulseDE2_compareDEMethods.R")
+source("srcImpulseDE2_computeNormConst.R")
+source("srcImpulseDE2_computePval.R")
+source("srcImpulseDE2_CostFunctionsFit.R")
+source("srcImpulseDE2_fitImpulse.R")
+#source("srcImpulseDE2_imputeSamples.R")
+source("srcImpulseDE2_plotDEGenes.R")
+source("srcImpulseDE2_processData.R")
+source("srcImpulseDE2_runDESeq2.R")
+source("srcImpulseDE2_simulateDataSet.R")
+
 # Compile function
 calcImpulse_comp <- cmpfun(calcImpulse)
-source("srcImpulseDE2_CostFunctionsFit.R")
-# Compile functions
 evalLogLikMuNB_comp <- cmpfun(evalLogLikMuNB)
 evalLogLikImpulseBatch_comp <- cmpfun(evalLogLikImpulseBatch)
 evalLogLikZINB_comp <- cmpfun(evalLogLikZINB)
 evalLogLikSmoothZINB_comp <- cmpfun(evalLogLikSmoothZINB)
 evalLogLikMuZINB_comp <- cmpfun(evalLogLikMuZINB)
 evalLogLikImpulseSC_comp <- cmpfun(evalLogLikImpulseSC)
-source("srcImpulseDE2_fitImpulse.R")
-source("srcImpulseDE2_computePval.R")
-source("srcImpulseDE2_plotDEGenes.R")
-source("srcImpulseDE2_compareDEMethods.R")
-#source("srcImpulseDE2_imputeSamples.R")
 
 ################################################################################
 ### Main function
