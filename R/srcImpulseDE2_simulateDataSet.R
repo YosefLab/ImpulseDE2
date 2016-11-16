@@ -18,6 +18,8 @@
 #'    Number of time points in batch A.
 #' @param vecTimePointsB: (numeric vector number of time points)
 #'    Number of time points in batch B.
+#' @param boolCaseCtrl: (bool) [Defaul FALSE] Whether A and B are 
+#'    are case and control data (used for annotation data frame).
 #' @param scaNConst: (scalar) Number of constant genes in data set.
 #' @param scaNImp: (scalar) Number of impulse distributed genes in data set.
 #' @param scaNLin: (scalar) Number of linear distributed genes in data set.
@@ -59,8 +61,9 @@
 #' 
 #' @export
 
-simulateDataSet <- function(vecTimePointsA,
+simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   vecTimePointsB,
+  boolCaseCtrl=FALSE,
   scaNConst,
   scaNImp,
   scaNLin,
@@ -104,15 +107,21 @@ simulateDataSet <- function(vecTimePointsA,
   scaNSamples <- length(vecSamples)
   vecTimePointsUnique <- unique(vecSamples)
   vecindTimePointAssign <- match(vecSamples, vecTimePointsUnique)
+  vecTimePointsUniqueB <- unique(vecSamplesB)
+  vecindTimePointAssignB <- match(vecSamplesB, vecTimePointsUniqueB)
   
   dfAnnotation <- data.frame(
     Sample=names(vecSamples),
     Condition=rep("case", length(vecSamples)),
     Time=vecSamples,
     LongitudinalSeries=c(rep("A", length(vecSamplesA)),
-      rep("B", length(vecSamplesB)))
+      rep("B", length(vecSamplesB))),
+    stringsAsFactors=FALSE
   )
   rownames(dfAnnotation) <- dfAnnotation$Sample
+  if(boolCaseCtrl){
+    dfAnnotation[dfAnnotation$LongitudinalSeries=="B",]$Condition <- rep("ctrl", sum(dfAnnotation$LongitudinalSeries=="B"))
+  }
   
   # 1. Create hidden data set
   vecConstIDs <- paste0(rep("_",scaNConst),c(1:scaNConst))
@@ -159,6 +168,35 @@ simulateDataSet <- function(vecTimePointsA,
   rownames(matImpulseModelHidden) <- vecImpulseIDs
   rownames(matMuImpulseHidden) <- vecImpulseIDs
   colnames(matMuImpulseHidden) <- names(vecSamples)
+  if(boolCaseCtrl){
+    # Keep start point the same, this doesn't work well for impulse model
+    scaNImpDE <- round(scaNImp/2)
+    betaDE <- runif(scaNImpDE)*2+0.5
+    ta <- runif(scaNImpDE)*max(vecTimePointsUniqueB)
+    tb <- runif(scaNImpDE)*max(vecTimePointsUniqueB)
+    t1DE <- ta
+    t1DE[tb < ta] <- tb[tb < ta]
+    t2DE <- tb
+    t2DE[tb < ta] <- ta[tb < ta]
+    h1DE <- h0*abs(rnorm(n=scaNImpDE, mean=0,sd=scaSDImpulseAmplitude))
+    h2DE <- h0*abs(rnorm(n=scaNImpDE, mean=0,sd=scaSDImpulseAmplitude))
+    h1DE[h1<0.00001] <-0.00001
+    h2DE[h2<0.00001] <-0.00001
+    lsMuImpulseHiddenDE <- lapply(seq(1,scaNImpDE), function(gene){
+      evalImpulse(t=vecTimePointsUniqueB,
+                  beta=betaDE[gene],
+                  t1=t1DE[gene],
+                  t2=t2DE[gene],
+                  h0=h0[gene],
+                  h1=h1DE[gene],
+                  h2=h2DE[gene])[vecindTimePointAssignB]
+    })
+    matMuImpulseHiddenDE <- do.call(rbind, lsMuImpulseHiddenDE)
+    rownames(matMuImpulseHiddenDE) <- vecImpulseIDs[1:scaNImpDE]
+    colnames(matMuImpulseHiddenDE) <- names(vecSamplesB)
+    matMuImpulseHidden[seq(1,scaNImpDE),names(vecSamplesB)] <- matMuImpulseHiddenDE
+  }
+
   
   # c. Linear functions
   # Draw linear model parameters
@@ -172,6 +210,20 @@ simulateDataSet <- function(vecTimePointsA,
   }))
   rownames(matMuLinHidden) <- vecLinIDs
   colnames(matMuLinHidden) <- names(vecSamples)
+  if(boolCaseCtrl){
+    # Keep start point the same, this doesn't work well for impulse model
+    scaNLinDE <- round(scaNLin/2)
+    vecFinalLevelDE <- runif(scaNLinDE)*scaMumax
+    # Evaluate linear functions
+    scaDeltaTtot <- max(vecTimePointsUniqueB)-min(vecTimePointsUniqueB)
+    matMuLinHiddenDE <- do.call(rbind, lapply(seq(1, scaNLinDE), function(i){
+      (vecInitialLevel[i]+(vecFinalLevelDE[i]-vecInitialLevel[i])/scaDeltaTtot*
+         (vecTimePointsUniqueB-min(vecTimePointsUniqueB)))[vecindTimePointAssignB]
+    }))
+    rownames(matMuLinHiddenDE) <- vecLinIDs[1:scaNLinDE]
+    colnames(matMuLinHiddenDE) <- names(vecSamplesB)
+    matMuLinHidden[seq(1,scaNImpDE),names(vecSamplesB)] <- matMuLinHiddenDE
+  }
   
   # d. Sigmoid functions
   # Draw sigmoid model parameters
@@ -189,12 +241,36 @@ simulateDataSet <- function(vecTimePointsA,
   }))
   rownames(matMuSigHidden) <- vecSigIDs
   colnames(matMuSigHidden) <- names(vecSamples)
+  if(boolCaseCtrl){
+    # Keep start point the same, this doesn't work well for impulse model
+    scaNSigDE <- round(scaNSig/2)
+    vech1DE <- runif(scaNSigDE)*scaMumax
+    vecBetaDE <- runif(scaNSigDE)*4+0.5
+    vecT1DE <- runif(scaNSigDE)*(max(vecTimePointsUniqueB)-min(vecTimePointsUniqueB))+
+      min(vecTimePointsUniqueB)
+    # Evaluate sigmoid functions
+    matMuSigHiddenDE <- do.call(rbind, lapply(seq(1, scaNSigDE), function(i){
+      evalSigmoid(t=vecTimePointsUniqueB,
+                  beta=vecBetaDE[i],
+                  t1=vecT1DE[i],
+                  h0=vech0[i],
+                  h1=vech1DE[i])[vecindTimePointAssignB]
+    }))
+    rownames(matMuSigHiddenDE) <- vecSigIDs[1:scaNSigDE]
+    colnames(matMuSigHiddenDE) <- names(vecSamplesB)
+    matMuSigHidden[seq(1,scaNSigDE),names(vecSamplesB)] <- matMuSigHiddenDE
+  }
   
   # e. Merge data
   matMuHidden <- do.call(rbind, list(matMuConstHidden, 
     matMuImpulseHidden,
     matMuLinHidden,
     matMuSigHidden))
+  if(boolCaseCtrl){
+    vecCaseCtrlDEIDs <- c(vecImpulseIDs[1:scaNImpDE],
+                           vecLinIDs[1:scaNLinDE],
+                           vecSigIDs[1:scaNSigDE])
+  }
   
   # Add scaling factors
   # Sample size factors
@@ -204,17 +280,19 @@ simulateDataSet <- function(vecTimePointsA,
   vecSizeFactorsHidden[vecSizeFactorsHidden>10] <- 10
   names(vecSizeFactorsHidden) <- names(vecSamples)
   # Sample batch normalisation factors
-  vecLongitudinalFactorsHidden <- rnorm(n=scaNGenes,
-    mean=scaMuBatchEffect, sd=scaSDBatchEffect)
-  vecLongitudinalFactorsHidden[vecLongitudinalFactorsHidden<0.1] <- 0.1
-  vecLongitudinalFactorsHidden[vecLongitudinalFactorsHidden>10] <- 10
-  names(vecLongitudinalFactorsHidden) <- rownames(matMuHidden)
+  if(!is.null(vecSamplesB) & !boolCaseCtrl){
+    vecLongitudinalFactorsHidden <- rnorm(n=scaNGenes,
+                                          mean=scaMuBatchEffect, sd=scaSDBatchEffect)
+    vecLongitudinalFactorsHidden[vecLongitudinalFactorsHidden<0.1] <- 0.1
+    vecLongitudinalFactorsHidden[vecLongitudinalFactorsHidden>10] <- 10
+    names(vecLongitudinalFactorsHidden) <- rownames(matMuHidden)
+  }
   # Scale
   matMuHiddenScaled <- matMuHidden*
     matrix(vecSizeFactorsHidden,
       nrow=dim(matMuHidden)[1],
       ncol=dim(matMuHidden)[2], byrow=TRUE)
-  if(!is.null(vecSamplesB)){
+  if(!is.null(vecSamplesB) & !boolCaseCtrl){
     matMuHiddenScaled <- matMuHiddenScaled*
       cbind(
         matrix(1,
@@ -229,7 +307,7 @@ simulateDataSet <- function(vecTimePointsA,
   colnames(matMuHiddenScaled) <- colnames(matMuHidden)
   
   # e. draw dispersions by gene
-  vecDispHidden <- runif(dim(matMuHiddenScaled)[1])+0.5
+  vecDispHidden <- runif(dim(matMuHiddenScaled)[1])+10
   names(vecDispHidden) <- rownames(matMuHiddenScaled)
   
   # f. add noise - draw from negative binomial
@@ -253,7 +331,8 @@ simulateDataSet <- function(vecTimePointsA,
   save(vecSigIDs,file=file.path(dirOutSimulation,"Simulation_vecSigIDs.RData"))
   
   save(vecSizeFactorsHidden,file=file.path(dirOutSimulation,"Simulation_vecSizeFactorsHidden.RData"))
-  save(vecLongitudinalFactorsHidden,file=file.path(dirOutSimulation,"vecLongitudinalFactorsHidden.RData"))
+  if(!is.null(vecSamplesB) & !boolCaseCtrl) { save(vecLongitudinalFactorsHidden,file=file.path(dirOutSimulation,"Simulation_vecLongitudinalFactorsHidden.RData")) }
+  if(boolCaseCtrl){ save(vecCaseCtrlDEIDs,file=file.path(dirOutSimulation,"Simulation_vecCaseCtrlDEIDs.RData")) }
   
   save(vecDispHidden,file=file.path(dirOutSimulation,"Simulation_vecDispHidden.RData"))
   save(matImpulseModelHidden,file=file.path(dirOutSimulation,"Simulation_matImpulseModelHidden.RData"))

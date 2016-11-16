@@ -109,15 +109,34 @@ runDESeq2 <- function(dfAnnotationProc,
     # With control data:
     
     if(strMode=="batch"){
+      # Check whether both conditions have each time point only once
+      boolNoSharedTP <- FALSE
+      if( !any( unique( dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Time ) %in%  
+         unique( dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Time ) ) ){
+        print("Completely separate time points in case-ctrl: DESeq2 p-values meaningless.")
+        boolDESeq2PvalValid <- FALSE
+        boolNoSharedTP <- TRUE
+      }
       # Create DESeq2 data object
-      dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
-        colData = dfAnnotationProc,
-        design = ~Condition + Condition:TimeCateg) )
-      # Run DESeq2
-      ddsDESeqObject <- DESeq(dds, test = "LRT", 
-        full = ~Condition + Condition:TimeCateg,
-        reduced = ~ TimeCateg,
-        parallel=TRUE)
+      if(boolNoSharedTP){
+        dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+                                                        colData = dfAnnotationProc,
+                                                        design = ~Condition) )
+        # Run DESeq2
+        ddsDESeqObject <- DESeq(dds, test = "LRT", 
+                                full = ~Condition,
+                                reduced = ~1,
+                                parallel=TRUE)
+      } else {
+        dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
+                                                        colData = dfAnnotationProc,
+                                                        design = ~Condition + Condition:TimeCateg) )
+        # Run DESeq2
+        ddsDESeqObject <- DESeq(dds, test = "LRT", 
+                                full = ~Condition + Condition:TimeCateg,
+                                reduced = ~ TimeCateg,
+                                parallel=TRUE)
+      }
       
     } else if(strMode=="longitudinal"){
       # Note: Have to distinguish model formula between

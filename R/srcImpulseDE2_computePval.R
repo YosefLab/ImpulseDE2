@@ -113,8 +113,8 @@ computePval <- function(matCountDataProc,vecDispersions,
       "deviance"=vecDeviance,
       "mean"=vecMu,
       "size"=vecDispersions,
-      "converge_impulse"=lsImpulseFits$parameters_case[,"converge_H1"],
-      stringsAsFactors = FALSE))
+      "converge_impulse"=lsImpulseFits$parameters_case[,"converge_H1"]),
+      stringsAsFactors = FALSE)
   } else {
     # With control data:
     dfDEAnalysis =   as.data.frame(cbind(
@@ -128,8 +128,8 @@ computePval <- function(matCountDataProc,vecDispersions,
       "size"=vecDispersions,
       "converge_combined"=lsImpulseFits$impulse_parameters_combined[,"converge_H1"],
       "converge_case"=lsImpulseFits$impulse_parameters_case[,"converge_H1"],
-      "converge_control"=lsImpulseFits$impulse_parameters_control[,"converge_H1"],
-      stringsAsFactors = FALSE))
+      "converge_control"=lsImpulseFits$impulse_parameters_control[,"converge_H1"]),
+      stringsAsFactors = FALSE)
   }
   
   # Order data frame by adjusted p-value
