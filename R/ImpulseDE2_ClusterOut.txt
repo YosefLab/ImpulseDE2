@@ -1,0 +1,78 @@
+starting worker pid=5671 on localhost:11536 at 16:01:17.751
+starting worker pid=5680 on localhost:11536 at 16:01:17.884
+starting worker pid=5689 on localhost:11536 at 16:01:18.020
+starting worker pid=5698 on localhost:11536 at 16:01:18.149
+starting worker pid=5707 on localhost:11536 at 16:01:18.289
+starting worker pid=5716 on localhost:11536 at 16:01:18.427
+starting worker pid=5731 on localhost:11536 at 16:01:24.791
+starting worker pid=5740 on localhost:11536 at 16:01:24.925
+starting worker pid=5749 on localhost:11536 at 16:01:25.066
+starting worker pid=5758 on localhost:11536 at 16:01:25.205
+starting worker pid=5767 on localhost:11536 at 16:01:25.338
+starting worker pid=5776 on localhost:11536 at 16:01:25.476
+starting worker pid=5791 on localhost:11536 at 16:01:30.670
+starting worker pid=5800 on localhost:11536 at 16:01:30.804
+starting worker pid=5809 on localhost:11536 at 16:01:30.938
+starting worker pid=5818 on localhost:11536 at 16:01:31.071
+starting worker pid=5827 on localhost:11536 at 16:01:31.203
+starting worker pid=5836 on localhost:11536 at 16:01:31.336
+starting worker pid=6020 on localhost:11536 at 16:19:29.825
+starting worker pid=6029 on localhost:11536 at 16:19:29.964
+starting worker pid=6038 on localhost:11536 at 16:19:30.104
+starting worker pid=6047 on localhost:11536 at 16:19:30.250
+starting worker pid=6056 on localhost:11536 at 16:19:30.392
+starting worker pid=6065 on localhost:11536 at 16:19:30.532
+Error in serialize(data, node$con) : ignoring SIGPIPE signal
+Calls: <Anonymous> ... doTryCatch -> sendData -> sendData.SOCKnode -> serialize
+Execution halted
+starting worker pid=6099 on localhost:11536 at 16:20:29.843
+starting worker pid=6108 on localhost:11536 at 16:20:29.986
+starting worker pid=6117 on localhost:11536 at 16:20:30.178
+starting worker pid=6126 on localhost:11536 at 16:20:30.323
+starting worker pid=6135 on localhost:11536 at 16:20:30.462
+starting worker pid=6144 on localhost:11536 at 16:20:30.617
+Error in serialize(data, node$con) : ignoring SIGPIPE signal
+Calls: <Anonymous> ... doTryCatch -> sendData -> sendData.SOCKnode -> serialize
+Execution halted
+Error in serialize(data, node$con) : ignoring SIGPIPE signal
+Calls: <Anonymous> ... doTryCatch -> sendData -> sendData.SOCKnode -> serialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+starting worker pid=6176 on localhost:11536 at 16:21:15.164
+starting worker pid=6185 on localhost:11536 at 16:21:15.297
+starting worker pid=6194 on localhost:11536 at 16:21:15.432
+starting worker pid=6203 on localhost:11536 at 16:21:15.567
+starting worker pid=6212 on localhost:11536 at 16:21:15.701
+starting worker pid=6221 on localhost:11536 at 16:21:15.836
+starting worker pid=6264 on localhost:11536 at 16:21:53.458
+starting worker pid=6273 on localhost:11536 at 16:21:53.609
+starting worker pid=6282 on localhost:11536 at 16:21:53.755
+starting worker pid=6291 on localhost:11536 at 16:21:53.898
+starting worker pid=6300 on localhost:11536 at 16:21:54.055
+starting worker pid=6309 on localhost:11536 at 16:21:54.223
+starting worker pid=6342 on localhost:11536 at 16:23:16.564
+starting worker pid=6351 on localhost:11536 at 16:23:16.702
+starting worker pid=6360 on localhost:11536 at 16:23:16.836
+starting worker pid=6369 on localhost:11536 at 16:23:16.972
+starting worker pid=6378 on localhost:11536 at 16:23:17.111
+starting worker pid=6387 on localhost:11536 at 16:23:17.253
+starting worker pid=6407 on localhost:11536 at 16:24:11.450
+starting worker pid=6416 on localhost:11536 at 16:24:11.586
+starting worker pid=6425 on localhost:11536 at 16:24:11.718
+starting worker pid=6434 on localhost:11536 at 16:24:11.854
+starting worker pid=6443 on localhost:11536 at 16:24:11.989
+starting worker pid=6452 on localhost:11536 at 16:24:12.123
+starting worker pid=6470 on localhost:11536 at 16:24:40.386
+starting worker pid=6479 on localhost:11536 at 16:24:40.521
+starting worker pid=6488 on localhost:11536 at 16:24:40.657
+starting worker pid=6497 on localhost:11536 at 16:24:40.793
+starting worker pid=6506 on localhost:11536 at 16:24:40.925
+starting worker pid=6515 on localhost:11536 at 16:24:41.064

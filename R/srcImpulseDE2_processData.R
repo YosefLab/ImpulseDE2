@@ -27,24 +27,15 @@
 #'    Count data of all conditions, unobserved entries are NA. 
 #' @param dfAnnotation: (Table) [Default NULL] 
 #'    Annotation table. Lists co-variables of samples: 
-#'    Sample, Condition, Time (and LongitudinalSeries). 
+#'    Sample, Condition, Time (and Batch). 
 #'    Time must be numeric.
 #' @param strCaseName (str) [Default NULL] 
 #'    Name of the case condition in \code{dfAnnotation}.
 #' @param strControlName: (str) [Default NULL] 
 #'    Name of the control condition in \code{dfAnnotation}.
-#' @param strMode: (str) [Default "batch"] 
-#'    {"batch","longitudinal","singlecell"}
-#'    Mode of model fitting.
-#' @param strSCMode: (str) {"clustered", "continuous"}
-#'    Mode in which singlecell data are fit: as clusters of
-#'    cells to pseudotime centroids or in continuous pseudotime
-#'    coordinates.
-#' @param scaWindowRadius: (integer) [Default NULL]
-#'    Smoothing interval radius.
-#' @param lsPseudoDE: (list) [Defaul NULL]
-#'    Hyperparameters and metadata used in impulse fitting
-#'    to scRNAseq data.
+#' @param strMode: (str) [Default "singelbatch"] 
+#'    {"singelbatch","batcheffects"}
+#'    Batch model.
 #' @param vecDispersionsExternal: (vector length number of
 #'    genes in matCountData) [Default NULL]
 #'    Externally generated list of gene-wise dispersion factors
@@ -53,7 +44,7 @@
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
-#' @param matTranslationFactorsExternal: (numeric matrix genes x cells) 
+#' @param matBatchFactorsExternal: (numeric matrix genes x cells) 
 #'    [Default NULL] Externally generated list of translation factors 
 #'    which override translation factor computation in ImpulseDE2.
 #' @param boolRunDESeq2: (bool) [Default TRUE]
@@ -63,11 +54,6 @@
 #' \itemize{
 #'  \item \code{matCountDataProc}: (count matrix  genes x samples) 
 #'      Count data: Reduced version of \code{matCountData}. 
-#'  \item \code{matProbNB} (probability matrix genes x samples)
-#'      Probability of each observation to originate from the negative
-#'      binomial component in the zero inflated negative binomial
-#'      mixture model. All entries are 1 if not operating in 
-#'      strMode=="singlecell".
 #' }
 #'
 #' @export
@@ -78,12 +64,9 @@ processData <- function(dfAnnotation=NULL,
   strCaseName=NULL, 
   strControlName=NULL, 
   strMode=NULL,
-  strSCMode=NULL,
-  scaWindowRadius=NULL,
-  lsPseudoDE=NULL, 
   vecDispersionsExternal=NULL,
   vecSizeFactorsExternal=NULL,
-  matTranslationFactorsExternal=NULL,
+  matBatchFactorsExternal=NULL,
   boolRunDESeq2=NULL){
   
   ###############################################################
@@ -149,12 +132,9 @@ processData <- function(dfAnnotation=NULL,
     strCaseName=NULL, 
     strControlName=NULL, 
     strMode=NULL,
-    strSCMode=NULL,
-    scaWindowRadius=NULL,
-    lsPseudoDE=NULL, 
     vecDispersionsExternal=NULL,
     vecSizeFactorsExternal=NULL,
-    matTranslationFactorsExternal=NULL,
+    matBatchFactorsExternal=NULL,
     boolRunDESeq2=NULL ){
     
     ### 1. Check that all necessary input was specified
@@ -164,26 +144,18 @@ processData <- function(dfAnnotation=NULL,
     checkNull(strMode,"strMode")
     
     ### 2. Check mode
-    lsAllowedModes <- c("batch", "longitudinal", "singlecell")
+    lsAllowedModes <- c("singlebatch", "batcheffects")
     if(!(strMode %in% lsAllowedModes)){
       stop(paste0( "ERROR: ImpulseDE2 mode given as input, strMode=", strMode,
         ", is not recognised. Chose from {", paste0(lsAllowedModes, collapse=","), "}." ))
     }
-    if(strMode=="singlecell"){
-      lsAllowedSCModes <- c("clustered", "continuous")
-      checkNull(strSCMode,"strSCMode")
-      if(!(strSCMode %in% lsAllowedSCModes)){
-        stop(paste0( "ERROR: ImpulseDE2 mode given as input, strSCMode=", strSCMode,
-          ", is not recognised. Chose from {", paste0(lsAllowedSCModes, collapse=","), "}." ))
-      }
-    }
     
     ### 3. Check annotation table content
     ### a) Check column names
-    if(strMode=="batch" | strMode=="singlecell"){
+    if(strMode=="singlebatch"){
       vecColNamesRequired <- c("Sample","Condition","Time")
-    } else if(strMode=="longitudinal"){
-      vecColNamesRequired <- c("Sample","Condition","Time","LongitudinalSeries")
+    } else if(strMode=="batcheffects"){
+      vecColNamesRequired <- c("Sample","Condition","Time","Batch")
     } else {
       stop(paste0("ERROR: Unrecognised strMode in processData::checkData(): ",strMode))
     }
@@ -215,11 +187,11 @@ processData <- function(dfAnnotation=NULL,
         stop("ERROR: Condition given for control does not occur in annotation table condition column.")
       }
     }
-    ### e) LongitudinalSeries
-    if(strMode=="longitudinal"){
+    ### e) Batch
+    if(strMode=="batcheffects"){
       # Check that number of time courses given is > 1
-      if(length(unique( dfAnnotation$LongitudinalSeries ))==1){
-        stop("ERROR: Only one time course given in annotation table in mode longitudinal. Use batch mode.")
+      if(length(unique( dfAnnotation$Batch ))==1){
+        stop("ERROR: Only one time course given in annotation table in mode batcheffects. Use singlebatch mode.")
       }
     }
     
@@ -234,67 +206,8 @@ processData <- function(dfAnnotation=NULL,
     checkNull(rownames(matCountData),"[Rownames of matCountData]")
     checkCounts(matCountData, "matCountData")
     
-    ### 5. Check PseudoDE objects
-    if(strMode=="singlecell"){
-      # Check that PseudoDE object was supplied
-      checkNull(lsPseudoDE,"lsPseudoDE")
-      ### a) Dropout rates and linear model
-      # Use scalar dropout rates if no logistic model supplied
-      # for drop-out rates
-      if(is.null(lsPseudoDE$matDropoutLinModel)){
-        checkNull(lsPseudoDE$matDropout,"lsPseudoDE$matDropout")
-        checkDimMatch(lsPseudoDE$matDropout,matCountData,"lsPseudoDE$matDropout","matCountData")
-        checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matDropout), 
-          "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matDropout]")
-        checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matDropout), 
-          "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matDropout]")
-        checkProbability(lsPseudoDE$matDropout, "lsPseudoDE$matDropout")
-      } else {
-        checkNumeric(lsPseudoDE$matDropoutLinModel, "[lsPseudoDE$matDropoutLinModel]")
-        checkElementMatch(colnames(matCountData), rownames(lsPseudoDE$matDropoutLinModel), 
-          "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matDropoutLinModel]")
-      }
-      
-      ### b) Posterior of observation belonging to negative binomial
-      ### component in mixture model.
-      checkNull(lsPseudoDE$matProbNB,"lsPseudoDE$matProbNB")
-      checkDimMatch(lsPseudoDE$matProbNB,matCountData,"lsPseudoDE$matProbNB","matCountData")
-      checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matProbNB), 
-        "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matProbNB]")
-      checkElementMatch(colnames(matCountData), colnames(lsPseudoDE$matProbNB), 
-        "[Colnames of matCountData]", "[Colnames of lsPseudoDE$matProbNB]")
-      checkProbability(lsPseudoDE$matProbNB, "lsPseudoDE$matProbNB")
-      
-      if(strSCMode=="clustered"){
-        ### c) Inferred mean parameter of negative binomial component
-        ### component in mixture model.
-        #checkNull(lsPseudoDE$matMuCluster,"lsPseudoDE$matMuCluster")
-        #checkElementMatch(rownames(matCountData), rownames(lsPseudoDE$matMuCluster),
-        #  "[Rownames of matCountData]", "[Rownames of lsPseudoDE$matMuCluster]")
-        #checkNumeric(lsPseudoDE$matMuCluster, "lsPseudoDE$matMuCluster")
-        #if(any(lsPseudoDE$matMuCluster <= 0)){
-        #  stop(paste0("ERROR: Some elements of lsPseudoDE$matMuCluster are <=0",
-        #    " which cannot be the case for the mean parameter of a negative binomial distribution."))
-        #}
-        
-        ### d) Cluster index of each cell
-        checkNull(lsPseudoDE$vecClusterAssignments,"lsPseudoDE$vecClusterAssignments")
-        checkElementMatch(colnames(matCountData), names(lsPseudoDE$vecClusterAssignments),
-          "[Colnames of matCountData]", "[Rownames of lsPseudoDE$vecClusterAssignments]")
-        if(!all(seq(1,length(unique(lsPseudoDE$vecClusterAssignments))) %in% unique(lsPseudoDE$vecClusterAssignments))){
-          stop(paste0("ERROR: lsPseudoDE$vecClusterAssignments must contain integers from 1 to (number of clusters)",
-            " as indeces."))
-        }
-        #if(length(unique(lsPseudoDE$vecClusterAssignments)) != dim(lsPseudoDE$matMuCluster)[2]){
-        #  stop(paste0("ERROR: The number of clusters indexed in lsPseudoDE$vecClusterAssignments (",
-        #    length(unique(lsPseudoDE$vecClusterAssignments)),
-        #    ") differs from the number of clusters in lsPseudoDE$matMuCluster (",
-        #    dim(lsPseudoDE$matMuCluster)[2], ")."))
-        #}
-      }
-    }
     
-    ### 6. Check supplied dispersion vector
+    ### 5. Check supplied dispersion vector
     if(!is.null(vecDispersionsExternal)){
       # Check that dispersions were named
       if(is.null(names(vecDispersionsExternal))){
@@ -314,7 +227,7 @@ processData <- function(dfAnnotation=NULL,
       }
     }
     
-    ### 7. Check supplied size facotrs
+    ### 6. Check supplied size facotrs
     if(!is.null(vecSizeFactorsExternal)){
       # Check that size factors were named
       if(is.null(names(vecSizeFactorsExternal))){
@@ -334,13 +247,13 @@ processData <- function(dfAnnotation=NULL,
       }
     }
     
-    ### 8. Check DESeq2 settings
+    ### 7. Check DESeq2 settings
     if(is.null(vecDispersionsExternal) & !boolRunDESeq2){
       stop(paste0( "ERROR: vecDispersionsExternal not supplied and boolRunDESeq2 is FALSE.",
         "Dispersions have to be computed by DESeq2 or provided externally." ))
     }
     
-    ### 9. Check scaSmallRun
+    ### 8. Check scaSmallRun
     if(!is.null(scaSmallRun)){
       checkCounts(scaSmallRun, "scaSmallRun")
       if(scaSmallRun > dim(matCountData)[1]){
@@ -349,58 +262,29 @@ processData <- function(dfAnnotation=NULL,
       }
     }
     
-    ### 10. Check strSCMode
-    if(strMode=="singlecell"){
-      if(!is.null(strSCMode)){
-        if(strSCMode=="continuous"){
-          if(is.null(scaWindowRadius)){
-            print(paste0( "WARNING: No smooting penalty used in strSCMode==continuous.",
-              " Turn on by setting scaWindowRadius."))
-          }
-        }
-        if(strSCMode=="clustered"){
-          if(!is.null(scaWindowRadius)){
-            warning(paste0( "ERROR: scaWindowRadius ignored in strSCMode==clustered"))
-          }
-        }
-      }
-    }
-    
-    ### 11. Check scaWindowRadius
-    if(strMode=="singlecell"){
-      if(!is.null(scaWindowRadius)){
-        checkNA(scaWindowRadius)
-        checkCounts(scaWindowRadius)
-        if(strSCMode!="continuous"){
-          stop(paste0("ImpulseDE2 ERROR: Smoothing is set by scaWindowRadius but fitting mode is",
-            " not continuous (strSCMode!=continuous)"))
-        }
-      }
-    }
-    
-    ### 12. Check matTranslationFactorsExternal
+    ### 12. Check matBatchFactorsExternal
     # Get the message accross that this really shouldn't be used in most cases.
-    if(!is.null(matTranslationFactorsExternal)){
-      print(paste0("matTranslationFactorsExternal IS SET AND OVERRIDES INTERNAL ",
+    if(!is.null(matBatchFactorsExternal)){
+      print(paste0("matBatchFactorsExternal IS SET AND OVERRIDES INTERNAL ",
         "GENERATION OF TRANSLATION FACTORS.",
         "USE WITH CARE. THIS IS NOT INTENDED FOR PUBLIC USE ",
         "BECAUSE THIS HEAVILY AFFECTS THE FITTING STATISTICS."))
-      print("matTranslationFactorsExternal is not checked for format.")
-      warning(paste0("matTranslationFactorsExternal IS SET AND OVERRIDES INTERNAL ",
+      print("matBatchFactorsExternal is not checked for format.")
+      warning(paste0("matBatchFactorsExternal IS SET AND OVERRIDES INTERNAL ",
         "GENERATION OF TRANSLATION FACTORS.",
         "USE WITH CARE. THIS IS NOT INTENDED FOR PUBLIC USE ",
         "BECAUSE THIS HEAVILY AFFECTS THE FITTING STATISTICS."))
     }
     
     ### Summarise which mode, conditions, samples and
-    ### longitudinal series were found
+    ### batch were found
     print(paste0("Found conditions: ",paste0(lsConditions,collapse=",")))
     print(paste0("Case condition: '", strCaseName, "'"))
     if(!is.null(strControlName)){
       print(paste0("Control condition: '", strControlName, "'"))
     }
     print(paste0( "ImpulseDE2 runs in mode: ", strMode ))
-    if(strMode=="batch" | strMode=="longitudinal"){
+    if(strMode=="singlebatch" | strMode=="batcheffects"){
       print(paste0( "Found time points: ",
         paste( vecTimepoints, collapse=",") ))
       for(tp in vecTimepoints){
@@ -423,39 +307,16 @@ processData <- function(dfAnnotation=NULL,
               ]$Sample,collapse=","),collapse="," ))
         }
       }
-    } else if(strMode=="singlecell"){
-      # Shorten output as there are potentially many single cells
-      print(paste0( "Case: Number of cells found is ",
-        length( dfAnnotation[
-          dfAnnotation$Condition %in% strCaseName &
-            dfAnnotation$Sample %in% colnames(matCountData),
-          ]$Sample),collapse="," ))
-      if(!is.null(strControlName)){
-        print(paste0( "Control: Number of cells found is ",
-          length( dfAnnotation[
-            dfAnnotation$Condition %in% strControlName &
-              dfAnnotation$Sample %in% colnames(matCountData),
-            ]$Sample),collapse="," ))
-      }
-      print(paste0( "Found ", length(vecTimepoints), " time points."))
     }
-    if(strMode=="longitudinal"){
-      for(longser in unique( dfAnnotation$LongitudinalSeries )){
-        print(paste0( "Found the following samples for longitudinal series ",
-          longser, ": ",
+    if(strMode=="batcheffects"){
+      for(batch in unique( dfAnnotation$Batch )){
+        print(paste0( "Found the following samples for batches ",
+          batch, ": ",
           paste0( dfAnnotation[
-            dfAnnotation$LongitudinalSeries %in% longser &
+            dfAnnotation$Batch %in% batch &
               dfAnnotation$Sample %in% colnames(matCountData),
             ]$Sample,collapse=",") ))
       }
-    }
-    if(strMode=="singlecell"){
-      print(paste0("Fitting impulse model in negative binomial mean mode ",
-        strSCMode))
-    }
-    if(!is.null(scaWindowRadius)){
-      print(paste0("Fitting impulse model with local smoothness constraint: ",
-        " Windows of length ", scaWindowRadius))
     }
     
     return(NULL)
@@ -478,14 +339,14 @@ processData <- function(dfAnnotation=NULL,
       # The following is used to build full-rank model matrices
       # for DESeq2 even though conditions are a linear combination of
       # longitudinal time series.
-      vecLongSersCase <- unique(dfAnnotationProc[dfAnnotation$Condition==strCaseName,]$LongitudinalSeries)
-      vecLongSersCtrl <- unique(dfAnnotationProc[dfAnnotation$Condition==strControlName,]$LongitudinalSeries)
-      vecindLongSerNested <- array(NA, dim(dfAnnotationProc)[1])
-      vecindLongSerNested[dfAnnotation$Condition==strCaseName] <- 
-        match(dfAnnotationProc$LongitudinalSeries, vecLongSersCase)[dfAnnotation$Condition==strCaseName]
-      vecindLongSerNested[dfAnnotation$Condition==strControlName] <- 
-        match(dfAnnotationProc$LongitudinalSeries, vecLongSersCtrl)[dfAnnotation$Condition==strControlName]
-      dfAnnotationProc$LongSerNested <- paste0("_", vecindLongSerNested)
+      vecBatchCase <- unique(dfAnnotationProc[dfAnnotation$Condition==strCaseName,]$Batch)
+      vecBatchCtrl <- unique(dfAnnotationProc[dfAnnotation$Condition==strControlName,]$Batch)
+      vecindBatchNested <- array(NA, dim(dfAnnotationProc)[1])
+      vecindBatchNested[dfAnnotation$Condition==strCaseName] <- 
+        match(dfAnnotationProc$Batch, vecBatchCase)[dfAnnotation$Condition==strCaseName]
+      vecindBatchNested[dfAnnotation$Condition==strControlName] <- 
+        match(dfAnnotationProc$Batch, vecBatchCtrl)[dfAnnotation$Condition==strControlName]
+      dfAnnotationProc$BatchNested <- paste0("_", vecindBatchNested)
     }
     dfAnnotationProc$TimeCateg <- paste0(
       "_", dfAnnotationProc$Time)
@@ -588,12 +449,9 @@ processData <- function(dfAnnotation=NULL,
     strControlName=strControlName,
     strCaseName=strCaseName,
     strMode=strMode,
-    strSCMode=strSCMode,
-    scaWindowRadius=scaWindowRadius,
-    lsPseudoDE=lsPseudoDE,
     vecDispersionsExternal=vecDispersionsExternal,
     vecSizeFactorsExternal=vecSizeFactorsExternal,
-    matTranslationFactorsExternal=matTranslationFactorsExternal,
+    matBatchFactorsExternal=matBatchFactorsExternal,
     boolRunDESeq2=boolRunDESeq2 )
   
   # Process annotation table
@@ -621,42 +479,12 @@ processData <- function(dfAnnotation=NULL,
   if(!is.null(vecSizeFactorsExternal)){
     vecSizeFactorsExternal <- vecSizeFactorsExternal[colnames(matCountDataProc)]
   }
-
-  # Process single cell hyperparameters
-  if(strMode=="singlecell"){
-    matProbNB <- lsPseudoDE$matProbNB
-    matDropout <- lsPseudoDE$matDropout
-    matDropoutLinModel <- lsPseudoDE$matDropoutLinModel
-    vecClusterAssignments <- lsPseudoDE$vecClusterAssignments
-    vecCentroids <- lsPseudoDE$vecCentroids
-    if(!is.null(scaSmallRun)){
-      scaNRows <- min(scaSmallRun,dim(matCountDataProc)[1])
-      matProbNB <- matProbNB[1:scaNRows,]
-      matDropout <- matDropout[1:scaNRows,]
-    }
-  } else {
-    matProbNB <- NULL
-    matDropout <- NULL
-    matDropoutLinModel <- NULL
-    vecClusterAssignments <- NULL
-    vecCentroids <- NULL
-  }
   
   lsProcessedData <- list(matCountDataProc,
     matCountDataProcFull,
-    dfAnnotationProc,
-    matProbNB, 
-    matDropout,
-    matDropoutLinModel,
-    vecClusterAssignments,
-    vecCentroids)
+    dfAnnotationProc)
   names(lsProcessedData) <- c("matCountDataProc",
     "matCountDataProcFull",
-    "dfAnnotationProc",
-    "matProbNB", 
-    "matDropout",
-    "matDropoutLinModel",
-    "vecClusterAssignments",
-    "vecCentroids")
+    "dfAnnotationProc")
   return( lsProcessedData )
 }

@@ -42,55 +42,65 @@
 #'    Summary of fitting procedure for each gene.
 #' @export
 
-computePval <- function(matCountDataProc,vecDispersions,
-  dfAnnotationProc, lsImpulseFits,
-  strCaseName=NULL, strControlName=NULL, strMode="batch",
-  NPARAM=6){
+runDEAnalysis <- function(matCountDataProc,
+                        vecDispersions,
+                        dfAnnotationProc, 
+                        lsModelFits,
+                        strCaseName, 
+                        strControlName, 
+                        strMode){
   
   if(is.null(strControlName)){
     # Without control data:
     # Take Values from the only fitting performed: case
     # The full model is the impulse fit.
-    vecLogLikFull <- lsImpulseFits$parameters_case[,"logL_H1"]
+    vecLogLikFull <- sapply(lsModelFits, function(fit) fit$lsImpulseFit$scaLL )
     # The reduced model is the mean fit.
-    vecLogLikRed <- lsImpulseFits$parameters_case[,"logL_H0"]
+    vecLogLikRed <- sapply(lsModelFits, function(fit) fit$lsConstFit$scaLL )
     # Mean inferred expression:
-    vecMu <- lsImpulseFits$parameters_case[,"mu"]
-    if(strMode=="batch" | strMode=="singlecell"){
-      # Parameters and 1 dispersion estimate
-      scaDegFreedomFull <- NPARAM + 1
+    vecMu <- sapply(lsModelFits, function(fit) fit$lsConstFit$scaMu )
+    if(strMode=="singlebatch"){
+      # Impulse model parameters and 1 dispersion estimate
+      scaDegFreedomFull <- 6 + 1
       # 1 dispersion estimate and overall mean estimate
       scaDegFreedomRed <- 1 + 1
-    } else if(strMode=="longitudinal"){
-      # Parameters, 1 dispersion estimate and 
-      # scaling factor for each time course
-      scaDegFreedomFull <- NPARAM + 1 + length(unique(dfAnnotationProc$LongitudinalSeries))
-      # 1 dispersion estimate and 1 mean estimate for each time course
-      scaDegFreedomRed <- 1 + length(unique(dfAnnotationProc$LongitudinalSeries))
+    } else if(strMode=="batcheffects"){
+      # 6 impulse model parameters, 1 dispersion estimate and 
+      # 1 scaling factor for each batch (except for the first one).
+      scaDegFreedomFull <- 6 + 1 + length(unique(dfAnnotationProc$Batch)) - 1
+      # 1 mean parameter, 1 dispersion parmeter and
+      # 1 scaling factor for each batch (except for the first one).
+      scaDegFreedomRed <- 1 + 1 + length(unique(dfAnnotationProc$Batch)) - 1
     }
+    vecConvergenceImpulse <- sapply(lsModelFits, function(fit) fit$lsImpulseFit$scaConvergence )
+    vecConvergenceConst <- sapply(lsModelFits, function(fit) fit$lsConstFit$scaConvergence )
   } else {
     # With control data:
     # Full model: Case and control model separate:
     # The log likelihood of the full model is the sum of the
     # log likelihoods of case and control fits.
-    vecLogLikFull <- lsImpulseFits$parameters_case[,"logL_H1"] + lsImpulseFits$parameters_control[,"logL_H1"]
+    vecLogLikFull <- sapply(lsModelFits$case, function(fit) fit$lsImpulseFit$scaLL )+
+      sapply(lsModelFits$control, function(fit) fit$lsImpulseFit$scaLL )
     # The reduced model is the combined data fit.
-    vecLogLikRed <- lsImpulseFits$parameters_combined[,"logL_H1"]
+    vecLogLikRed <- sapply(lsModelFits$combined, function(fit) fit$lsImpulseFit$scaLL )
     # Mean inferred expression: On combined data
-    vecMu <- lsImpulseFits$parameters_combined[,"mu"]
-    if(strMode=="batch" | strMode=="singlecell"){
+    vecMu <- sapply(lsModelFits$combined, function(fit) fit$lsConstFit$scaMu )
+    if(strMode=="singlebatch"){
       # Parameters of both models (case and control) and 1 dispersion estimate
-      scaDegFreedomFull <- NPARAM*2 + 1
+      scaDegFreedomFull <- 6*2 + 1
       # Parameters of one model (combined) and 1 dispersion estimate
-      scaDegFreedomRed <- NPARAM + 1
-    } else if(strMode=="longitudinal"){
-      # Parameters of both models (case and control), 1 dispersion estimate and 
-      # scaling factor for each time course
-      scaDegFreedomFull <- NPARAM*2 + 1 + length(unique(dfAnnotationProc$LongitudinalSeries))
-      # Parameters of one model (combined), 1 dispersion estimate 
-      # and 1 mean estimate for each time course
-      scaDegFreedomRed <- 1 + length(unique(dfAnnotationProc$LongitudinalSeries))
+      scaDegFreedomRed <- 6 + 1
+    } else if(strMode=="batcheffects"){
+      # 6 impulse model parameters for each model, 1 dispersion estimate and 
+      # 1 scaling factor for each batch (except for the first one) for each model.
+      scaDegFreedomFull <- 6*2 + 1 + 2*(length(unique(dfAnnotationProc$Batch)) - 1)
+      # 1 mean parameter, 1 dispersion parmeter and
+      # 1 scaling factor for each batch (except for the first one).
+      scaDegFreedomRed <- 6 + 1 + length(unique(dfAnnotationProc$Batch)) - 1
     }
+    vecConvergenceImpulseCombined <- sapply(lsModelFits$combined, function(fit) fit$lsImpulseFit$scaConvergence )
+    vecConvergenceImpulseCase <- sapply(lsModelFits$case, function(fit) fit$lsImpulseFit$scaConvergence )
+    vecConvergenceImpulseControl <- sapply(lsModelFits$control, function(fit) fit$lsImpulseFit$scaConvergence )
   }
   
   # Compute difference in degrees of freedom between null model and alternative model.
@@ -104,37 +114,38 @@ computePval <- function(matCountDataProc,vecDispersions,
   
   if(is.null(strControlName)){
     # Without control data:
-    dfDEAnalysis =   as.data.frame(cbind(
-      "Gene" = row.names(matCountDataProc),
-      "p"=as.numeric(vecPvalue),
-      "adj.p"=as.numeric(vecPvalueBH),
-      "loglik_full"=vecLogLikFull,
-      "loglik_red"=vecLogLikRed,
-      "deviance"=vecDeviance,
-      "mean"=vecMu,
-      "size"=vecDispersions,
-      "converge_impulse"=lsImpulseFits$parameters_case[,"converge_H1"]),
+    dfDEAnalysis =   data.frame(
+      Gene = row.names(matCountDataProc),
+      p=as.numeric(vecPvalue),
+      padj=as.numeric(vecPvalueBH),
+      loglik_full=vecLogLikFull,
+      loglik_red=vecLogLikRed,
+      deviance=vecDeviance,
+      mean=vecMu,
+      size=vecDispersions,
+      converge_impulse=vecConvergenceImpulse,
+      converge_const=vecConvergenceConst,
       stringsAsFactors = FALSE)
   } else {
     # With control data:
-    dfDEAnalysis =   as.data.frame(cbind(
-      "Gene" = row.names(matCountDataProc),
-      "p"=as.numeric(vecPvalue),
-      "adj.p"=as.numeric(vecPvalueBH),
-      "loglik_full"=vecLogLikFull,
-      "loglik_red"=vecLogLikRed,
-      "deviance"=vecDeviance,
-      "mean"=vecMu,
-      "size"=vecDispersions,
-      "converge_combined"=lsImpulseFits$impulse_parameters_combined[,"converge_H1"],
-      "converge_case"=lsImpulseFits$impulse_parameters_case[,"converge_H1"],
-      "converge_control"=lsImpulseFits$impulse_parameters_control[,"converge_H1"]),
+    dfDEAnalysis =   data.frame(
+      Gene = row.names(matCountDataProc),
+      p=as.numeric(vecPvalue),
+      padj=as.numeric(vecPvalueBH),
+      loglik_full=vecLogLikFull,
+      loglik_red=vecLogLikRed,
+      deviance=vecDeviance,
+      mean=vecMu,
+      size=vecDispersions,
+      converge_combined=vecConvergenceImpulseCombined,
+      converge_case=vecConvergenceImpulseCase,
+      converge_control=vecConvergenceImpulseConrol,
       stringsAsFactors = FALSE)
   }
   
   # Order data frame by adjusted p-value
-  dfDEAnalysis$adj.p <- as.numeric(as.character(dfDEAnalysis$adj.p))
-  dfDEAnalysis = dfDEAnalysis[order(dfDEAnalysis$adj.p),]
+  dfDEAnalysis$padj <- as.numeric(as.character(dfDEAnalysis$padj))
+  dfDEAnalysis = dfDEAnalysis[order(dfDEAnalysis$padj),]
   
   return(dfDEAnalysis)
 }

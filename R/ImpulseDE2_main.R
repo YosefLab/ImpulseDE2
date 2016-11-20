@@ -17,28 +17,23 @@ library(BiocParallel)
 # Source functions in .R files from same directory as this function.
 #setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
-setwd("/home/david/gitDevelopment/code/ImpulseDE2/R")
+setwd("/home/david/gitDevelopment/ImpulseDE2/R")
 
 source("srcImpulseDE2_calcImpulse.R")
 source("srcImpulseDE2_compareDEMethods.R")
 source("srcImpulseDE2_computeNormConst.R")
-source("srcImpulseDE2_computePval.R")
 source("srcImpulseDE2_CostFunctionsFit.R")
 source("srcImpulseDE2_fitImpulse.R")
-#source("srcImpulseDE2_imputeSamples.R")
 source("srcImpulseDE2_plotDEGenes.R")
 source("srcImpulseDE2_processData.R")
+source("srcImpulseDE2_runDEAnalysis.R")
 source("srcImpulseDE2_runDESeq2.R")
 source("srcImpulseDE2_simulateDataSet.R")
 
 # Compile function
 calcImpulse_comp <- cmpfun(calcImpulse)
-evalLogLikMuNB_comp <- cmpfun(evalLogLikMuNB)
-evalLogLikImpulseBatch_comp <- cmpfun(evalLogLikImpulseBatch)
-evalLogLikZINB_comp <- cmpfun(evalLogLikZINB)
-evalLogLikSmoothZINB_comp <- cmpfun(evalLogLikSmoothZINB)
-evalLogLikMuZINB_comp <- cmpfun(evalLogLikMuZINB)
-evalLogLikImpulseSC_comp <- cmpfun(evalLogLikImpulseSC)
+evalLogLikMu_comp <- cmpfun(evalLogLikMu)
+evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 
 ################################################################################
 ### Main function
@@ -150,7 +145,7 @@ evalLogLikImpulseSC_comp <- cmpfun(evalLogLikImpulseSC)
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
-#' @param matTranslationFactorsExternal: (numeric matrix genes x cells) 
+#' @param matBatchFactorsExternal: (numeric matrix genes x cells) 
 #'    [Default NULL] USE WITH CARE. THIS IS NOT INTENDED FOR
 #'    PUBLIC USE BECAUSE THIS HEAVILY AFFECTS THE FITTING
 #'    STATISTICS. Externally generated list of translation factors 
@@ -208,7 +203,7 @@ evalLogLikImpulseSC_comp <- cmpfun(evalLogLikImpulseSC)
 #'        Model scaling factors for each observation which take
 #'        sequencing depth into account (size factors). One size
 #'        factor per sample - rows of this matrix are equal.
-#'    \item \code{ImpulseDE2_matTranslationFactors.RData} 
+#'    \item \code{ImpulseDE2_matBatchFactors.RData} 
 #'        (numeric matrix genes x samples) Model scaling factors for each observation 
 #'        which take longitudinal time series mean within a gene into account 
 #'        (translation factors). Computed based based on all samples.
@@ -248,22 +243,17 @@ runImpulseDE2 <- function(matCountData=NULL,
   strCaseName = NULL, 
   strControlName=NULL, 
   strMode="batch",
-  nProc=1, 
-  Q_value=0.01,
+  scaNProc=1, 
+  scaQThres=0.01,
   vecDispersionsExternal=NULL,
   vecSizeFactorsExternal=NULL,
-  matTranslationFactorsExternal=NULL,
+  matBatchFactorsExternal=NULL,
   boolRunDESeq2=TRUE,
   boolPlotting=TRUE,
   boolSimplePlot=FALSE, 
   boolLogPlot=FALSE,
-  strSCMode="clustered",
-  scaWindowRadius=NULL,
-  lsPseudoDE=NULL, 
   scaSmallRun=NULL,
   boolSaveTemp=TRUE ){
-  
-  NPARAM=6
   
   print("ImpulseDE2 v1.0 for count data")
   
@@ -277,31 +267,38 @@ runImpulseDE2 <- function(matCountData=NULL,
       strControlName=strControlName, 
       strCaseName=strCaseName,
       strMode=strMode,
-      strSCMode=strSCMode,
-      scaWindowRadius=scaWindowRadius,
-      lsPseudoDE=lsPseudoDE,
       vecDispersionsExternal=vecDispersionsExternal,
       vecSizeFactorsExternal=vecSizeFactorsExternal,
-      matTranslationFactorsExternal=matTranslationFactorsExternal,
+      matBatchFactorsExternal=matBatchFactorsExternal,
       boolRunDESeq2=boolRunDESeq2 )
     
     matCountDataProc <- lsProcessedData$matCountDataProc
     matCountDataProcFull <- lsProcessedData$matCountDataProcFull
     dfAnnotationProc <- lsProcessedData$dfAnnotationProc
-    matProbNB <- lsProcessedData$matProbNB
-    matDropoutRate <- lsProcessedData$matDropout
-    matDropoutLinModel <- lsProcessedData$matDropoutLinModel
-    vecClusterAssignments <- lsProcessedData$vecClusterAssignments
-    vecCentroids <- lsProcessedData$vecCentroids
     
     if(boolSaveTemp){
       save(matCountDataProc,file=file.path(getwd(),"ImpulseDE2_matCountDataProc.RData"))
       save(matCountDataProcFull,file=file.path(getwd(),"ImpulseDE2_matCountDataProcFull.RData"))
       save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_dfAnnotationProc.RData"))
-      save(matProbNB,file=file.path(getwd(),"ImpulseDE2_matProbNB.RData"))
-      save(matDropoutRate,file=file.path(getwd(),"ImpulseDE2_matDropoutRate.RData"))
-      save(vecClusterAssignments,file=file.path(getwd(),"ImpulseDE2_vecClusterAssignments.RData"))
-      save(vecCentroids,file=file.path(getwd(),"ImpulseDE2_vecCentroids.RData"))
+    }
+    
+    # Initialise parallelisation
+    print(paste0("Register parallelisation parameters: ", scaNProc, " threads."))
+    # Set the parallelisation environment in BiocParallel:
+    if(scaNProc > 1){
+      # Set worker time out to 60*60*24*7 (7 days)
+      # For single machine (FORK) cluster
+      register(MulticoreParam(workers=scaNProc)) 
+      #timeout=60*60*24*7,
+      #log=boolBPlog, 
+      #threshold="INFO", 
+      #logdir=dirBPLogs))
+      # Use this on windows or if SOCK clusters wanted:
+      # For multiple machine (SOCK) cluster
+      #register(SnowParam(workers=scaNProc, timeout=60*60*24*7))
+    } else {
+      # For debugging in serial mode
+      register(SerialParam())
     }
     
     # 2. Run DESeq2
@@ -311,7 +308,6 @@ runImpulseDE2 <- function(matCountData=NULL,
         lsDESeq2Results <- runDESeq2(
           dfAnnotationProc=dfAnnotationProc,
           matCountDataProc=matCountDataProcFull,
-          nProc=nProc,
           strCaseName=strCaseName,
           strControlName=strControlName,
           strMode=strMode)
@@ -347,71 +343,56 @@ runImpulseDE2 <- function(matCountData=NULL,
     
     # 3. Compute normalisation constants
     print("3. Compute Normalisation constants")
-    lsNormConst <- computeNormConst(
+    vecSizeFactors <- computeNormConst(
       matCountDataProcFull=matCountDataProcFull,
-      matCountDataProc=matCountDataProc,
-      vecDispersions=vecDispersions,
-      scaSmallRun=scaSmallRun,
-      dfAnnotationProc=dfAnnotationProc,
-      strCaseName=strCaseName,
-      strControlName=strControlName, 
-      strMode=strMode,
-      vecSizeFactorsExternal=vecSizeFactorsExternal,
-      matTranslationFactorsExternal=matTranslationFactorsExternal )
-    matTranslationFactors <- lsNormConst$matTranslationFactors
-    matSizeFactors <- lsNormConst$matSizeFactors
+      vecSizeFactorsExternal=vecSizeFactorsExternal )
     if(boolSaveTemp){
-      save(matTranslationFactors,file=file.path(getwd(),"ImpulseDE2_matTranslationFactors.RData"))
-      save(matSizeFactors,file=file.path(getwd(),"ImpulseDE2_matSizeFactors.RData"))
+      save(vecSizeFactors,file=file.path(getwd(),"ImpulseDE2_vecSizeFactors.RData"))
     }
     
     ###  4. Fit impulse model to each gene 
     print("4. Fitting impulse model to the genes")
-    if(nProc > 1){print("Cluster output redirected to text file in this step.")}
     tm_fitImpulse <- system.time({
-      lsImpulseFits <- fitImpulse(
+      lsModelFits <- fitModels(
         matCountDataProc=matCountDataProc, 
         vecDispersions=vecDispersions,
-        matDropoutRate=matDropoutRate,
-        matDropoutLinModel=matDropoutLinModel,
-        matProbNB=matProbNB,
-        vecClusterAssignments=vecClusterAssignments,
-        matSizeFactors=matSizeFactors,
-        matTranslationFactors=matTranslationFactors,
+        vecSizeFactors=vecSizeFactors,
         dfAnnotationProc=dfAnnotationProc, 
         strCaseName=strCaseName, 
         strControlName=strControlName,
         strMode=strMode,
-        strSCMode=strSCMode,
-        scaWindowRadius=scaWindowRadius,
-        nProc=nProc, 
-        NPARAM=NPARAM)
+        nProc=nProc)
     })
     if(boolSaveTemp){
-      save(lsImpulseFits,file=file.path(getwd(),"ImpulseDE2_lsImpulseFits.RData"))
+      save(lsModelFits,file=file.path(getwd(),"ImpulseDE2_lsModelFits.RData"))
     }
     print(paste("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2),
       " min",sep=""))
     
     ### 5. Detect differentially expressed genes
     print("5. DE analysis")
-    dfImpulseResults <- computePval(
+    dfImpulseResults <- runDEAnalysis(
       matCountDataProc=matCountDataProc,
       vecDispersions=vecDispersions,
       dfAnnotationProc=dfAnnotationProc,
-      lsImpulseFits=lsImpulseFits,
+      lsModelFits=lsModelFits,
       strCaseName=strCaseName, 
       strControlName=strControlName,
-      strMode=strMode, 
-      NPARAM=NPARAM)
+      strMode=strMode)
     
-    vecDEGenes <- as.character(as.vector( 
-      dfImpulseResults[as.numeric(dfImpulseResults$adj.p) <= Q_value,"Gene"] ))
+    if(!is.null(scaQValThres)){
+      vecDEGenes <- as.vector( 
+        dfImpulseResults[as.numeric(dfImpulseResults$padj) <= scaQValThres,"Gene"] )
+      print(paste("Found ", length(vecDEGenes)," DE genes",sep=""))
+    } else {
+      vecDEGenes <- NULL
+    }
     if(boolSaveTemp){
       save(dfImpulseResults,file=file.path(getwd(),"ImpulseDE2_dfImpulseResults.RData"))
-      save(vecDEGenes,file=file.path(getwd(),"ImpulseDE2_vecDEGenes.RData"))
+      if(!is.null(scaQValThres)){
+        save(vecDEGenes,file=file.path(getwd(),"ImpulseDE2_vecDEGenes.RData"))
+      }
     }
-    print(paste("Found ", length(vecDEGenes)," DE genes",sep=""))
     
     ### 6. Plot differentially expressed genes
     if(boolPlotting){
@@ -422,16 +403,13 @@ runImpulseDE2 <- function(matCountData=NULL,
         plotDEGenes(
           vecGeneIDs=vecDEGenesPlot,
           matCountDataProc=matCountDataProc,
-          matTranslationFactors=matTranslationFactors,
+          matBatchFactors=matBatchFactors,
           matSizeFactors=matSizeFactors,
           dfAnnotationProc=dfAnnotationProc, 
-          lsImpulseFits=lsImpulseFits,
-          vecCentroids=vecCentroids,
-          vecClusterAssignments=vecClusterAssignments,
+          lsModelFits=lsModelFits,
           dfImpulseResults=dfImpulseResults,
           vecRefPval=vecRefPval,
           strMode=strMode,
-          strSCMode=strSCMode,
           strCaseName=strCaseName, 
           strControlName=strControlName, 
           strFileNameSuffix="DEgenes", 
@@ -439,20 +417,20 @@ runImpulseDE2 <- function(matCountData=NULL,
           strPlotSubtitle="",
           strNameMethod2=strRefMethod,
           boolSimplePlot=boolSimplePlot,
-          boolLogPlot=boolLogPlot,
-          NPARAM=NPARAM)
+          boolLogPlot=boolLogPlot)
       })
       print(paste("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2),
         " min",sep=""))
     }
   })
-  print("Finished ImpulseDE2.")
+  print("Finished running ImpulseDE2.")
   print(paste("TOTAL consumed time: ",round(tm_runImpulseDE2["elapsed"]/60,2),
     " min",sep=""))
   
   return(list(
-    "vecDEGenes"=vecDEGenes,
-    "dfImpulseResults"=dfImpulseResults,
-    "lsImpulseFits"=lsImpulseFits,
-    "dfDESeq2Results"=dfDESeq2Results))
+    vecDEGenes=vecDEGenes,
+    dfImpulseResults=dfImpulseResults,
+    lsImpulseFits=lsImpulseFits,
+    dfDESeq2Results=dfDESeq2Results
+  ))
 }

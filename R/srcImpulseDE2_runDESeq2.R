@@ -16,15 +16,15 @@
 #'    Lists co-variables of samples: 
 #'    Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and Timecourse). For internal use.
-#' @param nProc: (scalar) [Default 1] 
+#' @param scaNProc: (scalar) [Default 1] 
 #'    Number of processes for parallelisation.
 #' @param strCaseName: (str) [Default NULL] 
 #'    Name of the case condition in \code{dfAnnotation}.
 #' @param strControlName: (str) [Default NULL] 
 #'    Name of the control condition in \code{dfAnnotation}.
-#' @param strMode: (str) [Default "batch"] 
-#'    {"batch","longitudinal","singlecell"}
-#'    Mode of model fitting.
+#' @param strMode: (str) [Default "singelbatch"] 
+#'    {"singelbatch","batcheffects"}
+#'    Batch model.
 #'    
 #' @return (list length 2) with the following elements:
 #' \itemize{
@@ -36,13 +36,9 @@
 
 runDESeq2 <- function(dfAnnotationProc, 
   matCountDataProc,
-  nProc=1,
   strCaseName=NULL,
   strControlName=NULL, 
-  strMode="batch"){
-  
-  # Set number of processes for parallelisation
-  register(MulticoreParam(nProc))
+  strMode="singlebatch"){
   
   # Catch specific scenarios in which DESeq2 p-values cannot
   # be generated automatically:
@@ -52,14 +48,14 @@ runDESeq2 <- function(dfAnnotationProc,
   
   if(is.null(strControlName)){
     # Without control data:
-    # The covariate LongitudinalSeries, indicating the time series
+    # The covariate Batch, indicating the time series
     # experiment a sample belongs to, is ignored in batch mode,
     # in which replicates of one sample from different time series
     # experimentes are assumed to be i.i.d. In batch mode,
     # all samples should originate form the same series of 
     # independent samples.
     
-    if(strMode=="batch" | strMode=="singlecell"){
+    if(strMode=="singlebatch"){
       # Create DESeq2 data object
       dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
         colData = dfAnnotationProc,
@@ -69,17 +65,17 @@ runDESeq2 <- function(dfAnnotationProc,
         full = ~ TimeCateg, reduced = ~ 1,
         parallel=TRUE)
       
-    } else if(strMode=="longitudinal"){
+    } else if(strMode=="batcheffects"){
       # Catch case in which each longitudinal series has unique time points.
       tryCatch({
         # Create DESeq2 data object
         dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
           colData = dfAnnotationProc,
-          design = ~ TimeCateg + LongitudinalSeries) )
+          design = ~ TimeCateg + Batch) )
         # Run DESeq2
         ddsDESeqObject <- DESeq(dds, test = "LRT", 
-          full = ~ TimeCateg + LongitudinalSeries, 
-          reduced = ~ LongitudinalSeries,
+          full = ~ TimeCateg + Batch, 
+          reduced = ~ Batch,
           parallel=TRUE)
       }, error=function(strErrorMsg){
         print(strErrorMsg)
@@ -108,7 +104,7 @@ runDESeq2 <- function(dfAnnotationProc,
   } else {
     # With control data:
     
-    if(strMode=="batch"){
+    if(strMode=="singlebatch"){
       # Check whether both conditions have each time point only once
       boolNoSharedTP <- FALSE
       if( !any( unique( dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Time ) %in%  
@@ -138,7 +134,7 @@ runDESeq2 <- function(dfAnnotationProc,
                                 parallel=TRUE)
       }
       
-    } else if(strMode=="longitudinal"){
+    } else if(strMode=="batcheffects"){
       # Note: Have to distinguish model formula between
       # 1. One condition only has one series (i.e. that condition is 
       # a linear combination of that series)
@@ -147,29 +143,29 @@ runDESeq2 <- function(dfAnnotationProc,
       # Note that Condition is in both null models as it complements
       # the longitudinal series information in LSnested.
       boolSingleSeriesCond <- FALSE
-      if(length(unique( dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$LongSerNested ))==1){
+      if(length(unique( dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$BatchNested ))==1){
         boolSingleSeriesCond <- TRUE
       }
-      if(length(unique( dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$LongSerNested ))==1){
+      if(length(unique( dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$BatchNested ))==1){
         boolSingleSeriesCond <- TRUE
       }
       if(boolSingleSeriesCond){
         # Create DESeq2 data object: Don't need interaction of
-        # Condition and LongSerNested as longitudinal label is irrelevant
+        # Condition and BatchNested as longitudinal label is irrelevant
         # for one condition as it covers the same sample range as this
         # condition.
         dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
           colData = dfAnnotationProc,
-          design = ~Condition + LongSerNested + Condition:TimeCateg) )
+          design = ~Condition + BatchNested + Condition:TimeCateg) )
         # Run DESeq2
         ddsDESeqObject <- DESeq(dds, test = "LRT", 
-          full = ~Condition + LongSerNested + Condition:TimeCateg,
-          reduced = ~Condition + LongSerNested + TimeCateg,
+          full = ~Condition + BatchNested + Condition:TimeCateg,
+          reduced = ~Condition + BatchNested + TimeCateg,
           parallel=TRUE)
       } else {
         # Create DESeq2 data object: Need interaction between 
-        # Condition and LongSerNested if each condition has multiple series.
-        print("Using nested longitudinal series to avoid full rank error.")
+        # Condition and BatchNested if each condition has multiple series.
+        print("Using nested batches to avoid full rank error.")
         
         # Catch case in which longitudinal series have unique time points,
         # this occurs if samples come from very different time points. In this
@@ -182,11 +178,11 @@ runDESeq2 <- function(dfAnnotationProc,
         tryCatch({
           dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
             colData = dfAnnotationProc,
-            design = ~Condition + Condition:LongSerNested + Condition:TimeCateg) )
+            design = ~Condition + Condition:BatchNested + Condition:TimeCateg) )
           # Run DESeq2
           ddsDESeqObject <- DESeq(dds, test = "LRT", 
-            full = ~Condition + Condition:LongSerNested + Condition:TimeCateg,
-            reduced = ~Condition + Condition:LongSerNested + TimeCateg,
+            full = ~Condition + Condition:BatchNested + Condition:TimeCateg,
+            reduced = ~Condition + Condition:BatchNested + TimeCateg,
             parallel=TRUE)
         }, error=function(strErrorMsg){
           print(strErrorMsg)
@@ -198,10 +194,10 @@ runDESeq2 <- function(dfAnnotationProc,
             boolDESeq2PvalValid <- FALSE
             dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
               colData = dfAnnotationProc,
-              design = ~Condition + Condition:LongSerNested + TimeCateg) )
+              design = ~Condition + Condition:BatchNested + TimeCateg) )
             # Run DESeq2
             ddsDESeqObject <- DESeq(dds, test = "LRT", 
-              full = ~Condition + Condition:LongSerNested + TimeCateg,
+              full = ~Condition + Condition:BatchNested + TimeCateg,
               reduced = ~1,
               parallel=TRUE)
           }
