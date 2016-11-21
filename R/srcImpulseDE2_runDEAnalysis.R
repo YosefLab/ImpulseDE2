@@ -139,7 +139,7 @@ runDEAnalysis <- function(matCountDataProc,
       size=vecDispersions,
       converge_combined=vecConvergenceImpulseCombined,
       converge_case=vecConvergenceImpulseCase,
-      converge_control=vecConvergenceImpulseConrol,
+      converge_control=vecConvergenceImpulseControl,
       stringsAsFactors = FALSE)
   }
   

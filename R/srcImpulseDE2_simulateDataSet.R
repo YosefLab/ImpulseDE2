@@ -164,8 +164,8 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     t2 <- tb
     t2[tb < ta] <- ta[tb < ta]
     h0 <- runif(scaNImp)*scaMumax
-    h1 <- h0*abs(rnorm(n=scaNImp, mean=1,sd=scaSDExpressionChange))
-    h2 <- h0*abs(rnorm(n=scaNImp, mean=1,sd=scaSDExpressionChange))
+    h1 <- h0*abs(rnorm(n=scaNImp, mean=1, sd=scaSDExpressionChange))
+    h2 <- h0*abs(rnorm(n=scaNImp, mean=1, sd=scaSDExpressionChange))
     h0[h0<0.00001] <-0.00001
     h1[h1<0.00001] <-0.00001
     h2[h2<0.00001] <-0.00001
@@ -193,8 +193,8 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
       t1DE[tb < ta] <- tb[tb < ta]
       t2DE <- tb
       t2DE[tb < ta] <- ta[tb < ta]
-      h1DE <- h0*abs(rnorm(n=scaNImpDE, mean=1,sd=scaSDExpressionChange))
-      h2DE <- h0*abs(rnorm(n=scaNImpDE, mean=1,sd=scaSDExpressionChange))
+      h1DE <- h0[1:scaNImpDE]*abs(rnorm(n=scaNImpDE, mean=1,sd=scaSDExpressionChange))
+      h2DE <- h0[1:scaNImpDE]*abs(rnorm(n=scaNImpDE, mean=1,sd=scaSDExpressionChange))
       h1DE[h1<0.00001] <-0.00001
       h2DE[h2<0.00001] <-0.00001
       lsMuImpulseHiddenDE <- lapply(seq(1,scaNImpDE), function(gene){
@@ -233,7 +233,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     if(boolCaseCtrl){
       # Keep start point the same, this doesn't work well for impulse model
       scaNLinDE <- round(scaNLin/2)
-      vecFinalLevelDE <- vecInitialLevel*abs(rnorm(n=scaNLinDE, mean=1,sd=scaSDExpressionChange))
+      vecFinalLevelDE <- vecInitialLevel[1:scaNLinDE]*abs(rnorm(n=scaNLinDE, mean=1,sd=scaSDExpressionChange))
       # Evaluate linear functions
       scaDeltaTtot <- max(vecTimePointsUniqueB)-min(vecTimePointsUniqueB)
       matMuLinHiddenDE <- do.call(rbind, lapply(seq(1, scaNLinDE), function(i){
@@ -266,7 +266,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     if(boolCaseCtrl){
       # Keep start point the same, this doesn't work well for impulse model
       scaNSigDE <- round(scaNSig/2)
-      vech1DE <- vech0*abs(rnorm(n=scaNSigDE, mean=1,sd=scaSDExpressionChange))
+      vech1DE <- vech0[1:scaNSigDE]*abs(rnorm(n=scaNSigDE, mean=1,sd=scaSDExpressionChange))
       vecBetaDE <- runif(scaNSigDE)*4+0.5
       vecT1DE <- runif(scaNSigDE)*(max(vecTimePointsUniqueB)-min(vecTimePointsUniqueB))+
         min(vecTimePointsUniqueB)
