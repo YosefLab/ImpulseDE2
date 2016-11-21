@@ -20,6 +20,9 @@
 #'    Number of time points in batch B.
 #' @param boolCaseCtrl: (bool) [Defaul FALSE] Whether A and B are 
 #'    are case and control data (used for annotation data frame).
+#' @param boolCaseCtrlBatch: (bool) [Defaul FALSE] Whether to 
+#'    simulate batch effects in case-control: assume all time-points
+#'    are shared between batches, each replicate is one batch.
 #' @param scaNConst: (scalar) Number of constant genes in data set.
 #' @param scaNImp: (scalar) Number of impulse distributed genes in data set.
 #' @param scaNLin: (scalar) Number of linear distributed genes in data set.
@@ -67,7 +70,8 @@
 
 simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   vecTimePointsB,
-  boolCaseCtrl=FALSE,
+  vecBatchesA,
+  vecBatchesB,
   scaNConst,
   scaNImp,
   scaNLin,
@@ -100,7 +104,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   vecSamplesA <- vecTimePointsA
   names(vecSamplesA) <- sapply(seq(1, length(vecSamplesA)), function(i){
     paste0("A_", vecSamplesA[i], "_Rep", 
-      match(i, which(vecTimePointsA==vecTimePointsA[i]) ))
+      match(i, which(vecSamplesA==vecSamplesA[i]) ))
   })
   vecSamplesB <- vecTimePointsB
   if(!is.null(vecSamplesB)){
@@ -108,6 +112,9 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
       paste0("B_", vecSamplesB[i], "_Rep", 
         match(i, which(vecSamplesB==vecSamplesB[i]) ))
     })
+    boolCaseCtrl <- TRUE
+  } else {
+    boolCaseCtrl <- FALSE
   }
   vecSamples <- c(vecSamplesA, vecSamplesB)
   scaNSamples <- length(vecSamples)
@@ -115,18 +122,18 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   vecindTimePointAssign <- match(vecSamples, vecTimePointsUnique)
   vecTimePointsUniqueB <- unique(vecSamplesB)
   vecindTimePointAssignB <- match(vecSamplesB, vecTimePointsUniqueB)
-  
+    
   dfAnnotation <- data.frame(
     Sample=names(vecSamples),
     Condition=rep("case", length(vecSamples)),
     Time=vecSamples,
-    Batch=c(rep("A", length(vecSamplesA)),
-      rep("B", length(vecSamplesB))),
+    Batch=c(vecBatchesA, vecBatchesB),
     stringsAsFactors=FALSE
   )
   rownames(dfAnnotation) <- dfAnnotation$Sample
   if(boolCaseCtrl){
-    dfAnnotation[dfAnnotation$Batch=="B",]$Condition <- rep("ctrl", sum(dfAnnotation$Batch=="B"))
+    dfAnnotation[dfAnnotation$Sample %in% names(vecSamplesB),]$Condition <- 
+      rep("ctrl", sum(dfAnnotation$Sample %in% names(vecSamplesB)))
   }
   
   # 1. Create hidden data set
@@ -311,35 +318,44 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   }
   
   # Add scaling factors
-  # Sample size factors
+  # a) Sample size factors
   vecSizeFactorsHidden <- rnorm(n=scaNSamples, 
     mean=scaMuSizeEffect, sd=scaSDSizeEffect)
   vecSizeFactorsHidden[vecSizeFactorsHidden<0.1] <- 0.1
   vecSizeFactorsHidden[vecSizeFactorsHidden>10] <- 10
   names(vecSizeFactorsHidden) <- names(vecSamples)
-  # Sample batch normalisation factors
-  if(!is.null(vecSamplesB) & !boolCaseCtrl){
-    vecBatchFactorsHidden <- rnorm(n=scaNGenes,
-                                          mean=scaMuBatchEffect, sd=scaSDBatchEffect)
-    vecBatchFactorsHidden[vecBatchFactorsHidden<0.1] <- 0.1
-    vecBatchFactorsHidden[vecBatchFactorsHidden>10] <- 10
-    names(vecBatchFactorsHidden) <- rownames(matMuHidden)
-  }
-  # Scale
+  # Scale by size factors
   matMuHiddenScaled <- matMuHidden*
     matrix(vecSizeFactorsHidden,
       nrow=dim(matMuHidden)[1],
       ncol=dim(matMuHidden)[2], byrow=TRUE)
-  if(!is.null(vecSamplesB) & !boolCaseCtrl){
-    matMuHiddenScaled <- matMuHiddenScaled*
-      cbind(
-        matrix(1,
-          nrow=dim(matMuHidden)[1],
-          ncol=length(vecSamplesA), byrow=FALSE),
-        matrix(vecBatchFactorsHidden,
-          nrow=dim(matMuHidden)[1],
-          ncol=length(vecSamplesB), byrow=FALSE)
+  # b) Batch factors
+  vecBatchesUnique <- unique(dfAnnotation$Batch)
+  vecindBatches <- match(dfAnnotation$Batch, vecBatchesUnique)
+  # Check that batches dont coincide with case-ctrl split of samples
+  if(boolCaseCtrl & length(vecBatchesUnique)==2){
+    if(setequal( dfAnnotation[dfAnnotation$Batch==vecBatchesUnique[1],]$Sample,
+      dfAnnotation[dfAnnotation$Condition=="case",]$Sample ) |
+        setequal( dfAnnotation[dfAnnotation$Batch==vecBatchesUnique[1],]$Sample,
+          dfAnnotation[dfAnnotation$Condition=="ctrl",]$Sample ) ){
+      stop("Batch structure coincides with case-control structure.")
+    }
+  }
+  if(length(vecBatchesUnique)>1){
+    matBatchFactorsUnqiueHidden <- do.call(rbind, lapply(seq(1,scaNGenes), function(i){
+      c(1, 
+        rnorm(n=length(vecBatchesUnique)-1, 
+          mean=scaMuBatchEffect, 
+          sd=scaSDBatchEffect)
       )
+    }))
+                                          
+    matBatchFactorsUnqiueHidden[matBatchFactorsUnqiueHidden<0.1] <- 0.1
+    matBatchFactorsUnqiueHidden[matBatchFactorsUnqiueHidden>10] <- 10
+    matBatchFactorsHidden <- matBatchFactorsUnqiueHidden[,vecindBatches]
+    rownames(matBatchFactorsHidden) <- rownames(matMuHidden)
+    # Scale
+    matMuHiddenScaled <- matMuHiddenScaled*matBatchFactorsHidden
   }
   rownames(matMuHiddenScaled) <- rownames(matMuHidden)
   colnames(matMuHiddenScaled) <- colnames(matMuHidden)
@@ -370,7 +386,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   save(vecSigIDs,file=file.path(dirOutSimulation,"Simulation_vecRandIDs.RData"))
   
   save(vecSizeFactorsHidden,file=file.path(dirOutSimulation,"Simulation_vecSizeFactorsHidden.RData"))
-  if(!is.null(vecSamplesB) & !boolCaseCtrl) { save(vecBatchFactorsHidden,file=file.path(dirOutSimulation,"Simulation_vecBatchFactorsHidden.RData")) }
+  if(length(vecBatchesUnique)>1) { save(matBatchFactorsHidden,file=file.path(dirOutSimulation,"Simulation_matBatchFactorsHidden.RData")) }
   if(boolCaseCtrl){ save(vecCaseCtrlDEIDs,file=file.path(dirOutSimulation,"Simulation_vecCaseCtrlDEIDs.RData")) }
   
   save(vecDispHidden,file=file.path(dirOutSimulation,"Simulation_vecDispHidden.RData"))
