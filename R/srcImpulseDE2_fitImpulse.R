@@ -117,7 +117,7 @@ estimateImpulseParam <- function(vecCounts,
 fitConstModel <- function(vecCounts,
                           scaDisp,
                           vecSizeFactors,
-                          vecBatches,
+                          vecBatchesUnique,
                           vecindBatchAssign,
                           strMode,
                           MAXIT=100,
@@ -134,7 +134,7 @@ fitConstModel <- function(vecCounts,
       # One mean parameter and #batches-1 batch factors
       # initialised to 1 (0 in log space)
       vecParamGuess <- c(log(mean(vecCounts, na.rm=TRUE)), 
-                         rep(0, length(unqiue(vecBatch))) )
+                         rep(0, length(vecBatchesUnique)-1) )
     } else { vecParamGuess <- log(mean(vecCounts, na.rm=TRUE)) }
   }
   
@@ -171,11 +171,11 @@ fitConstModel <- function(vecCounts,
   # Catch boundary of likelihood domain on mu space:
   if(scaMu < 10^(-10)){scaMu <- 10^(-10)}
   if(strMode=="batcheffects"){
-    vecBatchFactors <- exp(lsFit$par[2:length(lsFit$par)])
+    vecBatchFactors <- c(1, exp(lsFit$par[2:length(lsFit$par)]))
     # Catch boundary of likelihood domain on batch factor space:
     vecBatchFactors[vecBatchFactors < 10^(-10)] <- 10^(-10)
     vecBatchFactors[vecBatchFactors > 10^(10)] <- 10^(10)
-    names(vecBatchFactors) <- vecBatches
+    names(vecBatchFactors) <- vecBatchesUnique
   } else { vecBatchFactors <- NULL }
   
   return(list( scaMu=scaMu,
@@ -236,7 +236,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
                             vecCounts,
                             scaDisp,
                             vecSizeFactors,
-                            vecBatches,
+                            vecBatchesUnique,
                             vecindBatchAssign,
                             vecTimepointsUnique,
                             vecindTimepointAssign,
@@ -250,7 +250,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   if(strMode=="batcheffects"){
     # Impulse parameter guesses (6) and #batches-1 batch factor parameters
     # initialised to 1 (0 in log space)
-    vecParamGuess <- c(vecImpulseParamGuess, rep(0, length(unqiue(vecBatch))-1))
+    vecParamGuess <- c(vecImpulseParamGuess, rep(0, length(vecBatchesUnique)-1))
   } else { vecParamGuess <- vecImpulseParamGuess }
   
   lsFit <- tryCatch({
@@ -293,11 +293,11 @@ fitImpulseModel <- function(vecImpulseParamGuess,
                                       vecTimepoints=vecTimepointsUnique)[vecindTimepointAssign]
   names(vecImpulseValue) <- names(vecCounts)
   if(strMode=="batcheffects"){
-    vecBatchFactors <- exp(lsFit$par[7:length(lsFit$par)])
+    vecBatchFactors <- c(1, exp(lsFit$par[7:length(lsFit$par)]))
     # Catch boundary of likelihood domain on batch factor space:
     vecBatchFactors[vecBatchFactors < 10^(-10)] <- 10^(-10)
     vecBatchFactors[vecBatchFactors > 10^(10)] <- 10^(10)
-    names(vecBatchFactors) <- vecBatches
+    names(vecBatchFactors) <- vecBatchesUnique
   } else { vecBatchFactors <- NULL }
   
   return(list( vecImpulseParam=vecImpulseParam,
@@ -373,10 +373,10 @@ fitConstImpulseGene <- function(vecCounts,
   # (I) Process data
   # Compute time point specifc parameters
   vecTimepointsUnique <- sort(unique( vecTimepoints ))
-  # Get vector of numeric time point assignment indices:
   vecindTimepointUniqueAssign <- match(vecTimepoints, vecTimepointsUnique)
   # Get batch assignments
-  vecindBatchAssign <- match(vecBatches, unique(vecBatches))
+  vecBatchesUnique <- unique(vecBatches)
+  vecindBatchAssign <- match(vecBatches, vecBatchesUnique)
   
   if(boolFitConst){
     # (II) Fit null model and compute loglikelihood of null model
@@ -386,7 +386,7 @@ fitConstImpulseGene <- function(vecCounts,
       vecCounts=vecCounts, 
       scaDisp=scaDisp,
       vecSizeFactors=vecSizeFactors,
-      vecBatches=vecBatches,
+      vecBatchesUnique=vecBatchesUnique,
       vecindBatchAssign=vecindBatchAssign,
       strMode=strMode)
   } else {
@@ -411,7 +411,7 @@ fitConstImpulseGene <- function(vecCounts,
                                vecSizeFactors=vecSizeFactors,
                                vecTimepointsUnique=vecTimepointsUnique, 
                                vecindTimepointAssign=vecindTimepointUniqueAssign,
-                               vecBatches=vecBatches,
+                               vecBatchesUnique=vecBatchesUnique,
                                vecindBatchAssign=vecindBatchAssign,
                                strMode=strMode, 
                                MAXIT=MAXIT)
@@ -422,7 +422,7 @@ fitConstImpulseGene <- function(vecCounts,
                                  vecSizeFactors=vecSizeFactors,
                                  vecTimepointsUnique=vecTimepointsUnique, 
                                  vecindTimepointAssign=vecindTimepointUniqueAssign,
-                                 vecBatches=vecBatches,
+                                 vecBatchesUnique=vecBatchesUnique,
                                  vecindBatchAssign=vecindBatchAssign,
                                  strMode=strMode, 
                                  MAXIT=MAXIT)

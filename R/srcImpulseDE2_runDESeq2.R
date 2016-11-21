@@ -66,7 +66,7 @@ runDESeq2 <- function(dfAnnotationProc,
         parallel=TRUE)
       
     } else if(strMode=="batcheffects"){
-      # Catch case in which each longitudinal series has unique time points.
+      # Catch case in which each batch has unique time points.
       tryCatch({
         # Create DESeq2 data object
         dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
@@ -141,7 +141,7 @@ runDESeq2 <- function(dfAnnotationProc,
       # 2. Both conditions have multiple series and are not linear
       # combinations of any one series.
       # Note that Condition is in both null models as it complements
-      # the longitudinal series information in LSnested.
+      # the batch information in LSnested.
       boolSingleSeriesCond <- FALSE
       if(length(unique( dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$BatchNested ))==1){
         boolSingleSeriesCond <- TRUE
@@ -151,7 +151,7 @@ runDESeq2 <- function(dfAnnotationProc,
       }
       if(boolSingleSeriesCond){
         # Create DESeq2 data object: Don't need interaction of
-        # Condition and BatchNested as longitudinal label is irrelevant
+        # Condition and BatchNested as batch label is irrelevant
         # for one condition as it covers the same sample range as this
         # condition.
         dds <- suppressWarnings( DESeqDataSetFromMatrix(countData = matCountDataProc,
@@ -167,7 +167,7 @@ runDESeq2 <- function(dfAnnotationProc,
         # Condition and BatchNested if each condition has multiple series.
         print("Using nested batches to avoid full rank error.")
         
-        # Catch case in which longitudinal series have unique time points,
+        # Catch case in which batches have unique time points,
         # this occurs if samples come from very different time points. In this
         # case, case-control comparison cannot be properly performed with DESeq2
         # as time points were not observed both in case and control and have to 

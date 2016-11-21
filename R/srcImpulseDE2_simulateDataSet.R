@@ -120,13 +120,13 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     Sample=names(vecSamples),
     Condition=rep("case", length(vecSamples)),
     Time=vecSamples,
-    LongitudinalSeries=c(rep("A", length(vecSamplesA)),
+    Batch=c(rep("A", length(vecSamplesA)),
       rep("B", length(vecSamplesB))),
     stringsAsFactors=FALSE
   )
   rownames(dfAnnotation) <- dfAnnotation$Sample
   if(boolCaseCtrl){
-    dfAnnotation[dfAnnotation$LongitudinalSeries=="B",]$Condition <- rep("ctrl", sum(dfAnnotation$LongitudinalSeries=="B"))
+    dfAnnotation[dfAnnotation$Batch=="B",]$Condition <- rep("ctrl", sum(dfAnnotation$Batch=="B"))
   }
   
   # 1. Create hidden data set
@@ -319,11 +319,11 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   names(vecSizeFactorsHidden) <- names(vecSamples)
   # Sample batch normalisation factors
   if(!is.null(vecSamplesB) & !boolCaseCtrl){
-    vecLongitudinalFactorsHidden <- rnorm(n=scaNGenes,
+    vecBatchFactorsHidden <- rnorm(n=scaNGenes,
                                           mean=scaMuBatchEffect, sd=scaSDBatchEffect)
-    vecLongitudinalFactorsHidden[vecLongitudinalFactorsHidden<0.1] <- 0.1
-    vecLongitudinalFactorsHidden[vecLongitudinalFactorsHidden>10] <- 10
-    names(vecLongitudinalFactorsHidden) <- rownames(matMuHidden)
+    vecBatchFactorsHidden[vecBatchFactorsHidden<0.1] <- 0.1
+    vecBatchFactorsHidden[vecBatchFactorsHidden>10] <- 10
+    names(vecBatchFactorsHidden) <- rownames(matMuHidden)
   }
   # Scale
   matMuHiddenScaled <- matMuHidden*
@@ -336,7 +336,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
         matrix(1,
           nrow=dim(matMuHidden)[1],
           ncol=length(vecSamplesA), byrow=FALSE),
-        matrix(vecLongitudinalFactorsHidden,
+        matrix(vecBatchFactorsHidden,
           nrow=dim(matMuHidden)[1],
           ncol=length(vecSamplesB), byrow=FALSE)
       )
@@ -370,7 +370,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   save(vecSigIDs,file=file.path(dirOutSimulation,"Simulation_vecRandIDs.RData"))
   
   save(vecSizeFactorsHidden,file=file.path(dirOutSimulation,"Simulation_vecSizeFactorsHidden.RData"))
-  if(!is.null(vecSamplesB) & !boolCaseCtrl) { save(vecLongitudinalFactorsHidden,file=file.path(dirOutSimulation,"Simulation_vecLongitudinalFactorsHidden.RData")) }
+  if(!is.null(vecSamplesB) & !boolCaseCtrl) { save(vecBatchFactorsHidden,file=file.path(dirOutSimulation,"Simulation_vecBatchFactorsHidden.RData")) }
   if(boolCaseCtrl){ save(vecCaseCtrlDEIDs,file=file.path(dirOutSimulation,"Simulation_vecCaseCtrlDEIDs.RData")) }
   
   save(vecDispHidden,file=file.path(dirOutSimulation,"Simulation_vecDispHidden.RData"))
