@@ -205,7 +205,7 @@ processData <- function(dfAnnotation=NULL,
     }
     checkNull(rownames(matCountData),"[Rownames of matCountData]")
     checkCounts(matCountData, "matCountData")
-    
+    # Check that gene IDs don't start with "_" -TODO
     
     ### 5. Check supplied dispersion vector
     if(!is.null(vecDispersionsExternal)){
@@ -260,20 +260,6 @@ processData <- function(dfAnnotation=NULL,
         stop(paste0( "ERROR: scaSmallRun (",scaSmallRun,
           ") larger then data set (",dim(matCountData)[1]," genes)."))
       }
-    }
-    
-    ### 12. Check matBatchFactorsExternal
-    # Get the message accross that this really shouldn't be used in most cases.
-    if(!is.null(matBatchFactorsExternal)){
-      print(paste0("matBatchFactorsExternal IS SET AND OVERRIDES INTERNAL ",
-        "GENERATION OF TRANSLATION FACTORS.",
-        "USE WITH CARE. THIS IS NOT INTENDED FOR PUBLIC USE ",
-        "BECAUSE THIS HEAVILY AFFECTS THE FITTING STATISTICS."))
-      print("matBatchFactorsExternal is not checked for format.")
-      warning(paste0("matBatchFactorsExternal IS SET AND OVERRIDES INTERNAL ",
-        "GENERATION OF TRANSLATION FACTORS.",
-        "USE WITH CARE. THIS IS NOT INTENDED FOR PUBLIC USE ",
-        "BECAUSE THIS HEAVILY AFFECTS THE FITTING STATISTICS."))
     }
     
     ### Summarise which mode, conditions, samples and
@@ -479,12 +465,8 @@ processData <- function(dfAnnotation=NULL,
   if(!is.null(vecSizeFactorsExternal)){
     vecSizeFactorsExternal <- vecSizeFactorsExternal[colnames(matCountDataProc)]
   }
-  
-  lsProcessedData <- list(matCountDataProc,
-    matCountDataProcFull,
-    dfAnnotationProc)
-  names(lsProcessedData) <- c("matCountDataProc",
-    "matCountDataProcFull",
-    "dfAnnotationProc")
-  return( lsProcessedData )
+
+  return( list(matCountDataProc=matCountDataProc,
+    matCountDataProcFull=matCountDataProcFull,
+    dfAnnotationProc=dfAnnotationProc) )
 }

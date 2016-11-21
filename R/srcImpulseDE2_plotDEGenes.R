@@ -37,7 +37,7 @@
 #'    \code{optim} from \code{stats}. Each value matrix is called
 #'    value_'condition' and has the form (genes x time points) and contains the
 #'    counts predicted by the impulse model at the observed time points.
-#' @param dfImpulseResults (data frame genes x fitting characteristics) 
+#' @param dfImpulseDE2Results (data frame genes x fitting characteristics) 
 #'    Summary of fitting procedure for each gene.
 #' @param vecRefPval (vec length genes) Method 2 (DESeq2) adjusted p-values
 #' @param strCaseName (str) Name of the case condition in \code{dfAnnotationProcFull}.
@@ -59,7 +59,7 @@ plotDEGenes <- function(vecGeneIDs,
   vecSizeFactors,
   dfAnnotationProc, 
   lsModelFits, 
-  dfImpulseResults, 
+  dfImpulseDE2Results, 
   vecRefPval=NULL, 
   strCaseName, 
   strControlName=NULL, 
@@ -167,7 +167,7 @@ plotDEGenes <- function(vecGeneIDs,
       if(boolLogPlot){ vecCaseValues <- log(vecCaseValues+1)/log(SCALOGBASE) }
       
       # Prepare p-values to include in header
-      pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
+      pval_Impulse <- round( log(dfImpulseDE2Results[geneID,]$adj.p)/log(10), 2 )
       if(!is.null(vecRefPval)){
         pval_Method2 <- round( log(vecRefPval[geneID])/log(10), 2 )
       }
@@ -238,7 +238,7 @@ plotDEGenes <- function(vecGeneIDs,
           vecCaseValueAtTP <- calcImpulse_comp(vecImpulseParamCaseLog,vecTimepoints)
           for(tp in vecTimepoints){
             vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
-                                    size=as.numeric(as.vector(dfImpulseResults[geneID,]$size)) )
+                                    size=as.numeric(as.vector(dfImpulseDE2Results[geneID,]$size)) )
             # Scale Y_coord to uniform peak heights of 1
             # This translates into width of one time unit in plot
             vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
@@ -345,7 +345,7 @@ plotDEGenes <- function(vecGeneIDs,
       vecCombValues <- lsModelFits$combined$geneID$lsImpulseFit$vecImpulseValues
       if(boolLogPlot){ vecCombValues <- log(vecCombValues+1)/log(SCALOGBASE) }
       
-      pval_Impulse <- round( log(dfImpulseResults[geneID,]$adj.p)/log(10), 2 )
+      pval_Impulse <- round( log(dfImpulseDE2Results[geneID,]$adj.p)/log(10), 2 )
       if(!is.null(vecRefPval)){
         pval_Method2 <- round( log(vecRefPval[geneID])/log(10), 2 )
       }

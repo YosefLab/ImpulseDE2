@@ -180,7 +180,7 @@ fitConstModel <- function(vecCounts,
   
   return(list( scaMu=scaMu,
                vecBatchFactors=vecBatchFactors,
-               scaLL=-lsFit$value,
+               scaLL=lsFit$value,
                scaConvergence=lsFit$convergence))
 }
 
@@ -303,7 +303,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   return(list( vecImpulseParam=vecImpulseParam,
                vecImpulseValue=vecImpulseValue,
                vecBatchFactors=vecBatchFactors,
-               scaLL=-lsFit$value,
+               scaLL=lsFit$value,
                scaConvergence=lsFit$convergence))
 }
 

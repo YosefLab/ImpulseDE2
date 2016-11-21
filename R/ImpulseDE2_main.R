@@ -15,9 +15,9 @@ library(DESeq2)
 library(BiocParallel)
 
 # Source functions in .R files from same directory as this function.
-#setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
+setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
-setwd("/home/david/gitDevelopment/ImpulseDE2/R")
+#setwd("/home/david/gitDevelopment/ImpulseDE2/R")
 
 source("srcImpulseDE2_calcImpulse.R")
 source("srcImpulseDE2_compareDEMethods.R")
@@ -253,7 +253,7 @@ runImpulseDE2 <- function(matCountData=NULL,
   boolSimplePlot=FALSE, 
   boolLogPlot=FALSE,
   scaSmallRun=NULL,
-  boolSaveTemp=TRUE ){
+  dirTemp=NULL ){
   
   print("ImpulseDE2 v1.0 for count data")
   
@@ -276,10 +276,10 @@ runImpulseDE2 <- function(matCountData=NULL,
     matCountDataProcFull <- lsProcessedData$matCountDataProcFull
     dfAnnotationProc <- lsProcessedData$dfAnnotationProc
     
-    if(boolSaveTemp){
-      save(matCountDataProc,file=file.path(getwd(),"ImpulseDE2_matCountDataProc.RData"))
-      save(matCountDataProcFull,file=file.path(getwd(),"ImpulseDE2_matCountDataProcFull.RData"))
-      save(dfAnnotationProc,file=file.path(getwd(),"ImpulseDE2_dfAnnotationProc.RData"))
+    if(!is.null(dirTemp)){
+      save(matCountDataProc,file=file.path(dirTemp,"ImpulseDE2_matCountDataProc.RData"))
+      save(matCountDataProcFull,file=file.path(dirTemp,"ImpulseDE2_matCountDataProcFull.RData"))
+      save(dfAnnotationProc,file=file.path(dirTemp,"ImpulseDE2_dfAnnotationProc.RData"))
     }
     
     # Initialise parallelisation
@@ -312,8 +312,7 @@ runImpulseDE2 <- function(matCountData=NULL,
           strControlName=strControlName,
           strMode=strMode)
       })
-      print(paste("Consumed time: ",round(tm_runDESeq2["elapsed"]/60,2),
-        " min",sep=""))
+      print(paste0("Consumed time: ",round(tm_runDESeq2["elapsed"]/60,2), " min."))
       dfDESeq2Results <- lsDESeq2Results$ddsResults
       vecRefPval <- dfDESeq2Results[rownames(matCountDataProc),]$padj
       names(vecRefPval) <- rownames(matCountDataProc)
@@ -336,9 +335,9 @@ runImpulseDE2 <- function(matCountData=NULL,
       print("Using externally supplied dispersion factors.")
       vecDispersions <- vecDispersionsExternal[rownames(matCountDataProc)]
     }
-    if(boolSaveTemp){
-      save(vecDispersions,file=file.path(getwd(),"ImpulseDE2_vecDispersions.RData"))
-      save(dfDESeq2Results,file=file.path(getwd(),"ImpulseDE2_dfDESeq2Results.RData"))
+    if(!is.null(dirTemp)){
+      save(vecDispersions,file=file.path(dirTemp,"ImpulseDE2_vecDispersions.RData"))
+      save(dfDESeq2Results,file=file.path(dirTemp,"ImpulseDE2_dfDESeq2Results.RData"))
     }
     
     # 3. Compute normalisation constants
@@ -346,8 +345,8 @@ runImpulseDE2 <- function(matCountData=NULL,
     vecSizeFactors <- computeNormConst(
       matCountDataProcFull=matCountDataProcFull,
       vecSizeFactorsExternal=vecSizeFactorsExternal )
-    if(boolSaveTemp){
-      save(vecSizeFactors,file=file.path(getwd(),"ImpulseDE2_vecSizeFactors.RData"))
+    if(!is.null(dirTemp)){
+      save(vecSizeFactors,file=file.path(dirTemp,"ImpulseDE2_vecSizeFactors.RData"))
     }
     
     ###  4. Fit impulse model to each gene 
@@ -363,15 +362,14 @@ runImpulseDE2 <- function(matCountData=NULL,
         strMode=strMode,
         nProc=nProc)
     })
-    if(boolSaveTemp){
-      save(lsModelFits,file=file.path(getwd(),"ImpulseDE2_lsModelFits.RData"))
+    if(!is.null(dirTemp)){
+      save(lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
     }
-    print(paste("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2),
-      " min",sep=""))
+    print(paste0("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2)," min."))
     
     ### 5. Detect differentially expressed genes
     print("5. DE analysis")
-    dfImpulseResults <- runDEAnalysis(
+    dfImpulseDE2Results <- runDEAnalysis(
       matCountDataProc=matCountDataProc,
       vecDispersions=vecDispersions,
       dfAnnotationProc=dfAnnotationProc,
@@ -380,17 +378,18 @@ runImpulseDE2 <- function(matCountData=NULL,
       strControlName=strControlName,
       strMode=strMode)
     
-    if(!is.null(scaQValThres)){
+    if(!is.null(scaQThres)){
       vecDEGenes <- as.vector( 
-        dfImpulseResults[as.numeric(dfImpulseResults$padj) <= scaQValThres,"Gene"] )
-      print(paste("Found ", length(vecDEGenes)," DE genes",sep=""))
+        dfImpulseDE2Results[as.numeric(dfImpulseDE2Results$padj) <= scaQThres,"Gene"] )
+      print(paste0("Found ", length(vecDEGenes)," DE genes",
+        " at a FDR corrected p-value cut off of ", scaQThres, "."))
     } else {
       vecDEGenes <- NULL
     }
-    if(boolSaveTemp){
-      save(dfImpulseResults,file=file.path(getwd(),"ImpulseDE2_dfImpulseResults.RData"))
-      if(!is.null(scaQValThres)){
-        save(vecDEGenes,file=file.path(getwd(),"ImpulseDE2_vecDEGenes.RData"))
+    if(!is.null(dirTemp)){
+      save(dfImpulseDE2Results,file=file.path(dirTemp,"ImpulseDE2_dfImpulseDE2Results.RData"))
+      if(!is.null(scaQThres)){
+        save(vecDEGenes,file=file.path(dirTemp,"ImpulseDE2_vecDEGenes.RData"))
       }
     }
     
@@ -407,7 +406,7 @@ runImpulseDE2 <- function(matCountData=NULL,
           matSizeFactors=matSizeFactors,
           dfAnnotationProc=dfAnnotationProc, 
           lsModelFits=lsModelFits,
-          dfImpulseResults=dfImpulseResults,
+          dfImpulseDE2Results=dfImpulseDE2Results,
           vecRefPval=vecRefPval,
           strMode=strMode,
           strCaseName=strCaseName, 
@@ -419,18 +418,16 @@ runImpulseDE2 <- function(matCountData=NULL,
           boolSimplePlot=boolSimplePlot,
           boolLogPlot=boolLogPlot)
       })
-      print(paste("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2),
-        " min",sep=""))
+      print(paste0("Consumed time: ",round(tm_plotDEGenes["elapsed"]/60,2)," min."))
     }
   })
   print("Finished running ImpulseDE2.")
-  print(paste("TOTAL consumed time: ",round(tm_runImpulseDE2["elapsed"]/60,2),
-    " min",sep=""))
+  print(paste0("TOTAL consumed time: ",round(tm_runImpulseDE2["elapsed"]/60,2)," min."))
   
   return(list(
+    dfImpulseDE2Results=dfImpulseDE2Results,
+    dfDESeq2Results=dfDESeq2Results,
     vecDEGenes=vecDEGenes,
-    dfImpulseResults=dfImpulseResults,
-    lsImpulseFits=lsImpulseFits,
-    dfDESeq2Results=dfDESeq2Results
+    lsModelFits=lsModelFits
   ))
 }

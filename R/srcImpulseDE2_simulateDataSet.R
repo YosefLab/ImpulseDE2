@@ -130,15 +130,15 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   }
   
   # 1. Create hidden data set
-  if(scaNConst>0) { vecConstIDs <- paste0(rep("_",scaNConst),c(1:scaNConst))
+  if(scaNConst>0) { vecConstIDs <- paste0(rep("gene",scaNConst),c(1:scaNConst))
   } else { vecConstIDs <- NULL }
-  if(scaNImp>0) { vecImpulseIDs <- paste0(rep("_",scaNImp),c((scaNConst+1):(scaNConst+scaNImp)))
+  if(scaNImp>0) { vecImpulseIDs <- paste0(rep("gene",scaNImp),c((scaNConst+1):(scaNConst+scaNImp)))
   } else { vecImpulseIDs <- NULL }
-  if(scaNLin>0) { vecLinIDs <- paste0(rep("_",scaNLin),c((scaNConst+scaNImp+1):(scaNConst+scaNImp+scaNLin)))
+  if(scaNLin>0) { vecLinIDs <- paste0(rep("gene",scaNLin),c((scaNConst+scaNImp+1):(scaNConst+scaNImp+scaNLin)))
   } else { vecLinIDs <- NULL }
-  if(scaNSig>0) { vecSigIDs <- paste0(rep("_",scaNSig),c((scaNConst+scaNImp+scaNLin+1):(scaNConst+scaNImp+scaNLin+scaNSig)))
+  if(scaNSig>0) { vecSigIDs <- paste0(rep("gene",scaNSig),c((scaNConst+scaNImp+scaNLin+1):(scaNConst+scaNImp+scaNLin+scaNSig)))
   } else { vecSigIDs <- NULL }
-  if(scaNRand>0){ vecRandIDs <- paste0(rep("_",scaNRand),c((scaNConst+scaNImp+scaNLin+scaNSig+1):(scaNConst+scaNImp+scaNLin+scaNSig+scaNRand)))
+  if(scaNRand>0){ vecRandIDs <- paste0(rep("gene",scaNRand),c((scaNConst+scaNImp+scaNLin+scaNSig+1):(scaNConst+scaNImp+scaNLin+scaNSig+scaNRand)))
   } else { vecRandIDs <- NULL }
   
   scaNGenes <- scaNConst+scaNImp+scaNLin+scaNSig+scaNRand

@@ -54,11 +54,11 @@ runDEAnalysis <- function(matCountDataProc,
     # Without control data:
     # Take Values from the only fitting performed: case
     # The full model is the impulse fit.
-    vecLogLikFull <- sapply(lsModelFits, function(fit) fit$lsImpulseFit$scaLL )
+    vecLogLikFull <- sapply(lsModelFits$case, function(fit) fit$lsImpulseFit$scaLL )
     # The reduced model is the mean fit.
-    vecLogLikRed <- sapply(lsModelFits, function(fit) fit$lsConstFit$scaLL )
+    vecLogLikRed <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaLL )
     # Mean inferred expression:
-    vecMu <- sapply(lsModelFits, function(fit) fit$lsConstFit$scaMu )
+    vecMu <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaMu )
     if(strMode=="singlebatch"){
       # Impulse model parameters and 1 dispersion estimate
       scaDegFreedomFull <- 6 + 1
@@ -72,8 +72,8 @@ runDEAnalysis <- function(matCountDataProc,
       # 1 scaling factor for each batch (except for the first one).
       scaDegFreedomRed <- 1 + 1 + length(unique(dfAnnotationProc$Batch)) - 1
     }
-    vecConvergenceImpulse <- sapply(lsModelFits, function(fit) fit$lsImpulseFit$scaConvergence )
-    vecConvergenceConst <- sapply(lsModelFits, function(fit) fit$lsConstFit$scaConvergence )
+    vecConvergenceImpulse <- sapply(lsModelFits$case, function(fit) fit$lsImpulseFit$scaConvergence )
+    vecConvergenceConst <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaConvergence )
   } else {
     # With control data:
     # Full model: Case and control model separate:
@@ -116,8 +116,8 @@ runDEAnalysis <- function(matCountDataProc,
     # Without control data:
     dfDEAnalysis =   data.frame(
       Gene = row.names(matCountDataProc),
-      p=as.numeric(vecPvalue),
-      padj=as.numeric(vecPvalueBH),
+      p=vecPvalue,
+      padj=vecPvalueBH,
       loglik_full=vecLogLikFull,
       loglik_red=vecLogLikRed,
       deviance=vecDeviance,
