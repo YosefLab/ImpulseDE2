@@ -121,7 +121,7 @@ fitConstModel <- function(vecCounts,
                           vecindBatchAssign,
                           strMode,
                           MAXIT=100,
-                          RELTOL=sqrt(.Machine$double.eps),
+                          RELTOL=10^(-8),
                           trace=0,
                           REPORT=10){
   
@@ -242,7 +242,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
                             vecindTimepointAssign,
                             strMode, 
                             MAXIT=100,
-                            RELTOL=sqrt(.Machine$double.eps),
+                            RELTOL=10^(-8),
                             trace=0,
                             REPORT=10 ){
   
