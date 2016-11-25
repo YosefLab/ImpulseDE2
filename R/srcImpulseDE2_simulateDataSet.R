@@ -125,8 +125,8 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     
   if(is.null(vecBatchesA)){
     print("Setting no batch structure.")
-    vecBatchesA <- "B_NULL"
-    vecBatchesB <- "B_NULL"
+    vecBatchesA <- rep("B_NULL", length(vecSamplesA))
+    vecBatchesB <- rep("B_NULL", length(vecSamplesB))
   }
   dfAnnotation <- data.frame(
     Sample=names(vecSamples),
