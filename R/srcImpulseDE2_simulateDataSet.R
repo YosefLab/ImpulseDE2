@@ -123,6 +123,11 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   vecTimePointsUniqueB <- unique(vecSamplesB)
   vecindTimePointAssignB <- match(vecSamplesB, vecTimePointsUniqueB)
     
+  if(is.null(vecBatchesA)){
+    print("Setting no batch structure.")
+    vecBatchesA <- "B_NULL"
+    vecBatchesB <- "B_NULL"
+  }
   dfAnnotation <- data.frame(
     Sample=names(vecSamples),
     Condition=rep("case", length(vecSamples)),
