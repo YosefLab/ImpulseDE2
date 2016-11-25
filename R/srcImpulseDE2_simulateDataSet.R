@@ -371,8 +371,8 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   
   # f. add noise - draw from negative binomial
   matObservedData <- do.call(rbind, lapply(seq(1,dim(matMuHiddenScaled)[1]), function(gene){
-    sapply(names(vecSamples), function(sample){
-      rnbinom(n=1, mu=matMuHiddenScaled[gene,sample], size=vecDispHidden[sample])
+    sapply(names(vecSamples), function(j){
+      rnbinom(n=1, mu=matMuHiddenScaled[gene,j], size=vecDispHidden[gene])
     })
   }))
   rownames(matObservedData) <- rownames(matMuHiddenScaled)
