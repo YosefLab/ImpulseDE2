@@ -92,8 +92,10 @@ runDEAnalysis <- function(matCountDataProc,
       scaDegFreedomRed <- 6 + 1
     } else if(strMode=="batcheffects"){
       # 6 impulse model parameters for each model, 1 dispersion estimate and 
-      # 1 scaling factor for each batch (except for the first one) for each model.
-      scaDegFreedomFull <- 6*2 + 1 + 2*(length(unique(dfAnnotationProc$Batch)) - 1)
+      # 1 scaling factor for each batch (except for the first one) in each model.
+      scaDegFreedomFull <- 6*2 + 1 + 
+        length(unique(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Batch)) - 1 +
+        length(unique(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Batch)) - 1
       # 1 mean parameter, 1 dispersion parmeter and
       # 1 scaling factor for each batch (except for the first one).
       scaDegFreedomRed <- 6 + 1 + length(unique(dfAnnotationProc$Batch)) - 1

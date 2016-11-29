@@ -154,10 +154,12 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   } else { vecRandIDs <- NULL }
   
   scaNGenes <- scaNConst+scaNImp+scaNLin+scaNSig+scaNRand
+  scaEps <- 0.00001
   
   # a. Draw means from uniform (first half of genes): one mean per gene
   if(scaNConst>0){
     vecMuConstHidden <- runif(scaNConst)*scaMumax
+    vecMuConstHidden[vecMuConstHidden < scaEps] <- scaEps
     matMuConstHidden <- matrix(vecMuConstHidden,
                                nrow=scaNConst,
                                ncol=scaNSamples,
@@ -178,9 +180,9 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     h0 <- runif(scaNImp)*scaMumax
     h1 <- h0*abs(rnorm(n=scaNImp, mean=1, sd=scaSDExpressionChange))
     h2 <- h0*abs(rnorm(n=scaNImp, mean=1, sd=scaSDExpressionChange))
-    h0[h0<0.00001] <-0.00001
-    h1[h1<0.00001] <-0.00001
-    h2[h2<0.00001] <-0.00001
+    h0[h0<scaEps] <- scaEps
+    h1[h1<scaEps] <- scaEps
+    h2[h2<scaEps] <- scaEps
     lsMuImpulseHidden <- lapply(seq(1,scaNImp), function(gene){
       evalImpulse(t=vecTimePointsUnique,
                   beta=beta[gene],
@@ -207,8 +209,8 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
       t2DE[tb < ta] <- ta[tb < ta]
       h1DE <- h0[1:scaNImpDE]*abs(rnorm(n=scaNImpDE, mean=1,sd=scaSDExpressionChange))
       h2DE <- h0[1:scaNImpDE]*abs(rnorm(n=scaNImpDE, mean=1,sd=scaSDExpressionChange))
-      h1DE[h1<0.00001] <-0.00001
-      h2DE[h2<0.00001] <-0.00001
+      h1DE[h1<scaEps] <- scaEps
+      h2DE[h2<scaEps] <- scaEps
       lsMuImpulseHiddenDE <- lapply(seq(1,scaNImpDE), function(gene){
         evalImpulse(t=vecTimePointsUniqueB,
                     beta=betaDE[gene],
@@ -234,6 +236,8 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   if(scaNLin>0){
     vecInitialLevel <- runif(scaNLin)*scaMumax
     vecFinalLevel <- vecInitialLevel*abs(rnorm(n=scaNLin, mean=1,sd=scaSDExpressionChange))
+    vecInitialLevel[vecInitialLevel < scaEps] <-scaEps
+    vecFinalLevel[vecFinalLevel < scaEps] <- scaEps
     # Evaluate linear functions
     scaDeltaTtot <- max(vecTimePointsUnique)-min(vecTimePointsUnique)
     matMuLinHidden <- do.call(rbind, lapply(seq(1, scaNLin), function(i){
@@ -246,6 +250,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
       # Keep start point the same, this doesn't work well for impulse model
       scaNLinDE <- round(scaNLin/2)
       vecFinalLevelDE <- vecInitialLevel[1:scaNLinDE]*abs(rnorm(n=scaNLinDE, mean=1,sd=scaSDExpressionChange))
+      vecFinalLevelDE[vecFinalLevelDE < scaEps] <- scaEps
       # Evaluate linear functions
       scaDeltaTtot <- max(vecTimePointsUniqueB)-min(vecTimePointsUniqueB)
       matMuLinHiddenDE <- do.call(rbind, lapply(seq(1, scaNLinDE), function(i){
@@ -265,6 +270,8 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     vech1 <- vech0*abs(rnorm(n=scaNSig, mean=1,sd=scaSDExpressionChange))
     vecBeta <- runif(scaNSig)*4+0.5
     vecT1 <- runif(scaNSig)*(max(vecTimePointsUnique)-min(vecTimePointsUnique))+min(vecTimePointsUnique)
+    vech0[vech0 < scaEps] <- scaEps
+    vech1[vech1 < scaEps] <- scaEps
     # Evaluate sigmoid functions
     matMuSigHidden <- do.call(rbind, lapply(seq(1, scaNSig), function(i){
       evalSigmoid(t=vecTimePointsUnique,
@@ -282,6 +289,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
       vecBetaDE <- runif(scaNSigDE)*4+0.5
       vecT1DE <- runif(scaNSigDE)*(max(vecTimePointsUniqueB)-min(vecTimePointsUniqueB))+
         min(vecTimePointsUniqueB)
+      vech1DE[vech1DE < scaEps] <- scaEps
       # Evaluate sigmoid functions
       matMuSigHiddenDE <- do.call(rbind, lapply(seq(1, scaNSigDE), function(i){
         evalSigmoid(t=vecTimePointsUniqueB,
@@ -299,11 +307,12 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   # e. Random data: random fluctuations around mean
   if(scaNRand>0){
     vecMu <- runif(scaNRand)*scaMumax
+    vecMu[vecMu < scaEps] <- scaEps
     if(is.null(scaSDRand)){ scaSDRand <- scaSDExpressionChange }
     # Evaluate sigmoid functions
     matMuRandHidden <- do.call(rbind, lapply(seq(1, scaNRand), function(i){
       vecRands <- vecMu[i]*abs(rnorm(n=length(vecSamples), mean=1, sd=scaSDRand))
-      vecRands[vecRands < 0.0001] <- 0.0001
+      vecRands[vecRands < scaEps] <- scaEps
       return(vecRands)
     }))
     rownames(matMuRandHidden) <- vecRandIDs

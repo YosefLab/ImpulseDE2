@@ -15,9 +15,9 @@ library(DESeq2)
 library(BiocParallel)
 
 # Source functions in .R files from same directory as this function.
-setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
+#setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
-#setwd("/home/david/gitDevelopment/ImpulseDE2/R")
+setwd("/home/david/gitDevelopment/ImpulseDE2/R")
 
 source("srcImpulseDE2_calcImpulse.R")
 source("srcImpulseDE2_compareDEMethods.R")
