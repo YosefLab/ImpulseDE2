@@ -32,38 +32,23 @@
 #' @export
 
 computeSizeFactors <- function(matCountDataProc,
-  scaSmallRun=NULL){
+                               scaSmallRun=NULL){
   
-    # Compute geometric count mean over replicates
-    # for genes without zero observations: Samples
-    # with more than half zero observations receive 
-    # size factor =1 otherwise.
-    matCountDataProcNoZeros <- matCountDataProc
-    vecboolZeroObs <- apply(matCountDataProcNoZeros,1,function(gene){!any(gene==0)})
-    matCountDataProcNoZeros <- matCountDataProcNoZeros[vecboolZeroObs,]
-    matboolObserved <- !is.na(matCountDataProcNoZeros) 
-    # Take geometric mean
-    vecGeomMean <- sapply(seq(1,dim(matCountDataProcNoZeros)[1]), 
-      function(gene){
-        ( prod(matCountDataProcNoZeros[gene,matboolObserved[gene,]]) )^
-          ( 1/sum(matboolObserved[gene,]) )
-      })
-    
-    matGeomMeans <- matrix(vecGeomMean, 
-      nrow=dim(matCountDataProcNoZeros)[1], 
-      ncol=dim(matCountDataProcNoZeros)[2], 
-      byrow=FALSE)
-    
-    # Compute ratio of each observation to geometric
-    # mean.
-    matSizeRatios <- matCountDataProcNoZeros / matGeomMeans
-    
-    # Chose median of ratios over genes as size factor
-    vecSizeFactors <- apply(matSizeRatios, 2,
-      function(sample){
-        median(sample, na.rm=TRUE)
-      })
-
+  # Compute geometric count mean over replicates
+  # for genes without zero observations: Samples
+  # with more than half zero observations receive 
+  # size factor =1 otherwise.
+  vecboolZeroObs <- apply(matCountDataProc,1,function(gene){!any(gene==0)})
+  # Take geometric mean
+  vecGeomMean <- apply(matCountDataProc[vecboolZeroObs,], 1, function(gene){
+    ( prod(gene[!is.na(gene)]) )^( 1/sum(!is.na(gene)) )
+  })
+  
+  # Chose median of ratios over genes as size factor
+  vecSizeFactors <- apply(matCountDataProc[vecboolZeroObs,], 2, function(sample){
+    median(sample/vecGeomMean, na.rm=TRUE)
+  })
+  
   if(any(vecSizeFactors==0)){
     print("WARNING: Found size factors==0, setting these to 1.")
     vecSizeFactors[vecSizeFactors==0] <- 1
@@ -107,7 +92,7 @@ computeSizeFactors <- function(matCountDataProc,
 #' @export
 
 computeNormConst <- function(matCountDataProcFull,
-  vecSizeFactorsExternal=NULL){
+                             vecSizeFactorsExternal=NULL){
   
   # Compute size factors
   # Size factors account for differential sequencing depth.

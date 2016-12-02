@@ -96,10 +96,10 @@ compareDEMethods <- function(matQval,
   
   # 3. Scatter plot of p-values of two methods
   dfScatter <- data.frame(
-    x=log(as.numeric(as.vector(matQval[,strMethod1])))/log(10),
-    y=log(as.numeric(as.vector(matQval[,strMethod2])))/log(10))
+    x=log(as.numeric(as.vector(matPval[,strMethod1])))/log(10),
+    y=log(as.numeric(as.vector(matPval[,strMethod2])))/log(10))
   g <- ggplot(dfScatter, aes(x=x, y=y)) +
-    stat_binhex(na.rm=TRUE) + 
+    geom_point(alpha=0.5) + 
     geom_abline(intercept = 0, slope = 1, color = "red") +
     labs(title="Scatter plot of adjusted p-values by gene") +
     xlab(paste0("log_10 p-value ",strMethod1)) +

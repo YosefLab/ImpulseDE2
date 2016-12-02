@@ -30,17 +30,21 @@ estimateImpulseParam <- function(vecCounts,
                                  strMode){
   # Compute general statistics for initialisation:
   # Expression means by timepoint
+  vecCountsSFcorrected <- vecCounts/vecSizeFactors
   if(strMode=="batcheffects"){
     # Estimate batch factors
     vecBatchFactors <- sapply(unique(vecindBatchAssign), function(batch){
-      mean(vecCounts[vecindBatchAssign==batch]/mean(vecCounts))
+      mean(vecCountsSFcorrected[vecindBatchAssign==batch]/mean(vecCounts, na.rm=TRUE), na.rm=TRUE)
     })
+    # Catch exception that all observations of a batch are zero:
+    vecBatchFactors[is.na(vecBatchFactors) | vecBatchFactors==0] <- 1
+    vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors[vecindBatchAssign]
     vecExpressionMeans <- sapply(vecTimepoints, function(tp){
-      mean((vecCounts/vecBatchFactors[vecindBatchAssign])[vecTimepoints==tp], na.rm=TRUE)
+      mean(vecCountsSFBatchcorrected[vecTimepoints==tp], na.rm=TRUE)
     })
   } else {
     vecExpressionMeans <- sapply(vecTimepoints, function(tp){
-      mean(vecCounts[vecTimepoints==tp], na.rm=TRUE)
+      mean(vecCountsSFcorrected[vecTimepoints==tp], na.rm=TRUE)
     })
   }
   scaNTimepoints <- length(vecTimepoints)
@@ -371,6 +375,7 @@ fitConstImpulseGene <- function(vecCounts,
                                 MAXIT=1000){
   
   # (I) Process data
+  # Check whether all counts are zero: this
   # Compute time point specifc parameters
   vecTimepointsUnique <- sort(unique( vecTimepoints ))
   vecindTimepointUniqueAssign <- match(vecTimepoints, vecTimepointsUnique)
