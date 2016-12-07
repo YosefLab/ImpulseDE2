@@ -29,13 +29,6 @@
 #'    Annotation table. Lists co-variables of samples: 
 #'    Sample, Condition, Time (and Batch). 
 #'    Time must be numeric.
-#' @param strCaseName (str) [Default NULL] 
-#'    Name of the case condition in \code{dfAnnotation}.
-#' @param strControlName: (str) [Default NULL] 
-#'    Name of the control condition in \code{dfAnnotation}.
-#' @param strMode: (str) [Default "singelbatch"] 
-#'    {"singelbatch","batcheffects"}
-#'    Batch model.
 #' @param vecDispersionsExternal: (vector length number of
 #'    genes in matCountData) [Default NULL]
 #'    Externally generated list of gene-wise dispersion factors
@@ -44,11 +37,6 @@
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
-#' @param matBatchFactorsExternal: (numeric matrix genes x cells) 
-#'    [Default NULL] Externally generated list of translation factors 
-#'    which override translation factor computation in ImpulseDE2.
-#' @param boolRunDESeq2: (bool) [Default TRUE]
-#'    Whether to run DESeq2.
 #'    
 #' @return (list length 3) with the following elements:
 #' \itemize{

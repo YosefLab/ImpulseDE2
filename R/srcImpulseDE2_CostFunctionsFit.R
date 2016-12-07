@@ -42,7 +42,7 @@ evalLogLikMu <- function(vecTheta,
   
   scaMu <- exp(vecTheta[1])
   scaNParamUsed <- 1
-  if(!is.null(scaDisp)){ 
+  if(is.null(scaDisp)){ 
   	scaDisp <- exp(vecTheta[scaNParamUsed+1])
   	scaNParamUsed <- scaNParamUsed + 1
   } 
@@ -51,7 +51,6 @@ evalLogLikMu <- function(vecTheta,
   if(scaDisp < 10^(-10)){ scaDisp <- 10^(-10) }
   if(scaDisp > 10^(10)){ scaDisp <- 10^(10) }
   
-  scaNParamUsed <- 2
   vecBatchFactors <- array(1, length(vecCounts))
   if(!is.null(lsvecindBatch)){
   	for(vecindConfounder in lsvecindBatch){
@@ -131,7 +130,7 @@ evalLogLikImpulse <- function(vecTheta,
   vecImpulseValue <- calcImpulse_comp(vecImpulseParam=vecImpulseParam,
                                       vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
   scaNParamUsed <- 6
-  if(!is.null(scaDisp)){ 
+  if(is.null(scaDisp)){ 
   	scaDisp <- exp(vecTheta[scaNParamUsed+1])
   	scaNParamUsed <- scaNParamUsed + 1
   }

@@ -343,7 +343,6 @@ runImpulseDE2 <- function(matCountData=NULL,
     print("5. Differentially expression analysis based on model fits")
     dfImpulseDE2Results <- runDEAnalysis(
       matCountDataProc=matCountDataProc,
-      vecDispersions=vecDispersions,
       dfAnnotationProc=dfAnnotationProc,
       lsModelFits=lsModelFits,
       boolCaseCtrl=boolCaseCtrl,

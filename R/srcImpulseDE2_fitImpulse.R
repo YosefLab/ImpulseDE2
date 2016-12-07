@@ -39,9 +39,9 @@ estimateImpulseParam <- function(vecCounts,
   		})
   		# Catch exception that all observations of a batch are zero:
   		vecBatchFactorsConfounder[is.na(vecBatchFactors) | vecBatchFactors==0] <- 1
-  		vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder
+  		vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder[vecindBatch]
   	}
-    vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors[lsvecindBatch]
+    vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors
     vecExpressionMeans <- sapply(vecTimepoints, function(tp){
       mean(vecCountsSFBatchcorrected[vecTimepoints==tp], na.rm=TRUE)
     })
@@ -132,7 +132,7 @@ fitConstModel <- function(vecCounts,
                           REPORT=10){
   
   vecParamGuess <- log(mean(vecCounts, na.rm=TRUE))
-  if(is.na(scaDisp)){
+  if(is.null(scaDisp)){
     # Co-estimate dispersion parameter, initialised as 1
     vecParamGuess <- c(vecParamGuess, 0)
   }
@@ -141,7 +141,7 @@ fitConstModel <- function(vecCounts,
   		vecParamGuess <- c(vecParamGuess, rep(0, length(unique(vecindConfounder))-1))
   	}
   }
-  
+
   lsFit <- tryCatch({
     optim(
       par=vecParamGuess,
@@ -173,10 +173,10 @@ fitConstModel <- function(vecCounts,
   scaMu <- exp(lsFit$par[1])
   # Catch boundary of likelihood domain on mu space:
   if(scaMu < 10^(-10)){scaMu <- 10^(-10)}
-  scaNParam <- 1
-  if(is.na(scaDisp)){
-    scaDispParam <- exp(lsFit$par[scaNParam+1])
-    scaNParam <- scaNParam + 1
+  scaNParamUsed <- 1
+  if(is.null(scaDisp)){
+    scaDispParam <- exp(lsFit$par[scaNParamUsed+1])
+    scaNParamUsed <- scaNParamUsed + 1
   } else {
     scaDispParam <- scaDisp
   }
@@ -185,7 +185,7 @@ fitConstModel <- function(vecCounts,
   		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
   		# Factor of first batch is one (constant), the remaining
   		# factors scale based on the first batch.
-  		vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))
+  		vecBatchFactorsConfounder <- c(1, exp(lsFit$par[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))
   		scaNParamUsed <- scaNParamUsed+scaNBatchFactors
   		# Catch boundary of likelihood domain on batch factor space:
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
@@ -224,7 +224,7 @@ fitConstModel <- function(vecCounts,
 #'    Dropout rate estimate for each cell for given gene.
 #' @param vecSizeFactors: (numeric vector number of samples) 
 #'    Normalisation constants for each sample.
-#' @param vecindTimepointAssign (numeric vector number samples) 
+#' @param vecindTimepoint (numeric vector number samples) 
 #'    Index of time point assigned to sample in list of sorted
 #'    time points (vecX).
 #' @param vecboolObserved: (bool vector number of samples)
@@ -253,7 +253,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
                             vecSizeFactors,
                             lsvecindBatch,
                             vecTimepointsUnique,
-                            vecindTimepointAssign,
+                            vecindTimepoint,
                             MAXIT=100,
                             RELTOL=10^(-8),
                             trace=0,
@@ -261,7 +261,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   
   
   vecParamGuess <- vecImpulseParamGuess
-  if(is.na(scaDisp)){
+  if(is.null(scaDisp)){
   	# Co-estimate dispersion parameter, initialised as 1
   	vecParamGuess <- c(vecParamGuess, 0)
   }
@@ -279,7 +279,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
       scaDisp=scaDisp,
       vecSizeFactors=vecSizeFactors,
       vecTimepointsUnique=vecTimepointsUnique,
-      vecindTimepointAssign=vecindTimepointAssign,
+      vecindTimepoint=vecindTimepoint,
       lsvecindBatch=lsvecindBatch,
       vecboolObserved=!is.na(vecCounts),
       method="BFGS",
@@ -295,8 +295,8 @@ fitImpulseModel <- function(vecImpulseParamGuess,
     print(paste0("scaDisp ", paste(scaDisp,collapse=" ")))
     print(paste0("vecSizeFactors ", paste(vecSizeFactors,collapse=" ")))
     print(paste0("vecTimepointsUnique ", paste(vecTimepointsUnique,collapse=" ")))
-    print(paste0("vecindTimepointAssign ", paste(vecindTimepointAssign,collapse=" ")))
-    print(paste0("lsvecindBatch ", paste(vecindTimepointAssign,collapse=" ")))
+    print(paste0("vecindTimepoint ", paste(vecindTimepoint,collapse=" ")))
+    print(paste0("lsvecindBatch ", paste(lsvecindBatch,collapse=" ")))
     print(paste0("MAXIT ", MAXIT))
     print(strErrorMsg)
     stop(strErrorMsg)
@@ -307,12 +307,12 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
   names(vecImpulseParam) <- c("beta", "h0", "h1", "h2", "t1", "t2")
   vecImpulseValue <- calcImpulse_comp(vecImpulseParam=vecImpulseParam,
-                                      vecTimepoints=vecTimepointsUnique)[vecindTimepointAssign]
+                                      vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
   names(vecImpulseValue) <- names(vecCounts)
-  scaNParam <- 6
-  if(is.na(scaDisp)){
-  	scaDispParam <- exp(lsFit$par[scaNParam+1])
-  	scaNParam <- scaNParam + 1
+  scaNParamUsed <- 6
+  if(is.null(scaDisp)){
+  	scaDispParam <- exp(lsFit$par[scaNParamUsed+1])
+  	scaNParamUsed <- scaNParamUsed + 1
   } else {
   	scaDispParam <- scaDisp
   }
@@ -321,7 +321,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
   		# Factor of first batch is one (constant), the remaining
   		# factors scale based on the first batch.
-  		vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))
+  		vecBatchFactorsConfounder <- c(1, exp(lsFit$par[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))
   		scaNParamUsed <- scaNParamUsed+scaNBatchFactors
   		# Catch boundary of likelihood domain on batch factor space:
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
@@ -402,7 +402,7 @@ fitConstImpulseGene <- function(vecCounts,
   # Check whether all counts are zero: this
   # Compute time point specifc parameters
   vecTimepointsUnique <- sort(unique( vecTimepoints ))
-  vecindTimepointUniqueAssign <- match(vecTimepoints, vecTimepointsUnique)
+  vecindTimepoint <- match(vecTimepoints, vecTimepointsUnique)
   # Get batch assignments
   if(!is.null(lsvecBatches)){
   	lsvecindBatch <- list()
@@ -427,7 +427,7 @@ fitConstImpulseGene <- function(vecCounts,
                                scaDisp=scaDisp,
                                vecSizeFactors=vecSizeFactors,
                                vecTimepointsUnique=vecTimepointsUnique, 
-                               vecindTimepointAssign=vecindTimepointUniqueAssign,
+                               vecindTimepoint=vecindTimepoint,
                                lsvecindBatch=lsvecindBatch,
                                MAXIT=MAXIT)
   # 3. Initialisation: Valley
@@ -436,7 +436,7 @@ fitConstImpulseGene <- function(vecCounts,
                                  scaDisp=scaDisp,
                                  vecSizeFactors=vecSizeFactors,
                                  vecTimepointsUnique=vecTimepointsUnique, 
-                                 vecindTimepointAssign=vecindTimepointUniqueAssign,
+                                 vecindTimepoint=vecindTimepoint,
                                  lsvecindBatch=lsvecindBatch,
                                  MAXIT=MAXIT)
   
@@ -459,7 +459,6 @@ fitConstImpulseGene <- function(vecCounts,
   } else {
     lsConstFit <- NULL
   }
-  
   
   return(list(
     lsImpulseFit=lsBestImpulseFit,
@@ -616,9 +615,9 @@ fitModels <- function(matCountDataProc,
   # Condition labels to be used in runs:
   # These labels are used to group samples
   if(boolCaseCtrl){
-    lsLabels <- c("combined","case","control")
+    vecLabels <- c("combined","case","control")
   } else {
-    lsLabels <- c("case")
+  	vecLabels <- c("case")
   }
   
   # Create lists of samples to be used per run
@@ -658,7 +657,7 @@ fitModels <- function(matCountDataProc,
   # for which the constant model is the null model or 
   # in the combined case of case-ctrl to derive a inferred
   # mean parameter for reference.
-  lsFitResults_all <- lapply(lsLabels, function(label){
+  lsFitResults_all <- lapply(vecLabels, function(label){
     lsFitResults <- fitConstImpulse(
       matCountDataProcCondition=matCountDataProc[,lsSamplesByCond[[label]]],
       vecSizeFactors=vecSizeFactors[lsSamplesByCond[[label]]],
@@ -667,6 +666,7 @@ fitModels <- function(matCountDataProc,
       lsvecBatches=lapply(lsvecBatches, function(condounder) condounder[lsSamplesByCond[[label]]] ),
       boolFitConst= !boolCaseCtrl | label=="combined" )
   })
+  names(lsFitResults_all) <- vecLabels
   
   return(lsFitResults_all)
 }

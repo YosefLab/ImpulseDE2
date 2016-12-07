@@ -43,7 +43,6 @@
 #' @export
 
 runDEAnalysis <- function(matCountDataProc,
-                        vecDispersions,
                         dfAnnotationProc, 
                         lsModelFits,
 												boolCaseCtrl,
@@ -91,7 +90,10 @@ runDEAnalysis <- function(matCountDataProc,
     	scaNBatchFactorsRed <- sum(sapply(vecConfounders, function(confounder){ 
     		length(unique(dfAnnotationProc[,confounder]))-1
     	}))
-    } else { scaNBatchFactors <- 0 }
+    } else { 
+    	scaNBatchFactorsFull <- 0
+    	scaNBatchFactorsRed <- 0
+    }
     # 6 impulse model parameters for each case and control, 
     # 1 dispersion estimate for each case and control and 
     # 1 batch factor for each batch (except for the first one) for each confounder in each condition.
@@ -113,33 +115,32 @@ runDEAnalysis <- function(matCountDataProc,
   # Multiple testing correction (Benjamini-Hochberg)
   vecPvalueBH = p.adjust(vecPvalue, method = "BH")
   
-  if(is.null(strControlName)){
-    # Without control data:
+  scaNGenes <- dim(matCountDataProc)[1]
+  if(!boolCaseCtrl){
+    # Case-only
     dfDEAnalysis =   data.frame(
       Gene = row.names(matCountDataProc),
       p=vecPvalue,
       padj=vecPvalueBH,
       loglik_full=vecLogLikFull,
       loglik_red=vecLogLikRed,
-      df_full=scaDegFreedomFull,
-      df_red=scaDegFreedomRed,
+      df_full=rep(scaDegFreedomFull, scaNGenes),
+      df_red=rep(scaDegFreedomRed, scaNGenes),
       mean=vecMu,
-      size=vecDispersions,
       converge_impulse=vecConvergenceImpulse,
       converge_const=vecConvergenceConst,
       stringsAsFactors = FALSE)
   } else {
-    # With control data:
+    # Case-control
     dfDEAnalysis =   data.frame(
       Gene = row.names(matCountDataProc),
       p=as.numeric(vecPvalue),
       padj=as.numeric(vecPvalueBH),
       loglik_full=vecLogLikFull,
       loglik_red=vecLogLikRed,
-      df_full=scaDegFreedomFull,
-      df_red=scaDegFreedomRed,
+      df_full=rep(scaDegFreedomFull, scaNGenes),
+      df_red=rep(scaDegFreedomRed, scaNGenes),
       mean=vecMu,
-      size=vecDispersions,
       converge_combined=vecConvergenceImpulseCombined,
       converge_case=vecConvergenceImpulseCase,
       converge_control=vecConvergenceImpulseControl,
