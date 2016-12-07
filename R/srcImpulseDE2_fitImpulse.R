@@ -26,18 +26,21 @@
 estimateImpulseParam <- function(vecCounts,
                                  vecTimepoints,
                                  vecSizeFactors,
-                                 lsvecindBatch,
-                                 strMode){
+                                 lsvecindBatch){
   # Compute general statistics for initialisation:
   # Expression means by timepoint
   vecCountsSFcorrected <- vecCounts/vecSizeFactors
-  if(strMode=="batcheffects"){
+  if(!is.null(lsvecindBatch)){
     # Estimate batch factors
-    vecBatchFactors <- sapply(unique(lsvecindBatch), function(batch){
-      mean(vecCountsSFcorrected[lsvecindBatch==batch]/mean(vecCounts, na.rm=TRUE), na.rm=TRUE)
-    })
-    # Catch exception that all observations of a batch are zero:
-    vecBatchFactors[is.na(vecBatchFactors) | vecBatchFactors==0] <- 1
+  	vecBatchFactors <- array(1, length(vecCounts))
+  	for(vecindBatch in lsvecindBatch){
+  		vecBatchFactorsConfounder <- sapply(unique(vecindBatch), function(batch){
+  			mean(vecCountsSFcorrected[vecindBatch==batch]/mean(vecCounts, na.rm=TRUE), na.rm=TRUE)
+  		})
+  		# Catch exception that all observations of a batch are zero:
+  		vecBatchFactorsConfounder[is.na(vecBatchFactors) | vecBatchFactors==0] <- 1
+  		vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder
+  	}
     vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors[lsvecindBatch]
     vecExpressionMeans <- sapply(vecTimepoints, function(tp){
       mean(vecCountsSFBatchcorrected[vecTimepoints==tp], na.rm=TRUE)
@@ -178,7 +181,7 @@ fitConstModel <- function(vecCounts,
     scaDispParam <- scaDisp
   }
   if(!is.null(lsvecindBatch)){
-  	lsvecBatchFactors <- lapply(vecindConfounder in lsvecindBatch){
+  	lsvecBatchFactors <- lapply(lsvecindBatch, function(vecindConfounder){
   		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
   		# Factor of first batch is one (constant), the remaining
   		# factors scale based on the first batch.
@@ -187,7 +190,7 @@ fitConstModel <- function(vecCounts,
   		# Catch boundary of likelihood domain on batch factor space:
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
-  	}
+  	})
   }
   
   return(list( scaMu=scaMu,
@@ -248,11 +251,9 @@ fitImpulseModel <- function(vecImpulseParamGuess,
                             vecCounts,
                             scaDisp,
                             vecSizeFactors,
-                            vecBatchesUnique,
                             lsvecindBatch,
                             vecTimepointsUnique,
                             vecindTimepointAssign,
-                            strMode, 
                             MAXIT=100,
                             RELTOL=10^(-8),
                             trace=0,
@@ -316,7 +317,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   	scaDispParam <- scaDisp
   }
   if(!is.null(lsvecindBatch)){
-  	lsvecBatchFactors <- lapply(vecindConfounder in lsvecindBatch){
+  	lsvecBatchFactors <- lapply(lsvecindBatch, function(vecindConfounder){
   		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
   		# Factor of first batch is one (constant), the remaining
   		# factors scale based on the first batch.
@@ -325,7 +326,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   		# Catch boundary of likelihood domain on batch factor space:
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
-  	}
+  	})
   }
   
   return(list( vecImpulseParam=vecImpulseParam,
@@ -416,8 +417,7 @@ fitConstImpulseGene <- function(vecCounts,
     vecCounts=vecCounts,
     vecTimepoints=vecTimepointsUnique, 
     lsvecindBatch=lsvecindBatch,
-    vecSizeFactors=vecSizeFactors,
-    strMode=strMode )
+    vecSizeFactors=vecSizeFactors )
   vecParamGuessPeak <- lsParamGuesses$peak
   vecParamGuessValley <- lsParamGuesses$valley
   
@@ -615,7 +615,7 @@ fitModels <- function(matCountDataProc,
   
   # Condition labels to be used in runs:
   # These labels are used to group samples
-  if(!is.null(strControlName)){
+  if(boolCaseCtrl){
     lsLabels <- c("combined","case","control")
   } else {
     lsLabels <- c("case")

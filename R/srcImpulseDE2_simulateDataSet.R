@@ -138,7 +138,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   rownames(dfAnnotation) <- dfAnnotation$Sample
   if(boolCaseCtrl){
     dfAnnotation[dfAnnotation$Sample %in% names(vecSamplesB),]$Condition <- 
-      rep("ctrl", sum(dfAnnotation$Sample %in% names(vecSamplesB)))
+      rep("control", sum(dfAnnotation$Sample %in% names(vecSamplesB)))
   }
   
   # 1. Create hidden data set

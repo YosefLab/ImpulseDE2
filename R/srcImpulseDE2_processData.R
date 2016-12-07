@@ -399,10 +399,10 @@ processData <- function(dfAnnotation,
 	# and reorder according to given data set.
 	if(!is.null(vecDispersionsExternal)){
 		vecDispersionsExternalProc <- vecDispersionsExternal[rownames(matCountDataProc)]
-	}
+	} else { vecDispersionsExternalProc <- NULL }
 	if(!is.null(vecSizeFactorsExternal)){
 		vecSizeFactorsExternalProc <- vecSizeFactorsExternal[colnames(matCountDataProc)]
-	}
+	} else { vecSizeFactorsExternalProc <-NULL }
 	
 	return( list(matCountDataProc=matCountDataProc,
 							 dfAnnotationProc=dfAnnotationProc,
