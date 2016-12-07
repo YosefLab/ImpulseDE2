@@ -35,41 +35,47 @@
 
 evalLogLikMu <- function(vecTheta,
   vecCounts,
-  scaDispEst, 
+  scaDisp, 
   vecSizeFactors,
-  vecindBatch,
-  strMode,
+  lsvecindBatch,
   vecboolObserved){
   
   scaMu <- exp(vecTheta[1])
-  # Prevent means shrinkage to zero:
+  scaNParamUsed <- 1
+  if(!is.null(scaDisp)){ 
+  	scaDisp <- exp(vecTheta[scaNParamUsed+1])
+  	scaNParamUsed <- scaNParamUsed + 1
+  } 
+  # Prevent mean and dispersion shrinkage/explosion to zero:
   if(scaMu < 10^(-10)){ scaMu <- 10^(-10) }
+  if(scaDisp < 10^(-10)){ scaDisp <- 10^(-10) }
+  if(scaDisp > 10^(10)){ scaDisp <- 10^(10) }
   
-  if(strMode=="singlebatch"){
-    # Compute log likelihood under constant model by
-    # adding log likelihood of model at each timepoint.
-    scaLogLik <- sum(dnbinom(
-      vecCounts[vecboolObserved], 
-      mu=scaMu * vecSizeFactors[vecboolObserved], 
-      size=scaDispEst, 
-      log=TRUE))
-  } else {
-    # Factor of first batch is one (constant), the remaining
-    # factors scale based on the first batch.
-    vecBatchFactors <- c(1, exp(vecTheta[2:length(vecTheta)]))
-    # Prevent batch factor shrinkage and explosion:
-    vecBatchFactors[vecBatchFactors < 10^(-10)] <- 10^(-10)
-    vecBatchFactors[vecBatchFactors > 10^(10)] <- 10^(10)
-    
-    # Compute log likelihood under constant model by
-    # adding log likelihood of model at each timepoint.
-    scaLogLik <- sum(dnbinom(
-      vecCounts[vecboolObserved], 
-      mu=scaMu*vecBatchFactors[vecindBatch[vecboolObserved]]*
-        vecSizeFactors[vecboolObserved], 
-      size=scaDispEst, 
-      log=TRUE))
+  scaNParamUsed <- 2
+  vecBatchFactors <- array(1, length(vecCounts))
+  if(!is.null(lsvecindBatch)){
+  	for(vecindConfounder in lsvecindBatch){
+  		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
+  		# Factor of first batch is one (constant), the remaining
+  		# factors scale based on the first batch.
+  		vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecindConfounder]
+  		scaNParamUsed <- scaNParamUsed+scaNBatchFactors
+  		# Prevent batch factor shrinkage and explosion:
+  		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
+  		vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
+  		
+  		vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder
+  	}
   }
+  
+  # Compute log likelihood under constant model by
+  # adding log likelihood of model at each timepoint.
+  scaLogLik <- sum(dnbinom(
+  	vecCounts[vecboolObserved], 
+  	mu=scaMu*vecBatchFactors[vecboolObserved]*
+  		vecSizeFactors[vecboolObserved], 
+  	size=scaDisp, 
+  	log=TRUE))
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)
@@ -101,7 +107,7 @@ evalLogLikMu <- function(vecTheta,
 #' @param scaDispEst: (scalar) Dispersion estimate for given gene.
 #' @param vecSizeFactors: (numeric vector number of samples) 
 #'    Normalisation constants for each sample.
-#' @param vecindTimepointAssign (numeric vector number samples) 
+#' @param vecindTimepoint (numeric vector number samples) 
 #'    Index of time point assigned to sample in list of sorted
 #'    time points (vecX).
 #' @param vecboolObserved: (bool vector number of samples)
@@ -112,47 +118,52 @@ evalLogLikMu <- function(vecTheta,
 
 evalLogLikImpulse <- function(vecTheta,
   vecCounts,
-  scaDispEst, 
+  scaDisp, 
   vecSizeFactors,
   vecTimepointsUnique,
-  vecindTimepointAssign,
-  vecindBatch,
-  strMode,
+  vecindTimepoint,
+  lsvecindBatch,
   vecboolObserved){
   
   # Compute normalised impulse function value:
   vecImpulseParam <- vecTheta[1:6]
   vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
   vecImpulseValue <- calcImpulse_comp(vecImpulseParam=vecImpulseParam,
-                                      vecTimepoints=vecTimepointsUnique)[vecindTimepointAssign]
-  
-  if(strMode=="singlebatch"){
-    # Compute log likelihood under impulse model by
-    # adding log likelihood of model at each timepoint.
-    scaLogLik <- sum(dnbinom(
-      vecCounts[vecboolObserved], 
-      mu=vecImpulseValue[vecboolObserved]*
-        vecSizeFactors[vecboolObserved], 
-      size=scaDispEst, 
-      log=TRUE))
-  } else {
-    # Factor of first batch is one (constant), the remaining
-    # factors scale based on the first batch.
-    vecBatchFactors <- c(1, exp(vecTheta[7:length(vecTheta)]))
-    # Prevent batch factor shrinkage and explosion:
-    vecBatchFactors[vecBatchFactors < 10^(-10)] <- 10^(-10)
-    vecBatchFactors[vecBatchFactors > 10^(10)] <- 10^(10)
-    
-    # Compute log likelihood under impulse model by
-    # adding log likelihood of model at each timepoint.
-    scaLogLik <- sum(dnbinom(
-      vecCounts[vecboolObserved], 
-      mu=vecImpulseValue[vecboolObserved]* 
-        vecBatchFactors[vecindBatch[vecboolObserved]]*
-        vecSizeFactors[vecboolObserved], 
-      size=scaDispEst, 
-      log=TRUE))
+                                      vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
+  scaNParamUsed <- 6
+  if(!is.null(scaDisp)){ 
+  	scaDisp <- exp(vecTheta[scaNParamUsed+1])
+  	scaNParamUsed <- scaNParamUsed + 1
   }
+  # Prevent dispersion shrinkage/explosion to zero:
+  if(scaDisp < 10^(-10)){ scaDisp <- 10^(-10) }
+  if(scaDisp > 10^(10)){ scaDisp <- 10^(10) }
+
+  vecBatchFactors <- array(1, length(vecCounts))
+  if(!is.null(lsvecindBatch)){
+  	for(vecindConfounder in lsvecindBatch){
+  		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
+  		# Factor of first batch is one (constant), the remaining
+  		# factors scale based on the first batch.
+  		vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecindConfounder]
+  		scaNParamUsed <- scaNParamUsed+scaNBatchFactors
+  		# Prevent batch factor shrinkage and explosion:
+  		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
+  		vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
+  		
+  		vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder
+  	}
+  }
+  
+  # Compute log likelihood under impulse model by
+  # adding log likelihood of model at each timepoint.
+  scaLogLik <- sum(dnbinom(
+  	vecCounts[vecboolObserved], 
+  	mu=vecImpulseValue[vecboolObserved]* 
+  		vecBatchFactors[vecboolObserved]*
+  		vecSizeFactors[vecboolObserved], 
+  	size=scaDisp, 
+  	log=TRUE))
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)

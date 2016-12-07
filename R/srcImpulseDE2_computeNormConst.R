@@ -91,19 +91,18 @@ computeSizeFactors <- function(matCountDataProc,
 #'      } 
 #' @export
 
-computeNormConst <- function(matCountDataProcFull,
+computeNormConst <- function(matCountDataProc,
                              vecSizeFactorsExternal=NULL){
   
   # Compute size factors
   # Size factors account for differential sequencing depth.
   if(is.null(vecSizeFactorsExternal)){
     # Compute size factors if not supplied to ImpulseDE2.
-    vecSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProcFull)
+    vecSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc)
   } else {
     # Chose externally supplied size factors if supplied.
     print("Using externally supplied size factors.")
-    vecSizeFactors <- vecSizeFactorsExternal
-    names(vecSizeFactors) <- colnames(matCountDataProc)
+    vecSizeFactors <- vecSizeFactorsExternal[colnames(matCountDataProc)]
   }
   
   return(vecSizeFactors)

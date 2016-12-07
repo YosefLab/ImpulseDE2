@@ -46,12 +46,11 @@ runDEAnalysis <- function(matCountDataProc,
                         vecDispersions,
                         dfAnnotationProc, 
                         lsModelFits,
-                        strCaseName, 
-                        strControlName, 
-                        strMode){
+												boolCaseCtrl,
+												vecConfounders){
   
-  if(is.null(strControlName)){
-    # Without control data:
+  if(!boolCaseCtrl){
+    # Case-only:
     # Take Values from the only fitting performed: case
     # The full model is the impulse fit.
     vecLogLikFull <- sapply(lsModelFits$case, function(fit) fit$lsImpulseFit$scaLL )
@@ -59,23 +58,22 @@ runDEAnalysis <- function(matCountDataProc,
     vecLogLikRed <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaLL )
     # Mean inferred expression:
     vecMu <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaMu )
-    if(strMode=="singlebatch"){
-      # Impulse model parameters and 1 dispersion estimate
-      scaDegFreedomFull <- 6 + 1
-      # 1 dispersion estimate and overall mean estimate
-      scaDegFreedomRed <- 1 + 1
-    } else if(strMode=="batcheffects"){
-      # 6 impulse model parameters, 1 dispersion estimate and 
-      # 1 scaling factor for each batch (except for the first one).
-      scaDegFreedomFull <- 6 + 1 + length(unique(dfAnnotationProc$Batch)) - 1
-      # 1 mean parameter, 1 dispersion parmeter and
-      # 1 scaling factor for each batch (except for the first one).
-      scaDegFreedomRed <- 1 + 1 + length(unique(dfAnnotationProc$Batch)) - 1
-    }
+    if(!is.null(vecConfounders)){
+    	scaNBatchFactors <- sum(sapply(vecConfounders, function(confounder){ 
+    		length(unique(dfAnnotationProc[,confounder]))-1 
+    	}))
+    } else { scaNBatchFactors <- 0 }
+    # 6 impulse model parameters, 1 dispersion estimate and 
+    # 1 batch factor for each batch (except for the first one) for each confounder.
+    scaDegFreedomFull <- 6 + 1 + scaNBatchFactors
+    # 1 constant model parameter1, 1 dispersion estimate and 
+    # 1 batch factor for each batch (except for the first one) for each confounder.
+    scaDegFreedomRed <- 1 + 1 + scaNBatchFactors
+    
     vecConvergenceImpulse <- sapply(lsModelFits$case, function(fit) fit$lsImpulseFit$scaConvergence )
     vecConvergenceConst <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaConvergence )
   } else {
-    # With control data:
+    # Case-control:
     # Full model: Case and control model separate:
     # The log likelihood of the full model is the sum of the
     # log likelihoods of case and control fits.
@@ -85,21 +83,22 @@ runDEAnalysis <- function(matCountDataProc,
     vecLogLikRed <- sapply(lsModelFits$combined, function(fit) fit$lsImpulseFit$scaLL )
     # Mean inferred expression: On combined data
     vecMu <- sapply(lsModelFits$combined, function(fit) fit$lsConstFit$scaMu )
-    if(strMode=="singlebatch"){
-      # Parameters of both models (case and control) and 1 dispersion estimate
-      scaDegFreedomFull <- 6*2 + 1
-      # Parameters of one model (combined) and 1 dispersion estimate
-      scaDegFreedomRed <- 6 + 1
-    } else if(strMode=="batcheffects"){
-      # 6 impulse model parameters for each model, 1 dispersion estimate and 
-      # 1 scaling factor for each batch (except for the first one) in each model.
-      scaDegFreedomFull <- 6*2 + 1 + 
-        length(unique(dfAnnotationProc[dfAnnotationProc$Condition==strCaseName,]$Batch)) - 1 +
-        length(unique(dfAnnotationProc[dfAnnotationProc$Condition==strControlName,]$Batch)) - 1
-      # 1 mean parameter, 1 dispersion parmeter and
-      # 1 scaling factor for each batch (except for the first one).
-      scaDegFreedomRed <- 6 + 1 + length(unique(dfAnnotationProc$Batch)) - 1
-    }
+    if(!is.null(vecConfounders)){
+    	scaNBatchFactorsFull <- sum(sapply(vecConfounders, function(confounder){ 
+    		length(unique(dfAnnotationProc[dfAnnotationProc$Condition=="case",confounder]))-1+
+    			length(unique(dfAnnotationProc[dfAnnotationProc$Condition=="control",confounder]))-1
+    	}))
+    	scaNBatchFactorsRed <- sum(sapply(vecConfounders, function(confounder){ 
+    		length(unique(dfAnnotationProc[,confounder]))-1
+    	}))
+    } else { scaNBatchFactors <- 0 }
+    # 6 impulse model parameters for each case and control, 
+    # 1 dispersion estimate for each case and control and 
+    # 1 batch factor for each batch (except for the first one) for each confounder in each condition.
+    scaDegFreedomFull <- 6*2 + 1*2 + scaNBatchFactorsFull
+    # 6 impulse model parameters, 1 dispersion estimate and 
+    # 1 batch factor for each batch (except for the first one) for each confounder.
+    scaDegFreedomRed <- 6 + 1 + scaNBatchFactorsRed
     vecConvergenceImpulseCombined <- sapply(lsModelFits$combined, function(fit) fit$lsImpulseFit$scaConvergence )
     vecConvergenceImpulseCase <- sapply(lsModelFits$case, function(fit) fit$lsImpulseFit$scaConvergence )
     vecConvergenceImpulseControl <- sapply(lsModelFits$control, function(fit) fit$lsImpulseFit$scaConvergence )
@@ -122,7 +121,8 @@ runDEAnalysis <- function(matCountDataProc,
       padj=vecPvalueBH,
       loglik_full=vecLogLikFull,
       loglik_red=vecLogLikRed,
-      deviance=vecDeviance,
+      df_full=scaDegFreedomFull,
+      df_red=scaDegFreedomRed,
       mean=vecMu,
       size=vecDispersions,
       converge_impulse=vecConvergenceImpulse,
@@ -136,7 +136,8 @@ runDEAnalysis <- function(matCountDataProc,
       padj=as.numeric(vecPvalueBH),
       loglik_full=vecLogLikFull,
       loglik_red=vecLogLikRed,
-      deviance=vecDeviance,
+      df_full=scaDegFreedomFull,
+      df_red=scaDegFreedomRed,
       mean=vecMu,
       size=vecDispersions,
       converge_combined=vecConvergenceImpulseCombined,
@@ -144,10 +145,6 @@ runDEAnalysis <- function(matCountDataProc,
       converge_control=vecConvergenceImpulseControl,
       stringsAsFactors = FALSE)
   }
-  
-  # Order data frame by adjusted p-value
-  dfDEAnalysis$padj <- as.numeric(as.character(dfDEAnalysis$padj))
-  dfDEAnalysis = dfDEAnalysis[order(dfDEAnalysis$padj),]
   
   return(dfDEAnalysis)
 }

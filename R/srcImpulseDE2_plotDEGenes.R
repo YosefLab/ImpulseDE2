@@ -107,7 +107,10 @@ plotDEGenes <- function(vecGeneIDs,
   # Therefore, the model curves follow the normalised
   # count data and not the raw count data. However, 
   # fitting was still performed based on raw count data.
-  matCountDataProcNorm <- matCountDataProc / matSizeFactors
+  matCountDataProcNorm <- matCountDataProc / matrix(
+    vecSizeFactors, 
+    nrow=dim(matCountDataProc)[1],
+    ncol=dim(matCountDataProc)[2], byrow=TRUE )
   matMuTimepoints <- matrix(NA, nrow=dim(matCountDataProc)[1],ncol=length(vecTimepoints))
   rownames(matMuTimepoints) <- rownames(matCountDataProc)
   for(tp in vecTimepoints){
@@ -163,11 +166,11 @@ plotDEGenes <- function(vecGeneIDs,
       # Without control  data 
       
       # Get impulse model values
-      vecCaseValues <- lsModelFits$geneID$lsImpulseFit$vecImpulseValues
+      vecCaseValues <- lsModelFits$case$geneID$lsImpulseFit$vecImpulseValues
       if(boolLogPlot){ vecCaseValues <- log(vecCaseValues+1)/log(SCALOGBASE) }
       
       # Prepare p-values to include in header
-      pval_Impulse <- round( log(dfImpulseDE2Results[geneID,]$adj.p)/log(10), 2 )
+      pval_Impulse <- round( log(dfImpulseDE2Results[geneID,]$padj)/log(10), 2 )
       if(!is.null(vecRefPval)){
         pval_Method2 <- round( log(vecRefPval[geneID])/log(10), 2 )
       }
@@ -263,7 +266,7 @@ plotDEGenes <- function(vecGeneIDs,
             inset=c(0,scaLegendInset))
           
         } else if(strMode=="batcheffects"){
-          vecBatchFactors <- lsModelFits$geneID$lsImpulseFit$vecBatchFactors
+          vecBatchFactors <- lsModelFits$case$geneID$lsImpulseFit$vecBatchFactors
           
           # Create colour vector
           vecCol <- rainbow(n=length(vecBatchesUnique))
@@ -345,7 +348,7 @@ plotDEGenes <- function(vecGeneIDs,
       vecCombValues <- lsModelFits$combined$geneID$lsImpulseFit$vecImpulseValues
       if(boolLogPlot){ vecCombValues <- log(vecCombValues+1)/log(SCALOGBASE) }
       
-      pval_Impulse <- round( log(dfImpulseDE2Results[geneID,]$adj.p)/log(10), 2 )
+      pval_Impulse <- round( log(dfImpulseDE2Results[geneID,]$padj)/log(10), 2 )
       if(!is.null(vecRefPval)){
         pval_Method2 <- round( log(vecRefPval[geneID])/log(10), 2 )
       }
@@ -412,3 +415,4 @@ plotDEGenes <- function(vecGeneIDs,
   # Close .pdf
   dev.off()
 }
+

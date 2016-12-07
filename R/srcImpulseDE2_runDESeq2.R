@@ -36,9 +36,7 @@
 
 runDESeq2 <- function(dfAnnotationProc, 
   matCountDataProc,
-  strCaseName=NULL,
-  strControlName=NULL, 
-  strMode="singlebatch"){
+  boolCaseCtrl){
   
   # Catch specific scenarios in which DESeq2 p-values cannot
   # be generated automatically:
