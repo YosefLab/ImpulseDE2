@@ -50,7 +50,7 @@ processData <- function(dfAnnotation,
 												matCountData,
 												boolCaseCtrl,
 												vecConfounders,
-												vecDispersionsExternal,
+												lsvecDispersionsExternal,
 												vecSizeFactorsExternal){
 	
 	###############################################################
@@ -114,7 +114,7 @@ processData <- function(dfAnnotation,
 												matCountData,
 												boolCaseCtrl,
 												vecConfounders,
-												vecDispersionsExternal,
+												lsvecDispersionsExternal,
 												vecSizeFactorsExternal){
 		
 		### 1. Check that all necessary input was specified
@@ -156,13 +156,26 @@ processData <- function(dfAnnotation,
 		}
 		### e) Batch
 		if(!is.null(vecConfounders)){
-			# Check that number of time courses given is > 1
+		  # Check that model matrix based on confounding variables is full rank
+		  # 1. Dummy check: Check that number of batches for each confounding variable is > 1
 			for(confounder in vecConfounders){
 				if(length(unique( dfAnnotation[,confounder] ))==1){
-					stop(paste0("ERROR: Only one batch given for confounder ", 
-											confounder, "Remove from vecConfounders or correct dfAnnotation."))
+				  stop(paste0("ERROR: Model matrix based on confounding variables {", vecConfounders,
+				              "} is not full rank: Only one batch given for confounder ", 
+				              confounder, ". Remove from vecConfounders or correct dfAnnotation."))
 				}
 			}
+		  # 2. More detailed full rank check
+		  matModelMatrix <- do.call(cbind, lapply(vecConfounders, function(confounder){
+		    match(dfAnnotation[,confounder], unique(dfAnnotation[,confounder]))
+		  }))
+		  if(rankMatrix(matModelMatrix)[1] != dim(matModelMatrix)[2]){
+		    stop(paste0("Model matrix based on confounding variables {", vecConfounders,
+		                "} is not full rank. Correct the confounding variables. ",
+		                " Note that it is not possible to model NESTED confounding variables: ",
+		                " Any confounding variables cannot be a linear combination of the other ",
+		                " confounding variables."))
+		  }
 		}
 		
 		### 3. Check expression table content
@@ -177,23 +190,37 @@ processData <- function(dfAnnotation,
 		checkCounts(matCountData, "matCountData")
 		
 		### 4. Check supplied dispersion vector
-		if(!is.null(vecDispersionsExternal)){
+		if( is.null(lsvecDispersionsExternal) & length(vecConfounders>1) ){
+		  stop(paste0("DESeq2 cannot be run in an automated fashion for multiple ",
+		              "confounding variables. Run DESeq separately and supply ",
+		              "dispersion parameters through lsvecDispersionsExternal.")
+		}
+		if(!is.null(lsvecDispersionsExternal)){
 			# Check that dispersions were named
-			if(is.null(names(vecDispersionsExternal))){
-				stop("ERROR: vecDispersionsExternal was not named. Name according to rownames of matCountData.")
+			if( ( !boolCaseCtrl & any(c("case")!=names(lsvecDispersionsExternal)) ) |
+			    ( boolCaseCtrl & any(c("case", "control", "combined")!=names(lsvecDispersionsExternal)) ) ){
+				stop(paste0("ERROR: lsvecDispersionsExternal was not named. Supply as: ",
+				            "Case-only: Supply list(case=...), ",
+				            "Case-control: Supply list(case=..., control=..., combined=...).",
+				            "Note that elements of vectors have to be named as the rows in matCountData."))
 			}
-			# Check that one dispersion was supplied per gene
-			if(any( !(names(vecDispersionsExternal) %in% rownames(matCountData)) ) |
-				 any( !(rownames(matCountData) %in% names(vecDispersionsExternal)) ) ){
-				stop("ERROR: vecDispersionsExternal supplied but names do not agree with rownames of matCountData.")
-			}
-			# Check that dispersion vector is numeric
-			checkNumeric(vecDispersionsExternal, "vecDispersionsExternal")
-			# Check that dispersions are positive (should not have sub-poissonian noise in count data)
-			if(any(vecDispersionsExternal < 0)){
-				warning(paste0( "WARNING: vecDispersionsExternal contains negative elements which corresponds to sub-poissonian noise.",
-												"These elements are kept as they are in the following." ))
-			}
+		  # Check vectors for each condition
+		  if(!boolCaseCtrl){ vecLables <- c("case")
+		  } else { vecLables <- c("case", "control", "combined") }
+		  for(label in vecLabels){
+		    # Check that one dispersion was supplied per gene
+		    if( any(names(lsvecDispersionsExternal$label) != rownames(matCountData)) ){
+		      stop("ERROR: Names of lsvecDispersionsExternal$" , label ," do not agree with rownames of matCountData.")
+		    }
+		    # Check that dispersion vector is numeric
+		    checkNumeric(lsvecDispersionsExternal$label, paste0("lsvecDispersionsExternal$", label))
+		    # Check that dispersions are positive (should not have sub-poissonian noise in count data)
+		    if(any(lsvecDispersionsExternal$label < 0)){
+		      warning(paste0( "WARNING: lsvecDispersionsExternal$" , label ,
+		                      " contains negative elements which corresponds to sub-poissonian noise.",
+		                      "These elements are kept as they are in the following." ))
+		    }
+		  }
 		}
 		
 		### 5. Check supplied size facotrs
@@ -283,6 +310,8 @@ processData <- function(dfAnnotation,
 		
 		# Take out columns which are not used
 		dfAnnotationProc <- dfAnnotationProc[,c("Sample", "Time", "Condition", vecConfounders)]
+		# Add categorial time column for DESeq2
+		dfAnnotationProc$TimeCateg <- paste0("_", dfAnnotationProc$Time)
 		
 		return(dfAnnotationProc)
 	}
@@ -368,7 +397,7 @@ processData <- function(dfAnnotation,
 		matCountData=matCountData,
 		boolCaseCtrl=boolCaseCtrl,
 		vecConfounders=vecConfounders,
-		vecDispersionsExternal=vecDispersionsExternal,
+		lsvecDispersionsExternal=lsvecDispersionsExternal,
 		vecSizeFactorsExternal=vecSizeFactorsExternal )
 	
 	# Process annotation table
@@ -385,15 +414,11 @@ processData <- function(dfAnnotation,
 	
 	# Reduce externally provided parameters according to reduced data set
 	# and reorder according to given data set.
-	if(!is.null(vecDispersionsExternal)){
-		vecDispersionsExternalProc <- vecDispersionsExternal[rownames(matCountDataProc)]
-	} else { vecDispersionsExternalProc <- NULL }
 	if(!is.null(vecSizeFactorsExternal)){
 		vecSizeFactorsExternalProc <- vecSizeFactorsExternal[colnames(matCountDataProc)]
 	} else { vecSizeFactorsExternalProc <-NULL }
 	
 	return( list(matCountDataProc=matCountDataProc,
 							 dfAnnotationProc=dfAnnotationProc,
-							 vecDispersionsExternalProc=vecDispersionsExternalProc,
 							 vecSizeFactorsExternalProc=vecSizeFactorsExternalProc) )
 }

@@ -42,14 +42,8 @@ evalLogLikMu <- function(vecTheta,
   
   scaMu <- exp(vecTheta[1])
   scaNParamUsed <- 1
-  if(is.null(scaDisp)){ 
-  	scaDisp <- exp(vecTheta[scaNParamUsed+1])
-  	scaNParamUsed <- scaNParamUsed + 1
-  } 
-  # Prevent mean and dispersion shrinkage/explosion to zero:
+  # Prevent mean shrinkage to zero:
   if(scaMu < 10^(-10)){ scaMu <- 10^(-10) }
-  if(scaDisp < 10^(-10)){ scaDisp <- 10^(-10) }
-  if(scaDisp > 10^(10)){ scaDisp <- 10^(10) }
   
   vecBatchFactors <- array(1, length(vecCounts))
   if(!is.null(lsvecindBatch)){
@@ -130,14 +124,7 @@ evalLogLikImpulse <- function(vecTheta,
   vecImpulseValue <- calcImpulse_comp(vecImpulseParam=vecImpulseParam,
                                       vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
   scaNParamUsed <- 6
-  if(is.null(scaDisp)){ 
-  	scaDisp <- exp(vecTheta[scaNParamUsed+1])
-  	scaNParamUsed <- scaNParamUsed + 1
-  }
-  # Prevent dispersion shrinkage/explosion to zero:
-  if(scaDisp < 10^(-10)){ scaDisp <- 10^(-10) }
-  if(scaDisp > 10^(10)){ scaDisp <- 10^(10) }
-
+  
   vecBatchFactors <- array(1, length(vecCounts))
   if(!is.null(lsvecindBatch)){
   	for(vecindConfounder in lsvecindBatch){

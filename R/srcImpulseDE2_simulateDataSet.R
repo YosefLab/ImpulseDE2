@@ -374,14 +374,24 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   rownames(matMuHiddenScaled) <- rownames(matMuHidden)
   colnames(matMuHiddenScaled) <- colnames(matMuHidden)
   
-  # e. draw dispersions by gene
-  vecDispHidden <- runif(dim(matMuHiddenScaled)[1])+10
-  names(vecDispHidden) <- rownames(matMuHiddenScaled)
+  # e. draw dispersions by gene - one per condition in case-control
+  if(boolCaseCtrl){
+    matDispHidden <- matrix(NA, nrow=dim(matMuHiddenScaled)[1], ncol=2)
+    matDispHidden[,1] <- rnorm(dim(matMuHiddenScaled)[1], mean=1, sd =0.1)*10
+    matDispHidden[,2] <- rnorm(dim(matMuHiddenScaled)[1], mean=1, sd =0.1)*10
+    colnames(matDispHidden) <- c("case", "control")
+  } else {
+    matDispHidden <- matrix(NA, nrow=dim(matMuHiddenScaled)[1], ncol=1)
+    matDispHidden[,1] <- rnorm(dim(matMuHiddenScaled)[1], mean=1, sd =0.1)*10
+    colnames(matDispHidden) <- c("case")
+  }
+  rownames(matDispHidden) <- rownames(matMuHiddenScaled)
+  matDispHidden[matDispHidden<1] <- 1
   
   # f. add noise - draw from negative binomial
   matObservedData <- do.call(rbind, lapply(seq(1,dim(matMuHiddenScaled)[1]), function(gene){
     sapply(names(vecSamples), function(j){
-      rnbinom(n=1, mu=matMuHiddenScaled[gene,j], size=vecDispHidden[gene])
+      rnbinom(n=1, mu=matMuHiddenScaled[gene,j], size=matDispHidden[gene, dfAnnotation[j,]$Condition])
     })
   }))
   rownames(matObservedData) <- rownames(matMuHiddenScaled)
@@ -403,7 +413,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   if(length(vecBatchesUnique)>1) { save(matBatchFactorsHidden,file=file.path(dirOutSimulation,"Simulation_matBatchFactorsHidden.RData")) }
   if(boolCaseCtrl){ save(vecCaseCtrlDEIDs,file=file.path(dirOutSimulation,"Simulation_vecCaseCtrlDEIDs.RData")) }
   
-  save(vecDispHidden,file=file.path(dirOutSimulation,"Simulation_vecDispHidden.RData"))
+  save(matDispHidden,file=file.path(dirOutSimulation,"Simulation_matDispHidden.RData"))
   save(matImpulseModelHidden,file=file.path(dirOutSimulation,"Simulation_matImpulseModelHidden.RData"))
   save(matMuHidden,file=file.path(dirOutSimulation,"Simulation_matMuHidden.RData"))
   save(matMuHiddenScaled,file=file.path(dirOutSimulation,"Simulation_matMuHiddenScaled.RData"))

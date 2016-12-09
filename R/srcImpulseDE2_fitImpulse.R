@@ -37,8 +37,8 @@ estimateImpulseParam <- function(vecCounts,
   		vecBatchFactorsConfounder <- sapply(unique(vecindBatch), function(batch){
   			mean(vecCountsSFcorrected[vecindBatch==batch]/mean(vecCounts, na.rm=TRUE), na.rm=TRUE)
   		})
-  		# Catch exception that all observations of a batch are zero:
-  		vecBatchFactorsConfounder[is.na(vecBatchFactors) | vecBatchFactors==0] <- 1
+  		# Catch exception that all observations of a batch are zero or all observations are zero:
+  		vecBatchFactorsConfounder[is.na(vecBatchFactorsConfounder) | vecBatchFactorsConfounder==0] <- 1
   		vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder[vecindBatch]
   	}
     vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors
@@ -132,10 +132,6 @@ fitConstModel <- function(vecCounts,
                           REPORT=10){
   
   vecParamGuess <- log(mean(vecCounts, na.rm=TRUE))
-  if(is.null(scaDisp)){
-    # Co-estimate dispersion parameter, initialised as 1
-    vecParamGuess <- c(vecParamGuess, 0)
-  }
   if(!is.null(lsvecindBatch)){
   	for(vecindConfounder in lsvecindBatch){
   		vecParamGuess <- c(vecParamGuess, rep(0, length(unique(vecindConfounder))-1))
@@ -174,12 +170,6 @@ fitConstModel <- function(vecCounts,
   # Catch boundary of likelihood domain on mu space:
   if(scaMu < 10^(-10)){scaMu <- 10^(-10)}
   scaNParamUsed <- 1
-  if(is.null(scaDisp)){
-    scaDispParam <- exp(lsFit$par[scaNParamUsed+1])
-    scaNParamUsed <- scaNParamUsed + 1
-  } else {
-    scaDispParam <- scaDisp
-  }
   if(!is.null(lsvecindBatch)){
   	lsvecBatchFactors <- lapply(lsvecindBatch, function(vecindConfounder){
   		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
@@ -190,11 +180,13 @@ fitConstModel <- function(vecCounts,
   		# Catch boundary of likelihood domain on batch factor space:
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
+  		return(vecBatchFactorsConfounder)
   	})
   }
-  
+
   return(list( scaMu=scaMu,
                lsvecBatchFactors=lsvecBatchFactors,
+               scaDispParam=scaDisp,
                scaLL=lsFit$value,
                scaConvergence=lsFit$convergence))
 }
@@ -261,10 +253,6 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   
   
   vecParamGuess <- vecImpulseParamGuess
-  if(is.null(scaDisp)){
-  	# Co-estimate dispersion parameter, initialised as 1
-  	vecParamGuess <- c(vecParamGuess, 0)
-  }
   if(!is.null(lsvecindBatch)){
   	for(vecindConfounder in lsvecindBatch){
   		vecParamGuess <- c(vecParamGuess, rep(0, length(unique(vecindConfounder))-1))
@@ -310,12 +298,6 @@ fitImpulseModel <- function(vecImpulseParamGuess,
                                       vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
   names(vecImpulseValue) <- names(vecCounts)
   scaNParamUsed <- 6
-  if(is.null(scaDisp)){
-  	scaDispParam <- exp(lsFit$par[scaNParamUsed+1])
-  	scaNParamUsed <- scaNParamUsed + 1
-  } else {
-  	scaDispParam <- scaDisp
-  }
   if(!is.null(lsvecindBatch)){
   	lsvecBatchFactors <- lapply(lsvecindBatch, function(vecindConfounder){
   		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
@@ -326,13 +308,14 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   		# Catch boundary of likelihood domain on batch factor space:
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
+  		return(vecBatchFactorsConfounder)
   	})
   }
   
   return(list( vecImpulseParam=vecImpulseParam,
                vecImpulseValue=vecImpulseValue,
   						 lsvecBatchFactors=lsvecBatchFactors,
-               scaDispParam=scaDispParam,
+               scaDispParam=scaDisp,
                scaLL=lsFit$value,
                scaConvergence=lsFit$convergence))
 }
@@ -606,50 +589,41 @@ fitConstImpulse <- function(matCountDataProcCondition,
 fitModels <- function(matCountDataProc, 
                       dfAnnotationProc, 
                       vecSizeFactors,
-                      vecDispersions,
+                      lsvecDispersions,
 											vecConfounders,
 											boolCaseCtrl){
   
   lsFitResults_all = list()
   
-  # Condition labels to be used in runs:
-  # These labels are used to group samples
+  # Conditions to be fitted separately
   if(boolCaseCtrl){
     vecLabels <- c("combined","case","control")
   } else {
   	vecLabels <- c("case")
   }
   
-  # Create lists of samples to be used per run
+  # Create lists of samples per condition
   if(boolCaseCtrl){    
     lsSamplesByCond <- list(
-      combined=colnames(matCountDataProc),
-      case=(colnames(matCountDataProc))[dfAnnotationProc[match(
-        colnames(matCountDataProc),
-        dfAnnotationProc$Sample),
-        ]$Condition %in% "case"],
-      control=(colnames(matCountDataProc))[dfAnnotationProc[match(
-        colnames(matCountDataProc),
-        dfAnnotationProc$Sample),
-        ]$Condition %in% "control"] )
+      combined=dfAnnotationProc$Sample,
+      case=dfAnnotationProc[dfAnnotationProc$Condition=="case",]$Sample,
+      control=dfAnnotationProc[dfAnnotationProc$Condition=="control",]$Sample )
   } else {
     lsSamplesByCond <- list(
-      case=colnames(matCountDataProc) )
+      case=dfAnnotationProc[dfAnnotationProc$Condition=="case",]$Sample )
   }
   
   # Get batch assignments of samples
   if(!is.null(vecConfounders)){
   	lsvecBatches <- lapply(vecConfounders, function(confounder){
-  		dfAnnotationProc[match(
-  			colnames(matCountDataProc),
-  			dfAnnotationProc$Sample),confounder]
+  	  vecBatches <- dfAnnotationProc[,confounder]
+  	  names(vecBatches) <- 	colnames(matCountDataProc)
+  	  return(vecBatches)
   	})
   } else { lsvecBatches <- NULL }
   
   # Get time point assignments of samples
-  vecTimepoints <- dfAnnotationProc[match(
-    colnames(matCountDataProc),
-    dfAnnotationProc$Sample),]$Time
+  vecTimepoints <- dfAnnotationProc$Time
   names(vecTimepoints) <- colnames(matCountDataProc)
   
   # Fitting for different runs
@@ -658,13 +632,16 @@ fitModels <- function(matCountDataProc,
   # in the combined case of case-ctrl to derive a inferred
   # mean parameter for reference.
   lsFitResults_all <- lapply(vecLabels, function(label){
+    print(paste0("Fit condition ", match(label, vecLabels), " (", label,
+                 ") out of ", length(vecLabels), " condition(s)."))
     lsFitResults <- fitConstImpulse(
       matCountDataProcCondition=matCountDataProc[,lsSamplesByCond[[label]]],
       vecSizeFactors=vecSizeFactors[lsSamplesByCond[[label]]],
-      vecDispersions=vecDispersions,
+      vecDispersions=lsvecDispersions[[label]],
       vecTimepoints=vecTimepoints[lsSamplesByCond[[label]]],
-      lsvecBatches=lapply(lsvecBatches, function(condounder) condounder[lsSamplesByCond[[label]]] ),
+      lsvecBatches=lapply(lsvecBatches, function(confounder) confounder[lsSamplesByCond[[label]]] ),
       boolFitConst= !boolCaseCtrl | label=="combined" )
+    return(lsFitResults)
   })
   names(lsFitResults_all) <- vecLabels
   
