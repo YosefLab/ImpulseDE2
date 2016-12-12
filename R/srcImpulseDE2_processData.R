@@ -50,7 +50,7 @@ processData <- function(dfAnnotation,
 												matCountData,
 												boolCaseCtrl,
 												vecConfounders,
-												lsvecDispersionsExternal,
+												vecDispersionsExternal,
 												vecSizeFactorsExternal){
 	
 	###############################################################
@@ -114,7 +114,7 @@ processData <- function(dfAnnotation,
 												matCountData,
 												boolCaseCtrl,
 												vecConfounders,
-												lsvecDispersionsExternal,
+												vecDispersionsExternal,
 												vecSizeFactorsExternal){
 		
 		### 1. Check that all necessary input was specified
@@ -190,36 +190,27 @@ processData <- function(dfAnnotation,
 		checkCounts(matCountData, "matCountData")
 		
 		### 4. Check supplied dispersion vector
-		if( is.null(lsvecDispersionsExternal) & length(vecConfounders>1) ){
+		if( is.null(vecDispersionsExternal) & length(vecConfounders)>1 ){
 		  stop(paste0("DESeq2 cannot be run in an automated fashion for multiple ",
 		              "confounding variables. Run DESeq separately and supply ",
-		              "dispersion parameters through lsvecDispersionsExternal.")
+		              "dispersion parameters through vecDispersionsExternal."))
 		}
-		if(!is.null(lsvecDispersionsExternal)){
+		if(!is.null(vecDispersionsExternal)){
 			# Check that dispersions were named
-			if( ( !boolCaseCtrl & any(c("case")!=names(lsvecDispersionsExternal)) ) |
-			    ( boolCaseCtrl & any(c("case", "control", "combined")!=names(lsvecDispersionsExternal)) ) ){
-				stop(paste0("ERROR: lsvecDispersionsExternal was not named. Supply as: ",
+			if( ( !boolCaseCtrl & any(c("case")!=names(vecDispersionsExternal)) ) |
+			    ( boolCaseCtrl & any(c("case", "control", "combined")!=names(vecDispersionsExternal)) ) ){
+				stop(paste0("ERROR: vecDispersionsExternal was not named. Supply as: ",
 				            "Case-only: Supply list(case=...), ",
 				            "Case-control: Supply list(case=..., control=..., combined=...).",
 				            "Note that elements of vectors have to be named as the rows in matCountData."))
 			}
-		  # Check vectors for each condition
-		  if(!boolCaseCtrl){ vecLables <- c("case")
-		  } else { vecLables <- c("case", "control", "combined") }
-		  for(label in vecLabels){
-		    # Check that one dispersion was supplied per gene
-		    if( any(names(lsvecDispersionsExternal$label) != rownames(matCountData)) ){
-		      stop("ERROR: Names of lsvecDispersionsExternal$" , label ," do not agree with rownames of matCountData.")
-		    }
-		    # Check that dispersion vector is numeric
-		    checkNumeric(lsvecDispersionsExternal$label, paste0("lsvecDispersionsExternal$", label))
-		    # Check that dispersions are positive (should not have sub-poissonian noise in count data)
-		    if(any(lsvecDispersionsExternal$label < 0)){
-		      warning(paste0( "WARNING: lsvecDispersionsExternal$" , label ,
-		                      " contains negative elements which corresponds to sub-poissonian noise.",
-		                      "These elements are kept as they are in the following." ))
-		    }
+		  # Check that dispersion vector is numeric
+		  checkNumeric(vecDispersionsExternal$label, paste0("vecDispersionsExternal$", label))
+		  # Check that dispersions are positive (should not have sub-poissonian noise in count data)
+		  if(any(vecDispersionsExternal$label < 0)){
+		    warning(paste0( "WARNING: vecDispersionsExternal$" , label ,
+		                    " contains negative elements which corresponds to sub-poissonian noise.",
+		                    "These elements are kept as they are in the following." ))
 		  }
 		}
 		
@@ -312,6 +303,21 @@ processData <- function(dfAnnotation,
 		dfAnnotationProc <- dfAnnotationProc[,c("Sample", "Time", "Condition", vecConfounders)]
 		# Add categorial time column for DESeq2
 		dfAnnotationProc$TimeCateg <- paste0("_", dfAnnotationProc$Time)
+		# Add nested batches for running DESeq2
+		if(boolCaseCtrl){
+		  # Create one new column for each nested batch
+		  for(confounder in vecConfounders){
+		    vecBatchesCase <- dfAnnotationProc[dfAnnotationProc$Condition=="case",confounder]
+		    vecNestedBatchesCase <- match(vecBatchesCase, unique(vecBatchesCase))
+		    vecBatchesCtrl <- dfAnnotationProc[dfAnnotationProc$Condition=="control",confounder]
+		    vecNestedBatchesCtrl <- match(vecBatchesCtrl, unique(vecBatchesCtrl))
+		    vecBatchesNested <- array(NA, dim(dfAnnotationProc)[1])
+		    vecBatchesNested[dfAnnotationProc$Condition=="case"] <- vecNestedBatchesCase
+		    vecBatchesNested[dfAnnotationProc$Condition=="control"] <- vecNestedBatchesCtrl
+		    strNameConfounderNested <- paste0(confounder, "Nested")
+		    dfAnnotationProc[strNameConfounderNested] <- as.factor(vecBatchesNested)
+		  }
+		}
 		
 		return(dfAnnotationProc)
 	}
@@ -397,7 +403,7 @@ processData <- function(dfAnnotation,
 		matCountData=matCountData,
 		boolCaseCtrl=boolCaseCtrl,
 		vecConfounders=vecConfounders,
-		lsvecDispersionsExternal=lsvecDispersionsExternal,
+		vecDispersionsExternal=vecDispersionsExternal,
 		vecSizeFactorsExternal=vecSizeFactorsExternal )
 	
 	# Process annotation table

@@ -26,91 +26,200 @@
 #' @export
 
 runDESeq2 <- function(dfAnnotationProc, 
-  matCountDataProc,
-  boolCaseCtrl,
-  vecConfounders){
+                      matCountDataProc,
+                      boolCaseCtrl,
+                      vecConfounders){
   
   # Get gene-wise dispersion estimates
   # var = mean + alpha * mean^2, alpha is dispersion
   # DESeq2 dispersion is 1/size used dnbinom (used in cost function
   # for evaluation of likelihood)
   
-  # Conditions to be fitted separately
-  if(boolCaseCtrl){
-    vecLabels <- c("combined","case","control")
-  } else {
-    vecLabels <- c("case")
-  }
-  
-  if(boolCaseCtrl){    
-    lsSamplesByCond <- list(
-      combined=dfAnnotationProc$Sample,
-      case=dfAnnotationProc[dfAnnotationProc$Condition=="case",]$Sample,
-      control=dfAnnotationProc[dfAnnotationProc$Condition=="control",]$Sample )
-  } else {
-    lsSamplesByCond <- list(
-      case=dfAnnotationProc[dfAnnotationProc$Condition=="case",]$Sample )
-  }
-  
-  lsvecDispersions <- lapply(vecLabels, function(label){
-    # Run DESeq2 on samples from ONE CONDITION
-    # Estimate one dispersion parameter PER CONDITION.
-    print(paste0("Run DESeq2 on condition ", match(label, vecLabels), " (", label,
-                 ") out of ", length(vecLabels), " condition(s)."))
-    vecSamples <- lsSamplesByCond[[label]]
-    dds <- NULL
-    ddsDESeqObject <- NULL
-    
+  dds <- NULL
+  #ddsDESeqObject <- NULL
+  if(!boolCaseCtrl){
+    # Case-only
     if(is.null(vecConfounders)){
       # No batch correction
       dds <- suppressWarnings( DESeqDataSetFromMatrix(
-        countData = matCountDataProc[,vecSamples],
-        colData = dfAnnotationProc[vecSamples,],
+        countData = matCountDataProc,
+        colData = dfAnnotationProc,
         design = ~ TimeCateg) )
-      ddsDESeqObject <- DESeq(dds, test = "LRT", 
-                              quiet=TRUE, parallel=TRUE,           
-                              full = ~ TimeCateg, 
-                              reduced = ~ 1)
+      dds <- estimateSizeFactors(dds)
+      dds <- estimateDispersions(dds)
+      #ddsDESeqObject <- DESeq(dds, test = "LRT", 
+      #                        quiet=TRUE, parallel=TRUE,           
+      #                        full = ~ TimeCateg, 
+      #                        reduced = ~ 1)
       
     } else {
       # With batch correction
-      # Catch case in which at least one batch has unique time points.
+      # Catch non full-rank design matrix 
+      # e.g. batches have of one confounder have mutually exclusive sets of time points
       tryCatch({
         dds <- suppressWarnings( DESeqDataSetFromMatrix(
-          countData = matCountDataProc[,vecSamples],
-          colData = dfAnnotationProc[vecSamples,],
+          countData = matCountDataProc,
+          colData = dfAnnotationProc,
           design = ~TimeCateg + Batch  ) )
-        ddsDESeqObject <- DESeq(dds, test = "LRT",
-                                quiet=TRUE, parallel=TRUE,           
-                                full = ~TimeCateg + Batch, 
-                                reduced = ~Batch)
+        dds <- estimateSizeFactors(dds)
+        dds <- estimateDispersions(dds)
+        #ddsDESeqObject <- DESeq(dds, test = "LRT",
+        #                        quiet=TRUE, parallel=TRUE,           
+        #                        full = ~TimeCateg + Batch, 
+        #                        reduced = ~Batch)
       }, error=function(strErrorMsg){
         print(strErrorMsg)
         print(paste0("WARNING: DESeq2 failed on full model - dispersions may be inaccurate.",
                      "Estimating dispersions on reduced model formulation [full = ~Batch",
                      " reduced = ~1]. Supply externally generated dispersion parameters via ",
-                     "lsvecDispersionsExternal if there is a more accurate model for your data set."))
+                     "vecDispersionsExternal if there is a more accurate model for your data set."))
         warning("Warning generated in dispersion factor estimation, read stdout.")
       }, finally={
         if(is.null(dds)){
           dds <- suppressWarnings( DESeqDataSetFromMatrix(
-            countData = matCountDataProc[,vecSamples],
-            colData = dfAnnotationProc[vecSamples,],
+            countData = matCountDataProc,
+            colData = dfAnnotationProc,
             design = ~Batch) )
-          ddsDESeqObject <- DESeq(dds, test = "LRT",
-                                  quiet=TRUE, parallel=TRUE,                      
-                                  full = ~Batch, 
-                                  reduced = ~1)
+          dds <- estimateSizeFactors(dds)
+          dds <- estimateDispersions(dds)
+          #ddsDESeqObject <- DESeq(dds, test = "LRT",
+          #                        quiet=TRUE, parallel=TRUE,                      
+          #                        full = ~Batch, 
+          #                        reduced = ~1)
+        }
+      })
+    }
+  } else {
+    # Case-control
+    if(is.null(vecConfounders)){
+      # No batch correction
+      # Catch non full-rank design matrix 
+      # e.g. conditions have mutually exclusive sets of timepoints
+      tryCatch({
+        dds <- suppressWarnings( DESeqDataSetFromMatrix(
+          countData = matCountDataProc,
+          colData = dfAnnotationProc,
+          design = ~Condition+Condition:TimeCateg) )
+        dds <- estimateSizeFactors(dds)
+        dds <- estimateDispersions(dds)
+        #ddsDESeqObject <- DESeq(dds, test = "LRT", 
+        #                        quiet=TRUE, parallel=TRUE,           
+        #                        full = ~Condition+Condition:TimeCateg, 
+        #                        reduced = ~TimeCateg)
+      }, error=function(strErrorMsg){
+        print(strErrorMsg)
+        print(paste0("WARNING: DESeq2 failed on full model - dispersions may be inaccurate.",
+                     "Estimating dispersions on reduced model formulation [full = ~Condition",
+                     " reduced = ~1]. Supply externally generated dispersion parameters via ",
+                     "vecDispersionsExternal if there is a more accurate model for your data set."))
+        warning("Warning generated in dispersion factor estimation, read stdout.")
+      }, finally={
+        if(is.null(dds)){
+          dds <- suppressWarnings( DESeqDataSetFromMatrix(
+            countData = matCountDataProc,
+            colData = dfAnnotationProc,
+            design = ~Condition) )
+          dds <- estimateSizeFactors(dds)
+          dds <- estimateDispersions(dds)
+          #ddsDESeqObject <- DESeq(dds, test = "LRT",
+          #                        quiet=TRUE, parallel=TRUE,                      
+          #                        full = ~Condition, 
+          #                        reduced = ~1)
         }
       })
       
+    } else {
+      # With batch correction
+      # Catch non full-rank design matrix 
+      # e.g.  a) batches have of one confounder have mutually exclusive sets of time points or
+      # b) conditions have mutually exclusive sets of time points.
+      # Note that full rank of design matrix of batches is checked in data processing.
+      # Note that design matrix of batches and condition is full rank if batch
+      # matrix is full rank due to the nested batches trick (using Condition:Batch below).
+      # Therefore, error catching tailored to a) and b).
+      tryCatch({
+        dds <- suppressWarnings( DESeqDataSetFromMatrix(
+          countData = matCountDataProc,
+          colData = dfAnnotationProc,
+          design = ~Condition+Condition:TimeCateg+Condition:BatchNested,  ) )
+        dds <- estimateSizeFactors(dds)
+        dds <- estimateDispersions(dds)
+        #ddsDESeqObject <- DESeq(dds, test = "LRT",
+        #                        quiet=TRUE, parallel=TRUE,           
+        #                        full = ~Condition+Condition:TimeCateg+Condition:BatchNested,
+        #                        reduced = ~TimeCateg+Batch)
+      }, error=function(strErrorMsg){
+        print(strErrorMsg)
+        print(paste0("WARNING: DESeq2 failed on full model - dispersions may be inaccurate.",
+                     "Estimating dispersions on reduced model.",
+                     " Supply externally generated dispersion parameters via ",
+                     "vecDispersionsExternal if there is a more accurate model for your data set."))
+        warning("Warning generated in dispersion factor estimation, read stdout.")
+      }, finally={
+        if(is.null(dds)){
+          matModelMatrixBatches <- do.call(cbind, lapply(vecConfounders, function(confounder){
+            match(dfAnnotation[,confounder], unique(dfAnnotation[,confounder]))
+          }))
+          matModelMatrixBatchesTime <- cbind(matModelMatrixBatches,
+                                             match(dfAnnotation$Time, unique(dfAnnotation$Time)))
+          boolFullRankBatchTime <- rankMatrix(matModelMatrixBatchesTime)[1] == dim(matModelMatrixBatchesTime)[2]
+          if(!boolFullRankBatchTime){
+            paste0("Model matrix based on confounding variables {", vecConfounders,
+                   "} and time is not full rank: There are confounding variables with ",
+                   " batch structures which are linear combinations of the time points.")
+            paste0("Using reduced model formulation [full= ~Condition+Condition:TimeCateg, reduced= ~TimeCateg].")
+            dds <- suppressWarnings( DESeqDataSetFromMatrix(
+              countData = matCountDataProc,
+              colData = dfAnnotationProc,
+              design = ~Condition+Condition:TimeCateg) )
+            dds <- estimateSizeFactors(dds)
+            dds <- estimateDispersions(dds)
+            #ddsDESeqObject <- DESeq(dds, test = "LRT",
+            #                        quiet=TRUE, parallel=TRUE,                      
+            #                        full = ~Condition+Condition:TimeCateg, 
+            #                        reduced = ~TimeCateg)
+          } else {
+            paste0("Found 1. or {1. and 2.}:")
+            paste0("1. Model matrix based on confounding variables {", vecConfounders,
+                   "} and time is not full rank: There are confounding variables with ",
+                   " batch structures which are linear combinations of the time points.")
+            paste0(" 2. Model matrix based on condition and time is not full rank: ",
+                   "Conditions case and control have mutually exclusive sets of timepoints.")
+            paste0("Using reduced model formulation [full= ~Condition+Condition:BatchNested, reduced= ~1].")
+            dds <- suppressWarnings( DESeqDataSetFromMatrix(
+              countData = matCountDataProc,
+              colData = dfAnnotationProc,
+              design = ~Condition+Condition:BatchNested) )
+            dds <- estimateSizeFactors(dds)
+            dds <- estimateDispersions(dds)
+            #ddsDESeqObject <- DESeq(dds, test = "LRT",
+            #                        quiet=TRUE, parallel=TRUE,                      
+            #                        full = ~Condition+Condition:BatchNested, 
+            #                        reduced = ~1)
+          }
+        }
+      })
     }
-    
-    vecDispersions <- 1/dispersions(ddsDESeqObject)
-    names(vecDispersions) <- rownames(ddsDESeqObject)
-    return(vecDispersions)
-  })
-  names(lsvecDispersions) <- vecLabels
-
-  return(lsvecDispersions)
+  }
+  
+  vecDispersionsInv <- mcols(dds)$dispersion
+  # Catch dispersion trend outliers at the upper bounadry (alpha = 20 ->large variance)
+  # which contain zero measurements: The zeros throw off the dispersion estimation 
+  # in DESeq2 which may converge to the upper bound even though the obesrved variance is small.
+  # Avoid outlier handling and replace estimates by MAP which is more stable in these cases.
+  vecindDESeq2HighOutliesFailure <- !is.na(mcols(dds)$dispOutlier) & mcols(dds)$dispOutlier==TRUE & mcols(dds)$dispersion==20 
+  vecDispersionsInv[vecindDESeq2HighOutliesFailure] <- mcols(dds)$dispMAP[vecindDESeq2HighOutliesFailure]
+  print(paste0("Corrected ", sum(vecindDESeq2HighOutliesFailure),
+               " DESEq2 dispersion estimates which ",
+               "were at the upper variance boundary (alpha=20) and ",
+               "were labeled outlier and ",
+               "contained zero-count observations to their MAP ",
+               "to avoid variance overestimation and loss of discriminatory power for model selection."))
+  # DESeq2 uses alpha=1/phi as dispersion
+  vecDispersions <- 1/vecDispersionsInv
+  names(vecDispersions) <- rownames(dds)
+  #vecDispersions <- 1/dispersions(ddsDESeqObject)
+  #names(vecDispersions) <- rownames(ddsDESeqObject)
+  
+  return(vecDispersions)
 }

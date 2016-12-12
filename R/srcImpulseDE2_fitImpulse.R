@@ -589,7 +589,7 @@ fitConstImpulse <- function(matCountDataProcCondition,
 fitModels <- function(matCountDataProc, 
                       dfAnnotationProc, 
                       vecSizeFactors,
-                      lsvecDispersions,
+                      vecDispersions,
 											vecConfounders,
 											boolCaseCtrl){
   
@@ -637,7 +637,7 @@ fitModels <- function(matCountDataProc,
     lsFitResults <- fitConstImpulse(
       matCountDataProcCondition=matCountDataProc[,lsSamplesByCond[[label]]],
       vecSizeFactors=vecSizeFactors[lsSamplesByCond[[label]]],
-      vecDispersions=lsvecDispersions[[label]],
+      vecDispersions=vecDispersions,
       vecTimepoints=vecTimepoints[lsSamplesByCond[[label]]],
       lsvecBatches=lapply(lsvecBatches, function(confounder) confounder[lsSamplesByCond[[label]]] ),
       boolFitConst= !boolCaseCtrl | label=="combined" )
