@@ -209,12 +209,11 @@ runDESeq2 <- function(dfAnnotationProc,
   # Avoid outlier handling and replace estimates by MAP which is more stable in these cases.
   vecindDESeq2HighOutliesFailure <- !is.na(mcols(dds)$dispOutlier) & mcols(dds)$dispOutlier==TRUE & mcols(dds)$dispersion==20 
   vecDispersionsInv[vecindDESeq2HighOutliesFailure] <- mcols(dds)$dispMAP[vecindDESeq2HighOutliesFailure]
-  print(paste0("Corrected ", sum(vecindDESeq2HighOutliesFailure),
-               " DESEq2 dispersion estimates which ",
-               "were at the upper variance boundary (alpha=20) and ",
-               "were labeled outlier and ",
-               "contained zero-count observations to their MAP ",
-               "to avoid variance overestimation and loss of discriminatory power for model selection."))
+  if(sum(vecindDESeq2HighOutliesFailure)>0){
+  	print(paste0("Corrected ", sum(vecindDESeq2HighOutliesFailure),
+  							 " DESEq2 dispersion estimates which ",
+  							 "to avoid variance overestimation and loss of discriminatory power for model selection."))
+  }
   # DESeq2 uses alpha=1/phi as dispersion
   vecDispersions <- 1/vecDispersionsInv
   names(vecDispersions) <- rownames(dds)

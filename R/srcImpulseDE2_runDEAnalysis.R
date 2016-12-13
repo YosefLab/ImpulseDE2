@@ -95,9 +95,9 @@ runDEAnalysis <- function(matCountDataProc,
     	scaNBatchFactorsRed <- 0
     }
     # 6 impulse model parameters for each case and control, 
-    # 1 dispersion estimate for each case and control and 
+    # 1 dispersion estimate and 
     # 1 batch factor for each batch (except for the first one) for each confounder in each condition.
-    scaDegFreedomFull <- 6*2 + 1*2 + scaNBatchFactorsFull
+    scaDegFreedomFull <- 6*2 + 1 + scaNBatchFactorsFull
     # 6 impulse model parameters, 1 dispersion estimate and 
     # 1 batch factor for each batch (except for the first one) for each confounder.
     scaDegFreedomRed <- 6 + 1 + scaNBatchFactorsRed
