@@ -125,17 +125,17 @@ evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 #'    Count data of all conditions, unobserved entries are NA.
 #' @param dfAnnotation: (Table) [Default NULL] 
 #'    Lists co-variables of samples: 
-#'    Sample, Condition, Time (numeric), (and Timecourse).
-#' @param strCaseName: (str) [Default NULL] 
-#'    Name of the case condition in \code{dfAnnotation}.
-#' @param strControlName: (str) [Default NULL] 
-#'    Name of the control condition in \code{dfAnnotation}.
-#' @param strMode: (str) [Default "batch"] 
-#'    {"batch","longitudinal","singlecell"}
-#'    Mode of model fitting.
-#' @param nProc: (scalar) [Default 1] Number of processes for 
+#'    Sample, Condition, Time (numeric), (and Batch).
+#' @param boolCaseCtrl: (bool) 
+#' 		Whether to perform case-control analysis. Does case-only
+#' 		analysis if FALSE.
+#' @param vecConfounders: (vector of strings number of confounding variables)
+#' 		Factors to correct for during batch correction. Have to 
+#' 		supply dispersion factors if more than one is supplied.
+#' 		Names refer to columns in dfAnnotation.
+#' @param scaNProc: (scalar) [Default 1] Number of processes for 
 #'    parallelisation.
-#' @param Q_value: (scalar) [Default 0.01] 
+#' @param scaQThres: (scalar) [Default 0.01] 
 #'    FDR-corrected p-value cutoff for significance.
 #' @param vecDispersionsExternal: (vector length number of
 #'    genes in matCountData) [Default NULL]
@@ -145,53 +145,19 @@ evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
-#' @param matBatchFactorsExternal: (numeric matrix genes x cells) 
-#'    [Default NULL] USE WITH CARE. THIS IS NOT INTENDED FOR
-#'    PUBLIC USE BECAUSE THIS HEAVILY AFFECTS THE FITTING
-#'    STATISTICS. Externally generated list of translation factors 
-#'    which override translation factor computation in ImpulseDE2.
-#' @param boolRunDESeq2: (bool) [Default TRUE]
-#'    Whether to run DESeq2.
 #' @param boolPlotting: (bool) [TRUE] 
 #'    Whether to plot significant DE genes into output pdf.
 #'    Consider setting FALSE for large data sets with many hits.
 #' @param boolSimplePlot: (bool) [Default FALSE]
 #'    Whether to reduce plot to data points and impulse trace.
-#' @param boolLogPlot: (bool) [Default FALSE]
-#'    Whether to plot in counts in log space.
-#' @param strSCMode: (str) {"clustered", "continuous"}
-#'    Mode in which singlecell data are fit: as clusters of
-#'    cells to pseudotime centroids or in continuous pseudotime
-#'    coordinates.
-#' @param scaWindowRadius: (integer) 
-#'    Smoothing interval radius. Smoothing can only be done
-#'    in continuous mode strSCMode==continuous.
-#' @param lsPseudoDE: (list) [Defaul NULL]
-#'    Hyperparameters and metadata used in impulse fitting
-#'    to scRNAseq data.
-#' @param scaSmallRun: (integer) [Default NULL] Number of rows
-#'    on which ImpulseDE2 is supposed to be run, the full
-#'    data set is only used for size factor estimation.
-#' @param boolSaveTemp: (bool) [Defaul TRUE] Whether
-#'    temporary data are saved as .RData in the working directory.
+#' @param dirTemp: (dir) Directory to which temporary results are saved.
+#' 
 #' @return (list length 4)
 #' \itemize{
 #'    \item vecDEGenes: (list number of genes) Genes IDs identified
 #'        as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
 #'    \item dfImpulseResults: (data frame) ImpulseDE2 results.
-#'    \item lsImpulseFits: (list) List of matrices which
-#'        contain parameter fits and model values for given time course for the
-#'        case condition (and control and combined if control is present).
-#'        Each parameter matrix is called parameter_'condition' and has the form
-#'        (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
-#'        converge_H0]) where beta to t2 are parameters of the impulse
-#'        model, mu is the single parameter of the mean model, logL are
-#'        log likelihoods of full (H1) and reduced model (H0) respectively, converge
-#'        is convergence status of numerical optimisation of model fitting by
-#'        \code{optim} from \code{stats} of either model. Each value matrix is called
-#'        value_'condition' and has the form (genes x time points) and contains the
-#'        counts predicted by the impulse model at the observed time points.
-#'    \item dfDESeq2Results: (data frame) DESeq2 results. NULL if DESeq2 is not run.
+#'    \item lsModelFits: (list) Model fits by condition-gene-model-parameters
 #' }
 #' Additionally, \code{ImpulseDE2} saves the following objects and tables into
 #' the working directory:
@@ -199,17 +165,12 @@ evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 #'    \item \code{ImpulseDE2_matCountDataProc.RData} (2D array genes x replicates) 
 #'        Count data: Reduced version of \code{matCountData}. For internal use.
 #'    \item \code{ImpulseDE2_dfAnnotationProc.RData} (data frame) Annotation table.
-#'    \item \code{ImpulseDE2_matSizeFactors.RData} (numeric matrix genes x samples) 
+#'    \item \code{ImpulseDE2_vecSizeFactors.RData} (numeric vector number of samples) 
 #'        Model scaling factors for each observation which take
 #'        sequencing depth into account (size factors). One size
-#'        factor per sample - rows of this matrix are equal.
-#'    \item \code{ImpulseDE2_matBatchFactors.RData} 
-#'        (numeric matrix genes x samples) Model scaling factors for each observation 
-#'        which take longitudinal time series mean within a gene into account 
-#'        (translation factors). Computed based based on all samples.
+#'        factor per sample.
 #'    \item \code{ImpulseDE2_vecDispersions.RData} (vector number of genes) Inverse 
 #'        of gene-wise negative binomial dispersion coefficients computed by DESeq2.
-#'    \item \code{ImpulseDE2_dfDESeq2Results.RData} (data frame) DESeq2 results.
 #'    \item \code{ImpulseDE2_lsImpulseFits.RData} (list) List of matrices which
 #'        contain parameter fits and model values for given time course for the
 #'        case condition (and control and combined if control is present).
@@ -222,12 +183,9 @@ evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 #'        \code{optim} from \code{stats} of either model. Each value matrix is called
 #'        value_'condition' and has the form (genes x time points) and contains the
 #'        counts predicted by the impulse model at the observed time points.
-#'    \item \code{ImpulseDE2_dfImpulseResults.RData} (data frame) ImpulseDE2 results.
+#'    \item \code{ImpulseDE2_dfImpulseDE2Results.RData} (data frame) ImpulseDE2 results.
 #'    \item \code{ImpulseDE2_vecDEGenes.RData} (list number of genes) Genes IDs identified
-#'        as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
-#'    \item \code{ImpulseDE2_ClusterOut.txt} Text-file with stdout and stderr from
-#'        cluster created in \code{fitImpulse}.
-#' }
+#'        as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.#' }
 #' 
 #' @seealso Calls the following functions:
 #' \code{\link{processData}}, \code{\link{runDESeq2}},
