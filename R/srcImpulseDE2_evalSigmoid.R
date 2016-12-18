@@ -2,22 +2,21 @@
 #+++++++++++++++++++     Impulse model value prediction    ++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Compute value of impulse function given parameters.
+#' Compute value of sigmoid function given parameters.
 #' 
-#' Amplitude parameters are assumed to be in log space.
+#' Compute value of sigmoid function given parameters.
 #' 
-#' @aliases calcImpulse_comp
+#' @aliases evalSigmoid_comp
 #' 
-#' @seealso Called by \code{evalLogLikImpulse},\code{evalLogLikMean}, 
-#'    \code{plotDEGenes}.
+#' @seealso 
 #' 
-#' @param vecSigmoidParam (vector number of impulse model parameters)
-#'  { beta, h0, h1, h2, t1, t2 }
+#' @param vecSigmoidParam (numeric vector number of sigmoid model parameters)
+#'  { beta, h0, h1, t1 }
 #'  Vector of impulse parameters.
-#' @param vecTimepoints (vector number vecTimepoints) 
-#'    Observed vecTimepoints, numeric.
+#' @param vecTimepoints (numeric vector number vecTimepoints) 
+#'    Time points to be evaluated.
 #' 
-#' @return vecImpulseValue (vec number of vecTimepoints) 
+#' @return vecSigmoidValue (numeric vector length of vecTimepoints) 
 #'    Model expression values of given gene for time points
 #' @export
 
@@ -29,16 +28,13 @@ evalSigmoid <- function(vecSigmoidParam,
   # h1 is vecSigmoidParam[3]
   # t1 is vecSigmoidParam[4]
   
-  vecImpulseValue <- sapply(vecTimepoints, function(t){
-    (1/vecSigmoidParam[3]) * 
-      (vecSigmoidParam[2] + (vecSigmoidParam[3]-vecSigmoidParam[2])*
-         (1/(1+exp(-vecSigmoidParam[1]*(t-vecSigmoidParam[5]))))) *
-      (vecSigmoidParam[4] + (vecSigmoidParam[3]-vecSigmoidParam[4])*
-         (1/(1+exp(vecSigmoidParam[1]*(t-vecSigmoidParam[6])))))
+  vecSigmoidValue <- sapply(vecTimepoints, function(t){
+    vecSigmoidParam[2] + (vecSigmoidParam[3]-vecSigmoidParam[2])*
+      (1/(1+exp(-vecSigmoidParam[1]*(t-vecSigmoidParam[4]))))
   })
   
   # Catch lower bound on mu space
-  vecImpulseValue[vecImpulseValue < 10^(-10)] <- 10^(-10)
+  vecSigmoidValue[vecSigmoidValue < 10^(-10)] <- 10^(-10)
   
-  return(vecImpulseValue)
+  return(vecSigmoidValue)
 }

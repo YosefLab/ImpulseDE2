@@ -101,7 +101,6 @@ computeNormConst <- function(matCountDataProc,
     vecSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc)
   } else {
     # Chose externally supplied size factors if supplied.
-    print("Using externally supplied size factors.")
     vecSizeFactors <- vecSizeFactorsExternal[colnames(matCountDataProc)]
   }
   

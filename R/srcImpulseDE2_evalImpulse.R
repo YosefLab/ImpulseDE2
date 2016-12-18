@@ -4,7 +4,7 @@
 
 #' Compute value of impulse function given parameters.
 #' 
-#' Amplitude parameters are assumed to be in log space.
+#' Compute value of impulse function given parameters.
 #' 
 #' @aliases evalImpulse_comp
 #' 
@@ -14,8 +14,8 @@
 #' @param vecImpulseParam (vector number of impulse model parameters)
 #'  { beta, h0, h1, h2, t1, t2 }
 #'  Vector of impulse parameters.
-#' @param vecTimepoints (vector number vecTimepoints) 
-#'    Observed vecTimepoints, numeric.
+#' @param vecTimepoints (numeric vector length of vecTimepoints) 
+#'    Model expression values of given gene for time points
 #' 
 #' @return vecImpulseValue (vec number of vecTimepoints) 
 #'    Model expression values of given gene for time points

@@ -154,24 +154,23 @@ evalLogLikImpulse <- function(vecTheta,
   return(scaLogLik)
 }
 
-#' Cost function impulse model fit - Batch mode
+#' Cost function sigmoid model fit
 #' 
 #' Log likelihood cost function for impulse model fit based on negative 
-#' binomial model. This cost function is called in the modes
-#' "batch" and "longitudinal".
+#' binomial model.
 #' In analogy to generalised linear models, a log linker
 #' function is used for the count parameters. The inferred negative
 #' binomial model is scaled by the factors in vecSizeFactors,
 #' which represent size factors (and translation factors),
 #' for evaluation of the likelihood on the data.
 #' 
-#' @aliases evalLogLikImpulseBatch_comp
+#' @aliases evalLogLikSigmoid_comp
 #' 
 #' @seealso Called by \code{fitImpulse}:\code{fitImpulse_gene}.
 #' Calls \code{evalImpulse}. \code{evalLogLikImpulseByTC} for
 #' dependent residuals (i.e. time course experiments)
 #' 
-#' @param vecTheta (vector number of parameters [6]) 
+#' @param vecTheta (vector number of parameters [4]) 
 #'    Impulse model parameters.
 #' @param vecX (numeric vector number of timepoints) 
 #'    Time-points at which gene was sampled.
@@ -201,7 +200,7 @@ evalLogLikSigmoid <- function(vecTheta,
   # Compute normalised impulse function value:
   vecSigmoidParam <- vecTheta[1:4]
   vecSigmoidParam[2:3] <- exp(vecSigmoidParam[2:3])
-  vecSigmoidValue <- evalImpulse_comp(vecSigmoidParam=vecSigmoidParam,
+  vecSigmoidValue <- evalSigmoid_comp(vecSigmoidParam=vecSigmoidParam,
                                       vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
   scaNParamUsed <- 4
   

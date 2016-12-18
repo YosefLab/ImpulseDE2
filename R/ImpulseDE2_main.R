@@ -22,10 +22,12 @@ library(circlize)
 setwd("/home/david/gitDevelopment/ImpulseDE2/R")
 
 source("srcImpulseDE2_evalImpulse.R")
+source("srcImpulseDE2_evalSigmoid.R")
 source("srcImpulseDE2_compareDEMethods.R")
 source("srcImpulseDE2_computeNormConst.R")
 source("srcImpulseDE2_CostFunctionsFit.R")
 source("srcImpulseDE2_fitImpulse.R")
+source("srcImpulseDE2_fitSigmoid.R")
 source("srcImpulseDE2_plotDEGenes.R")
 source("srcImpulseDE2_processData.R")
 source("srcImpulseDE2_runDEAnalysis.R")
@@ -34,8 +36,10 @@ source("srcImpulseDE2_simulateDataSet.R")
 
 # Compile function
 evalImpulse_comp <- cmpfun(evalImpulse)
+evalSigmoid_comp <- cmpfun(evalSigmoid)
 evalLogLikMu_comp <- cmpfun(evalLogLikMu)
 evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
+evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 
 ################################################################################
 ### Main function
@@ -206,6 +210,7 @@ runImpulseDE2 <- function(matCountData=NULL,
   scaQThres=0.01,
   vecDispersionsExternal=NULL,
   vecSizeFactorsExternal=NULL,
+  boolIdentifyTransients=FALSE,
   boolPlotting=FALSE,
   boolSimplePlot=FALSE,
   dirTemp=NULL ){
@@ -214,7 +219,7 @@ runImpulseDE2 <- function(matCountData=NULL,
   
   tm_runImpulseDE2 <- system.time({    
     # 1. Process input data 
-    print("1. Process input")
+    print("# Process input")
     lsProcessedData <- processData(
       dfAnnotation=dfAnnotation,
       matCountData=matCountData,
@@ -239,7 +244,7 @@ runImpulseDE2 <- function(matCountData=NULL,
     # 2. Run DESeq2
     # Use dispersion factors from DESeq2 if
     if(is.null(vecDispersionsExternal)){
-      print("2. Run DESeq2: Using dispersion factors computed by DESeq2.")
+      print("# Run DESeq2: Using dispersion factors computed by DESeq2.")
       tm_runDESeq2 <- system.time({
         vecDispersions <- runDESeq2(
           dfAnnotationProc=dfAnnotationProc,
@@ -250,7 +255,7 @@ runImpulseDE2 <- function(matCountData=NULL,
       print(paste0("Consumed time: ",round(tm_runDESeq2["elapsed"]/60,2), " min."))
     } else {
       # Use externally provided dispersions and reorder
-      print("2. Using externally supplied dispersion factors.")
+      print("# Using externally supplied dispersion factors.")
       vecDispersions <- vecDispersionsExternal
     }
     if(!is.null(dirTemp)){
@@ -258,7 +263,7 @@ runImpulseDE2 <- function(matCountData=NULL,
     }
     
     # 3. Compute size factors
-    print("3. Compute size factors")
+    print("# Compute size factors")
     vecSizeFactors <- computeNormConst(
     	matCountDataProc=matCountDataProc,
       vecSizeFactorsExternal=vecSizeFactorsExternalProc )
@@ -267,7 +272,7 @@ runImpulseDE2 <- function(matCountData=NULL,
     }
     
     ###  4. Fit null and alternative model to each gene
-    print("4. Fitting null and alternative model to the genes")
+    print("# Fitting null and alternative model to the genes")
     tm_fitImpulse <- system.time({
       lsModelFits <- fitModels(
         matCountDataProc=matCountDataProc, 
@@ -282,14 +287,34 @@ runImpulseDE2 <- function(matCountData=NULL,
     }
     print(paste0("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2)," min."))
     
-    ### 5. Differentially expression analysis based on model fits
-    print("5. Differentially expression analysis based on model fits")
+    ###  5. Fit sigmoid model to case condition if desired
+    if(boolIdentifyTransients){
+      print("# Fitting sigmoid model to case condition")
+      tm_fitSigmoid <- system.time({
+        lsModelFits <- fitSigmoidModels(
+          matCountDataProc=matCountDataProc,
+          lsModelFits=lsModelFits,
+          vecDispersions=vecDispersions,
+          vecSizeFactors=vecSizeFactors,
+          dfAnnotationProc=dfAnnotationProc,
+          vecConfounders=vecConfounders,
+          strCondition="case")
+      })
+      if(!is.null(dirTemp)){
+        save(lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
+      }
+      print(paste0("Consumed time: ",round(tm_fitSigmoid["elapsed"]/60,2)," min."))
+    }
+    
+    ### 6. Differentially expression analysis based on model fits
+    print("# Differentially expression analysis based on model fits")
     dfImpulseDE2Results <- runDEAnalysis(
       matCountDataProc=matCountDataProc,
       dfAnnotationProc=dfAnnotationProc,
       lsModelFits=lsModelFits,
       boolCaseCtrl=boolCaseCtrl,
-      vecConfounders=vecConfounders)
+      vecConfounders=vecConfounders,
+      boolIdentifyTransients=boolIdentifyTransients)
     
     if(!is.null(scaQThres)){
       vecDEGenes <- as.vector( 
@@ -306,9 +331,9 @@ runImpulseDE2 <- function(matCountData=NULL,
       }
     }
     
-    ### 6. Plot differentially expressed genes
+    ### 7. Plot differentially expressed genes
     if(boolPlotting){
-      print("6. Plot differentially expressed genes")
+      print("# Plot differentially expressed genes")
       if(length(vecDEGenes) > 500){vecDEGenesPlot <- vecDEGenes[1:500]
       } else {vecDEGenesPlot <- vecDEGenes}
       tm_plotDEGenes <- system.time({

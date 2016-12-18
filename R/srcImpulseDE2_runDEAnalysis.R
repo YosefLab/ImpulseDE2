@@ -46,7 +46,8 @@ runDEAnalysis <- function(matCountDataProc,
                         dfAnnotationProc, 
                         lsModelFits,
 												boolCaseCtrl,
-												vecConfounders){
+												vecConfounders,
+												boolIdentifyTransients){
   
   if(!boolCaseCtrl){
     # Case-only:
@@ -145,6 +146,42 @@ runDEAnalysis <- function(matCountDataProc,
       converge_case=vecConvergenceImpulseCase,
       converge_control=vecConvergenceImpulseControl,
       stringsAsFactors = FALSE)
+  }
+  
+  # Add entries if sigmoidal fit was performed and transient tranjectories
+  # are to be differentiated from monotonous ones. Do this in case condition.
+  if(boolIdentifyTransients){
+    # Take the sigmoid model as reference if transient are tested versus montonous model
+    vecLogLikImpulse <- sapply(lsModelFits$case, function(fit) fit$lsImpulseFit$scaLL )
+    vecLogLikSigmoid <- sapply(lsModelFits$case, function(fit) fit$lsSigmoidFit$scaLL )
+    vecLogLikConst <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaLL )
+    scaDegFreedomImpulse <- 6 + 1 + scaNBatchFactors
+    scaDegFreedomSigmoid <- 4 + 1 + scaNBatchFactors
+    scaDegFreedomConst <- 1 + 1 + scaNBatchFactors
+    
+    # Compare impulse to sigmoid: Trajectory is transient if this is significant
+    vecDevianceImpulseSigmoid <- 2*(vecLogLikImpulse - vecLogLikSigmoid)
+    vecPvalueImpulseSigmoid <- pchisq(vecDevianceImpulseSigmoid,
+                        df=scaDegFreedomImpulse-scaDegFreedomSigmoid,
+                        lower.tail=FALSE)
+    vecPvalueImpulseSigmoidBH = p.adjust(vecPvalueImpulseSigmoid, method = "BH")
+    
+    # Compare sigmoid to constant: Trajectory is constant if this is not significant
+    # Trajectory is montonous if this is significant but vecPvalueImpulseSigmoidBH is not
+    vecDevianceSigmoidConst <- 2*(vecLogLikSigmoid - vecLogLikConst)
+    vecPvalueSigmoidConst <- pchisq(vecDevianceSigmoidConst,
+                                      df=scaDegFreedomSigmoid-scaDegFreedomConst,
+                                      lower.tail=FALSE)
+    vecPvalueSigmoidConstBH = p.adjust(vecPvalueSigmoidConst, method = "BH")
+    
+    # Add entries into DE table
+    dfDEAnalysis$impulseTOsigmoid_p <- as.numeric(vecPvalueImpulseSigmoid)
+    dfDEAnalysis$impulseTOsigmoid_padj <- as.numeric(vecPvalueImpulseSigmoidBH)
+    dfDEAnalysis$sigmoidTOconst_p <- as.numeric(vecPvalueSigmoidConst)
+    dfDEAnalysis$sigmoidTOconst_padj <- as.numeric(vecPvalueSigmoidConstBH)
+    dfDEAnalysis$isTransient <- vecPvalueImpulseSigmoidBH <= 0.01
+    dfDEAnalysis$isMonotonous <- (vecPvalueSigmoidConst <= 0.01) &
+      (vecPvalueImpulseSigmoidBH > 0.01)
   }
   
   return(dfDEAnalysis)

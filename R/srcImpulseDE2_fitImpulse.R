@@ -70,8 +70,10 @@ estimateImpulseParam <- function(vecCounts,
   indUpperInflexionPoint <- indMaxMiddleMean - 1 + match(
     min(vecGradients[indMaxMiddleMean:length(vecGradients)], na.rm=TRUE), 
     vecGradients[indMaxMiddleMean:length(vecGradients)])
-  vecParamGuessPeak <- c(1,log(vecExpressionMeans[1]+1),
-                         log(scaMaxMiddleMean+1),log(vecExpressionMeans[scaNTimepoints]+1),
+  vecParamGuessPeak <- c(1,
+                         log(vecExpressionMeans[1]+1),
+                         log(scaMaxMiddleMean+1),
+                         log(vecExpressionMeans[scaNTimepoints]+1),
                          (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
                          (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2)
   
