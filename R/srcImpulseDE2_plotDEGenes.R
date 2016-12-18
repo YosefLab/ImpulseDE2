@@ -238,7 +238,7 @@ plotDEGenes <- function(vecGeneIDs,
           # Bulk: Plot inferred negative binomial pdf at each time point in black (vertical)
           vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
           # Mean parameter of negative binomial is value of inferred impulse model
-          vecCaseValueAtTP <- calcImpulse_comp(vecImpulseParamCaseLog,vecTimepoints)
+          vecCaseValueAtTP <- evalImpulse_comp(vecImpulseParamCaseLog,vecTimepoints)
           for(tp in vecTimepoints){
             vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
                                     size=as.numeric(as.vector(dfImpulseDE2Results[geneID,]$size)) )

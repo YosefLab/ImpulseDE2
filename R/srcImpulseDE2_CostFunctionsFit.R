@@ -74,21 +74,20 @@ evalLogLikMu <- function(vecTheta,
   return(scaLogLik)
 }
 
-#' Cost function impulse model fit - Batch mode
+#' Cost function impulse model fit
 #' 
 #' Log likelihood cost function for impulse model fit based on negative 
-#' binomial model. This cost function is called in the modes
-#' "batch" and "longitudinal".
+#' binomial model.
 #' In analogy to generalised linear models, a log linker
 #' function is used for the count parameters. The inferred negative
 #' binomial model is scaled by the factors in vecSizeFactors,
 #' which represent size factors (and translation factors),
 #' for evaluation of the likelihood on the data.
 #' 
-#' @aliases evalLogLikImpulseBatch_comp
+#' @aliases evalLogLikImpulse_comp
 #' 
 #' @seealso Called by \code{fitImpulse}:\code{fitImpulse_gene}.
-#' Calls \code{calcImpulse}. \code{evalLogLikImpulseByTC} for
+#' Calls \code{evalImpulse}. \code{evalLogLikImpulseByTC} for
 #' dependent residuals (i.e. time course experiments)
 #' 
 #' @param vecTheta (vector number of parameters [6]) 
@@ -121,7 +120,7 @@ evalLogLikImpulse <- function(vecTheta,
   # Compute normalised impulse function value:
   vecImpulseParam <- vecTheta[1:6]
   vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
-  vecImpulseValue <- calcImpulse_comp(vecImpulseParam=vecImpulseParam,
+  vecImpulseValue <- evalImpulse_comp(vecImpulseParam=vecImpulseParam,
                                       vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
   scaNParamUsed <- 6
   
@@ -150,6 +149,87 @@ evalLogLikImpulse <- function(vecTheta,
   		vecSizeFactors[vecboolObserved], 
   	size=scaDisp, 
   	log=TRUE))
+  
+  # Maximise log likelihood: Return likelihood as value to optimisation routine
+  return(scaLogLik)
+}
+
+#' Cost function impulse model fit - Batch mode
+#' 
+#' Log likelihood cost function for impulse model fit based on negative 
+#' binomial model. This cost function is called in the modes
+#' "batch" and "longitudinal".
+#' In analogy to generalised linear models, a log linker
+#' function is used for the count parameters. The inferred negative
+#' binomial model is scaled by the factors in vecSizeFactors,
+#' which represent size factors (and translation factors),
+#' for evaluation of the likelihood on the data.
+#' 
+#' @aliases evalLogLikImpulseBatch_comp
+#' 
+#' @seealso Called by \code{fitImpulse}:\code{fitImpulse_gene}.
+#' Calls \code{evalImpulse}. \code{evalLogLikImpulseByTC} for
+#' dependent residuals (i.e. time course experiments)
+#' 
+#' @param vecTheta (vector number of parameters [6]) 
+#'    Impulse model parameters.
+#' @param vecX (numeric vector number of timepoints) 
+#'    Time-points at which gene was sampled.
+#' @param vecY (count vector samples) 
+#'    Observed expression values for given gene.
+#' @param scaDispEst: (scalar) Dispersion estimate for given gene.
+#' @param vecSizeFactors: (numeric vector number of samples) 
+#'    Normalisation constants for each sample.
+#' @param vecindTimepoint (numeric vector number samples) 
+#'    Index of time point assigned to sample in list of sorted
+#'    time points (vecX).
+#' @param vecboolObserved: (bool vector number of samples)
+#'    Stores bool of sample being not NA (observed).
+#'     
+#' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
+#' @export
+
+evalLogLikSigmoid <- function(vecTheta,
+                              vecCounts,
+                              scaDisp, 
+                              vecSizeFactors,
+                              vecTimepointsUnique,
+                              vecindTimepoint,
+                              lsvecindBatch,
+                              vecboolObserved){
+  
+  # Compute normalised impulse function value:
+  vecSigmoidParam <- vecTheta[1:4]
+  vecSigmoidParam[2:3] <- exp(vecSigmoidParam[2:3])
+  vecSigmoidValue <- evalImpulse_comp(vecSigmoidParam=vecSigmoidParam,
+                                      vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
+  scaNParamUsed <- 4
+  
+  vecBatchFactors <- array(1, length(vecCounts))
+  if(!is.null(lsvecindBatch)){
+    for(vecindConfounder in lsvecindBatch){
+      scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
+      # Factor of first batch is one (constant), the remaining
+      # factors scale based on the first batch.
+      vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecindConfounder]
+      scaNParamUsed <- scaNParamUsed+scaNBatchFactors
+      # Prevent batch factor shrinkage and explosion:
+      vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
+      vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
+      
+      vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder
+    }
+  }
+  
+  # Compute log likelihood under impulse model by
+  # adding log likelihood of model at each timepoint.
+  scaLogLik <- sum(dnbinom(
+    vecCounts[vecboolObserved], 
+    mu=vecSigmoidValue[vecboolObserved]* 
+      vecBatchFactors[vecboolObserved]*
+      vecSizeFactors[vecboolObserved], 
+    size=scaDisp, 
+    log=TRUE))
   
   # Maximise log likelihood: Return likelihood as value to optimisation routine
   return(scaLogLik)

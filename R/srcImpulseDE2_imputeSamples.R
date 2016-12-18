@@ -265,7 +265,7 @@ plotImputedGenes <- function(vecGeneIDs,
     # Convert h0,h1,h2 to log space again
     vecImpulseParamCaseLog <- lsImpulseFits$parameters_case[geneID,1:6]
     vecImpulseParamCaseLog[c("h0","h1","h2")] <- log( vecImpulseParamCaseLog[c("h0","h1","h2")] )
-    vecCaseValues <- calcImpulse_comp(vecImpulseParamCaseLog,vecX)
+    vecCaseValues <- evalImpulse_comp(vecImpulseParamCaseLog,vecX)
     
     # Plot points, impulse trace and
     # batch: inferred negative binomials

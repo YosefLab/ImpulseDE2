@@ -294,7 +294,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   vecImpulseParam <- lsFit$par[1:6]
   vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
   names(vecImpulseParam) <- c("beta", "h0", "h1", "h2", "t1", "t2")
-  vecImpulseValue <- calcImpulse_comp(vecImpulseParam=vecImpulseParam,
+  vecImpulseValue <- evalImpulse_comp(vecImpulseParam=vecImpulseParam,
                                       vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
   names(vecImpulseValue) <- names(vecCounts)
   scaNParamUsed <- 6

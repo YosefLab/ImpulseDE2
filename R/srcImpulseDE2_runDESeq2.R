@@ -207,7 +207,9 @@ runDESeq2 <- function(dfAnnotationProc,
   # which contain zero measurements: The zeros throw off the dispersion estimation 
   # in DESeq2 which may converge to the upper bound even though the obesrved variance is small.
   # Avoid outlier handling and replace estimates by MAP which is more stable in these cases.
-  vecindDESeq2HighOutliesFailure <- !is.na(mcols(dds)$dispOutlier) & mcols(dds)$dispOutlier==TRUE & mcols(dds)$dispersion==20 
+  # Note: the upper bound 20 is not exactly reached - there is numeric uncertainty here - use > rather than ==
+  vecindDESeq2HighOutliesFailure <- !is.na(mcols(dds)$dispOutlier) & mcols(dds)$dispOutlier==TRUE &
+    mcols(dds)$dispersion>(20-10^(-5)) & apply(matCountDataProc, 1, function(gene) any(gene==0) )
   vecDispersionsInv[vecindDESeq2HighOutliesFailure] <- mcols(dds)$dispMAP[vecindDESeq2HighOutliesFailure]
   if(sum(vecindDESeq2HighOutliesFailure)>0){
   	print(paste0("Corrected ", sum(vecindDESeq2HighOutliesFailure),

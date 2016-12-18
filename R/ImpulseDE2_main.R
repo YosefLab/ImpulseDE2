@@ -13,13 +13,15 @@ library(compiler)
 library(DESeq2)
 library(BiocParallel)
 library(Matrix)
+library(ComplexHeatmap)
+library(circlize)
 
 # Source functions in .R files from same directory as this function.
 #setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
 setwd("/home/david/gitDevelopment/ImpulseDE2/R")
 
-source("srcImpulseDE2_calcImpulse.R")
+source("srcImpulseDE2_evalImpulse.R")
 source("srcImpulseDE2_compareDEMethods.R")
 source("srcImpulseDE2_computeNormConst.R")
 source("srcImpulseDE2_CostFunctionsFit.R")
@@ -31,7 +33,7 @@ source("srcImpulseDE2_runDESeq2.R")
 source("srcImpulseDE2_simulateDataSet.R")
 
 # Compile function
-calcImpulse_comp <- cmpfun(calcImpulse)
+evalImpulse_comp <- cmpfun(evalImpulse)
 evalLogLikMu_comp <- cmpfun(evalLogLikMu)
 evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 
