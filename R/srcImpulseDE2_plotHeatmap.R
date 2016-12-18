@@ -8,24 +8,26 @@ plotHeatmap <- function(matCountDataProc,
                         vecSizeFactors=NULL,
                         scaQThres=0.001){
   
-  scaNTPtoEvaluate <- 100 # Number of time points to evalute for each model
+  scaMinNTPtoEvaluate <- 100 # Number of time points to evalute for each model
   scaNGenes <- dim(matCountDataProc)[1]
   # Order genes by time of extremum (peak/valley)
   vecSignificantIDs <- rownames(dfImpulseDE2Results[dfImpulseDE2Results$padj<scaQThres,])
-  vecTimePointsToEval <- seq(min(dfAnnotationProc$Time), max(dfAnnotationProc$Time), length.out=scaNTPtoEvaluate)
+  #vecTimePointsToEval <- seq(min(dfAnnotationProc$Time), max(dfAnnotationProc$Time), length.out=scaMinNTPtoEvaluate)
+  vecTimePointsToEval <- sort(unique(dfAnnotationProc$Time), decreasing=FALSE)
+  scaNTPtoEvaluate <- length(vecTimePointsToEval)
   matImpulseValue <- do.call(rbind, lapply(vecSignificantIDs, function(x){
     evalImpulse_comp(vecImpulseParam=lsModelFits[[strCondition]][[x]]$lsImpulseFit$vecImpulseParam,
                                       vecTimepoints=vecTimePointsToEval)
   }))
   rownames(matImpulseValue) <- vecSignificantIDs
-  vecMaxTime <- apply(matImpulseValue, 1, function(genevalues){
-    idxPeakTime <- sort(genevalues, decreasing=TRUE, index.return=TRUE)$ix[1]
-    return(vecTimePointsToEval[idxPeakTime])
-  })
-  vecMinTime <- apply(matImpulseValue, 1, function(genevalues){
-    idxPeakTime <- sort(genevalues, decreasing=FALSE, index.return=TRUE)$ix[1]
-    return(vecTimePointsToEval[idxPeakTime])
-  })
+  matidxMaxTimeSort <-t(apply(matImpulseValue, 1, function(genevalues){
+    sort(genevalues, decreasing=TRUE, index.return=TRUE)$ix
+  }))
+  vecMaxTime <- vecTimePointsToEval[matidxMaxTimeSort[,1]]
+  matidxMinTimeSort <- t(apply(matImpulseValue, 1, function(genevalues){
+    sort(genevalues, decreasing=FALSE, index.return=TRUE)$ix
+  }))
+  vecMinTime <- vecTimePointsToEval[matidxMinTimeSort[,1]]
   
   if(boolIdentifyTransients){
     vecboolValleyUnSig <- apply(matImpulseValue, 1, function(genevalues){
@@ -38,9 +40,11 @@ plotHeatmap <- function(matCountDataProc,
     vecboolPeak <- !vecboolValley
     
     vecidxPeak <- which(vecboolPeak)
-    vecidxPeakSort <- vecidxPeak[sort(vecMaxTime[vecidxPeak], decreasing=FALSE, index.return=TRUE)$ix]
+    vecidxPeakSort <- vecidxPeak[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxPeak,1]))]
+    #vecidxPeakSort <- vecidxPeak[sort(vecMaxTime[vecidxPeak], decreasing=FALSE, index.return=TRUE)$ix]
     vecidxValley <- which(vecboolValley)
-    vecidxValleySort <- vecidxValley[sort(vecMinTime[vecidxValley], decreasing=FALSE, index.return=TRUE)$ix]
+    vecidxValleySort <- vecidxValley[do.call(order, as.data.frame(matidxMinTimeSort[vecidxValley,1]))]
+    #vecidxValleySort <- vecidxValley[sort(vecMinTime[vecidxValley], decreasing=FALSE, index.return=TRUE)$ix]
     
     vecidxAllSort <- c(vecidxPeakSort, vecidxValleySort)
     
@@ -89,8 +93,7 @@ plotHeatmap <- function(matCountDataProc,
   draw(complexHeatmapRaw)
   
   # 2. Plot fitted data
-  vecidxTPMatch <- sapply(vecUniqueTP, function(tp) which.min(abs(vecTimePointsToEval-tp)) )
-  matDataHeat <- matImpulseValue[,vecidxTPMatch]
+  matDataHeat <- matImpulseValue
   colnames(matDataHeat) <- vecUniqueTP
   rownames(matDataHeat) <- NULL
   matDataHeat <- matDataHeat[apply(matDataHeat, 1, function(gene) any(gene>0) ),]
@@ -100,8 +103,8 @@ plotHeatmap <- function(matCountDataProc,
   }))
   
   # Create heatmap of raw data, ordered by fits
-  complexHeatmapFit <- Heatmap(matDataHeatZ,
-                               row_order                = vecidxAllSort,
+  complexHeatmapFit <- Heatmap(matDataHeatZ[vecidxAllSort,],
+                               #row_order                = vecidxAllSort,
                                split                    = vecTrajectoryType,
                                #km                       = 6, # Number of k-means clusters
                                cluster_rows             = FALSE, #hclustObject,
