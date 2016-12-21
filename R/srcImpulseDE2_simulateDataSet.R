@@ -52,14 +52,16 @@
 #'    [Default NULL]
 #'    Size factors for data set. Size factors are set to 1 if this is
 #'    not specified (NULL).
-#' @param dirOutSimulation: (str directory)
+#' @param dirOutSimulation: (directory)
 #'    Directory to which simulated parameter objects are 
 #'    saved to.
 #' 
 #' @return list: (length 2)
 #' \itemize{
-#'    \item vecPT: (numerical vector length number of cells)
-#'    Pseudotime coordinates (1D) of cells: One scalar per cell.
+#'    \item dfAnnotation: (data frame samples x covariates) 
+#'    {Sample, Condition, Time (numeric), TimeCateg (str)
+#'    (and confounding variables if given).}
+#'    Annotation table with covariates for each sample.
 #'    \item matSampledCountsObserved: (matrix genes x cells)
 #'    Sampled count data of all cells after drop-out.
 #' }
@@ -67,7 +69,6 @@
 #' @author David Sebastian Fischer
 #' 
 #' @export
-
 simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   vecTimePointsB,
   vecBatchesA,
@@ -420,6 +421,6 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   save(matObservedData,file=file.path(dirOutSimulation,"Simulation_matObservedData.RData"))
   save(matObservedCounts,file=file.path(dirOutSimulation,"Simulation_matObservedCounts.RData"))
   
-  return(list( dfAnnotation=dfAnnotation,
-    matObservedCounts=matObservedCounts ))
+  return(list( dfAnnotation      = dfAnnotation,
+               matObservedCounts = matObservedCounts ))
 }

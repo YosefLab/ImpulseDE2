@@ -1,34 +1,49 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++     Annotation preparation    +++++++++++++++++++++++++#
+#++++++++++++++++++++++     Check and process input    ++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Process annotation and count data
+#' Check and process input to runImpulseDE2()
 #' 
 #' Check validity of input and process count data matrix and annotation
 #' into data structures used later in \code{runImpulseDE2}.
 #' \code{processData} is structure in the following way:
-#' (I) Subhelper functions:
-#'    checkNull() Check whether object was supplied (is not NULL).
-#'    checkDimMatch() Checks whether dimensions of matrices agree.
-#'    checkElementMatch() Checks whether vectors are identical.
-#'    checkNumeric() Checks whether elements are numeric.
-#'    checkProbability() Checks whether elements are probabilities.
-#'    checkCounts() Checks whether elements are count data.
-#' (II) Helper functions:
-#'    checkData() Check format and presence of input data.
-#'    nameGenes() Name genes if names are not given.
-#'    procAnnotation() Add categorial time variable to annotation table.
-#'    reduceCountData() Reduce count data to data which are utilised later.
-#' (III) Script body
+#' \itemize{
+#'    \item Subhelper functions:
+#'    \itemize{
+#'      \item checkNull() Check whether object was supplied (is not NULL).
+#'      \item checkDimMatch() Checks whether dimensions of matrices agree.
+#'      \item checkElementMatch() Checks whether vectors are identical.
+#'      \item checkNumeric() Checks whether elements are numeric.
+#'      \item checkProbability() Checks whether elements are probabilities.
+#'      \item checkCounts() Checks whether elements are count data.
+#'    }
+#'    \item Helper functions:
+#'    \itemize{
+#'      \item checkData() Check format and presence of input data.
+#'      \item nameGenes() Name genes if names are not given.
+#'      \item procAnnotation() Add categorial time variable to annotation table.
+#'      Add nested batch column if necessary.
+#'      Reduce to samples used.
+#'      \item reduceCountData() Reduce count data to data which are utilised later.
+#'    }
+#'    \item Script body
+#' }
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
 #' @param matCountData: (matrix genes x samples) [Default NULL] 
-#'    Count data of all conditions, unobserved entries are NA. 
-#' @param dfAnnotation: (Table) [Default NULL] 
-#'    Annotation table. Lists co-variables of samples: 
-#'    Sample, Condition, Time (and Batch). 
-#'    Time must be numeric.
+#'    Read count data, unobserved entries are NA.
+#' @param dfAnnotationProc: (data frame samples x covariates) 
+#'    {Sample, Condition, Time (numeric), TimeCateg (str)
+#'    (and confounding variables if given).}
+#'    Annotation table with covariates for each sample.
+#' @param boolCaseCtrl: (bool) 
+#' 		Whether to perform case-control analysis. Does case-only
+#' 		analysis if FALSE.
+#' @param vecConfounders: (vector of strings number of confounding variables)
+#' 		Factors to correct for during batch correction. Have to 
+#' 		supply dispersion factors if more than one is supplied.
+#' 		Names refer to columns in dfAnnotation.
 #' @param vecDispersionsExternal: (vector length number of
 #'    genes in matCountData) [Default NULL]
 #'    Externally generated list of gene-wise dispersion factors
@@ -38,14 +53,22 @@
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
 #'    
-#' @return (list length 3) with the following elements:
+#' @return (list length 4)
 #' \itemize{
-#'  \item \code{matCountDataProc}: (count matrix  genes x samples) 
-#'      Count data: Reduced version of \code{matCountData}. 
+#'    \item matCountDataProc: (matrix genes x samples)
+#'    Read count data.
+#'    \item dfAnnotationProc: (data frame samples x covariates) 
+#'    {Sample, Condition, Time (numeric), TimeCateg (str)
+#'    (and confounding variables if given).}
+#'    Processed annotation table with covariates for each sample.
+#'    \item vecSizeFactorsExternalProc: (numeric vector number of samples) 
+#'    Model scaling factors for each sample which take
+#'    sequencing depth into account (size factors).
+#'    \item vecDispersionsExternalProc: (vector number of genes) Gene-wise 
+#'    negative binomial dispersion hyper-parameter.
 #' }
-#'
-#' @export
-
+#' 
+#' @author David Sebastian Fischer
 processData <- function(dfAnnotation, 
 												matCountData,
 												boolCaseCtrl,
@@ -196,21 +219,21 @@ processData <- function(dfAnnotation,
 		              "dispersion parameters through vecDispersionsExternal."))
 		}
 		if(!is.null(vecDispersionsExternal)){
-			# Check that dispersions were named
-			if( ( !boolCaseCtrl & any(c("case")!=names(vecDispersionsExternal)) ) |
-			    ( boolCaseCtrl & any(c("case", "control", "combined")!=names(vecDispersionsExternal)) ) ){
-				stop(paste0("ERROR: vecDispersionsExternal was not named. Supply as: ",
-				            "Case-only: Supply list(case=...), ",
-				            "Case-control: Supply list(case=..., control=..., combined=...).",
-				            "Note that elements of vectors have to be named as the rows in matCountData."))
-			}
-		  # Check that dispersion vector is numeric
-		  checkNumeric(vecDispersionsExternal$label, paste0("vecDispersionsExternal$", label))
-		  # Check that dispersions are positive (should not have sub-poissonian noise in count data)
-		  if(any(vecDispersionsExternal$label < 0)){
-		    warning(paste0( "WARNING: vecDispersionsExternal$" , label ,
-		                    " contains negative elements which corresponds to sub-poissonian noise.",
-		                    "These elements are kept as they are in the following." ))
+		  # Check that dispersion parameters were named
+		  if(is.null(names(vecDispersionsExternal))){
+		    stop("ERROR: vecDispersionsExternal was not named. Name according to rownames of matCountData.")
+		  }
+		  # Check that one dispersion parameter factors was supplied per gene
+		  if(any( !(names(vecDispersionsExternal) %in% rownames(matCountData)) ) |
+		     any( !(rownames(matCountData) %in% names(vecDispersionsExternal)) ) ){
+		    stop("ERROR: vecDispersionsExternal supplied but names do not agree with rownames of matCountData.")
+		  }
+		  # Check that dipsersion parameter vector is numeric
+		  checkNumeric(vecDispersionsExternal, "vecDispersionsExternal")
+		  # Check that dispersion parameters are positive
+		  if(any(vecDispersionsExternal <= 0)){
+		    stop(paste0( "WARNING: vecDispersionsExternal contains negative or zero elements which leads.",
+		                 "Dispersion parameters must be positive." ))
 		  }
 		}
 		
@@ -279,6 +302,8 @@ processData <- function(dfAnnotation,
 	# Add categorial time variable to annotation table which
 	# differentiates case and control time points (given to DESeq2).
 	# Add column with time scalars with underscore prefix.
+	# Add nested batch column if necssary for running DESeq2.
+	# Reduce to samples uesed.
 	procAnnotation <- function(dfAnnotation,
 														 matCountData,
 														 boolCaseCtrl,
@@ -423,8 +448,12 @@ processData <- function(dfAnnotation,
 	if(!is.null(vecSizeFactorsExternal)){
 		vecSizeFactorsExternalProc <- vecSizeFactorsExternal[colnames(matCountDataProc)]
 	} else { vecSizeFactorsExternalProc <-NULL }
+	if(!is.null(vecDispersionsExternal)){
+	  vecDispersionsExternalProc <- vecDispersionsExternal[rownames(matCountDataProc)]
+	} else { vecDispersionsExternalProc <-NULL }
 	
-	return( list(matCountDataProc=matCountDataProc,
-							 dfAnnotationProc=dfAnnotationProc,
-							 vecSizeFactorsExternalProc=vecSizeFactorsExternalProc) )
+	return( list(matCountDataProc           = matCountDataProc,
+							 dfAnnotationProc           = dfAnnotationProc,
+							 vecSizeFactorsExternalProc = vecSizeFactorsExternalProc,
+							 vecDispersionsExternalProc = vecDispersionsExternalProc) )
 }

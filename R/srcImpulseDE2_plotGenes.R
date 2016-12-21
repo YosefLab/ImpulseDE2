@@ -54,7 +54,7 @@
 #' @return NULL
 #' @export
 
-plotDEGenes <- function(vecGeneIDs, 
+plotGenes <- function(vecGeneIDs, 
   matCountDataProc, 
   vecSizeFactors,
   dfAnnotationProc, 

@@ -1,30 +1,35 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++     Run DESeq2    +++++++++++++++++++++++++++++++++#
+#+++++++++++++++++     Estimate dispersions with DESeq2    ++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 #' Wrapper function for running DESeq2
 #' 
-#' Run DESeq2 and extract differential expression analysis results and 
-#' overdispersion coefficients.
+#' Run DESeq2 and extract dispersion parameter estimates.
+#' Catch and remove dispersion outlier exception on samples
+#' with zero-count observations.
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
+#' @param dfAnnotationProc: (data frame samples x covariates) 
+#'    {Sample, Condition, Time (numeric), TimeCateg (str)
+#'    (and confounding variables if given).}
+#'    Processed annotation table with covariates for each sample.
 #' @param matCountDataProc: (matrix genes x samples)
-#'    Count data: Reduced version of \code{matCountData}. 
-#'    For internal use.
-#' @param dfAnnotationProc: (Table) Processed annotation table. 
-#'    Lists co-variables of samples: 
-#'    Sample, Condition, Time (numeric), TimeCateg (str)
-#'    (and Timecourse). For internal use.
-#'    
-#' @return (list length 2) with the following elements:
-#' \itemize{
-#'  \item \code{vecDispersions} (vector number of genes) Inverse of gene-wise 
-#'      negative binomial dispersion coefficients computed by DESeq2.
-#'  \item \code{ddsResults} (data frame) DESeq2 results.
-#' }
-#' @export
-
+#'    Read count data.
+#' @param boolCaseCtrl: (bool) 
+#' 		Whether to perform case-control analysis. Does case-only
+#' 		analysis if FALSE.
+#' @param vecConfounders: (vector of strings number of confounding variables)
+#' 		Factors to correct for during batch correction. Have to 
+#' 		supply dispersion factors if more than one is supplied.
+#' 		Names refer to columns in dfAnnotationProc.
+#' 		
+#' @return (numeric vector length number of genes)
+#'    Dispersion parameter estimates for each gene.
+#'    In format of parameter size of \code{dnbinom}
+#'    which is 1/dispersion factor of DESeq2.
+#' 
+#' @author David Sebastian Fischer
 runDESeq2 <- function(dfAnnotationProc, 
                       matCountDataProc,
                       boolCaseCtrl,

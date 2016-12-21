@@ -154,6 +154,8 @@
 #'    }
 #'    
 #' @author David Sebastian Fischer
+#' 
+#' @export
 runDEAnalysis <- function(matCountDataProc,
                         dfAnnotationProc, 
                         lsModelFits,

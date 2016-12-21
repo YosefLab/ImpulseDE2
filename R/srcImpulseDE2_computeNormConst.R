@@ -2,7 +2,7 @@
 #++++++++++++++++++     Compute normalisation constants    ++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Compute size factors for a dataset
+#' Compute a size factor for each sample
 #' 
 #' This function computes size factors for each sample
 #' in the dataset and expands them to a matrix of the size
@@ -17,22 +17,14 @@
 #' @seealso Called by \code{computeNormConst}.
 #' 
 #' @param matCountDataProc: (matrix genes x samples)
-#'    Count data: Reduced version of \code{matCountData}. 
-#'    For internal use.
-#' @param scaSmallRun: (integer) [Default NULL] Number of rows
-#'    on which ImpulseDE2 is supposed to be run, the full
-#'    data set is only used for size factor estimation.
-#' @param strMode: (str) [Default "singelbatch"] 
-#'    {"singelbatch","batcheffects"}
-#'    Batch model.
+#'    Read count data.
 #' 
-#' @return vecSizeFactors: (numeric vectors number of samples) 
+#' @return vecSizeFactors: (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @export
-
-computeSizeFactors <- function(matCountDataProc,
-                               scaSmallRun=NULL){
+#' 
+#' @author David Sebastian Fischer
+computeSizeFactors <- function(matCountDataProc){
   
   # Compute geometric count mean over replicates
   # for genes without zero observations: Samples
@@ -58,7 +50,7 @@ computeSizeFactors <- function(matCountDataProc,
   return(vecSizeFactors)
 }
 
-#' Compute normalisation constant for each replicate
+#' Compute a normalisation constant for each sample
 #' 
 #' The normalisation constant is the median of the ratio of gene counts versus
 #' the geomtric gene count mean. There is one normalisation constant per 
@@ -76,21 +68,18 @@ computeSizeFactors <- function(matCountDataProc,
 #' @seealso Called by \code{runImpulseDE2}. 
 #' Calls \code{computeSizeFactors}.
 #' 
-#' @param matCountDataProcFull: (matrix genes x samples)
-#'    Count data: Reduced version of \code{matCountData}. 
-#'    For internal use. This is the entire data set.
-#' @param vecSizeFactorsExternal: (numeric vector number of samples) 
-#'    Model scaling factors for each sample which take
-#'    sequencing depth into account (size factors). One size
-#'    factor per sample. These are supplied to ImpulseDE, if this variable
-#'    is not set, size factors are computed in this function.
+#' @param matCountDataProc: (matrix genes x samples)
+#'    Read count data.
+#' @param vecSizeFactorsExternal: (vector length number of
+#'    cells in matCountData) [Default NULL]
+#'    Externally generated list of size factors which override
+#'    size factor computation in ImpulseDE2.
 #'     
-#' @return (vecSizeFactors: (numeric vector number of samples) 
-#'        Model scaling factors for each sample which take
-#'        sequencing depth into account (size factors).
-#'      } 
-#' @export
-
+#' @return vecSizeFactors: (numeric vector number of samples) 
+#'    Model scaling factors for each sample which take
+#'    sequencing depth into account (size factors).
+#' 
+#' @author David Sebastian Fischer
 computeNormConst <- function(matCountDataProc,
                              vecSizeFactorsExternal=NULL){
   

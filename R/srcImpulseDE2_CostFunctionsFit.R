@@ -2,37 +2,40 @@
 #++++++++++++++++++++++++++     Cost Functions    +++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Cost function for negative binomial mean parameter fit
+#' Cost function for constant model
 #' 
-#' Log likelihood cost function for numerical optimisation of mean model fit 
-#' based on negative binomial model. Note that the closed form solution
-#' of the negative binomial mean parameter only holds if all normalisation
-#' factors are 1.
-#' In analogy to generalised linear models, a log linker
-#' function is used for the mean. The inferred negative
-#' binomial mean model is scaled by the factors in vecSizeFactors,
-#' which represent size factors (and translation factors),
-#' for evaluation of the likelihood on the data. 
+#' Log likelihood cost function for numerical optimisation of
+#' constant model.
+#' Implements log linker function for the constant mean parameter
+#' and the batch correction factors.
+#' Implements lower sensitivity bound of likelihood with respect
+#' to constant mean parameter.
+#' Implements upper and lower sensitivity bound of likelihood with respect
+#' to batch correction factors.
 #' 
 #' @aliases evalLogLikMuNB_comp
 #' 
-#' @seealso
-#' 
-#' @param scaTheta (vector number of parameters [6]) 
-#'    Negative binomial mean parameter estimate (log).
-#' @param vecCounts (count vector samples) 
-#'    Observed expression values for given gene.
-#' @param scaDispEst: (scalar) Dispersion estimate for given gene.
+#' @param vecTheta (numeric vector number of parameters to be estimated) 
+#'    Constant model parameter and batch correction factor estimates.
+#' @param vecCounts: (numeric vector number of samples)
+#'    Read count data.
+#' @param scaDisp: (scalar) Gene-wise 
+#'    negative binomial dispersion hyper-parameter.
 #' @param vecSizeFactors: (numeric vector number of samples) 
-#'    Normalisation constants for each sample.
-#' @param vecWeights: (probability vector number of samples) 
-#'    Weights for inference on mixture models.
+#'    Model scaling factors for each sample which take
+#'    sequencing depth into account (size factors).
+#' @param lsvecindBatch: (list length number of confounding variables)
+#' 		List of index vectors. 
+#' 		One vector per confounding variable.
+#' 		Each vector has one entry per sample with the index batch
+#' 		within the given confounding variable of the given sample.
+#' 		Batches are enumerated from 1 to number of batches.
 #' @param vecboolObserved: (bool vector number of samples)
-#'    Stores bool of sample being not NA (observed).
+#'    Whether sample is observed (finite and not NA).
 #'     
-#' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
-#' @export
-
+#' @return scaLogLik: (scalar) Value of cost function (loglikelihood) for given gene.
+#' 
+#' @author David Sebastian Fischer
 evalLogLikMu <- function(vecTheta,
   vecCounts,
   scaDisp, 
@@ -74,40 +77,44 @@ evalLogLikMu <- function(vecTheta,
   return(scaLogLik)
 }
 
-#' Cost function impulse model fit
+#' Cost function for impulse model
 #' 
-#' Log likelihood cost function for impulse model fit based on negative 
-#' binomial model.
-#' In analogy to generalised linear models, a log linker
-#' function is used for the count parameters. The inferred negative
-#' binomial model is scaled by the factors in vecSizeFactors,
-#' which represent size factors (and translation factors),
-#' for evaluation of the likelihood on the data.
+#' Log likelihood cost function for numerical optimisation of
+#' impulse model.
+#' Implements log linker function for the amplitude parameters
+#' and the batch correction factors.
+#' Implements upper and lower sensitivity bound of likelihood with respect
+#' to batch correction factors.
 #' 
 #' @aliases evalLogLikImpulse_comp
 #' 
-#' @seealso Called by \code{fitImpulse}:\code{fitImpulse_gene}.
-#' Calls \code{evalImpulse}. \code{evalLogLikImpulseByTC} for
-#' dependent residuals (i.e. time course experiments)
-#' 
-#' @param vecTheta (vector number of parameters [6]) 
-#'    Impulse model parameters.
-#' @param vecX (numeric vector number of timepoints) 
-#'    Time-points at which gene was sampled.
-#' @param vecY (count vector samples) 
-#'    Observed expression values for given gene.
-#' @param scaDispEst: (scalar) Dispersion estimate for given gene.
+#' @param vecTheta (numeric vector number of parameters to be estimated) 
+#'    Impulse model parameter and batch correction factor estimates.
+#' @param vecCounts: (numeric vector number of samples)
+#'    Read count data.
+#' @param scaDisp: (scalar) Gene-wise 
+#'    negative binomial dispersion hyper-parameter.
 #' @param vecSizeFactors: (numeric vector number of samples) 
-#'    Normalisation constants for each sample.
-#' @param vecindTimepoint (numeric vector number samples) 
-#'    Index of time point assigned to sample in list of sorted
-#'    time points (vecX).
+#'    Model scaling factors for each sample which take
+#'    sequencing depth into account (size factors).
+#' @param vecTimepointsUnique: 
+#'    (numeric vector length number of unique time points)
+#'    Unique time points of set of time points of given samples.
+#' @param vecindTimepoint: (index vector length number of samples)
+#'    Index of of time point assigned to each sample in vector
+#'    vecTimepointsUnique.
+#' @param lsvecindBatch: (list length number of confounding variables)
+#' 		List of index vectors. 
+#' 		One vector per confounding variable.
+#' 		Each vector has one entry per sample with the index batch
+#' 		within the given confounding variable of the given sample.
+#' 		Batches are enumerated from 1 to number of batches.
 #' @param vecboolObserved: (bool vector number of samples)
-#'    Stores bool of sample being not NA (observed).
+#'    Whether sample is observed (finite and not NA).
 #'     
-#' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
-#' @export
-
+#' @return scaLogLik: (scalar) Value of cost function (loglikelihood) for given gene.
+#' 
+#' @author David Sebastian Fischer
 evalLogLikImpulse <- function(vecTheta,
   vecCounts,
   scaDisp, 
@@ -154,40 +161,44 @@ evalLogLikImpulse <- function(vecTheta,
   return(scaLogLik)
 }
 
-#' Cost function sigmoid model fit
+#' Cost function for sigmoidal model
 #' 
-#' Log likelihood cost function for impulse model fit based on negative 
-#' binomial model.
-#' In analogy to generalised linear models, a log linker
-#' function is used for the count parameters. The inferred negative
-#' binomial model is scaled by the factors in vecSizeFactors,
-#' which represent size factors (and translation factors),
-#' for evaluation of the likelihood on the data.
+#' Log likelihood cost function for numerical optimisation of
+#' sigmoidal model.
+#' Implements log linker function for the amplitude parameters
+#' and the batch correction factors.
+#' Implements upper and lower sensitivity bound of likelihood with respect
+#' to batch correction factors.
 #' 
 #' @aliases evalLogLikSigmoid_comp
 #' 
-#' @seealso Called by \code{fitImpulse}:\code{fitImpulse_gene}.
-#' Calls \code{evalImpulse}. \code{evalLogLikImpulseByTC} for
-#' dependent residuals (i.e. time course experiments)
-#' 
-#' @param vecTheta (vector number of parameters [4]) 
-#'    Impulse model parameters.
-#' @param vecX (numeric vector number of timepoints) 
-#'    Time-points at which gene was sampled.
-#' @param vecY (count vector samples) 
-#'    Observed expression values for given gene.
-#' @param scaDispEst: (scalar) Dispersion estimate for given gene.
+#' @param vecTheta (numeric vector number of parameters to be estimated) 
+#'    Sigmoid model parameter and batch correction factor estimates.
+#' @param vecCounts: (numeric vector number of samples)
+#'    Read count data.
+#' @param scaDisp: (scalar) Gene-wise 
+#'    negative binomial dispersion hyper-parameter.
 #' @param vecSizeFactors: (numeric vector number of samples) 
-#'    Normalisation constants for each sample.
-#' @param vecindTimepoint (numeric vector number samples) 
-#'    Index of time point assigned to sample in list of sorted
-#'    time points (vecX).
+#'    Model scaling factors for each sample which take
+#'    sequencing depth into account (size factors).
+#' @param vecTimepointsUnique: 
+#'    (numeric vector length number of unique time points)
+#'    Unique time points of set of time points of given samples.
+#' @param vecindTimepoint: (index vector length number of samples)
+#'    Index of of time point assigned to each sample in vector
+#'    vecTimepointsUnique.
+#' @param lsvecindBatch: (list length number of confounding variables)
+#' 		List of index vectors. 
+#' 		One vector per confounding variable.
+#' 		Each vector has one entry per sample with the index batch
+#' 		within the given confounding variable of the given sample.
+#' 		Batches are enumerated from 1 to number of batches.
 #' @param vecboolObserved: (bool vector number of samples)
-#'    Stores bool of sample being not NA (observed).
+#'    Whether sample is observed (finite and not NA).
 #'     
-#' @return scaLogLik: (scalar) Value of cost function (likelihood) for given gene.
-#' @export
-
+#' @return scaLogLik: (scalar) Value of cost function (loglikelihood) for given gene.
+#' 
+#' @author David Sebastian Fischer
 evalLogLikSigmoid <- function(vecTheta,
                               vecCounts,
                               scaDisp, 
