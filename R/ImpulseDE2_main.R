@@ -128,10 +128,12 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' @aliases ImpulseDE2
 #' 
 #' @param matCountData: (matrix genes x samples) [Default NULL] 
-#'    Count data of all conditions, unobserved entries are NA.
-#' @param dfAnnotation: (Table) [Default NULL] 
-#'    Lists co-variables of samples: 
-#'    Sample, Condition, Time (numeric), (and Batch).
+#'    Read count data, unobserved entries are NA.
+#'    Read count data.
+#' @param dfAnnotationProc: (Table samples x covariates) 
+#'    {Sample, Condition, Time (numeric), TimeCateg (str)
+#'    (and confounding variables if given).}
+#'    Annotation table with covariates for each sample.
 #' @param boolCaseCtrl: (bool) 
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
@@ -161,9 +163,83 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' @return (list length 4)
 #' \itemize{
 #'    \item vecDEGenes: (list number of genes) Genes IDs identified
-#'        as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
+#'    as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.
 #'    \item dfImpulseResults: (data frame) ImpulseDE2 results.
-#'    \item lsModelFits: (list) Model fits by condition-gene-model-parameters
+#'    \item lsModelFits: (list length number of conditions fit (1 or 3))
+#'    {"case"} or {"case", "control", "combined"}
+#'    One model fitting object for each condition:
+#'    In case-only DE analysis, only the condition {"case"} is fit.
+#'    In case-control DE analysis, the conditions 
+#'    {"case", "control","combined} are fit.
+#'    Each condition entry is a list of model fits for each gene.
+#'    Each gene entry is a list of model fits to the individual models:
+#'    Impulse model and constant model (if boolFitConst is TRUE).
+#'    At this level, the sigmoid model fit can be added later.
+#'    Each model fit per gene is a list of fitting parameters and results.
+#'    \itemize{
+#'      \item Condition ID: (list length number of genes)
+#'      List of fits for each gene to the samples of this condition.
+#'      One entry of this format for all conditions fit.
+#'      \itemize{
+#'        \item Gene ID: (list length 2)
+#'        Impulse and constant model fit to gene observations.
+#'        One entry of this format for all gene IDs.
+#'        \itemize{
+#'          \item lsImpulseFit: (list) List of impulse fit parameters and results.
+#'          \itemize{
+#'            \item vecImpulseParam: (numeric vector length 6)
+#'            {beta, h0, h1, h2, t1, t2}
+#'            Maximum likelihood estimators of impulse model parameters.
+#'            \item vecImpulseValue: (numeric vector length number of time points)
+#'            Values of impulse model fit at time points used for fit.
+#'            \item lsvecBatchFactors: (list length number of confounders)
+#'            List of vectors of scalar batch correction factors for each sample.
+#'            These are also maximum likelihood estimators.
+#'            NULL if no confounders given.
+#'            \item scaDispParam: (scalar) Dispersion parameter estimate
+#'            used in fitting (hyper-parameter).
+#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'            estimator model.
+#'            \item scaConvergence: (scalar) 
+#'            Convergence status of optim on impulse model.
+#'          }
+#'          \item lsConstFit: (list) List of constant fit parameters and results.
+#'          \itemize{
+#'            \item scaMu: (scalar) Maximum likelihood estimator of
+#'            negative binomial mean parameter.
+#'            \item lsvecBatchFactors: (list length number of confounders)
+#'            List of vectors of scalar batch correction factors for each sample.
+#'            These are also maximum likelihood estimators.
+#'            NULL if no confounders given.
+#'            \item scaDispParam: (scalar) Dispersion parameter estimate
+#'            used in fitting (hyper-parameter).
+#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'            estimator model.
+#'            \item scaConvergence: (scalar) 
+#'            Convergence status of optim on constant model.
+#'          }
+#'          \item ls SigmoidFit: (list) List of sigmoidal fit parameters and results.
+#'          NULL if boolIdentifyTransients is FALSE.
+#'          \itemize{
+#'            \item vecSigmoidParam: (numeric vector length 4)
+#'            {beta, h0, h1, t}
+#'            Maximum likelihood estimators of sigmoidal model parameters.
+#'            \item vecSigmoidValue: (numeric vector length number of time points)
+#'            Values of sigmoid model fit at time points used for fit.
+#'            \item lsvecBatchFactors: (list length number of confounders)
+#'            List of vectors of scalar batch correction factors for each sample.
+#'            These are also maximum likelihood estimators.
+#'            NULL if no confounders given.
+#'            \item scaDispParam: (scalar) Dispersion parameter estimate
+#'            used in fitting (hyper-parameter).
+#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'            estimator model.
+#'            \item scaConvergence: (scalar) 
+#'            Convergence status of optim on sigmoidal model.
+#'          }
+#'        }
+#'      }
+#'    }
 #' }
 #' Additionally, \code{ImpulseDE2} saves the following objects and tables into
 #' the working directory:
@@ -177,26 +253,28 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'        factor per sample.
 #'    \item \code{ImpulseDE2_vecDispersions.RData} (vector number of genes) Inverse 
 #'        of gene-wise negative binomial dispersion coefficients computed by DESeq2.
-#'    \item \code{ImpulseDE2_lsImpulseFits.RData} (list) List of matrices which
-#'        contain parameter fits and model values for given time course for the
-#'        case condition (and control and combined if control is present).
-#'        Each parameter matrix is called parameter_'condition' and has the form
-#'        (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
-#'        converge_H0]) where beta to t2 are parameters of the impulse
-#'        model, mu is the single parameter of the mean model, logL are
-#'        log likelihoods of full (H1) and reduced model (H0) respectively, converge
-#'        is convergence status of numerical optimisation of model fitting by
-#'        \code{optim} from \code{stats} of either model. Each value matrix is called
-#'        value_'condition' and has the form (genes x time points) and contains the
-#'        counts predicted by the impulse model at the observed time points.
+#'    \item \code{ImpulseDE2_lsModelFits.RData} (list length number of conditions fit (1 or 3))
+#'    {"case"} or {"case", "control", "combined"}
+#'    One model fitting object for each condition:
+#'    In case-only DE analysis, only the condition {"case"} is fit.
+#'    In case-control DE analysis, the conditions 
+#'    {"case", "control","combined} are fit.
+#'    Each condition entry is a list of model fits for each gene.
+#'    Each gene entry is a list of model fits to the individual models:
+#'    Impulse model and constant model (if boolFitConst is TRUE).
+#'    At this level, the sigmoid model fit can be added later.
+#'    Each model fit per gene is a list of fitting parameters and results.
+#'    Read the return-value section of runImpulseDE2 for details.
 #'    \item \code{ImpulseDE2_dfImpulseDE2Results.RData} (data frame) ImpulseDE2 results.
-#'    \item \code{ImpulseDE2_vecDEGenes.RData} (list number of genes) Genes IDs identified
-#'        as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.#' }
+#'    \item \code{ImpulseDE2_vecDEGenes.RData} vecDEGenes: (list number of genes) Genes IDs identified
+#'    as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.
 #' 
 #' @seealso Calls the following functions:
-#' \code{\link{processData}}, \code{\link{runDESeq2}},
+#' \code{\link{processData}}, 
+#' \code{\link{runDESeq2}},
 #' \code{\link{fitImpulse}},
-#' \code{\link{computePval}}, \code{\link{plotDEGenes}}.
+#' \code{\link{computePval}}, 
+#' \code{\link{plotDEGenes}}.
 #' 
 #' @author David Sebastian Fischer
 #' 
