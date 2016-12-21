@@ -1,47 +1,159 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#+++++++++++++++++++++++++++    computePval   +++++++++++++++++++++++++++++++++#
+#++   Perform differential expression analysis and identify transient genes  ++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Compute p-values for model fit
+#' Perform differential expression analysis and identification
+#' of transiently activated or deactivated genes.
 #' 
-#' Compute p-value of differential expression based on chi-squared distribution
-#' of deviance of liklihoods and report summary of statistics.
+#' Performs model selction based on loglikelihood ratio tests.
+#' The primary model selection is the differential expression analysis.
+#' The secondary model selection is the selection between a sigmoidal
+#' and an impulse fit for differentially expressed genes which is used
+#' to define transiently activated or deactivated genes.
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
 #' @param matCountDataProc: (matrix genes x samples)
-#'    Count data: Reduced version of \code{matCountData}. 
-#'    For internal use.
-#' @param dfAnnotationProc: (Table) Processed annotation table. 
-#'    Lists co-variables of samples: 
-#'    Sample, Condition, Time (numeric), TimeCateg (categorial)
-#'    (and LongitudinalSeries). For internal use.
-#' @param vecDispersions (vector number of genes) Inverse of gene-wise 
-#'    negative binomial dispersion coefficients computed by DESeq2.
-#' @param lsImpulseFits (list length 2 or 6) List of matrices which
-#'    contain parameter fits and model values for given time course for the
-#'    case condition (and control and combined if control is present).
-#'    Each parameter matrix is called parameter_'condition' and has the form
-#'    (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
-#'    ) where beta to t2 are parameters of the impulse
-#'    model, mu is the single parameter of the mean model, logL are
-#'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
-#'    is convergence status of numerical optimisation of model fitting by
-#'    \code{optim} from \code{stats}. Each value matrix is called
-#'    value_'condition' and has the form (genes x time points) and contains the
-#'    counts predicted by the impulse model at the observed time points.
-#' @param dfDEAnalysis (data frame genes x fitting characteristics) 
-#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationRedFull}.
-#' @param strControlName: (str) [Default NULL] Name of the control condition in 
-#'    \code{dfAnnotationRedFull}.
-#' @param strMode: (str) [Default "batch"] {"batch","longitudinal","singlecell"}
-#'    Mode of model fitting.
-#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
+#'    Read count data.
+#' @param dfAnnotationProc: (data frame samples x covariates) 
+#'    {Sample, Condition, Time (numeric), TimeCateg (str)
+#'    (and confounding variables if given).}
+#'    Processed annotation table with covariates for each sample.
+#' @parm lsModelFits: (list length number of conditions fit (1 or 3))
+#'    {"case"} or {"case", "control", "combined"}
+#'    This is the lsModelFits object handed to this function with additional
+#'    sigmoid fit entries for every gene for the given condition.
+#'    One model fitting object for each condition:
+#'    In case-only DE analysis, only the condition {"case"} is fit.
+#'    In case-control DE analysis, the conditions 
+#'    {"case", "control","combined} are fit.
+#'    Each condition entry is a list of model fits for each gene.
+#'    Each gene entry is a list of model fits to the individual models:
+#'    Impulse model, constant model and sigmoidal fit.
+#'    Each model fit per gene is a list of fitting parameters and results.
+#'    \itemize{
+#'      \item Condition ID: (list length number of genes)
+#'      List of fits for each gene to the samples of this condition.
+#'      One entry of this format for all conditions fit.
+#'      \itemize{
+#'        \item Gene ID: (list length 2)
+#'        Impulse, constant and sigmoidal model fit to gene observations.
+#'        One entry of this format for all gene IDs.
+#'        \itemize{
+#'          \item lsImpulseFit: (list) List of impulse fit parameters and results.
+#'          \itemize{
+#'            \item vecImpulseParam: (numeric vector length 6)
+#'            {beta, h0, h1, h2, t1, t2}
+#'            Maximum likelihood estimators of impulse model parameters.
+#'            \item vecImpulseValue: (numeric vector length number of time points)
+#'            Values of impulse model fit at time points used for fit.
+#'            \item lsvecBatchFactors: (list length number of confounders)
+#'            List of vectors of scalar batch correction factors for each sample.
+#'            These are also maximum likelihood estimators.
+#'            NULL if no confounders given.
+#'            \item scaDispParam: (scalar) Dispersion parameter estimate
+#'            used in fitting (hyper-parameter).
+#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'            estimator model.
+#'            \item scaConvergence: (scalar) 
+#'            Convergence status of optim on impulse model.
+#'          }
+#'          \item lsConstFit: (list) List of constant fit parameters and results.
+#'          \itemize{
+#'            \item scaMu: (scalar) Maximum likelihood estimator of
+#'            negative binomial mean parameter.
+#'            \item lsvecBatchFactors: (list length number of confounders)
+#'            List of vectors of scalar batch correction factors for each sample.
+#'            These are also maximum likelihood estimators.
+#'            NULL if no confounders given.
+#'            \item scaDispParam: (scalar) Dispersion parameter estimate
+#'            used in fitting (hyper-parameter).
+#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'            estimator model.
+#'            \item scaConvergence: (scalar) 
+#'            Convergence status of optim on constant model.
+#'          }
+#'          \item ls SigmoidFit: (list) List of sigmoidal fit parameters and results.
+#'          \itemize{
+#'            \item vecSigmoidParam: (numeric vector length 4)
+#'            {beta, h0, h1, t}
+#'            Maximum likelihood estimators of sigmoidal model parameters.
+#'            \item vecSigmoidValue: (numeric vector length number of time points)
+#'            Values of sigmoid model fit at time points used for fit.
+#'            \item lsvecBatchFactors: (list length number of confounders)
+#'            List of vectors of scalar batch correction factors for each sample.
+#'            These are also maximum likelihood estimators.
+#'            NULL if no confounders given.
+#'            \item scaDispParam: (scalar) Dispersion parameter estimate
+#'            used in fitting (hyper-parameter).
+#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'            estimator model.
+#'            \item scaConvergence: (scalar) 
+#'            Convergence status of optim on sigmoidal model.
+#'        }
+#'      }
+#'    }
+#' @param boolCaseCtrl: (bool) 
+#' 		Whether to perform case-control analysis. Does case-only
+#' 		analysis if FALSE.
+#' @param vecConfounders: (vector of strings number of confounding variables)
+#' 		Factors to correct for during batch correction.
+#' 		Names refer to columns in dfAnnotation.
+#' @param boolIdentifyTransients: (bool) [Defaul FALSE]
+#'    Whether to identify transiently activated or deactivated 
+#'    genes. This involves an additional fitting of sigmoidal models
+#'    and hypothesis testing between constant, sigmoidal and impulse model.
 #' 
-#' @return dfDEAnalysis (data frame genes x fitting characteristics) 
-#'    Summary of fitting procedure for each gene.
-#' @export
-
+#' @return dfDEAnalysis (data frame genes x reported characteristics) 
+#'    Summary of fitting procedure and 
+#'    differential expression results for each gene.
+#'    \itemize{
+#'      \item Gene: Gene ID.
+#'      \item p: P-value for differential expression.
+#'      \item padj: Benjamini-Hochberg false-discovery rate corrected p-value
+#'      for differential expression analysis.
+#'      \item loglik_full: Loglikelihood of full model.
+#'      \item loglik_red: Loglikelihood of reduced model.
+#'      \item df_full: Degrees of freedom of full model.
+#'      \item df_red: Degrees of freedom of reduced model
+#'      \item mean: Inferred mean parameter of constant model over all samples.
+#'    }
+#'    Entries only present in case-only DE analysis:
+#'    \itemize{
+#'      \item converge_impulse: Convergence status of optim for 
+#'      impulse model fit (full model).
+#'      \item converge_const: Convergence status of optim for 
+#'      constant model fit (reduced model).
+#'    }
+#'    Entries only present in case-control DE analysis:
+#'    \itemize{
+#'      \item converge_combined: Convergence status of optim for 
+#'      impulse model fit to case and control samples combined (reduced model).
+#'      \item converge_case: Convergence status of optim for 
+#'      impulse model fit to samples of case condition (full model 1/2).
+#'      \item converge_control: Convergence status of optim for 
+#'      impulse model fit to samples of control condition (full model 2/2).
+#'    }
+#'    Entries only present if boolIdentifyTransients is TRUE:
+#'    \itemize{
+#'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
+#'      impulse model fit versus sigmoidal model on samples of case condition.
+#'      \item dfDEAnalysis$impulseTOsigmoid_padj: Benjamini-Hochberg 
+#'      false-discovery rate corrected p-value of loglikelihood ratio test
+#'      impulse model fit versus sigmoid model on samples of case condition.
+#'      \item dfDEAnalysis$sigmoidTOconst_p: P-value of loglikelihood ratio test
+#'      sigmoidal model fit versus constant model on samples of case condition.
+#'      \item dfDEAnalysis$sigmoidTOconst_padj: Benjamini-Hochberg 
+#'      false-discovery rate corrected p-value of loglikelihood ratio test
+#'      sigmoidal model fit versus constant model on samples of case condition.
+#'      \item dfDEAnalysis$isTransient: (bool) Whether gene is transiently
+#'      activated or deactivated and differentially expressed.
+#'      \item dfDEAnalysis$isMonotonous: (bool) Whether gene is not transiently
+#'      activated or deactivated and differentially expressed. This scenario
+#'      corresponds to a montonous expression level increase or decrease.
+#'    }
+#'    
+#' @author David Sebastian Fischer
 runDEAnalysis <- function(matCountDataProc,
                         dfAnnotationProc, 
                         lsModelFits,

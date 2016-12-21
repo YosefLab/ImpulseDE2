@@ -1,25 +1,25 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#+++++++++++++++++++     Impulse model value prediction    ++++++++++++++++++++#
+#+++++++++++++++++++    Compute value of sigmoidal model   ++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Compute value of sigmoid function given parameters.
+#' Compute value of sigmoidal model given parameters.
 #' 
-#' Compute value of sigmoid function given parameters.
+#' Compute value of sigmoidal model given parameters.
+#' Enforces lower bound on value of function to avoid numerical
+#' errors during model fitting.
 #' 
 #' @aliases evalSigmoid_comp
 #' 
-#' @seealso 
-#' 
 #' @param vecSigmoidParam (numeric vector number of sigmoid model parameters)
-#'  { beta, h0, h1, t1 }
-#'  Vector of impulse parameters.
-#' @param vecTimepoints (numeric vector number vecTimepoints) 
+#'    { beta, h0, h1, t1 }
+#'    Vector of sigmoidal model parameters.
+#' @param vecTimepoints (numeric vector length number of time points) 
 #'    Time points to be evaluated.
 #' 
 #' @return vecSigmoidValue (numeric vector length of vecTimepoints) 
-#'    Model expression values of given gene for time points
-#' @export
-
+#'    Model values for given time points.
+#'    
+#' @author David Sebastian Fischer
 evalSigmoid <- function(vecSigmoidParam,
                         vecTimepoints){
   

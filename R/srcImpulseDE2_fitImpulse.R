@@ -36,6 +36,8 @@
 #'      {beta, h0, h1, h2, t1, t2}
 #'      Valley model initialisations of impulse model parameters.
 #'    }
+#'    
+#' @author David Sebastian Fischer
 estimateImpulseParam <- function(vecCounts,
                                  vecTimepoints,
                                  vecSizeFactors,
@@ -161,6 +163,8 @@ estimateImpulseParam <- function(vecCounts,
 #'      \item scaConvergence: (scalar) 
 #'      Convergence status of optim on constant model.
 #'    }
+#'    
+#' @author David Sebastian Fischer
 fitConstModel <- function(vecCounts,
                           scaDisp,
                           vecSizeFactors,
@@ -292,6 +296,8 @@ fitConstModel <- function(vecCounts,
 #'      \item scaConvergence: (scalar) 
 #'      Convergence status of optim on impulse model.
 #'    }
+#'    
+#' @author David Sebastian Fischer
 fitImpulseModel <- function(vecImpulseParamGuess,
                             vecCounts,
                             scaDisp,
@@ -454,6 +460,8 @@ fitImpulseModel <- function(vecImpulseParamGuess,
 #'        Convergence status of optim on constant model.
 #'      }
 #'    }
+#'    
+#' @author David Sebastian Fischer
 fitConstImpulseGene <- function(vecCounts, 
                                 scaDisp,
                                 vecSizeFactors,
@@ -600,6 +608,8 @@ fitConstImpulseGene <- function(vecCounts,
 #'        }
 #'      }
 #'    }
+#'    
+#' @author David Sebastian Fischer
 fitConstImpulse <- function(matCountDataProcCondition, 
                             vecDispersions, 
                             vecSizeFactors,
@@ -638,7 +648,7 @@ fitConstImpulse <- function(matCountDataProcCondition,
 #'  
 #' @param matCountDataProc: (matrix genes x samples)
 #'    Read count data.
-#' @param dfAnnotationProc: (Table samples x covariates) 
+#' @param dfAnnotationProc: (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Processed annotation table with covariates for each sample.
@@ -710,6 +720,9 @@ fitConstImpulse <- function(matCountDataProcCondition,
 #'        }
 #'      }
 #'    }
+#'    
+#' @author David Sebastian Fischer
+#' 
 #' @export
 fitModels <- function(matCountDataProc, 
                       dfAnnotationProc, 

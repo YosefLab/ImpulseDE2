@@ -1,26 +1,28 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#+++++++++++++++++++     Impulse model value prediction    ++++++++++++++++++++#
+#++++++++++++++++++++    Compute value of impulse model   +++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 #' Compute value of impulse function given parameters.
 #' 
 #' Compute value of impulse function given parameters.
+#' Enforces lower bound on value of function to avoid numerical
+#' errors during model fitting.
 #' 
 #' @aliases evalImpulse_comp
 #' 
 #' @seealso Called by \code{evalLogLikImpulse},\code{evalLogLikMean}, 
 #'    \code{plotDEGenes}.
 #' 
-#' @param vecImpulseParam (vector number of impulse model parameters)
-#'  { beta, h0, h1, h2, t1, t2 }
-#'  Vector of impulse parameters.
-#' @param vecTimepoints (numeric vector length of vecTimepoints) 
-#'    Model expression values of given gene for time points
+#' @param vecImpulseParam (numeric vector number of impulse model parameters)
+#'    { beta, h0, h1, h2, t1, t2 }
+#'    Vector of impulse model parameters.
+#' @param vecTimepoints (numeric vector length number of time points) 
+#'    Time points to be evaluated.
 #' 
 #' @return vecImpulseValue (vec number of vecTimepoints) 
-#'    Model expression values of given gene for time points
-#' @export
-
+#'     Model values for given time points.
+#'     
+#' @author David Sebastian Fischer
 evalImpulse <- function(vecImpulseParam,
                         vecTimepoints){
   

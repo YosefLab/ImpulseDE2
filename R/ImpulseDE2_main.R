@@ -127,10 +127,18 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' 
 #' @aliases ImpulseDE2
 #' 
+#' @seealso Calls the following functions:
+#' \code{\link{processData}}, 
+#' \code{\link{runDESeq2}},
+#' \code{\link{computeNormConst}},
+#' \code{\link{fitModels},
+#' \code{\link{fitSigmoidModels},
+#' \code{\link{runDEAnalysis}}, 
+#' \code{\link{plotDEGenes}}.
+#' 
 #' @param matCountData: (matrix genes x samples) [Default NULL] 
 #'    Read count data, unobserved entries are NA.
-#'    Read count data.
-#' @param dfAnnotationProc: (Table samples x covariates) 
+#' @param dfAnnotationProc: (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Annotation table with covariates for each sample.
@@ -153,6 +161,10 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
+#' @param boolIdentifyTransients: (bool) [Defaul FALSE]
+#'    Whether to identify transiently activated or deactivated 
+#'    genes. This involves an additional fitting of sigmoidal models
+#'    and hypothesis testing between constant, sigmoidal and impulse model.
 #' @param boolPlotting: (bool) [TRUE] 
 #'    Whether to plot significant DE genes into output pdf.
 #'    Consider setting FALSE for large data sets with many hits.
@@ -164,7 +176,54 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' \itemize{
 #'    \item vecDEGenes: (list number of genes) Genes IDs identified
 #'    as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.
-#'    \item dfImpulseResults: (data frame) ImpulseDE2 results.
+#'    \item dfDEAnalysis (data frame genes x reported characteristics) 
+#'    Summary of fitting procedure and 
+#'    differential expression results for each gene.
+#'    \itemize{
+#'      \item Gene: Gene ID.
+#'      \item p: P-value for differential expression.
+#'      \item padj: Benjamini-Hochberg false-discovery rate corrected p-value
+#'      for differential expression analysis.
+#'      \item loglik_full: Loglikelihood of full model.
+#'      \item loglik_red: Loglikelihood of reduced model.
+#'      \item df_full: Degrees of freedom of full model.
+#'      \item df_red: Degrees of freedom of reduced model
+#'      \item mean: Inferred mean parameter of constant model over all samples.
+#'    }
+#'    Entries only present in case-only DE analysis:
+#'    \itemize{
+#'      \item converge_impulse: Convergence status of optim for 
+#'      impulse model fit (full model).
+#'      \item converge_const: Convergence status of optim for 
+#'      constant model fit (reduced model).
+#'    }
+#'    Entries only present in case-control DE analysis:
+#'    \itemize{
+#'      \item converge_combined: Convergence status of optim for 
+#'      impulse model fit to case and control samples combined (reduced model).
+#'      \item converge_case: Convergence status of optim for 
+#'      impulse model fit to samples of case condition (full model 1/2).
+#'      \item converge_control: Convergence status of optim for 
+#'      impulse model fit to samples of control condition (full model 2/2).
+#'    }
+#'    Entries only present if boolIdentifyTransients is TRUE:
+#'    \itemize{
+#'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
+#'      impulse model fit versus sigmoidal model on samples of case condition.
+#'      \item dfDEAnalysis$impulseTOsigmoid_padj: Benjamini-Hochberg 
+#'      false-discovery rate corrected p-value of loglikelihood ratio test
+#'      impulse model fit versus sigmoid model on samples of case condition.
+#'      \item dfDEAnalysis$sigmoidTOconst_p: P-value of loglikelihood ratio test
+#'      sigmoidal model fit versus constant model on samples of case condition.
+#'      \item dfDEAnalysis$sigmoidTOconst_padj: Benjamini-Hochberg 
+#'      false-discovery rate corrected p-value of loglikelihood ratio test
+#'      sigmoidal model fit versus constant model on samples of case condition.
+#'      \item dfDEAnalysis$isTransient: (bool) Whether gene is transiently
+#'      activated or deactivated and differentially expressed.
+#'      \item dfDEAnalysis$isMonotonous: (bool) Whether gene is not transiently
+#'      activated or deactivated and differentially expressed. This scenario
+#'      corresponds to a montonous expression level increase or decrease.
+#'    }
 #'    \item lsModelFits: (list length number of conditions fit (1 or 3))
 #'    {"case"} or {"case", "control", "combined"}
 #'    One model fitting object for each condition:
@@ -244,15 +303,21 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' Additionally, \code{ImpulseDE2} saves the following objects and tables into
 #' the working directory:
 #' \itemize{
-#'    \item \code{ImpulseDE2_matCountDataProc.RData} (2D array genes x replicates) 
-#'        Count data: Reduced version of \code{matCountData}. For internal use.
-#'    \item \code{ImpulseDE2_dfAnnotationProc.RData} (data frame) Annotation table.
-#'    \item \code{ImpulseDE2_vecSizeFactors.RData} (numeric vector number of samples) 
-#'        Model scaling factors for each observation which take
-#'        sequencing depth into account (size factors). One size
-#'        factor per sample.
-#'    \item \code{ImpulseDE2_vecDispersions.RData} (vector number of genes) Inverse 
-#'        of gene-wise negative binomial dispersion coefficients computed by DESeq2.
+#'    \item \code{ImpulseDE2_matCountDataProc.RData}
+#'    matCountDataProc: (matrix genes x samples) [Default NULL] 
+#'    Processed read count data, unobserved entries are NA.
+#'    \item \code{ImpulseDE2_dfAnnotationProc.RData} 
+#'    dfAnnotationProc: (data frame samples x covariates) 
+#'    {Sample, Condition, Time (numeric), TimeCateg (str)
+#'    (and confounding variables if given).}
+#'    Annotation table with covariates for each sample.
+#'    \item \code{ImpulseDE2_vecSizeFactors.RData}
+#'    vecSizeFactors: (numeric vector number of samples) 
+#'    Model scaling factors for each sample which take
+#'    sequencing depth into account (size factors).
+#'    \item \code{ImpulseDE2_vecDispersions.RData}
+#'    vecDispersions: (vector number of genes) Gene-wise 
+#'    negative binomial dispersion hyper-parameter.
 #'    \item \code{ImpulseDE2_lsModelFits.RData} (list length number of conditions fit (1 or 3))
 #'    {"case"} or {"case", "control", "combined"}
 #'    One model fitting object for each condition:
@@ -265,16 +330,13 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'    At this level, the sigmoid model fit can be added later.
 #'    Each model fit per gene is a list of fitting parameters and results.
 #'    Read the return-value section of runImpulseDE2 for details.
-#'    \item \code{ImpulseDE2_dfImpulseDE2Results.RData} (data frame) ImpulseDE2 results.
+#'    \item \code{ImpulseDE2_dfImpulseDE2Results.RData} dfDEAnalysis (data frame genes x reported characteristics) 
+#'    Summary of fitting procedure and 
+#'    differential expression results for each gene.
+#'    Read the return-value section of runImpulseDE2 for details.
 #'    \item \code{ImpulseDE2_vecDEGenes.RData} vecDEGenes: (list number of genes) Genes IDs identified
 #'    as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.
-#' 
-#' @seealso Calls the following functions:
-#' \code{\link{processData}}, 
-#' \code{\link{runDESeq2}},
-#' \code{\link{fitImpulse}},
-#' \code{\link{computePval}}, 
-#' \code{\link{plotDEGenes}}.
+#' }
 #' 
 #' @author David Sebastian Fischer
 #' 

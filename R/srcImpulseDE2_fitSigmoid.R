@@ -36,6 +36,8 @@
 #'      {beta, h0, h1, t}
 #'      Down model initialisations of sigmoidal model parameters.
 #'    }
+#'    
+#' @author David Sebastian Fischer
 estimateSigmoidParam <- function(vecCounts,
                                  vecTimepoints,
                                  vecSizeFactors,
@@ -149,6 +151,8 @@ estimateSigmoidParam <- function(vecCounts,
 #'      \item scaConvergence: (scalar) 
 #'      Convergence status of optim for sigmoid model.
 #'    }
+#'    
+#' @author David Sebastian Fischer
 fitSigmoidModel <- function(vecSigmoidParamGuess,
                             vecCounts,
                             scaDisp,
@@ -291,6 +295,8 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
 #'      \item scaConvergence: (scalar) 
 #'      Convergence status of optim on sigmoidal model.
 #'    }
+#'    
+#' @author David Sebastian Fischer
 fitSigmoidGene <- function(vecCounts, 
                            scaDisp,
                            vecSizeFactors,
@@ -357,7 +363,7 @@ fitSigmoidGene <- function(vecCounts,
 #'   
 #' @param matCountDataProc: (matrix genes x samples)
 #'    Read count data.
-#' @param dfAnnotationProc: (Table samples x covariates) 
+#' @param dfAnnotationProc: (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Processed annotation table with covariates for each sample.
@@ -446,6 +452,9 @@ fitSigmoidGene <- function(vecCounts,
 #'        }
 #'      }
 #'    }
+#'    
+#' @author David Sebastian Fischer
+#' 
 #' @export
 fitSigmoidModels <- function(matCountDataProc, 
                              dfAnnotationProc, 
