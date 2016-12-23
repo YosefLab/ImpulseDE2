@@ -66,6 +66,7 @@
 #'    sequencing depth into account (size factors).
 #'    \item vecDispersionsExternalProc: (vector number of genes) Gene-wise 
 #'    negative binomial dispersion hyper-parameter.
+#'    \item strReportProcessing: (str) String of stdout of processData().
 #' }
 #' 
 #' @author David Sebastian Fischer
@@ -138,8 +139,10 @@ processData <- function(dfAnnotation,
 												boolCaseCtrl,
 												vecConfounders,
 												vecDispersionsExternal,
-												vecSizeFactorsExternal){
+												vecSizeFactorsExternal,
+												strReportProcessing){
 		
+	  strReportProcessing <- "Processing Details:"
 		### 1. Check that all necessary input was specified
 		checkNull(dfAnnotation,"dfAnnotation")
 		checkNull(matCountData,"matCountData")
@@ -204,10 +207,10 @@ processData <- function(dfAnnotation,
 		### 3. Check expression table content
 		# Check that all entries in count data table occur in annotation table
 		if( any(!(colnames(matCountData) %in% dfAnnotation$Sample)) ){
-			print(paste0("WARNING: The column(s) ",
+		  strReportProcessing <- paste0(strReportProcessing, "\n","WARNING: The column(s) ",
 									 paste0(as.character( colnames(matCountData)[
 									 	!(colnames(matCountData) %in% dfAnnotation$Sample)] ),collapse=","),
-									 " in the count data table do(es) not occur in annotation table and will be ignored."))
+									 " in the count data table do(es) not occur in annotation table and will be ignored.")
 		}
 		checkNull(rownames(matCountData),"[Rownames of matCountData]")
 		checkCounts(matCountData, "matCountData")
@@ -259,44 +262,44 @@ processData <- function(dfAnnotation,
 		
 		### Summarise which mode, conditions, samples and
 		### batch were found
-		if(boolCaseCtrl){ print(paste0( "ImpulseDE2 runs in case-ctrl mode." )) }
-		else{ print(paste0( "ImpulseDE2 runs in case-only mode." )) }
-		print(paste0( "Found time points: ",
-									paste( vecTimepoints, collapse=",") ))
+		if(boolCaseCtrl){ strReportProcessing <- paste0(strReportProcessing, "\n","ImpulseDE2 runs in case-ctrl mode." ) }
+		else{ strReportProcessing <- paste0(strReportProcessing, "\n","ImpulseDE2 runs in case-only mode." ) }
+		strReportProcessing <- paste0(strReportProcessing, "\n",
+		                              paste0( "Found time points: ",
+		                                      paste( vecTimepoints, collapse=",") ))
 		for(tp in vecTimepoints){
-			print(paste0( "Case: Found the samples at time point ", 
+		  strReportProcessing <- paste0(strReportProcessing, "\n",paste0( "Case: Found the samples at time point ", 
 										tp,": ", 
 										paste0(dfAnnotation[
 											(dfAnnotation$Time %in% tp) &
 												(dfAnnotation$Condition %in% "case") &
 												(dfAnnotation$Sample %in% colnames(matCountData)),
-											]$Sample,collapse=","),collapse="," ))
+											]$Sample,collapse=","),collapse="," ) )
 		}
 		if(boolCaseCtrl){
 			for(tp in vecTimepoints){
-				print(paste0( "Control: Found the following samples at time point ", 
+			  strReportProcessing <- paste0(strReportProcessing, "\n",paste0( "Control: Found the following samples at time point ", 
 											tp, ":", 
 											paste0(dfAnnotation[
 												dfAnnotation$Time %in% tp &
 													dfAnnotation$Condition %in% "control" &
 													dfAnnotation$Sample %in% colnames(matCountData),
-												]$Sample,collapse=","),collapse="," ))
+												]$Sample,collapse=","),collapse="," ) )
 			}
 		}
 		if(!is.null(vecConfounders)){
 			for(confounder in vecConfounders){
 				for(batch in unique( dfAnnotation[,confounder] )){
-					print(paste0( "Found the following samples for confounder ", confounder,
-												" and batch ", batch, ": ",
-												paste0( dfAnnotation[
-													dfAnnotation[,confounder] %in% batch &
-														dfAnnotation$Sample %in% colnames(matCountData),
-													]$Sample,collapse=",") ))
+				  strReportProcessing <- paste0(strReportProcessing, "\n", "Found the following samples for confounder ", confounder,
+				                                " and batch ", batch, ": ",
+				                                paste0( dfAnnotation[ dfAnnotation[,confounder] %in% batch &
+				                                    dfAnnotation$Sample %in% colnames(matCountData),
+				                                  ]$Sample, collapse=",") )
 				}
 			}
 		}
 		
-		return(NULL)
+		return(strReportProcessing)
 	}
 	
 	# Add categorial time variable to annotation table which
@@ -358,7 +361,7 @@ processData <- function(dfAnnotation,
 	# Reduce count data to data which are utilised later
 	reduceCountData <- function(dfAnnotation, matCountDataProc){
 		
-		print(paste0("Input contained ",dim(matCountDataProc)[1]," genes/regions."))
+	  strReportCountRed <- paste0("Input contained ",dim(matCountDataProc)[1]," genes/regions.")
 		### 1. Columns (Conditions):
 		# Reduce expression table to columns of considered conditions
 		if(boolCaseCtrl){
@@ -384,53 +387,50 @@ processData <- function(dfAnnotation,
 		# Check that every sample contains at least one observed value (not NA)
 		vecboolNASample <- apply(matCountDataProc,2,function(sample){all(is.na(sample))})
 		if(any(vecboolNASample)){
-			print(paste0( "WARNING: Sample(s) ",
+		  strReportCountRed <- paste0(strReportCountRed,  "\n","WARNING: Sample(s) ",
 										paste0(colnames(matCountDataProc)[vecboolNASample], collapse=","),
-										" only contain(s) NA values and will be removed from the analysis."))
+										" only contain(s) NA values and will be removed from the analysis.")
 			matCountDataProc <- matCountDataProc[,!vecboolNASample]
 		}
 		# Trigger warning if all zero sample is encountered - these are kept!
 		vecboolAllZeroSample <- apply(matCountDataProc,2,function(sample){all(sample[!is.na(sample)]==0)})
 		if(any(vecboolAllZeroSample)){
-			print(paste0( "WARNING: Sample(s) ",
+		  strReportCountRed <- paste0(strReportCountRed,  "\n", "WARNING: Sample(s) ",
 										paste0(colnames(matCountDataProc)[vecboolAllZeroSample], collapse=","),
-										" only contain(s) zeros (and NAs). These samples are kept for analysis."))
+										" only contain(s) zeros (and NAs). These samples are kept for analysis.")
 		}
+		
 		### 2. Rows (Genes):
 		# Exclude genes with only missing values (NAs)
-		vecboolNAGene <- apply(matCountDataProc,1,function(gene){all(is.na(gene))})
-		if(any(vecboolNAGene)){
-			print(paste0("WARNING: Excluded ",sum(vecboolNAGene)," genes because no real valued samples were given."))
-		}
-		matCountDataProc <- matCountDataProc[!vecboolNAGene,]
-		# Reduce expression table to rows containing at least one non-zero count
-		vecboolAllZeroGene <- apply(matCountDataProc,1,function(gene){all(gene[!is.na(gene)]==0)})
-		if(sum(vecboolAllZeroGene) > 0){
-			print(paste0("WARNING: ",sum(vecboolAllZeroGene), " out of ",
-									 dim(matCountDataProc)[1],
-									 " genes had only zero counts in all considered samples and are omitted."))
-			matCountDataProc <- matCountDataProc[!vecboolAllZeroGene,]
+		vecboolNonZeroGene <- apply(matCountDataProc,1,function(gene)  any(!is.na(gene) & gene > 0) )
+		matCountDataProc <- matCountDataProc[vecboolNonZeroGene,]
+		if(sum(!vecboolNonZeroGene) > 0){
+		  strReportCountRed <- paste0(strReportCountRed,  "\n","WARNING: ",
+		                                sum(!vecboolNonZeroGene), " out of ",
+		                                length(vecboolNonZeroGene),
+		                                " genes do not have obserserved non-zero counts and are excluded.")
 		}
 		
 		# Sort count matrix column by annotation table
 		matCountDataProc <- matCountDataProc[,match(as.vector(dfAnnotation$Sample),colnames(matCountDataProc))]
 		
-		print(paste0("Selected ",dim(matCountDataProc)[1]," genes/regions for analysis."))
-		return(matCountDataProc)
+		strReportCountRed <- paste0(strReportCountRed,  "\n","Selected ",dim(matCountDataProc)[1]," genes/regions for analysis.")
+		return(list( matCountDataProc=matCountDataProc,
+		             strReportCountRed=strReportCountRed) )
 	}
 	
 	###############################################################
 	# (II) Main body of function
 	
 	# Check validity of input
-	checkData(
+	strReportProcessing <- checkData(
 		dfAnnotation=dfAnnotation,
 		matCountData=matCountData,
 		boolCaseCtrl=boolCaseCtrl,
 		vecConfounders=vecConfounders,
 		vecDispersionsExternal=vecDispersionsExternal,
 		vecSizeFactorsExternal=vecSizeFactorsExternal )
-	
+
 	# Process annotation table
 	dfAnnotationProc <- procAnnotation(dfAnnotation=dfAnnotation,
 																		 matCountData=matCountData,
@@ -439,9 +439,11 @@ processData <- function(dfAnnotation,
 	
 	# Process raw counts
 	matCountDataProc <- nameGenes(matCountDataProc=matCountData)
-	matCountDataProc <- reduceCountData(
+	lsReduceCounts <- reduceCountData(
 		dfAnnotation=dfAnnotationProc, 
 		matCountDataProc=matCountDataProc)
+	matCountDataProc <- lsReduceCounts$matCountDataProc
+	strReportProcessing <- paste0(strReportProcessing, "\n",lsReduceCounts$strReportCountRed)
 	
 	# Reduce externally provided parameters according to reduced data set
 	# and reorder according to given data set.
@@ -455,5 +457,6 @@ processData <- function(dfAnnotation,
 	return( list(matCountDataProc           = matCountDataProc,
 							 dfAnnotationProc           = dfAnnotationProc,
 							 vecSizeFactorsExternalProc = vecSizeFactorsExternalProc,
-							 vecDispersionsExternalProc = vecDispersionsExternalProc) )
+							 vecDispersionsExternalProc = vecDispersionsExternalProc,
+							 strReportProcessing        = strReportProcessing ) )
 }

@@ -93,6 +93,8 @@
 #'        }
 #'      }
 #'    }
+#' @param vecAllIDs: (string vector length number of all originally given genes)
+#'    IDs of all originally given genes.
 #' @param boolCaseCtrl: (bool) 
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
@@ -117,6 +119,8 @@
 #'      \item df_full: Degrees of freedom of full model.
 #'      \item df_red: Degrees of freedom of reduced model
 #'      \item mean: Inferred mean parameter of constant model over all samples.
+#'      \item allZero: (bool) Whether there were no observed non-zero observations of this gene.
+#'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
 #'    }
 #'    Entries only present in case-only DE analysis:
 #'    \itemize{
@@ -159,6 +163,7 @@
 runDEAnalysis <- function(matCountDataProc,
                         dfAnnotationProc, 
                         lsModelFits,
+                        vecAllIDs,
 												boolCaseCtrl,
 												vecConfounders,
 												boolIdentifyTransients){
@@ -297,6 +302,11 @@ runDEAnalysis <- function(matCountDataProc,
     dfDEAnalysis$isMonotonous <- (vecPvalueSigmoidConst <= 0.01) &
       (vecPvalueImpulseSigmoidBH > 0.01)
   }
+  
+  vecboolAllZero <- !(vecAllIDs %in% rownames(matCountDataProc))
+  dfDEAnalysis <- dfDEAnalysis[vecAllIDs,]
+  rownames(dfDEAnalysis) <- vecAllIDs
+  dfDEAnalysis$allZero <- vecboolAllZero
   
   return(dfDEAnalysis)
 }

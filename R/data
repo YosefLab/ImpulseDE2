@@ -1,0 +1,20 @@
+ImpulseDE2 v1.0 for count data
+# Process inputProcessing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 1,2,3,4,5,6
+Case: Found the samples at time point 1: A_1_Rep1,A_1_Rep2
+Case: Found the samples at time point 2: A_2_Rep1,A_2_Rep2
+Case: Found the samples at time point 3: A_3_Rep1,A_3_Rep2
+Case: Found the samples at time point 4: A_4_Rep1,A_4_Rep2
+Case: Found the samples at time point 5: A_5_Rep1,A_5_Rep2
+Case: Found the samples at time point 6: A_6_Rep1,A_6_Rep2
+Input contained 600 genes/regions.
+Selected 600 genes/regions for analysis.
+# Run DESeq2: Using dispersion factors computed by DESeq2.
+Consumed time: 0 min.
+# Compute size factors
+# Fitting null and alternative model to the genes
+Consumed time: 0.2 min.
+# Differentially expression analysis based on model fits
+Finished running ImpulseDE2.
+TOTAL consumed time: 0.21 min.

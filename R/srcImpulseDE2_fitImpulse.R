@@ -770,8 +770,6 @@ fitModels <- function(matCountDataProc,
   # in the combined case of case-ctrl to derive a inferred
   # mean parameter for reference.
   lsFitResultsByCond <- lapply(vecLabels, function(label){
-    print(paste0("Fit condition ", match(label, vecLabels), " (", label,
-                 ") out of ", length(vecLabels), " condition(s)."))
     lsFitResults <- fitConstImpulse(
       matCountDataProcCondition=matCountDataProc[,lsSamplesByCond[[label]]],
       vecSizeFactors=vecSizeFactors[lsSamplesByCond[[label]]],

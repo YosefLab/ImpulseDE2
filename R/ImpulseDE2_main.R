@@ -21,9 +21,9 @@ library(circlize)
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
 setwd("/home/david/gitDevelopment/ImpulseDE2/R")
 
+source("srcImpulseDE2_classImpulseDE2Object.R")
 source("srcImpulseDE2_evalImpulse.R")
 source("srcImpulseDE2_evalSigmoid.R")
-source("srcImpulseDE2_compareDEMethods.R")
 source("srcImpulseDE2_computeNormConst.R")
 source("srcImpulseDE2_CostFunctionsFit.R")
 source("srcImpulseDE2_fitImpulse.R")
@@ -90,7 +90,6 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' \code{\link{runDEAnalysis}}, 
 #' \code{\link{plotGenes}}.
 #' The following functions are additionally available to the user:
-#' \code{\link{compareDEMethods}},
 #' \code{\link{fitSigmoidModels}},
 #' \code{\link{plotGenes}},  
 #' \code{\link{plotHeatmap}},
@@ -132,6 +131,8 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' @param boolSimplePlot: (bool) [Default FALSE]
 #'    Whether to reduce plot to data points and impulse trace without
 #'    batch information.
+#' @param boolVerbose: (bool) [Default TRUE] Whether to print
+#'    progress to stdout.
 #' @param dirTemp: (dir) Directory to which temporary results are saved.
 #' 
 #' @return (list length 4)
@@ -151,6 +152,8 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'      \item df_full: Degrees of freedom of full model.
 #'      \item df_red: Degrees of freedom of reduced model
 #'      \item mean: Inferred mean parameter of constant model over all samples.
+#'      \item allZero: (bool) Whether there were no observed non-zero observations of this gene.
+#'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
 #'    }
 #'    Entries only present in case-only DE analysis:
 #'    \itemize{
@@ -314,13 +317,18 @@ runImpulseDE2 <- function(matCountData=NULL,
   boolIdentifyTransients=FALSE,
   boolPlotting=FALSE,
   boolSimplePlot=FALSE,
+  boolVerbose=TRUE,
   dirTemp=NULL ){
   
-  print("ImpulseDE2 v1.0 for count data")
+  strMessage <- "ImpulseDE2 v1.0 for count data"
+  if(boolVerbose) print(strMessage)
+  strReport <- strMessage
   
   tm_runImpulseDE2 <- system.time({    
     # 1. Process input data 
-    print("# Process input")
+    strMessage <- "# Process input"
+    if(boolVerbose) print(strMessage)
+    strReport <- paste0(strReport, "\n", strMessage)
     lsProcessedData <- processData(
       dfAnnotation=dfAnnotation,
       matCountData=matCountData,
@@ -333,6 +341,8 @@ runImpulseDE2 <- function(matCountData=NULL,
     dfAnnotationProc <- lsProcessedData$dfAnnotationProc
     vecSizeFactorsExternalProc <- lsProcessedData$vecSizeFactorsExternalProc
     vecDispersionsExternalProc <- lsProcessedData$vecDispersionsExternalProc
+    if(boolVerbose) write(lsProcessedData$strReportProcessing, file="", ncolumns=1)
+    strReport <- paste0(strReport, lsProcessedData$strReportProcessing)
     
     # Set parallelisation
     if(scaNProc > 1){ register(MulticoreParam(workers=scaNProc)) 
@@ -346,7 +356,9 @@ runImpulseDE2 <- function(matCountData=NULL,
     # 2. Run DESeq2
     # Use dispersion factors from DESeq2 if
     if(is.null(vecDispersionsExternal)){
-      print("# Run DESeq2: Using dispersion factors computed by DESeq2.")
+      strMessage <- "# Run DESeq2: Using dispersion factors computed by DESeq2."
+      if(boolVerbose) print(strMessage)
+      strReport <- paste0(strReport, "\n", strMessage)
       tm_runDESeq2 <- system.time({
         vecDispersions <- runDESeq2(
           dfAnnotationProc=dfAnnotationProc,
@@ -354,10 +366,14 @@ runImpulseDE2 <- function(matCountData=NULL,
           boolCaseCtrl=boolCaseCtrl,
           vecConfounders=vecConfounders)
       })
-      print(paste0("Consumed time: ",round(tm_runDESeq2["elapsed"]/60,2), " min."))
+      strMessage <- paste0("Consumed time: ",round(tm_runDESeq2["elapsed"]/60,2), " min.")
+      if(boolVerbose) print(strMessage)
+      strReport <- paste0(strReport, "\n", strMessage)
     } else {
       # Use externally provided dispersions and reorder
-      print("# Using externally supplied dispersion factors.")
+      strMessage <- "# Using externally supplied dispersion factors."
+      if(boolVerbose) print(strMessage)
+      strReport <- paste0(strReport, "\n", strMessage)
       vecDispersions <- vecDispersionsExternalProc
     }
     if(!is.null(dirTemp)){
@@ -365,7 +381,9 @@ runImpulseDE2 <- function(matCountData=NULL,
     }
     
     # 3. Compute size factors
-    print("# Compute size factors")
+    strMessage <- "# Compute size factors"
+    if(boolVerbose) print(strMessage)
+    strReport <- paste0(strReport, "\n", strMessage)
     vecSizeFactors <- computeNormConst(
     	matCountDataProc=matCountDataProc,
       vecSizeFactorsExternal=vecSizeFactorsExternalProc )
@@ -374,7 +392,9 @@ runImpulseDE2 <- function(matCountData=NULL,
     }
     
     ###  4. Fit null and alternative model to each gene
-    print("# Fitting null and alternative model to the genes")
+    strMessage <- "# Fitting null and alternative model to the genes"
+    if(boolVerbose) print(strMessage)
+    strReport <- paste0(strReport, "\n", strMessage)
     tm_fitImpulse <- system.time({
       lsModelFits <- fitModels(
         matCountDataProc=matCountDataProc, 
@@ -387,11 +407,15 @@ runImpulseDE2 <- function(matCountData=NULL,
     if(!is.null(dirTemp)){
       save(lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
     }
-    print(paste0("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2)," min."))
+    strMessage <- paste0("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2)," min.")
+    if(boolVerbose) print(strMessage)
+    strReport <- paste0(strReport, "\n", strMessage)
     
     ###  5. Fit sigmoid model to case condition if desired
     if(boolIdentifyTransients){
-      print("# Fitting sigmoid model to case condition")
+      strMessage <- "# Fitting sigmoid model to case condition"
+      if(boolVerbose) print(strMessage)
+      strReport <- paste0(strReport, "\n", strMessage)
       tm_fitSigmoid <- system.time({
         lsModelFits <- fitSigmoidModels(
           matCountDataProc=matCountDataProc,
@@ -405,15 +429,20 @@ runImpulseDE2 <- function(matCountData=NULL,
       if(!is.null(dirTemp)){
         save(lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
       }
-      print(paste0("Consumed time: ",round(tm_fitSigmoid["elapsed"]/60,2)," min."))
+      strMessage <- paste0("Consumed time: ",round(tm_fitSigmoid["elapsed"]/60,2)," min.")
+      if(boolVerbose) print(strMessage)
+      strReport <- paste0(strReport, "\n", strMessage)
     }
     
     ### 6. Differentially expression analysis based on model fits
-    print("# Differentially expression analysis based on model fits")
+    strMessage <- "# Differentially expression analysis based on model fits"
+    if(boolVerbose) print(strMessage)
+    strReport <- paste0(strReport, "\n", strMessage)
     dfImpulseDE2Results <- runDEAnalysis(
       matCountDataProc=matCountDataProc,
       dfAnnotationProc=dfAnnotationProc,
       lsModelFits=lsModelFits,
+      vecAllIDs=rownames(matCountData),
       boolCaseCtrl=boolCaseCtrl,
       vecConfounders=vecConfounders,
       boolIdentifyTransients=boolIdentifyTransients)
@@ -421,8 +450,10 @@ runImpulseDE2 <- function(matCountData=NULL,
     if(!is.null(scaQThres)){
       vecDEGenes <- as.vector( 
         dfImpulseDE2Results[as.numeric(dfImpulseDE2Results$padj) <= scaQThres,"Gene"] )
-      print(paste0("Found ", length(vecDEGenes)," DE genes",
-        " at a FDR corrected p-value cut off of ", scaQThres, "."))
+      strMessage <- paste0("Found ", length(vecDEGenes)," DE genes",
+        " at a FDR corrected p-value cut off of ", scaQThres, ".")
+      if(boolVerbose) print(strMessage)
+      strReport <- paste0(strReport, "\n", strMessage)
     } else {
       vecDEGenes <- NULL
     }
@@ -435,7 +466,9 @@ runImpulseDE2 <- function(matCountData=NULL,
     
     ### 7. Plot differentially expressed genes
     if(boolPlotting){
-      print("# Plot differentially expressed genes")
+      strMessage <- "# Plot differentially expressed genes"
+      if(boolVerbose) print(strMessage)
+      strReport <- paste0(strReport, "\n", strMessage)
       if(length(vecDEGenes) > 500){vecDEGenesPlot <- vecDEGenes[1:500]
       } else {vecDEGenesPlot <- vecDEGenes}
       tm_plotGenes <- system.time({
@@ -458,15 +491,30 @@ runImpulseDE2 <- function(matCountData=NULL,
           boolSimplePlot=boolSimplePlot,
           boolLogPlot=boolLogPlot)
       })
-      print(paste0("Consumed time: ",round(tm_plotGenes["elapsed"]/60,2)," min."))
+      strMessage <- paste0("Consumed time: ",round(tm_plotGenes["elapsed"]/60,2)," min.")
+      if(boolVerbose) print(strMessage)
+      strReport <- paste0(strReport, "\n", strMessage)
     }
   })
-  print("Finished running ImpulseDE2.")
-  print(paste0("TOTAL consumed time: ",round(tm_runImpulseDE2["elapsed"]/60,2)," min."))
+  strMessage <- "Finished running ImpulseDE2."
+  if(boolVerbose) print(strMessage)
+  strReport <- paste0(strReport, "\n", strMessage)
+  strMessage <- paste0("TOTAL consumed time: ",round(tm_runImpulseDE2["elapsed"]/60,2)," min.")
+  if(boolVerbose) print(strMessage)
+  strReport <- paste0(strReport, "\n", strMessage)
   
-  return(list(
+  return( new('ImpulseDE2Object',
     dfImpulseDE2Results=dfImpulseDE2Results,
     vecDEGenes=vecDEGenes,
-    lsModelFits=lsModelFits
+    lsModelFits=lsModelFits,
+    matCountDataProc    = matCountDataProc,
+    dfAnnotationProc    = dfAnnotationProc,
+    vecSizeFactors      = vecSizeFactors,
+    vecDispersions      = vecDispersions,
+    boolCaseCtrl        = boolCaseCtrl,
+    vecConfounders      = vecConfounders,
+    scaNProc            = scaNProc, 
+    scaQThres           = scaQThres,
+    strReport           = strReport
   ))
 }
