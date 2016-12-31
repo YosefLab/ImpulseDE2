@@ -1,18 +1,20 @@
 
-plotHeatmap <- function(matCountDataProc,
-                        dfAnnotationProc,
-                        lsModelFits,
-                        dfImpulseDE2Results,
-                        boolIdentifyTransients,
+plotHeatmap <- function(objectImpulseDE2,
                         strCondition,
-                        vecSizeFactors=NULL,
-                        scaQThres=0.001){
+                        boolIdentifyTransients,
+                        scaQThres=0.01){
   
-  scaMinNTPtoEvaluate <- 100 # Number of time points to evalute for each model
+  # Load objects from output class
+  matCountDataProc <- objectImpulseDE2@matCountDataProc
+  dfAnnotationProc <- objectImpulseDE2@dfAnnotationProc
+  lsModelFits <- objectImpulseDE2@lsModelFits
+  dfImpulseDE2Results  <- objectImpulseDE2@dfImpulseDE2Results
+  vecSizeFactors <- objectImpulseDE2@vecSizeFactors
+  
   scaNGenes <- dim(matCountDataProc)[1]
   # Order genes by time of extremum (peak/valley)
-  vecSignificantIDs <- rownames(dfImpulseDE2Results[dfImpulseDE2Results$padj<scaQThres,])
-  #vecTimePointsToEval <- seq(min(dfAnnotationProc$Time), max(dfAnnotationProc$Time), length.out=scaMinNTPtoEvaluate)
+  vecSignificantIDs <- rownames(dfImpulseDE2Results[!is.na(dfImpulseDE2Results$padj) & 
+                                                      dfImpulseDE2Results$padj<scaQThres,])
   vecTimePointsToEval <- sort(unique(dfAnnotationProc$Time), decreasing=FALSE)
   scaNTPtoEvaluate <- length(vecTimePointsToEval)
   matImpulseValue <- do.call(rbind, lapply(vecSignificantIDs, function(x){
@@ -30,26 +32,47 @@ plotHeatmap <- function(matCountDataProc,
   vecMinTime <- vecTimePointsToEval[matidxMinTimeSort[,1]]
   
   if(boolIdentifyTransients){
-    vecboolValleyUnSig <- apply(matImpulseValue, 1, function(genevalues){
+    # Group into transients and monotonous
+    vecidxTransient <- which(dfImpulseDE2Results[vecSignificantIDs,]$isTransient)
+    #vecidxTransientSort <- vecidxTransient[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxTransient,1]))]
+    
+    vecidxMonotonous <- which(dfImpulseDE2Results[vecSignificantIDs,]$isMonotonous)
+    #vecidxMonotonousSort <- vecidxMonotonous[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxMonotonous,1]))]
+    
+    # Finbe sort montonous transition signals into up/down
+    vecboolMonotonousUp <- apply(matImpulseValue[vecidxMonotonous,], 1, function(gene){
+      gene[1] < gene[scaNTPtoEvaluate]
+    })
+    vecboolMonotonousDown <- !vecboolMonotonousUp
+    
+    vecidxMonotonousUp <- vecidxMonotonous[vecboolMonotonousUp]
+    vecidxMonotonousUpSort <- vecidxMonotonousUp[do.call(order, as.data.frame(matidxMinTimeSort[vecidxMonotonousUp,1]))]
+    vecidxMonotonousDown <- vecidxMonotonous[vecboolMonotonousDown]
+    vecidxMonotonousDownSort <- vecidxMonotonousDown[do.call(order, as.data.frame(matidxMinTimeSort[vecidxMonotonousDown,1]))]
+    
+    # Fine sort transitive signals into off/on
+    vecboolTransientValley <- apply(matImpulseValue[vecidxTransient,], 1, function(genevalues){
       # Assume no complete constant fit initially
       boolValley <- any(genevalues[2:(scaNTPtoEvaluate-1)] < genevalues[1] &
                           genevalues[2:(scaNTPtoEvaluate-1)] < genevalues[scaNTPtoEvaluate])
       return(boolValley)
     })
-    vecboolValley <- vecboolValleyUnSig & dfImpulseDE2Results[vecSignificantIDs,]$isTransient
-    vecboolPeak <- !vecboolValley
+    vecboolTransientPeak <- !vecboolTransientValley
     
-    vecidxPeak <- which(vecboolPeak)
-    vecidxPeakSort <- vecidxPeak[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxPeak,1]))]
-    #vecidxPeakSort <- vecidxPeak[sort(vecMaxTime[vecidxPeak], decreasing=FALSE, index.return=TRUE)$ix]
-    vecidxValley <- which(vecboolValley)
-    vecidxValleySort <- vecidxValley[do.call(order, as.data.frame(matidxMinTimeSort[vecidxValley,1]))]
-    #vecidxValleySort <- vecidxValley[sort(vecMinTime[vecidxValley], decreasing=FALSE, index.return=TRUE)$ix]
+    vecidxTransientPeak <- vecidxTransient[vecboolTransientPeak]
+    vecidxTransientPeakSort <- vecidxTransientPeak[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxTransientPeak,1]))]
+    vecidxTransientValley <- vecidxTransient[vecboolTransientValley]
+    vecidxTransientValleySort <- vecidxTransientValley[do.call(order, as.data.frame(matidxMinTimeSort[vecidxTransientValley,1]))]
     
-    vecidxAllSort <- c(vecidxPeakSort, vecidxValleySort)
+    vecidxAllSort <- c(vecidxMonotonousUpSort,
+                       vecidxMonotonousDownSort,
+                       vecidxTransientPeakSort,
+                       vecidxTransientValleySort)
     
-    vecTrajectoryType <- c(rep("peak", length(vecidxPeakSort)), 
-                           rep("valley", length(vecidxValleySort)))
+    vecTrajectoryType <- c(rep("up", length(vecidxMonotonousUpSort)), 
+                           rep("down", length(vecidxMonotonousDownSort)), 
+                           rep("*up", length(vecidxTransientPeakSort)),
+                           rep("*down", length(vecidxTransientValleySort)) )
   } else {
     vecidxAllSort <- sort(vecMaxTime, decreasing=FALSE, index.return=TRUE)$ix
     vecTrajectoryType <- rep(" ", length(vecidxAllSort))

@@ -173,6 +173,8 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'    }
 #'    Entries only present if boolIdentifyTransients is TRUE:
 #'    \itemize{
+#'      \item converge_sigmoid: Convergence status of optim for 
+#'      sigmoid model fit to samples of case condition.
 #'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
 #'      impulse model fit versus sigmoidal model on samples of case condition.
 #'      \item dfDEAnalysis$impulseTOsigmoid_padj: Benjamini-Hochberg 
@@ -504,9 +506,9 @@ runImpulseDE2 <- function(matCountData=NULL,
   strReport <- paste0(strReport, "\n", strMessage)
   
   return( new('ImpulseDE2Object',
-    dfImpulseDE2Results=dfImpulseDE2Results,
-    vecDEGenes=vecDEGenes,
-    lsModelFits=lsModelFits,
+    dfImpulseDE2Results = dfImpulseDE2Results,
+    vecDEGenes          = vecDEGenes,
+    lsModelFits         = lsModelFits,
     matCountDataProc    = matCountDataProc,
     dfAnnotationProc    = dfAnnotationProc,
     vecSizeFactors      = vecSizeFactors,

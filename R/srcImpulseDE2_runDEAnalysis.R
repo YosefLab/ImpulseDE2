@@ -140,6 +140,8 @@
 #'    }
 #'    Entries only present if boolIdentifyTransients is TRUE:
 #'    \itemize{
+#'      \item converge_sigmoid: Convergence status of optim for 
+#'      sigmoid model fit to samples of case condition.
 #'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
 #'      impulse model fit versus sigmoidal model on samples of case condition.
 #'      \item dfDEAnalysis$impulseTOsigmoid_padj: Benjamini-Hochberg 
@@ -233,12 +235,12 @@ runDEAnalysis <- function(matCountDataProc,
   # Get p-values from Chi-square distribution (assumption about null model)
   vecPvalue <- pchisq(vecDeviance,df=scaDeltaDegFreedom,lower.tail=FALSE)
   # Multiple testing correction (Benjamini-Hochberg)
-  vecPvalueBH = p.adjust(vecPvalue, method = "BH")
+  vecPvalueBH <- p.adjust(vecPvalue, method = "BH")
   
   scaNGenes <- dim(matCountDataProc)[1]
   if(!boolCaseCtrl){
     # Case-only
-    dfDEAnalysis =   data.frame(
+    dfDEAnalysis = data.frame(
       Gene = row.names(matCountDataProc),
       p=vecPvalue,
       padj=vecPvalueBH,
@@ -252,7 +254,7 @@ runDEAnalysis <- function(matCountDataProc,
       stringsAsFactors = FALSE)
   } else {
     # Case-control
-    dfDEAnalysis =   data.frame(
+    dfDEAnalysis = data.frame(
       Gene = row.names(matCountDataProc),
       p=as.numeric(vecPvalue),
       padj=as.numeric(vecPvalueBH),
@@ -266,6 +268,7 @@ runDEAnalysis <- function(matCountDataProc,
       converge_control=vecConvergenceImpulseControl,
       stringsAsFactors = FALSE)
   }
+  rownames(dfDEAnalysis) <- row.names(matCountDataProc)
   
   # Add entries if sigmoidal fit was performed and transient tranjectories
   # are to be differentiated from monotonous ones. Do this in case condition.
@@ -283,7 +286,7 @@ runDEAnalysis <- function(matCountDataProc,
     vecPvalueImpulseSigmoid <- pchisq(vecDevianceImpulseSigmoid,
                         df=scaDegFreedomImpulse-scaDegFreedomSigmoid,
                         lower.tail=FALSE)
-    vecPvalueImpulseSigmoidBH = p.adjust(vecPvalueImpulseSigmoid, method = "BH")
+    vecPvalueImpulseSigmoidBH <- p.adjust(vecPvalueImpulseSigmoid, method = "BH")
     
     # Compare sigmoid to constant: Trajectory is constant if this is not significant
     # Trajectory is montonous if this is significant but vecPvalueImpulseSigmoidBH is not
@@ -294,6 +297,7 @@ runDEAnalysis <- function(matCountDataProc,
     vecPvalueSigmoidConstBH = p.adjust(vecPvalueSigmoidConst, method = "BH")
     
     # Add entries into DE table
+    dfDEAnalysis$converge_sigmoid <- sapply(lsModelFits$case, function(fit) fit$lsSigmoidFit$scaConvergence )
     dfDEAnalysis$impulseTOsigmoid_p <- as.numeric(vecPvalueImpulseSigmoid)
     dfDEAnalysis$impulseTOsigmoid_padj <- as.numeric(vecPvalueImpulseSigmoidBH)
     dfDEAnalysis$sigmoidTOconst_p <- as.numeric(vecPvalueSigmoidConst)
@@ -303,9 +307,9 @@ runDEAnalysis <- function(matCountDataProc,
       (vecPvalueImpulseSigmoidBH > 0.01)
   }
   
-  vecboolAllZero <- !(vecAllIDs %in% rownames(matCountDataProc))
-  dfDEAnalysis <- dfDEAnalysis[vecAllIDs,]
+  dfDEAnalysis <- dfDEAnalysis[match(vecAllIDs,dfDEAnalysis$Gene),]
   rownames(dfDEAnalysis) <- vecAllIDs
+  vecboolAllZero <- !(vecAllIDs %in% rownames(matCountDataProc))
   dfDEAnalysis$allZero <- vecboolAllZero
   
   return(dfDEAnalysis)
