@@ -15,6 +15,8 @@ library(BiocParallel)
 library(Matrix)
 library(ComplexHeatmap)
 library(circlize)
+library(gridExtra)
+library(cowplot)
 
 # Source functions in .R files from same directory as this function.
 #setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
@@ -237,16 +239,8 @@ runImpulseDE2 <- function(matCountData=NULL,
     if(boolVerbose) write(lsProcessedData$strReportProcessing, file="", ncolumns=1)
     strReport <- paste0(strReport, lsProcessedData$strReportProcessing)
     
-    # Attempt accessing temp directory
-    if(!is.null(dirTemp)){
-      dirCurrent <- getwd()
-      tryCatch({
-        setwd(dirTemp)
-      }, error=function(strErrorMsg){
-        stop(paste0("ERROR: dirTemp not available: ", strErrorMsg))
-      })
-      setwd(dirCurrent)
-    }
+    # Check temp directory
+    if(!is.null(dirTemp)) if(!file.exists(dirTemp)) stop(paste0("ERROR: dirTemp not available."))
     
     # Set parallelisation
     if(scaNProc > 1){ register(MulticoreParam(workers=scaNProc)) 
@@ -322,7 +316,7 @@ runImpulseDE2 <- function(matCountData=NULL,
         boolCaseCtrl=boolCaseCtrl)
     })
     if(!is.null(dirTemp)){
-      save(lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
+      save(objectImpulseDE2@lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
     }
     strMessage <- paste0("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2)," min.")
     if(boolVerbose) print(strMessage)

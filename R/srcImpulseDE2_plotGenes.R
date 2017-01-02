@@ -2,417 +2,186 @@
 #++++++++++++++++++++++     Plot impulse fits    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#' Plots the impulse fits and data to pdf
+#' Plots the impulse fits and data
 #' 
-#' Plots the impulse fits and data to pdf.
+#' Plots the impulse fits and data to pdf and return a list of gplots.
 #' 
-#' @seealso Called by \code{runImpulseDE2}.
+#' @seealso Called by separately by user.
 #' 
-#' @param vecGeneIDs (string vector) Gene names to be plotted,
-#      must be rownames of matCountDataProc
-#' @param matCountDataProc: (matrix genes x samples)
-#'    Count data: Reduced version of \code{matCountData}. 
-#'    For internal use.
-#' @param matTranslationFactors: (numeric matrix genes x samples) 
-#'    Model scaling factors for each observation which take
-#'    longitudinal time series mean within a gene into account 
-#'    (translation factors). Computed based based on all samples.
-#' @param matSizeFactors: (numeric matrix genes x samples) 
-#'    Model scaling factors for each observation which take
-#'    sequencing depth into account (size factors). One size
-#'    factor per sample - rows of this matrix are equal.
-#' @param dfAnnotationProc: (Table) Processed annotation table. 
-#'    Lists co-variables of samples: 
-#'    Sample, Condition, Time (numeric), TimeCateg (str)
-#'    (and LongitudinalSeries). For internal use.
-#' @param lsImpulseFits (list length 2 or 6) List of matrices which
-#'    contain parameter fits and model values for given time course for the
-#'    case condition (and control and combined if control is present).
-#'    Each parameter matrix is called parameter_'condition' and has the form
-#'    (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
-#'    ) where beta to t2 are parameters of the impulse
-#'    model, mu is the single parameter of the mean model, logL are
-#'    log likelihoods of full (H1) and reduced model (H0) respectively, converge
-#'    is convergence status of numerical optimisation of model fitting by
-#'    \code{optim} from \code{stats}. Each value matrix is called
-#'    value_'condition' and has the form (genes x time points) and contains the
-#'    counts predicted by the impulse model at the observed time points.
-#' @param dfImpulseDE2Results (data frame genes x fitting characteristics) 
-#'    Summary of fitting procedure for each gene.
-#' @param vecRefPval (vec length genes) Method 2 (DESeq2) adjusted p-values
-#' @param strCaseName (str) Name of the case condition in \code{dfAnnotationProcFull}.
-#' @param strControlName: (str) [Default NULL] Name of the control condition in 
-#'    \code{dfAnnotationProcFull}.
-#' @param strMode: (str) [Default "batch"] {"batch","longitudinal","singlecell"}
-#'    Mode of model fitting.
-#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
-#' @param strFileNameSuffix (character string) [Default ""] File extention.
-#' @param title_string (character string) [Default ""] Title for each plot.
-#' @param strPlotSubtitle (character string) [Default ""] Subtitle for each plot.
-#' @param NPARAM (scalar) [Default 6] Number of parameters of impulse model.
+#' @param vecGeneIDs: (string vector) Gene names to be plotted,
+#'     Must be in rownames of matCountDataProc.
+#' @param dirOut: (dir) Directory into which pdf is printed.
+#' @param strFileName: (str) [Default "ImpulseDE2_Trajectories.pdf"]
+#'    File name of pdf with plots.
+#' @param vecRefPval: (vector length vecGeneIDs) [Default NULL]
+#'    P/Q-values to be displayed alongside ImpulseDE2 q-value
+#'    for differential expression in plot titles.
+#' @param strNameRefMethod: (str) [Default NULL]
+#'    Name of reference method used to generate vecRefPval.
+#'    Mentioned in plot titles.
 #' 
-#' @return NULL
+#' @return lsgplotsID: (gplot list length vecGeneIDs)
+#'    List of gplots for IDs in vecGeneIDs. This is secondary 
+#'    output next to the .pdf and can be used to extract 
+#'    single plots or assemble plots differently.
+#' 
+#' @author David Sebastian Fischer
+#' 
 #' @export
-
 plotGenes <- function(vecGeneIDs, 
-  matCountDataProc, 
-  vecSizeFactors,
-  dfAnnotationProc, 
-  lsModelFits, 
-  dfImpulseDE2Results, 
-  vecRefPval=NULL, 
-  strCaseName, 
-  strControlName=NULL, 
-  strMode="batch",
-  strFileNameSuffix = "", 
-  strPlotTitleSuffix = "", 
-  strPlotSubtitle = "",
-  strNameMethod1="ImpulseDE2", 
-  strNameMethod2=NULL,
-  boolSimplePlot=FALSE, 
-  boolLogPlot=FALSE){
+                      objectImpulseDE2,
+                      dirOut,
+                      strFileName="ImpulseDE2_Trajectories.pdf",
+                      vecRefPval=NULL, 
+                      strNameRefMethod=NULL){
   
-  # Base of logarithm to use if boolLogPlot==TRUE
-  SCALOGBASE <- 2
-  # Plot one plot per page
-  boolPlotOnePerPage <- FALSE
+  # Load objects from output class
+  matCountDataProc <- objectImpulseDE2@matCountDataProc
+  dfAnnotationProc <- objectImpulseDE2@dfAnnotationProc
+  lsModelFits <- objectImpulseDE2@lsModelFits
+  vecSizeFactors <- objectImpulseDE2@vecSizeFactors
+  vecDispersions <- objectImpulseDE2@vecDispersions
+  vecConfounders <- objectImpulseDE2@vecConfounders
   
-  # Process metadata
-  vecConditions <- as.vector( dfAnnotationProc[match(
-    colnames(matCountDataProc),
-    dfAnnotationProc$Sample),
-    ]$Condition )
-  vecTimepointAssign <- as.vector( dfAnnotationProc[match(
-    colnames(matCountDataProc),
-    dfAnnotationProc$Sample),
-    ]$Time )
-  names(vecTimepointAssign) <- colnames(matCountDataProc)
-  vecTimepoints <- sort(unique(vecTimepointAssign))
-  if(!is.null(strControlName)){
-    vecidxSamplesCase <- vecConditions %in% strCaseName
-    vecidxSamplesCtrl <- vecConditions %in% strControlName
-  }
-  if(strMode=="batcheffects"){
-    vecBatches <- dfAnnotationProc[match(
-      colnames(matCountDataProc),
-      dfAnnotationProc$Sample),
-      ]$LongitudinalSeries
-    vecBatchesUnique <- unique(vecBatches)
-    vecBatchAssign <- match(vecBatches, vecBatchesUnique)
-    vecBatchAssignFirstOcc <- sapply(vecBatchesUnique, function(batch) match(batch, vecBatches))
-  }
+  # Set graphical parameters
+  scaNPlotsPerPage <- 6
+  scaRefTextSize <- 14
+  scaResScale <- 2
+  scaLabelsScale <- 2
   
-  # Scale count data by size factors for plotting:
-  # The impulse models are fit based on normalised means.
-  # Therefore, the model curves follow the normalised
-  # count data and not the raw count data. However, 
-  # fitting was still performed based on raw count data.
-  matCountDataProcNorm <- matCountDataProc / matrix(
-    vecSizeFactors, 
-    nrow=dim(matCountDataProc)[1],
-    ncol=dim(matCountDataProc)[2], byrow=TRUE )
-  matMuTimepoints <- matrix(NA, nrow=dim(matCountDataProc)[1],ncol=length(vecTimepoints))
-  rownames(matMuTimepoints) <- rownames(matCountDataProc)
-  for(tp in vecTimepoints){
-    if(sum(vecTimepointAssign==tp)>1){
-      matMuTimepoints[,match(tp,vecTimepoints)] <- rowMeans(matCountDataProcNorm[,vecTimepointAssign==tp],na.rm=TRUE)
+  # Check input
+  if(is.null(dirOut) | !file.exists(dirOut)) stop("Output directory dirOut not available.")
+  if(!is.null(vecRefPval) & names(vecRefPval) != vecGeneIDs) stop("Names of vecRefPval have to be IDs from vecGeneIDs.")
+  
+  scaNIDs <- length(vecGeneIDs)
+  lsgplotsID <- list()
+  for(id in vecGeneIDs){
+    
+    vecTimePointsFit <- seq(min(dfAnnotation$Time), max(dfAnnotation$Time), length.out=100)
+    vecCaseImpulseParam <- lsResImpulseDE2$lsModelFits$case[[id]]$lsImpulseFit$vecImpulseParam
+    vecCaseImpulseValue <- evalImpulse_comp(vecImpulseParam=vecCaseImpulseParam,
+                                            vecTimepoints=vecTimePointsFit)
+    
+    # Can only resolve one level of batch effects as this is plotted
+    # as different function fits to the indididual batches
+    vecCaseBatchFactors <- lsResImpulseDE2$lsModelFits$case[[id]]$lsvecBatchFactors[[1]]
+    vecBatchLabelsCase <- lsResImpulseDE2$lsModelFits$IdxGroups$case$lsvecBatchUnique[[1]]
+    
+    vecValueToPlotCase <- do.call(c, lapply(vecCaseBatchFactors, function(f) vecCaseImpulseValue*f) )
+    
+    if(boolCaseCtrl){
+      vecSamples <- dfAnnotationProc$Gene
+      dfRaw <- data.frame(
+        normCounts=matCountDataProc[id,vecSamples]/vecSizeFactors[vecSamples],
+        time=dfAnnotationProc[vecSamples,]$Time,
+        batch=dfAnnotation[vecSamples,vecConfounders[1]],
+        condition=dfAnnotation[vecSamples,]$Condition
+      )
+      
+      vecControlImpulseParam <- lsResImpulseDE2$lsModelFits$control[[id]]$lsImpulseFit$vecImpulseParam
+      vecControlImpulseValue <- evalImpulse_comp(vecImpulseParam=vecControlImpulseParam,
+                                                 vecTimepoints=vecTimePointsFit)
+      vecCombinedImpulseParam <- lsResImpulseDE2$lsModelFits$combined[[id]]$lsImpulseFit$vecImpulseParam
+      vecCombinedImpulseValue <- evalImpulse_comp(vecImpulseParam=vecCombinedImpulseParam,
+                                                  vecTimepoints=vecTimePointsFit)
+      
+      vecControlBatchFactors <- lsResImpulseDE2$lsModelFits$ctrl[[id]]$lsvecBatchFactors[[1]]
+      vecCombinedBatchFactors <- lsResImpulseDE2$lsModelFits$comb[[id]]$lsvecBatchFactors[[1]]
+      
+      vecBatchLabelsCtrl <- lsResImpulseDE2$lsModelFits$IdxGroups$ctrl$lsvecBatchUnique[[1]]
+      vecBatchLabelsComb <- lsResImpulseDE2$lsModelFits$IdxGroups$comb$lsvecBatchUnique[[1]]
+      
+      vecValueToPlotCtrl <- do.call(c, lapply(vecCtrlBatchFactors, function(f) vecControlImpulseValue*f) )
+      vecValueToPlotComb <- do.call(c, lapply(vecCombBatchFactors, function(f) vecCombinedImpulseValue*f) )
+      
+      dfFit <- data.frame(
+        time=c(rep(vecTimePointsFit, length(vecCaseBatchFactors)),
+               rep(vecTimePointsFit, length(vecCtrlBatchFactors)),
+               rep(vecTimePointsFit, length(vecCombBatchFactors))),
+        value=c(vecValueToPlotCase,
+                vecValueToPlotCtrl,
+                vecValueToPlotComb),
+        condition=c(rep(rep("case", length(vecTimePointsFit)), length(vecCaseBatchFactors)),
+                    rep(rep("ctrl", length(vecTimePointsFit)), length(vecCtrlBatchFactors)),
+                    rep(rep("comb", length(vecTimePointsFit)), length(vecCombBatchFactors))),
+        batchfit=c(sapply(vecBatchLabelsCase, function(label) rep(label, length(vecTimePointsFit)) ),
+                sapply(vecBatchLabelsCtrl, function(label) rep(label, length(vecTimePointsFit)) ),
+                sapply(vecBatchLabelsComb, function(label) rep(label, length(vecTimePointsFit)) ) )
+      )
+      gplotGene <- ggplot() +
+        geom_point(data=dfRaw, aes(x=time, y=normCounts, colour=condition, shape=batch), size=6) +
+        geom_line(data=dfFit, aes(x=time, y=value, colour=condition, linetype=batchfit), size=2)
     } else {
-      matMuTimepoints[,match(tp,vecTimepoints)] <- matCountDataProcNorm[,vecTimepointAssign==tp]
+      vecSamples <- dfAnnotationProc[dfAnnotationProc$Condition=="case",]$Gene
+      dfRaw <- data.frame(
+        normCounts=matCountDataProc[id,vecSamples]/vecSizeFactors[vecSamples],
+        time=dfAnnotationProc[vecSamples,]$Time,
+        batch=dfAnnotation[vecSamples,vecConfounders[1]],
+        condition=dfAnnotation[vecSamples,]$Condition
+      )
+      
+      dfFit <- data.frame(
+        time=rep(vecTimePointsFit, length(vecCaseBatchFactors)),
+        value=vecValueToPlotCase,
+        condition=rep(rep("case", length(vecTimePointsFit)), length(vecCaseBatchFactors)),
+        batchfit=sapply(vecBatchLabelsCase, function(label) rep(label, length(vecTimePointsFit)) )
+      )
+      gplotGene <- ggplot() +
+        geom_point(data=dfRaw, aes(x=time, y=normCounts, colour=batch, shape=batch), size=6) +
+        geom_line(data=dfFit, aes(x=time, y=value, colour=batch, linetype=batchfit), size=2)
     }
-  }
-  if(boolLogPlot){
-    # Add pseudocounts for plotting convenience
-    matCountDataProcNorm <- log(matCountDataProcNorm+1)/log(SCALOGBASE)
-    matMuTimepoints <- log(matMuTimepoints+1)/log(SCALOGBASE)
-    strLogPlot <- paste0("log_",SCALOGBASE)
-  } else {
-    strLogPlot <- NULL
+    lsgplotsID[[length(lsgplotsID)+1]] <- gplotGene + 
+      labs(title=paste0(id, ": ImpulseDE2 [",
+                        round(log(matPval[id,]$ImpulseDE2)/log(10), 2), 
+                        "] ", strRefMethod," [", 
+                        round(log(matPval[id,strRefMethod])/log(10), 2), "]" )) +
+      xlab("time [hours]") +
+      ylab("Read counts")
   }
   
-  # Only for batch/singlecell plotting:
-  # Width of negative binomial pdf (ylim) in time units for plotting
-  # E.g. PDF_WIDTH <- 1 means that the inferred negative binomial
-  # density of a sample will be scaled into the interval [0,1]
-  # and plotted at sample x time units vertically in the interval
-  # [x,x+1] time units, with the y axis (the counts) being the
-  # horizontal axis of the pdf.
-  PDF_WIDTH <- (max(vecTimepoints)-min(vecTimepoints))/10
+  ### Put pages together
+  # Add margins
+  marginObject <- theme(plot.margin = unit(c(1,1,1,2), "cm")) #t,r,b,l
+  lsgplotsID <- lapply(lsgplotsID, "+", marginObject)
   
-  # Open .pdf
-  pdf(paste("ImpulseDE2_",strFileNameSuffix,".pdf",sep=""),height=6.0,width=9.0)
+  # Add text and legend formats
+  themeObjectStandard <- theme(axis.text=element_text(size=scaRefTextSize*scaResScale),
+                               axis.title=element_text(size=scaRefTextSize*scaResScale,face="bold"),
+                               plot.title=element_text(size=rel(scaResScale),face="bold"),
+                               legend.text=element_text(size=scaRefTextSize*scaResScale),
+                               legend.title=element_text(size=scaRefTextSize*scaResScale),
+                               legend.key.size = unit(scaResScale, 'lines'))
+  # themeObjectNoLegend is currently not used. Add in lsthemeObjects if displaying many plots
+  themeObjectNoLegend <- theme(axis.text=element_text(size=scaRefTextSize*scaResScale),
+                               axis.title=element_text(size=scaRefTextSize*scaResScale,face="bold"),
+                               plot.title=element_text(size=rel(scaResScale),face="bold"),
+                               legend.position="none")
+  lsthemeObjects <- list(themeObjectStandard,themeObjectStandard,
+                         themeObjectStandard,themeObjectStandard,
+                         themeObjectStandard,themeObjectStandard )
+  lsgplotsID <- lapply(seq(1, length(lsgplotsID)), function(g){
+    lsgplotsID[[g]] + lsthemeObjects[[g]]
+  })
   
-  # Define grid for printing plots
-  if (length(vecGeneIDs) == 1 | boolPlotOnePerPage){
-    par(mfrow=c(1,1), xpd=TRUE)
-    scaLegendInset <- -0.15
-  } else if (length(vecGeneIDs) <= 4){
-    par(mfrow=c(2,2), xpd=TRUE)
-    scaLegendInset <- -0.35
-  } else if (length(vecGeneIDs) <= 6){
-    par(mfrow=c(2,3), xpd=TRUE)
-    scaLegendInset <- -0.3
-  } else {
-    par(mfrow=c(3,3), xpd=TRUE)
-    scaLegendInset <- -0.65
+  # Printing to file
+  dirFileOut <- paste0(dirOut, strFileName)
+  print(paste0("Creating ", dirFileOut))
+  graphics.off()
+  pdf(dirFileOut, width=480*2*2, height=480*2*3)
+  for(p in seq(1,scaNIDs %/% scaNPlotsPerPage)){
+    if(p < scaNIDs %/% scaNPlotsPerPage){ vecidxPlots <- seq((p*scaNPlotsPerPage+1),(p*(scaNPlotsPerPage+1)))
+    } else { vecidxPlots <- seq((p*scaNPlotsPerPage+1),scaNIDs) }
+    print(plot_grid(plotlist=lsgplotsID[[vecidxPlots]],
+                    align="h",
+                    nrow=3, ncol=2,
+                    rel_widths=c(1,1),
+                    rel_heights=c(1,1,1),
+                    labels="AUTO",
+                    label_size=scaRefTextSize*scaResScale*scaLabelsScale))
   }
-  # Time points for plotting of impulse model
-  vecX <- seq(min(vecTimepoints),max(vecTimepoints),min(0.1,(max(vecTimepoints)-min(vecTimepoints))/100))
-  # Find elements in vecX corresponding (closest) to observed time point
-  indVecXObs <- unlist(lapply( 
-    vecTimepoints, function(t){match( min(abs(vecX-t)), abs(vecX-t) )} 
-  ))
-  for (geneID in vecGeneIDs){
-    if(is.null(strControlName)){
-      # Without control  data 
-      
-      # Get impulse model values
-      vecCaseValues <- lsModelFits$case$geneID$lsImpulseFit$vecImpulseValues
-      if(boolLogPlot){ vecCaseValues <- log(vecCaseValues+1)/log(SCALOGBASE) }
-      
-      # Prepare p-values to include in header
-      pval_Impulse <- round( log(dfImpulseDE2Results[geneID,]$padj)/log(10), 2 )
-      if(!is.null(vecRefPval)){
-        pval_Method2 <- round( log(vecRefPval[geneID])/log(10), 2 )
-      }
-      
-      if(boolSimplePlot){
-        # Only plot points and impulse trace
-        # Plot observed points in blue - all time courses in same colour
-        scaYlim_lower <- min( min(matCountDataProcNorm[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
-        scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
-        if(max(vecCaseValues) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
-          if(boolLogPlot){ scaYlim_upper <- 1+max(matCountDataProcNorm[geneID,],na.rm=TRUE)
-          } else { scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE) }
-        }
-        strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
-        if(!is.null(vecRefPval)){
-          strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
-        } else {
-          strPvalMethod2 <- NULL
-        }
-        plot(vecTimepointAssign,
-          matCountDataProcNorm[geneID,],
-          col="blue",pch=3,
-          xlim=c(0,max(vecTimepoints,na.rm=TRUE)+PDF_WIDTH), 
-          ylim=c(scaYlim_lower,scaYlim_upper),
-          xlab="Time", ylab=paste0(strLogPlot," Impulse fit and count data"),
-          main=paste0(geneID," ",strPlotTitleSuffix," log_10(Pval):\n ",strPvalImpulse,
-            strPvalMethod2 ),sub=strPlotSubtitle)
-        # Plot impulse model within boundaries of observed points
-        vecCaseValuesToPlot <- vecCaseValues
-        indImpulseValToPlot <- vecCaseValuesToPlot >= scaYlim_lower & vecCaseValuesToPlot <= scaYlim_upper
-        vecCaseValuesToPlot[!indImpulseValToPlot] <- NA
-        points(vecX, vecCaseValuesToPlot,col="black", type="l")
-        
-      } else {
-        # Plot points, impulse trace and
-        # batch: inferred negative binomials
-        # longitudinal: longitudinal series scaled impulse traces
-        if(strMode=="singlebatch"){
-          # Plot observed points in blue - all time courses in same colour
-          scaYlim_lower <- min( min(matCountDataProcNorm[geneID,],na.rm=TRUE), min(vecCaseValues[indVecXObs]) )
-          scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), max(vecCaseValues[indVecXObs]) )
-          if(max(vecCaseValues) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
-            if(boolLogPlot){ scaYlim_upper <- 1+max(matCountDataProcNorm[geneID,],na.rm=TRUE)
-            } else { scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE) }
-          }
-          strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
-          if(!is.null(vecRefPval)){
-            strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
-          } else {
-            strPvalMethod2 <- NULL
-          }
-          
-          plot(vecTimepointAssign,
-            matCountDataProcNorm[geneID,],
-            col="blue",
-            pch=3,
-            xlim=c(0,max(vecTimepoints,na.rm=TRUE)+PDF_WIDTH), 
-            ylim=c(scaYlim_lower,scaYlim_upper),
-            xlab="Time",
-            ylab=paste0(strLogPlot," Impulse fit and count data"),
-            main=paste0(geneID," ",strPlotTitleSuffix," log_10(Pval):\n ",strPvalImpulse,
-              strPvalMethod2 ),sub=strPlotSubtitle)
-          
-          # Add vertical density traces:
-          # Bulk: Plot inferred negative binomial pdf at each time point in black (vertical)
-          vecXCoordPDF <- seq(round(scaYlim_lower),round(scaYlim_upper), by=1 )
-          # Mean parameter of negative binomial is value of inferred impulse model
-          vecCaseValueAtTP <- evalImpulse_comp(vecImpulseParamCaseLog,vecTimepoints)
-          for(tp in vecTimepoints){
-            vecYCoordPDF <- dnbinom(vecXCoordPDF,mu=vecCaseValueAtTP[match(tp,vecTimepoints)],
-                                    size=as.numeric(as.vector(dfImpulseDE2Results[geneID,]$size)) )
-            # Scale Y_coord to uniform peak heights of 1
-            # This translates into width of one time unit in plot
-            vecYCoordPDF <- vecYCoordPDF * PDF_WIDTH/max(vecYCoordPDF)
-            # Plot pdf vertically at time point
-            lines(x=tp+vecYCoordPDF,y=vecXCoordPDF,col="black")
-          }
-          
-          # Plot inferred mean of each time point
-          points(vecTimepoints,
-                 matMuTimepoints[geneID,],
-                 col="black",pch=1)
-          # Plot impulse model within boundaries of observed points
-          vecCaseValuesToPlot <- vecCaseValues
-          indImpulseValToPlot <- vecCaseValuesToPlot >= scaYlim_lower & vecCaseValuesToPlot <= scaYlim_upper
-          vecCaseValuesToPlot[!indImpulseValToPlot] <- NA
-          points(vecX, vecCaseValuesToPlot,col="black", type="l")
-          
-          legend(x="bottomright",
-            legend=c(strCaseName),
-            fill=c("blue"), 
-            cex=0.6, 
-            inset=c(0,scaLegendInset))
-          
-        } else if(strMode=="batcheffects"){
-          vecBatchFactors <- lsModelFits$case$geneID$lsImpulseFit$vecBatchFactors
-          
-          # Create colour vector
-          vecCol <- rainbow(n=length(vecBatchesUnique))
-          
-          # Create plot and plot data of first batch with batch factor=1
-          scaYlim_lower <- min( min(matCountDataProcNorm[geneID,],na.rm=TRUE), 
-            min(vecCaseValues[indVecXObs]*min(vecBatchFactors)) )
-          scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE), 
-            max(vecCaseValues[indVecXObs]*max(vecBatchFactors)) )
-          if(max(vecCaseValues)*max(vecBatchFactors) > 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE)){
-            if(boolLogPlot){ scaYlim_upper <- 1+max(matCountDataProcNorm[geneID,],na.rm=TRUE)
-            } else { scaYlim_upper <- 2*max(matCountDataProcNorm[geneID,],na.rm=TRUE) }
-          }
-          strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
-          if(!is.null(vecRefPval)){
-            strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
-          } else {
-            strPvalMethod2 <- NULL
-          }
-          plot(vecTimepointAssign[vecBatchAssign==1],
-            matCountDataProcNorm[geneID, vecBatchAssign==1],
-            col=vecCol[1],pch=3,
-            xlim=c(0,max(vecTimepoints,na.rm=TRUE)), 
-            ylim=c(scaYlim_lower,scaYlim_upper),
-            xlab="Time", ylab=paste0(strLogPlot," Impulse fit and count data"),
-            main=paste0(geneID," ",strPlotTitleSuffix," log_10(Pval):\n ",strPvalImpulse,
-              strPvalMethod2 ),sub=strPlotSubtitle)
-          # Plot impulse fit to time course
-          vecCaseValuesToPlotTC <- vecCaseValues*vecBatchFactors[1]
-          indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
-          vecCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
-          points(vecX, vecCaseValuesToPlotTC,col=vecCol[1], type="l")
-          
-          # Plot remaining time courses
-          if(length(vecBatchesUnique)>1){
-            for(batch in seq(2,length(vecBatchesUnique))){
-              # Plot data of time course
-              points(x=vecTimepointAssign[vecindBatchAssign==batch],
-                y=matCountDataProcNorm[geneID, vecindBatchAssign==batch],
-                col=vecCol[batch],pch=3)
-              # Plot impulse within boundaries of observed points
-              vecCaseValuesToPlotTC <- vecCaseValues*vecBatchFactors[batch]
-              indImpulseValToPlot <- vecCaseValuesToPlotTC >= scaYlim_lower & vecCaseValuesToPlotTC <= scaYlim_upper
-              vecCaseValuesToPlotTC[!indImpulseValToPlot] <- NA
-              points(vecX, 
-                vecCaseValuesToPlotTC,
-                col=vecCol[batch], type="l")
-            }
-          }
-          
-          # Plot mean of each time point
-          points(vecTimepoints,
-            matMuTimepoints[geneID,],
-            col="black",pch=1)
-          
-          legend(x="bottomright",
-            legend=vecLongitudinalSeries,
-            fill=vecCol, 
-            cex=0.6, 
-            inset=c(0,scaLegendInset-0.04*length(vecLongitudinalSeries)))
-        } else {
-          stop(paste0("ERROR: Unrecognised strMode in plotDEGenes(): ",strMode))
-        }
-      }
-      
-    } else {
-      # With control data:
-      # Do not distinguish batch/singlecell/longitudinals plotting:
-      # Plots become to crowded if more than 3 traces (case, control
-      # combined) and two point clouds (case, control) are plotted.
-      
-      # Get impulse model values
-      vecCaseValues <- lsModelFits$case$geneID$lsImpulseFit$vecImpulseValues
-      if(boolLogPlot){ vecCaseValues <- log(vecCaseValues+1)/log(SCALOGBASE) }
-      
-      vecCtrlValues <- lsModelFits$control$geneID$lsImpulseFit$vecImpulseValues
-      if(boolLogPlot){ vecCtrlValues <- log(vecCtrlValues+1)/log(SCALOGBASE) }
-      
-      vecCombValues <- lsModelFits$combined$geneID$lsImpulseFit$vecImpulseValues
-      if(boolLogPlot){ vecCombValues <- log(vecCombValues+1)/log(SCALOGBASE) }
-      
-      pval_Impulse <- round( log(dfImpulseDE2Results[geneID,]$padj)/log(10), 2 )
-      if(!is.null(vecRefPval)){
-        pval_Method2 <- round( log(vecRefPval[geneID])/log(10), 2 )
-      }
-      
-      # Plot observed points: Case green, control red
-      scaYlim_lower <- min( min(matCountDataProcNorm[geneID,],na.rm=TRUE),
-        min(vecCaseValues[indVecXObs]),
-        min(vecCtrlValues[indVecXObs]),
-        min(vecCombValues[indVecXObs]) )
-      scaYlim_upper <- max( max(matCountDataProcNorm[geneID,],na.rm=TRUE),
-        max(vecCaseValues[indVecXObs]),
-        max(vecCtrlValues[indVecXObs]),
-        max(vecCombValues[indVecXObs]) )
-      strPvalImpulse <- paste0(strNameMethod1," ",pval_Impulse)
-      if(!is.null(vecRefPval)){
-        strPvalMethod2 <- paste0(" ",strNameMethod2," ",pval_Method2)
-      } else {
-        strPvalMethod2 <- NULL
-      }
-      # Plot points case
-      plot(vecTimepointAssign[vecidxSamplesCase],
-        (matCountDataProcNorm[geneID,])[vecidxSamplesCase],
-        col="green",pch=3,
-        xlim=c(0,max(vecTimepoints,na.rm=TRUE)+PDF_WIDTH),
-        ylim=c(scaYlim_lower,scaYlim_upper),
-        xlab="Time", ylab=paste0(strLogPlot," Impulse fit and count data"),
-        main=paste0(geneID," ",strPlotTitleSuffix," log_10(Pval):\n ",
-          strPvalImpulse," ",strPvalMethod2),sub=strPlotSubtitle)
-      # Plot points control
-      points(vecTimepointAssign[vecidxSamplesCtrl],
-        (matCountDataProcNorm[geneID,])[vecidxSamplesCtrl],
-        col="red",pch=3, type="p")
-      # Plot impulse models within boundaries of observed points for 
-      # case, control and combined.
-      # Plot impulse model case:
-      vecCaseValuesToPlot <- vecCaseValues
-      indImpulseValToPlot <- vecCaseValuesToPlot >= scaYlim_lower & vecCaseValuesToPlot <= scaYlim_upper
-      vecCaseValuesToPlot[!indImpulseValToPlot] <- NA
-      points(vecX, vecCaseValuesToPlot,col="green", type="l")
-      # Plot impulse model control:
-      vecCtrlValuesToPlot <- vecCtrlValues
-      indImpulseValToPlot <- vecCtrlValuesToPlot >= scaYlim_lower & vecCtrlValuesToPlot <= scaYlim_upper
-      vecCtrlValuesToPlot[!indImpulseValToPlot] <- NA
-      points(vecX, vecCtrlValuesToPlot,col="red", type="l")
-      # Plot impulse model combined:
-      vecCombValuesToPlot <- vecCombValues
-      indImpulseValToPlot <- vecCombValuesToPlot >= scaYlim_lower & vecCombValuesToPlot <= scaYlim_upper
-      vecCombValuesToPlot[!indImpulseValToPlot] <- NA
-      points(vecX, vecCombValuesToPlot,col="black", type="l")
-      
-      # Plot mean of each time point
-      points(vecTimepoints,
-        matMuTimepoints[geneID,],
-        col="black",pch=1)
-      
-      legend(x="bottomright",
-        legend=c(strCaseName,strControlName),
-        fill=c("green","red"), 
-        cex=0.6, 
-        inset=c(0,scaLegendInset))
-      
-    }
-  }
-  # Close .pdf
   dev.off()
+  graphics.off()
+  
+  # Return raw list of gplots
+  return(lsgplotsID)
 }
-
