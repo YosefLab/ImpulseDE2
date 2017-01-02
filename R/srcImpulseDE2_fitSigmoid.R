@@ -20,7 +20,7 @@
 #' @param vecSizeFactors: (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @param lsvecindBatch: (list length number of confounding variables)
+#' @param lsvecidxBatch: (list length number of confounding variables)
 #' 		List of index vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the index batch
@@ -41,20 +41,20 @@
 estimateSigmoidParam <- function(vecCounts,
                                  vecTimepoints,
                                  vecSizeFactors,
-                                 lsvecindBatch){
+                                 lsvecidxBatch){
   # Compute general statistics for initialisation:
   # Expression means by timepoint
   vecCountsSFcorrected <- vecCounts/vecSizeFactors
-  if(!is.null(lsvecindBatch)){
+  if(!is.null(lsvecidxBatch)){
     # Estimate batch factors
     vecBatchFactors <- array(1, length(vecCounts))
-    for(vecindBatch in lsvecindBatch){
-      vecBatchFactorsConfounder <- sapply(unique(vecindBatch), function(batch){
-        mean(vecCountsSFcorrected[vecindBatch==batch]/mean(vecCounts, na.rm=TRUE), na.rm=TRUE)
+    for(vecidxBatch in lsvecidxBatch){
+      vecBatchFactorsConfounder <- sapply(unique(vecidxBatch), function(batch){
+        mean(vecCountsSFcorrected[vecidxBatch==batch]/mean(vecCounts, na.rm=TRUE), na.rm=TRUE)
       })
       # Catch exception that all observations of a batch are zero or all observations are zero:
       vecBatchFactorsConfounder[is.na(vecBatchFactorsConfounder) | vecBatchFactorsConfounder==0] <- 1
-      vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder[vecindBatch]
+      vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder[vecidxBatch]
     }
     vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors
     vecExpressionMeans <- sapply(vecTimepoints, function(tp){
@@ -111,7 +111,7 @@ estimateSigmoidParam <- function(vecCounts,
 #' @param vecSizeFactors: (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @param lsvecindBatch: (list length number of confounding variables)
+#' @param lsvecidxBatch: (list length number of confounding variables)
 #' 		List of index vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the index batch
@@ -120,7 +120,7 @@ estimateSigmoidParam <- function(vecCounts,
 #' @param vecTimepointsUnique: 
 #'    (numeric vector length number of unique time points)
 #'    Unique time points of set of time points of given samples.
-#' @param vecindTimepoint: (index vector length number of samples)
+#' @param vecidxTimepoint: (index vector length number of samples)
 #'    Index of of time point assigned to each sample in vector
 #'    vecTimepointsUnique.
 #' @param MAXIT: (scalar) [Default 1000] 
@@ -157,9 +157,9 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
                             vecCounts,
                             scaDisp,
                             vecSizeFactors,
-                            lsvecindBatch,
+                            lsvecidxBatch,
                             vecTimepointsUnique,
-                            vecindTimepoint,
+                            vecidxTimepoint,
                             MAXIT=100,
                             RELTOL=10^(-8),
                             trace=0,
@@ -167,9 +167,9 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
   
   
   vecParamGuess <- vecSigmoidParamGuess
-  if(!is.null(lsvecindBatch)){
-    for(vecindConfounder in lsvecindBatch){
-      vecParamGuess <- c(vecParamGuess, rep(0, length(unique(vecindConfounder))-1))
+  if(!is.null(lsvecidxBatch)){
+    for(vecidxConfounder in lsvecidxBatch){
+      vecParamGuess <- c(vecParamGuess, rep(0, length(unique(vecidxConfounder))-1))
     }
   }
   
@@ -181,8 +181,8 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
       scaDisp=scaDisp,
       vecSizeFactors=vecSizeFactors,
       vecTimepointsUnique=vecTimepointsUnique,
-      vecindTimepoint=vecindTimepoint,
-      lsvecindBatch=lsvecindBatch,
+      vecidxTimepoint=vecidxTimepoint,
+      lsvecidxBatch=lsvecidxBatch,
       vecboolObserved=!is.na(vecCounts),
       method="BFGS",
       control=list(maxit=MAXIT,
@@ -197,8 +197,8 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
     print(paste0("scaDisp ", paste(scaDisp,collapse=" ")))
     print(paste0("vecSizeFactors ", paste(vecSizeFactors,collapse=" ")))
     print(paste0("vecTimepointsUnique ", paste(vecTimepointsUnique,collapse=" ")))
-    print(paste0("vecindTimepoint ", paste(vecindTimepoint,collapse=" ")))
-    print(paste0("lsvecindBatch ", paste(lsvecindBatch,collapse=" ")))
+    print(paste0("vecidxTimepoint ", paste(vecidxTimepoint,collapse=" ")))
+    print(paste0("lsvecidxBatch ", paste(lsvecidxBatch,collapse=" ")))
     print(paste0("MAXIT ", MAXIT))
     print(strErrorMsg)
     stop(strErrorMsg)
@@ -209,12 +209,12 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
   vecSigmoidParam[2:4] <- exp(vecSigmoidParam[2:4])
   names(vecSigmoidParam) <- c("beta", "h0", "h1", "t")
   vecSigmoidValue <- evalSigmoid_comp(vecSigmoidParam=vecSigmoidParam,
-                                      vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
+                                      vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
   names(vecSigmoidValue) <- names(vecCounts)
   scaNParamUsed <- 6
-  if(!is.null(lsvecindBatch)){
-    lsvecBatchFactors <- lapply(lsvecindBatch, function(vecindConfounder){
-      scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
+  if(!is.null(lsvecidxBatch)){
+    lsvecBatchFactors <- lapply(lsvecidxBatch, function(vecidxConfounder){
+      scaNBatchFactors <- max(vecidxConfounder)-1 # Batches are counted from 1
       # Factor of first batch is one (constant), the remaining
       # factors scale based on the first batch.
       vecBatchFactorsConfounder <- c(1, exp(lsFit$par[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))
@@ -242,7 +242,6 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
 #' observations of this gene.
 #' Structure of this function:
 #' \itemize{
-#'    \item Prepare data,
 #'    \item Fit sigmoidal model
 #'    \itemize{
 #'      \item Initialise sigmoidal model parameters (up and down)
@@ -265,13 +264,17 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
 #' @param vecSizeFactors: (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @param vecTimepoints: (numeric vector length number of samples)
-#'    Time coordinates of each sample.
-#' @param lsvecBatches: (list length number of confounding variables)
+#' @param vecTimepointsUnique: (numeric vector length number of unique
+#'    timepoints) Vector of unique time coordinates observed in this condition.
+#' @param vecidxTimepoint: (idx vector length number of samples)
+#'    Index of the time coordinates of each sample (reference is
+#'    vecTimepointsUnique).
+#' @param lsvecidxBatches: (idx list length number of confounding variables)
 #' 		List of vectors. 
 #' 		One vector per confounding variable.
-#' 		Each vector has one entry per sample with the name of the batch ID
-#' 		within the given confounding variable of the given sample.
+#' 		Each vector has one entry per sample with the index of the batch ID
+#' 		within the given confounding variable of the given sample. Reference
+#' 		is the list of unique batch ids for each confounding variable.
 #' @param MAXIT: (scalar) [Default 1000] 
 #'    Maximum number of BFGS iterations for model fitting with \code{optim}.
 #' 
@@ -300,28 +303,17 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
 fitSigmoidGene <- function(vecCounts, 
                            scaDisp,
                            vecSizeFactors,
-                           vecTimepoints, 
-                           lsvecBatches=lsvecBatches,
+                           vecTimepointsUnique,
+                           vecidxTimepoint,
+                           lsvecidxBatch,
                            MAXIT=1000){
   
-  # (I) Process data
-  # Compute time point specifc parameters
-  vecTimepointsUnique <- sort(unique( vecTimepoints ))
-  vecindTimepoint <- match(vecTimepoints, vecTimepointsUnique)
-  # Get batch assignments
-  if(!is.null(lsvecBatches)){
-    lsvecindBatch <- list()
-    for(batchfactor in lsvecBatches){
-      lsvecindBatch[[length(lsvecindBatch)+1]] <- match(batchfactor, unique(batchfactor))
-    }
-  } else { lsvecindBatch <- NULL }
-  
-  # (II) Fit sigmoidal model
+  # (I) Fit sigmoidal model
   # 1. Compute initialisations
   lsParamGuesses <- estimateSigmoidParam(
     vecCounts=vecCounts,
-    vecTimepoints=vecTimepointsUnique, 
-    lsvecindBatch=lsvecindBatch,
+    vecTimepoints=vecTimepointsUnique[vecidxTimepoint], 
+    lsvecidxBatch=lsvecidxBatch,
     vecSizeFactors=vecSizeFactors )
   vecParamGuessUp <- lsParamGuesses$up
   vecParamGuessDown <- lsParamGuesses$down
@@ -332,8 +324,8 @@ fitSigmoidGene <- function(vecCounts,
                              scaDisp=scaDisp,
                              vecSizeFactors=vecSizeFactors,
                              vecTimepointsUnique=vecTimepointsUnique, 
-                             vecindTimepoint=vecindTimepoint,
-                             lsvecindBatch=lsvecindBatch,
+                             vecidxTimepoint=vecidxTimepoint,
+                             lsvecidxBatch=lsvecidxBatch,
                              MAXIT=MAXIT)
   # 3. Initialisation: Down
   lsFitDown <- fitSigmoidModel(vecSigmoidParamGuess=vecParamGuessDown,
@@ -341,11 +333,11 @@ fitSigmoidGene <- function(vecCounts,
                                scaDisp=scaDisp,
                                vecSizeFactors=vecSizeFactors,
                                vecTimepointsUnique=vecTimepointsUnique, 
-                               vecindTimepoint=vecindTimepoint,
-                               lsvecindBatch=lsvecindBatch,
+                               vecidxTimepoint=vecidxTimepoint,
+                               lsvecidxBatch=lsvecidxBatch,
                                MAXIT=MAXIT)
   
-  # (III) Select best fit and report fit type
+  # (II) Select best fit and report fit type
   if(lsFitDown$scaLL > lsFitUp$scaLL){ lsbestSigmoidFit <- lsFitDown
   } else { lsbestSigmoidFit <- lsFitUp }
   
@@ -361,45 +353,9 @@ fitSigmoidGene <- function(vecCounts,
 #' 
 #' @seealso Calls \code{fitSigmoidGene} to perform fitting on each gene.
 #'   
-#' @param matCountDataProc: (matrix genes x samples)
-#'    Read count data.
-#' @param dfAnnotationProc: (data frame samples x covariates) 
-#'    {Sample, Condition, Time (numeric), TimeCateg (str)
-#'    (and confounding variables if given).}
-#'    Processed annotation table with covariates for each sample.
-#' @param lsModelFits: (list length number of conditions fit (1 or 3))
-#'    {"case"} or {"case", "control", "combined"}
-#'    This is the lsModelFits object created by \code{fitModels} with
-#'    impulse and constant model fits.
-#'    One model fitting object for each condition:
-#'    In case-only DE analysis, only the condition {"case"} is fit.
-#'    In case-control DE analysis, the conditions 
-#'    {"case", "control","combined} are fit.
-#'    Each condition entry is a list of model fits for each gene.
-#'    Each gene entry is a list of model fits to the individual models:
-#'    Impulse model and constant model fit.
-#'    Each model fit per gene is a list of fitting parameters and results.
-#'    \itemize{
-#'      \item Condition ID: (list length number of genes)
-#'      List of fits for each gene to the samples of this condition.
-#'      One entry of this format for all conditions fit.
-#'      \itemize{
-#'        \item Gene ID: (list length 2)
-#'        Impulse, constant and sigmoidal model fit to gene observations.
-#'        One entry of this format for all gene IDs.
-#'        \itemize{
-#'          \item lsImpulseFit: (list) List of impulse fit parameters and results.
-#'          For details, read the annotation of \code{fitModels}.
-#'          \item lsConstFit: (list) List of constant fit parameters and results.
-#'          For details, read the annotation of \code{fitModels}.
-#'        }
-#'      }
-#'    }
-#' @param vecSizeFactors: (numeric vector number of samples) 
-#'    Model scaling factors for each sample which take
-#'    sequencing depth into account (size factors).
-#' @param vecDispersions: (vector number of genes) Gene-wise 
-#'    negative binomial dispersion hyper-parameter.
+#' @param objectImpulseDE2: (object class ImpulseDE2Object)
+#'    Object to be fit with sigmoidal model. Needs to be fitted with impulse 
+#'    model before.
 #' @param vecConfounders: (vector of strings number of confounding variables)
 #' 		Factors to correct for during batch correction.
 #' 		Names refer to columns in dfAnnotation.
@@ -407,7 +363,10 @@ fitSigmoidGene <- function(vecCounts,
 #'    Name of condition entry in lsModelFits for which sigmoidal
 #'    models are to be fit to each gene.
 #'    
-#' @return lsModelFits: (list length number of conditions fit (1 or 3))
+#' @return objectImpulseDE2: (object class ImpulseDE2Object)
+#'    Object with sigmoidal fit added: objectImpulseDE2@lsModelFits
+#'    is updated to:
+#'    lsModelFits: (list length number of conditions fit (1 or 3) +1)
 #'    {"case"} or {"case", "control", "combined"}
 #'    This is the lsModelFits object handed to this function with additional
 #'    sigmoid fit entries for every gene for the given condition.
@@ -420,6 +379,33 @@ fitSigmoidGene <- function(vecCounts,
 #'    Impulse model, constant model and sigmoidal fit.
 #'    Each model fit per gene is a list of fitting parameters and results.
 #'    \itemize{
+#'      \item IdxGroups: (list length number of conditions)
+#'      Samples grouped by time points and by batches and time point vectors. 
+#'      Sample groups are stored in the form of index vectors in which
+#'      samples of the same time point or batch have the same index.
+#'      \itemize{
+#'        \item Condition ID: (list length 5)
+#'        List of index vectors and time points.
+#'        One entry of this format for each condition.
+#'        \itemize{
+#'          \item vecTimepointsUnique: (numeric vector length number of unique
+#'        timepoints) Vector of unique time coordinates observed in this condition.
+#'          \item vecidxTimepoint: (idx vector length number of samples)
+#'        Index of the time coordinates of each sample (reference is
+#'        vecTimepointsUnique).
+#'          \item lsvecBatchUnique: (list number of confounders)
+#'        List of string vectors. One vector per confounder: vector of unique batches
+#'        in this confounder.
+#'          \item lsvecidxBatches: (idx list length number of confounding variables)
+#' 		    List of index vectors. 
+#' 		    One vector per confounding variable.
+#' 		    Each vector has one entry per sample with the index of the batch ID
+#' 		    within the given confounding variable of the given sample. Reference
+#' 		    is the list of unique batch ids for each confounding variable.
+#' 		      \item vecSamples: (vector number of samples) Names of samples fit
+#' 		    for this condition in same order as index vectors above.
+#'        }
+#'      }   
 #'      \item Condition ID: (list length number of genes)
 #'      List of fits for each gene to the samples of this condition.
 #'      One entry of this format for all conditions fit.
@@ -456,28 +442,24 @@ fitSigmoidGene <- function(vecCounts,
 #' @author David Sebastian Fischer
 #' 
 #' @export
-fitSigmoidModels <- function(matCountDataProc, 
-                             dfAnnotationProc, 
-                             lsModelFits,
-                             vecSizeFactors,
-                             vecDispersions,
+fitSigmoidModels <- function(objectImpulseDE2,
                              vecConfounders,
                              strCondition){
+  
+  # Load objects from output class
+  matCountDataProc <- objectImpulseDE2@matCountDataProc
+  dfAnnotationProc <- objectImpulseDE2@dfAnnotationProc
+  lsModelFits <- objectImpulseDE2@lsModelFits
+  vecSizeFactors <- objectImpulseDE2@vecSizeFactors
+  vecDispersions <- objectImpulseDE2@vecDispersions
   
   vecSamplesCond <- dfAnnotationProc[dfAnnotationProc$Condition==strCondition,]$Sample
   
   # Get batch assignments of samples
-  if(!is.null(vecConfounders)){
-    lsvecBatches <- lapply(vecConfounders, function(confounder){
-      vecBatches <- dfAnnotationProc[,confounder]
-      names(vecBatches) <- 	colnames(matCountDataProc)
-      return(vecBatches)
-    })
-  } else { lsvecBatches <- NULL }
-  
+  lsvecidxBatchCond <- lsModelFits$IdxGroups[[strCondition]]$lsvecidxBatch
   # Get time point assignments of samples
-  vecTimepoints <- dfAnnotationProc$Time
-  names(vecTimepoints) <- colnames(matCountDataProc)
+  vecTimepointsUniqueCond <- lsModelFits$IdxGroups[[strCondition]]$vecTimepointsUnique
+  vecidxTimepointCond <- lsModelFits$IdxGroups[[strCondition]]$vecidxTimepoint
   
   # Developmental note: Compared to impulse/constant fitting,
   # this function does not iterate over conditions as this is likely
@@ -493,8 +475,9 @@ fitSigmoidModels <- function(matCountDataProc,
       vecCounts=matCountDataProc[x,vecSamplesCond],
       scaDisp=vecDispersions[x],
       vecSizeFactors=vecSizeFactors[vecSamplesCond],
-      vecTimepoints=vecTimepoints[vecSamplesCond],
-      lsvecBatches=lapply(lsvecBatches, function(confounder) confounder[vecSamplesCond] ),
+      vecTimepointsUnique=vecTimepointsUniqueCond,
+      vecidxTimepoint=vecidxTimepointCond,
+      lsvecidxBatch=lsvecidxBatchCond,
       MAXIT=MAXIT )
   })
   names(lsSigmoidFits) <- rownames(matCountDataProc)
@@ -505,5 +488,6 @@ fitSigmoidModels <- function(matCountDataProc,
     lsModelFits[[strCondition]][[x]]$lsSigmoidFit <- lsSigmoidFits[[x]]
   }
   
-  return(lsModelFits)
+  objectImpulseDE2@lsModelFits <- lsModelFits
+  return(objectImpulseDE2)
 }

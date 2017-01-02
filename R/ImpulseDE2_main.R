@@ -21,6 +21,7 @@ library(circlize)
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
 setwd("/home/david/gitDevelopment/ImpulseDE2/R")
 
+source("srcImpulseDE2_classUnions.R")
 source("srcImpulseDE2_classImpulseDE2Object.R")
 source("srcImpulseDE2_evalImpulse.R")
 source("srcImpulseDE2_evalSigmoid.R")
@@ -135,11 +136,13 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'    progress to stdout.
 #' @param dirTemp: (dir) Directory to which temporary results are saved.
 #' 
-#' @return (list length 4)
+#' @return (object of class ImpulseDE2Object)
+#' This object can be treated as a list with 2 elements:
+#' (list length 2)
 #' \itemize{
 #'    \item vecDEGenes: (list number of genes) Genes IDs identified
 #'    as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.
-#'    \item dfDEAnalysis (data frame genes x reported characteristics) 
+#'    \item dfDEAnalysis (data frame samples x reported characteristics) 
 #'    Summary of fitting procedure and 
 #'    differential expression results for each gene.
 #'    \itemize{
@@ -191,118 +194,6 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'      activated or deactivated and differentially expressed. This scenario
 #'      corresponds to a montonous expression level increase or decrease.
 #'    }
-#'    \item lsModelFits: (list length number of conditions fit (1 or 3))
-#'    {"case"} or {"case", "control", "combined"}
-#'    One model fitting object for each condition:
-#'    In case-only DE analysis, only the condition {"case"} is fit.
-#'    In case-control DE analysis, the conditions 
-#'    {"case", "control","combined} are fit.
-#'    Each condition entry is a list of model fits for each gene.
-#'    Each gene entry is a list of model fits to the individual models:
-#'    Impulse model and constant model (if boolFitConst is TRUE).
-#'    At this level, the sigmoid model fit can be added later.
-#'    Each model fit per gene is a list of fitting parameters and results.
-#'    \itemize{
-#'      \item Condition ID: (list length number of genes)
-#'      List of fits for each gene to the samples of this condition.
-#'      One entry of this format for all conditions fit.
-#'      \itemize{
-#'        \item Gene ID: (list length 2)
-#'        Impulse and constant model fit to gene observations.
-#'        One entry of this format for all gene IDs.
-#'        \itemize{
-#'          \item lsImpulseFit: (list) List of impulse fit parameters and results.
-#'          \itemize{
-#'            \item vecImpulseParam: (numeric vector length 6)
-#'            {beta, h0, h1, h2, t1, t2}
-#'            Maximum likelihood estimators of impulse model parameters.
-#'            \item vecImpulseValue: (numeric vector length number of time points)
-#'            Values of impulse model fit at time points used for fit.
-#'            \item lsvecBatchFactors: (list length number of confounders)
-#'            List of vectors of scalar batch correction factors for each sample.
-#'            These are also maximum likelihood estimators.
-#'            NULL if no confounders given.
-#'            \item scaDispParam: (scalar) Dispersion parameter estimate
-#'            used in fitting (hyper-parameter).
-#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
-#'            estimator model.
-#'            \item scaConvergence: (scalar) 
-#'            Convergence status of optim on impulse model.
-#'          }
-#'          \item lsConstFit: (list) List of constant fit parameters and results.
-#'          \itemize{
-#'            \item scaMu: (scalar) Maximum likelihood estimator of
-#'            negative binomial mean parameter.
-#'            \item lsvecBatchFactors: (list length number of confounders)
-#'            List of vectors of scalar batch correction factors for each sample.
-#'            These are also maximum likelihood estimators.
-#'            NULL if no confounders given.
-#'            \item scaDispParam: (scalar) Dispersion parameter estimate
-#'            used in fitting (hyper-parameter).
-#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
-#'            estimator model.
-#'            \item scaConvergence: (scalar) 
-#'            Convergence status of optim on constant model.
-#'          }
-#'          \item ls SigmoidFit: (list) List of sigmoidal fit parameters and results.
-#'          NULL if boolIdentifyTransients is FALSE.
-#'          \itemize{
-#'            \item vecSigmoidParam: (numeric vector length 4)
-#'            {beta, h0, h1, t}
-#'            Maximum likelihood estimators of sigmoidal model parameters.
-#'            \item vecSigmoidValue: (numeric vector length number of time points)
-#'            Values of sigmoid model fit at time points used for fit.
-#'            \item lsvecBatchFactors: (list length number of confounders)
-#'            List of vectors of scalar batch correction factors for each sample.
-#'            These are also maximum likelihood estimators.
-#'            NULL if no confounders given.
-#'            \item scaDispParam: (scalar) Dispersion parameter estimate
-#'            used in fitting (hyper-parameter).
-#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
-#'            estimator model.
-#'            \item scaConvergence: (scalar) 
-#'            Convergence status of optim on sigmoidal model.
-#'          }
-#'        }
-#'      }
-#'    }
-#' }
-#' Additionally, \code{ImpulseDE2} saves the following objects and tables into
-#' the working directory:
-#' \itemize{
-#'    \item \code{ImpulseDE2_matCountDataProc.RData}
-#'    matCountDataProc: (matrix genes x samples) [Default NULL] 
-#'    Processed read count data, unobserved entries are NA.
-#'    \item \code{ImpulseDE2_dfAnnotationProc.RData} 
-#'    dfAnnotationProc: (data frame samples x covariates) 
-#'    {Sample, Condition, Time (numeric), TimeCateg (str)
-#'    (and confounding variables if given).}
-#'    Annotation table with covariates for each sample.
-#'    \item \code{ImpulseDE2_vecSizeFactors.RData}
-#'    vecSizeFactors: (numeric vector number of samples) 
-#'    Model scaling factors for each sample which take
-#'    sequencing depth into account (size factors).
-#'    \item \code{ImpulseDE2_vecDispersions.RData}
-#'    vecDispersions: (vector number of genes) Gene-wise 
-#'    negative binomial dispersion hyper-parameter.
-#'    \item \code{ImpulseDE2_lsModelFits.RData} (list length number of conditions fit (1 or 3))
-#'    {"case"} or {"case", "control", "combined"}
-#'    One model fitting object for each condition:
-#'    In case-only DE analysis, only the condition {"case"} is fit.
-#'    In case-control DE analysis, the conditions 
-#'    {"case", "control","combined} are fit.
-#'    Each condition entry is a list of model fits for each gene.
-#'    Each gene entry is a list of model fits to the individual models:
-#'    Impulse model and constant model (if boolFitConst is TRUE).
-#'    At this level, the sigmoid model fit can be added later.
-#'    Each model fit per gene is a list of fitting parameters and results.
-#'    Read the return-value section of runImpulseDE2 for details.
-#'    \item \code{ImpulseDE2_dfImpulseDE2Results.RData} dfDEAnalysis (data frame genes x reported characteristics) 
-#'    Summary of fitting procedure and 
-#'    differential expression results for each gene.
-#'    Read the return-value section of runImpulseDE2 for details.
-#'    \item \code{ImpulseDE2_vecDEGenes.RData} vecDEGenes: (list number of genes) Genes IDs identified
-#'    as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.
 #' }
 #' 
 #' @author David Sebastian Fischer
@@ -345,6 +236,17 @@ runImpulseDE2 <- function(matCountData=NULL,
     vecDispersionsExternalProc <- lsProcessedData$vecDispersionsExternalProc
     if(boolVerbose) write(lsProcessedData$strReportProcessing, file="", ncolumns=1)
     strReport <- paste0(strReport, lsProcessedData$strReportProcessing)
+    
+    # Attempt accessing temp directory
+    if(!is.null(dirTemp)){
+      dirCurrent <- getwd()
+      tryCatch({
+        setwd(dirTemp)
+      }, error=function(strErrorMsg){
+        stop(paste0("ERROR: dirTemp not available: ", strErrorMsg))
+      })
+      setwd(dirCurrent)
+    }
     
     # Set parallelisation
     if(scaNProc > 1){ register(MulticoreParam(workers=scaNProc)) 
@@ -393,16 +295,29 @@ runImpulseDE2 <- function(matCountData=NULL,
       save(vecSizeFactors,file=file.path(dirTemp,"ImpulseDE2_vecSizeFactors.RData"))
     }
     
-    ###  4. Fit null and alternative model to each gene
+    # 4. Create instance of ImpulseDE2Object
+    # Create ImpulseDE2 object
+    objectImpulseDE2 <- new('ImpulseDE2Object',
+                            dfImpulseDE2Results = NULL,
+                            vecDEGenes          = NULL,
+                            lsModelFits         = NULL,
+                            matCountDataProc    = matCountDataProc,
+                            dfAnnotationProc    = dfAnnotationProc,
+                            vecSizeFactors      = vecSizeFactors,
+                            vecDispersions      = vecDispersions,
+                            boolCaseCtrl        = boolCaseCtrl,
+                            vecConfounders      = vecConfounders,
+                            scaNProc            = scaNProc, 
+                            scaQThres           = scaQThres,
+                            strReport           = strReport )
+    
+    #  5. Fit null and alternative model to each gene
     strMessage <- "# Fitting null and alternative model to the genes"
     if(boolVerbose) print(strMessage)
-    strReport <- paste0(strReport, "\n", strMessage)
+    objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
     tm_fitImpulse <- system.time({
-      lsModelFits <- fitModels(
-        matCountDataProc=matCountDataProc, 
-        vecDispersions=vecDispersions,
-        vecSizeFactors=vecSizeFactors,
-        dfAnnotationProc=dfAnnotationProc,
+      objectImpulseDE2 <- fitModels(
+        objectImpulseDE2=objectImpulseDE2,
         vecConfounders=vecConfounders,
         boolCaseCtrl=boolCaseCtrl)
     })
@@ -411,39 +326,33 @@ runImpulseDE2 <- function(matCountData=NULL,
     }
     strMessage <- paste0("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2)," min.")
     if(boolVerbose) print(strMessage)
-    strReport <- paste0(strReport, "\n", strMessage)
+    objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
     
-    ###  5. Fit sigmoid model to case condition if desired
+    # 6. Fit sigmoid model to case condition if desired
     if(boolIdentifyTransients){
       strMessage <- "# Fitting sigmoid model to case condition"
       if(boolVerbose) print(strMessage)
-      strReport <- paste0(strReport, "\n", strMessage)
+      objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
       tm_fitSigmoid <- system.time({
-        lsModelFits <- fitSigmoidModels(
-          matCountDataProc=matCountDataProc,
-          lsModelFits=lsModelFits,
-          vecDispersions=vecDispersions,
-          vecSizeFactors=vecSizeFactors,
-          dfAnnotationProc=dfAnnotationProc,
+        objectImpulseDE2 <- fitSigmoidModels(
+          objectImpulseDE2=objectImpulseDE2,
           vecConfounders=vecConfounders,
           strCondition="case")
       })
       if(!is.null(dirTemp)){
-        save(lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
+        save(objectImpulseDE2@lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
       }
       strMessage <- paste0("Consumed time: ",round(tm_fitSigmoid["elapsed"]/60,2)," min.")
       if(boolVerbose) print(strMessage)
-      strReport <- paste0(strReport, "\n", strMessage)
+      objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
     }
     
-    ### 6. Differentially expression analysis based on model fits
+    # 7. Differentially expression analysis based on model fits
     strMessage <- "# Differentially expression analysis based on model fits"
     if(boolVerbose) print(strMessage)
-    strReport <- paste0(strReport, "\n", strMessage)
+    objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
     dfImpulseDE2Results <- runDEAnalysis(
-      matCountDataProc=matCountDataProc,
-      dfAnnotationProc=dfAnnotationProc,
-      lsModelFits=lsModelFits,
+      objectImpulseDE2=objectImpulseDE2,
       vecAllIDs=rownames(matCountData),
       boolCaseCtrl=boolCaseCtrl,
       vecConfounders=vecConfounders,
@@ -455,7 +364,7 @@ runImpulseDE2 <- function(matCountData=NULL,
       strMessage <- paste0("Found ", length(vecDEGenes)," DE genes",
         " at a FDR corrected p-value cut off of ", scaQThres, ".")
       if(boolVerbose) print(strMessage)
-      strReport <- paste0(strReport, "\n", strMessage)
+      objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
     } else {
       vecDEGenes <- NULL
     }
@@ -465,58 +374,15 @@ runImpulseDE2 <- function(matCountData=NULL,
         save(vecDEGenes,file=file.path(dirTemp,"ImpulseDE2_vecDEGenes.RData"))
       }
     }
-    
-    ### 7. Plot differentially expressed genes
-    if(boolPlotting){
-      strMessage <- "# Plot differentially expressed genes"
-      if(boolVerbose) print(strMessage)
-      strReport <- paste0(strReport, "\n", strMessage)
-      if(length(vecDEGenes) > 500){vecDEGenesPlot <- vecDEGenes[1:500]
-      } else {vecDEGenesPlot <- vecDEGenes}
-      tm_plotGenes <- system.time({
-        plotGenes(
-          vecGeneIDs=vecDEGenesPlot,
-          matCountDataProc=matCountDataProc,
-          matBatchFactors=matBatchFactors,
-          matSizeFactors=matSizeFactors,
-          dfAnnotationProc=dfAnnotationProc, 
-          lsModelFits=lsModelFits,
-          dfImpulseDE2Results=dfImpulseDE2Results,
-          vecRefPval=vecRefPval,
-          strMode=strMode,
-          strCaseName=strCaseName, 
-          strControlName=strControlName, 
-          strFileNameSuffix="DEgenes", 
-          strPlotTitleSuffix="", 
-          strPlotSubtitle="",
-          strNameMethod2=strRefMethod,
-          boolSimplePlot=boolSimplePlot,
-          boolLogPlot=boolLogPlot)
-      })
-      strMessage <- paste0("Consumed time: ",round(tm_plotGenes["elapsed"]/60,2)," min.")
-      if(boolVerbose) print(strMessage)
-      strReport <- paste0(strReport, "\n", strMessage)
-    }
+    objectImpulseDE2@dfImpulseDE2Results <- dfImpulseDE2Results
+    objectImpulseDE2@vecDEGenes <- vecDEGenes
   })
   strMessage <- "Finished running ImpulseDE2."
   if(boolVerbose) print(strMessage)
-  strReport <- paste0(strReport, "\n", strMessage)
+  objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
   strMessage <- paste0("TOTAL consumed time: ",round(tm_runImpulseDE2["elapsed"]/60,2)," min.")
   if(boolVerbose) print(strMessage)
-  strReport <- paste0(strReport, "\n", strMessage)
+  objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
   
-  return( new('ImpulseDE2Object',
-    dfImpulseDE2Results = dfImpulseDE2Results,
-    vecDEGenes          = vecDEGenes,
-    lsModelFits         = lsModelFits,
-    matCountDataProc    = matCountDataProc,
-    dfAnnotationProc    = dfAnnotationProc,
-    vecSizeFactors      = vecSizeFactors,
-    vecDispersions      = vecDispersions,
-    boolCaseCtrl        = boolCaseCtrl,
-    vecConfounders      = vecConfounders,
-    scaNProc            = scaNProc, 
-    scaQThres           = scaQThres,
-    strReport           = strReport
-  ))
+  return(objectImpulseDE2)
 }

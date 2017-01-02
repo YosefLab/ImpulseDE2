@@ -1,4 +1,46 @@
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+#++++++++++++++++++++++     Plot z-value heatmaps    ++++++++++++++++++++++++++#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+#' Plot structured z-value heatmaps of differentially expressed genes
+#' 
+#' Creates a complexHeatmap heatmap structured into subsets of genes according
+#' to their behaviour and sorted by peak time for raw counts and for the
+#' fitted signal.
+#' 
+#' @seealso Called seperately by used.
+#' 
+#' @param objectImpulseDE2: (instance of class ImpulseDE2Object)
+#'    ImpulseDE2 output object to create heatmap from.
+#' @param strCondition: (str) {"case","control","combined}
+#'    Heatmap is created from samples of this condition.
+#' @param boolIdentifyTransients: (bool) 
+#'    Whether to structure heatmap into transient and transition
+#'    trajectories, only possible if sigmoids were fit to the
+#'    indicated condition.
+#' @param scaQThres: (scalar) FDR-corrected p-value threshold
+#'    for calling differentially expressed genes: Only genes
+#'    below this threshold are included in the heatmap.
+#'    
+#' @return (list length 3)
+#'    \itemize{
+#'      \item complexHeatmapRaw: (complexHeatmap plot)
+#'      Heatmap of raw data by time point: Average of the
+#'      size factor (and batch factor) normalised counts 
+#'      per time point and gene.
+#'      Plot with draw(complexHeatmapRaw).
+#'      \item complexHeatmapFit: (complexHeatmap plot)
+#'      Heatmap of impulse-fitted data by time point.
+#'      Plot with draw(complexHeatmapFit).
+#'      \item lsvecGeneGroups: (list)
+#'      List of gene ID vectors: One per heatmap group 
+#'      with all gene IDs of the the profiles displayed
+#'      in the heatmap.
+#'    }
+#'    
+#' @author David Sebastian Fischer
+#' 
+#' @export
 plotHeatmap <- function(objectImpulseDE2,
                         strCondition,
                         boolIdentifyTransients,
@@ -19,7 +61,7 @@ plotHeatmap <- function(objectImpulseDE2,
   scaNTPtoEvaluate <- length(vecTimePointsToEval)
   matImpulseValue <- do.call(rbind, lapply(vecSignificantIDs, function(x){
     evalImpulse_comp(vecImpulseParam=lsModelFits[[strCondition]][[x]]$lsImpulseFit$vecImpulseParam,
-                                      vecTimepoints=vecTimePointsToEval)
+                     vecTimepoints=vecTimePointsToEval)
   }))
   rownames(matImpulseValue) <- vecSignificantIDs
   matidxMaxTimeSort <-t(apply(matImpulseValue, 1, function(genevalues){
@@ -29,14 +71,23 @@ plotHeatmap <- function(objectImpulseDE2,
   matidxMinTimeSort <- t(apply(matImpulseValue, 1, function(genevalues){
     sort(genevalues, decreasing=FALSE, index.return=TRUE)$ix
   }))
-  vecMinTime <- vecTimePointsToEval[matidxMinTimeSort[,1]]
   
   if(boolIdentifyTransients){
     # Group into transients and monotonous
-    vecidxTransient <- which(dfImpulseDE2Results[vecSignificantIDs,]$isTransient)
+    # Note that isTransient does include monotonous fits which
+    # are better fit by impulse than by sigmoid, this is corrected for here.
+    vecboolSignImpulseToSimgoidANDmonot <- sapply(vecSignificantIDs, function(id){
+      vecCounts <- matImpulseValue[id,]
+      boolBounded <- (max(vecCounts[2:length((vecCounts)-1)]) <= max(vecCounts[c(1,length(vecCounts))]) &
+                        min(vecCounts[2:length((vecCounts)-1)]) >= min(vecCounts[c(1,length(vecCounts))]) )
+      return(dfImpulseDE2Results[id,]$isTransient & boolBounded)
+    })
+    vecboolTransient <- dfImpulseDE2Results[vecSignificantIDs,]$isTransient
+    vecidxTransient <- which(vecboolTransient & !vecboolSignImpulseToSimgoidANDmonot)
     #vecidxTransientSort <- vecidxTransient[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxTransient,1]))]
     
-    vecidxMonotonous <- which(dfImpulseDE2Results[vecSignificantIDs,]$isMonotonous)
+    vecboolMonotonous <- dfImpulseDE2Results[vecSignificantIDs,]$isMonotonous
+    vecidxMonotonous <- which(vecboolMonotonous | vecboolSignImpulseToSimgoidANDmonot)
     #vecidxMonotonousSort <- vecidxMonotonous[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxMonotonous,1]))]
     
     # Finbe sort montonous transition signals into up/down
@@ -73,9 +124,14 @@ plotHeatmap <- function(objectImpulseDE2,
                            rep("down", length(vecidxMonotonousDownSort)), 
                            rep("*up", length(vecidxTransientPeakSort)),
                            rep("*down", length(vecidxTransientValleySort)) )
+    lsvecGeneGroups <- list( transition_up   = vecSignificantIDs[vecidxMonotonousUpSort],
+                             transition_down = vecSignificantIDs[vecidxMonotonousDownSort],
+                             transient_up    = vecSignificantIDs[vecidxTransientPeakSort],
+                             transient_down  = vecSignificantIDs[vecidxTransientValleySort] )
   } else {
     vecidxAllSort <- sort(vecMaxTime, decreasing=FALSE, index.return=TRUE)$ix
     vecTrajectoryType <- rep(" ", length(vecidxAllSort))
+    lsvecGeneGroups <- list(all = vecSignificantIDs[vecidxAllSort])
   }
   
   #vecidxAllSort <- vecidxMaxSort
@@ -92,6 +148,9 @@ plotHeatmap <- function(objectImpulseDE2,
   
   # 1. Plot raw data
   matDataNorm <- matCountDataProc[vecSignificantIDs,]/matSizefactors
+  #if(length(objectImpulseDE2@lsModelFits[[strCondition]][[1]]$lsImpulseFit$lsvecBatchFactors)>0){
+  #  for(vecBatchFactors in )
+  #}
   matDataHeat <- do.call(cbind, lapply(vecUniqueTP, function(tp){
     vecidxCols <- which(dfAnnotationProc$Time %in% tp)
     if(length(vecidxCols)>1){ return(rowMeans(matDataNorm[,vecidxCols], na.rm=TRUE))
@@ -99,7 +158,6 @@ plotHeatmap <- function(objectImpulseDE2,
   }))
   colnames(matDataHeat) <- vecUniqueTP
   rownames(matDataHeat) <- NULL
-  matDataHeat <- matDataHeat[apply(matDataHeat, 1, function(gene) any(gene>0) ),]
   # Row normalisation: z-scores
   matDataHeatZ <- do.call(rbind, lapply(seq(1,dim(matDataHeat)[1]), function(i){
     (matDataHeat[i,]-mean(matDataHeat[i,], na.rm=TRUE))/sd(matDataHeat[i,], na.rm=TRUE)
@@ -107,19 +165,18 @@ plotHeatmap <- function(objectImpulseDE2,
   
   # Create heatmap of raw data, ordered by fits
   complexHeatmapRaw <- Heatmap(matDataHeatZ[vecidxAllSort,],
-                               #row_order                = ,
-                               split                    = vecTrajectoryType,
-                               cluster_rows             = FALSE,
-                               #show_row_dend            = FALSE,
-                               cluster_columns          = FALSE,
+                               gap                  =unit(5, "mm"),
+                               #row_order           = vecidxAllSort,
+                               split                = vecTrajectoryType,
+                               cluster_rows         = FALSE,
+                               #show_row_dend       = FALSE,
+                               cluster_columns      = FALSE,
                                heatmap_legend_param = list(title = "z-score") )
-  draw(complexHeatmapRaw)
   
   # 2. Plot fitted data
   matDataHeat <- matImpulseValue
   colnames(matDataHeat) <- vecUniqueTP
   rownames(matDataHeat) <- NULL
-  matDataHeat <- matDataHeat[apply(matDataHeat, 1, function(gene) any(gene>0) ),]
   # Row normalisation: z-scores
   matDataHeatZ <- do.call(rbind, lapply(seq(1,dim(matDataHeat)[1]), function(i){
     (matDataHeat[i,]-mean(matDataHeat[i,], na.rm=TRUE))/sd(matDataHeat[i,], na.rm=TRUE)
@@ -127,17 +184,18 @@ plotHeatmap <- function(objectImpulseDE2,
   
   # Create heatmap of raw data, ordered by fits
   complexHeatmapFit <- Heatmap(matDataHeatZ[vecidxAllSort,],
-                               #row_order                = vecidxAllSort,
-                               split                    = vecTrajectoryType,
-                               #km                       = 6, # Number of k-means clusters
-                               cluster_rows             = FALSE, #hclustObject,
-                               #show_row_dend            = FALSE,
-                               cluster_columns          = FALSE,
+                               gap                  = unit(5, "mm"),
+                               #row_order           = vecidxAllSort,
+                               split                = vecTrajectoryType,
+                               #km                  = 6, # Number of k-means clusters
+                               cluster_rows         = FALSE, #hclustObject,
+                               #show_row_dend       = FALSE,
+                               cluster_columns      = FALSE,
                                heatmap_legend_param = list(title = "z-score") )
-  draw(complexHeatmapFit)
   
   return(list(
-    complexHeatmapRaw=complexHeatmapRaw,
-    complexHeatmapFit=complexHeatmapFit
+    complexHeatmapRaw = complexHeatmapRaw,
+    complexHeatmapFit = complexHeatmapFit,
+    lsvecGeneGroups   = lsvecGeneGroups
   ))
 }

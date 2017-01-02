@@ -311,6 +311,9 @@ processData <- function(dfAnnotation,
 														 matCountData,
 														 boolCaseCtrl,
 														 vecConfounders){
+	  
+	  # Make sure all columns are not factors
+	  for(col in seq(1,dim(dfAnnotation)[2])) dfAnnotation[,col] <- as.vector(dfAnnotation[,col])
 		
 		if(!boolCaseCtrl){
 			dfAnnotationProc <- dfAnnotation[dfAnnotation$Condition=="case",]
@@ -343,7 +346,7 @@ processData <- function(dfAnnotation,
 		    vecBatchesNested[dfAnnotationProc$Condition=="case"] <- vecNestedBatchesCase
 		    vecBatchesNested[dfAnnotationProc$Condition=="control"] <- vecNestedBatchesCtrl
 		    strNameConfounderNested <- paste0(confounder, "Nested")
-		    dfAnnotationProc[strNameConfounderNested] <- as.factor(vecBatchesNested)
+		    dfAnnotationProc[strNameConfounderNested] <- vecBatchesNested
 		  }
 		}
 		

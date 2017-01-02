@@ -24,7 +24,7 @@
 #' @param vecSizeFactors: (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @param lsvecindBatch: (list length number of confounding variables)
+#' @param lsvecidxBatch: (list length number of confounding variables)
 #' 		List of index vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the index batch
@@ -40,7 +40,7 @@ evalLogLikMu <- function(vecTheta,
   vecCounts,
   scaDisp, 
   vecSizeFactors,
-  lsvecindBatch,
+  lsvecidxBatch,
   vecboolObserved){
   
   scaMu <- exp(vecTheta[1])
@@ -49,12 +49,12 @@ evalLogLikMu <- function(vecTheta,
   if(scaMu < 10^(-10)){ scaMu <- 10^(-10) }
   
   vecBatchFactors <- array(1, length(vecCounts))
-  if(!is.null(lsvecindBatch)){
-  	for(vecindConfounder in lsvecindBatch){
-  		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
+  if(!is.null(lsvecidxBatch)){
+  	for(vecidxConfounder in lsvecidxBatch){
+  		scaNBatchFactors <- max(vecidxConfounder)-1 # Batches are counted from 1
   		# Factor of first batch is one (constant), the remaining
   		# factors scale based on the first batch.
-  		vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecindConfounder]
+  		vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecidxConfounder]
   		scaNParamUsed <- scaNParamUsed+scaNBatchFactors
   		# Prevent batch factor shrinkage and explosion:
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
@@ -100,10 +100,10 @@ evalLogLikMu <- function(vecTheta,
 #' @param vecTimepointsUnique: 
 #'    (numeric vector length number of unique time points)
 #'    Unique time points of set of time points of given samples.
-#' @param vecindTimepoint: (index vector length number of samples)
+#' @param vecidxTimepoint: (index vector length number of samples)
 #'    Index of of time point assigned to each sample in vector
 #'    vecTimepointsUnique.
-#' @param lsvecindBatch: (list length number of confounding variables)
+#' @param lsvecidxBatch: (list length number of confounding variables)
 #' 		List of index vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the index batch
@@ -120,24 +120,24 @@ evalLogLikImpulse <- function(vecTheta,
   scaDisp, 
   vecSizeFactors,
   vecTimepointsUnique,
-  vecindTimepoint,
-  lsvecindBatch,
+  vecidxTimepoint,
+  lsvecidxBatch,
   vecboolObserved){
   
   # Compute normalised impulse function value:
   vecImpulseParam <- vecTheta[1:6]
   vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
   vecImpulseValue <- evalImpulse_comp(vecImpulseParam=vecImpulseParam,
-                                      vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
+                                      vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
   scaNParamUsed <- 6
   
   vecBatchFactors <- array(1, length(vecCounts))
-  if(!is.null(lsvecindBatch)){
-  	for(vecindConfounder in lsvecindBatch){
-  		scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
+  if(!is.null(lsvecidxBatch)){
+  	for(vecidxConfounder in lsvecidxBatch){
+  		scaNBatchFactors <- max(vecidxConfounder)-1 # Batches are counted from 1
   		# Factor of first batch is one (constant), the remaining
   		# factors scale based on the first batch.
-  		vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecindConfounder]
+  		vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecidxConfounder]
   		scaNParamUsed <- scaNParamUsed+scaNBatchFactors
   		# Prevent batch factor shrinkage and explosion:
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
@@ -184,10 +184,10 @@ evalLogLikImpulse <- function(vecTheta,
 #' @param vecTimepointsUnique: 
 #'    (numeric vector length number of unique time points)
 #'    Unique time points of set of time points of given samples.
-#' @param vecindTimepoint: (index vector length number of samples)
+#' @param vecidxTimepoint: (index vector length number of samples)
 #'    Index of of time point assigned to each sample in vector
 #'    vecTimepointsUnique.
-#' @param lsvecindBatch: (list length number of confounding variables)
+#' @param lsvecidxBatch: (list length number of confounding variables)
 #' 		List of index vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the index batch
@@ -204,24 +204,24 @@ evalLogLikSigmoid <- function(vecTheta,
                               scaDisp, 
                               vecSizeFactors,
                               vecTimepointsUnique,
-                              vecindTimepoint,
-                              lsvecindBatch,
+                              vecidxTimepoint,
+                              lsvecidxBatch,
                               vecboolObserved){
   
   # Compute normalised impulse function value:
   vecSigmoidParam <- vecTheta[1:4]
   vecSigmoidParam[2:3] <- exp(vecSigmoidParam[2:3])
   vecSigmoidValue <- evalSigmoid_comp(vecSigmoidParam=vecSigmoidParam,
-                                      vecTimepoints=vecTimepointsUnique)[vecindTimepoint]
+                                      vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
   scaNParamUsed <- 4
   
   vecBatchFactors <- array(1, length(vecCounts))
-  if(!is.null(lsvecindBatch)){
-    for(vecindConfounder in lsvecindBatch){
-      scaNBatchFactors <- max(vecindConfounder)-1 # Batches are counted from 1
+  if(!is.null(lsvecidxBatch)){
+    for(vecidxConfounder in lsvecidxBatch){
+      scaNBatchFactors <- max(vecidxConfounder)-1 # Batches are counted from 1
       # Factor of first batch is one (constant), the remaining
       # factors scale based on the first batch.
-      vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecindConfounder]
+      vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecidxConfounder]
       scaNParamUsed <- scaNParamUsed+scaNBatchFactors
       # Prevent batch factor shrinkage and explosion:
       vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)

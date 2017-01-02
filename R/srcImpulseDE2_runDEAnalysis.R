@@ -13,86 +13,8 @@
 #' 
 #' @seealso Called by \code{runImpulseDE2}.
 #' 
-#' @param matCountDataProc: (matrix genes x samples)
-#'    Read count data.
-#' @param dfAnnotationProc: (data frame samples x covariates) 
-#'    {Sample, Condition, Time (numeric), TimeCateg (str)
-#'    (and confounding variables if given).}
-#'    Processed annotation table with covariates for each sample.
-#' @parm lsModelFits: (list length number of conditions fit (1 or 3))
-#'    {"case"} or {"case", "control", "combined"}
-#'    This is the lsModelFits object handed to this function with additional
-#'    sigmoid fit entries for every gene for the given condition.
-#'    One model fitting object for each condition:
-#'    In case-only DE analysis, only the condition {"case"} is fit.
-#'    In case-control DE analysis, the conditions 
-#'    {"case", "control","combined} are fit.
-#'    Each condition entry is a list of model fits for each gene.
-#'    Each gene entry is a list of model fits to the individual models:
-#'    Impulse model, constant model and sigmoidal fit.
-#'    Each model fit per gene is a list of fitting parameters and results.
-#'    \itemize{
-#'      \item Condition ID: (list length number of genes)
-#'      List of fits for each gene to the samples of this condition.
-#'      One entry of this format for all conditions fit.
-#'      \itemize{
-#'        \item Gene ID: (list length 2)
-#'        Impulse, constant and sigmoidal model fit to gene observations.
-#'        One entry of this format for all gene IDs.
-#'        \itemize{
-#'          \item lsImpulseFit: (list) List of impulse fit parameters and results.
-#'          \itemize{
-#'            \item vecImpulseParam: (numeric vector length 6)
-#'            {beta, h0, h1, h2, t1, t2}
-#'            Maximum likelihood estimators of impulse model parameters.
-#'            \item vecImpulseValue: (numeric vector length number of time points)
-#'            Values of impulse model fit at time points used for fit.
-#'            \item lsvecBatchFactors: (list length number of confounders)
-#'            List of vectors of scalar batch correction factors for each sample.
-#'            These are also maximum likelihood estimators.
-#'            NULL if no confounders given.
-#'            \item scaDispParam: (scalar) Dispersion parameter estimate
-#'            used in fitting (hyper-parameter).
-#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
-#'            estimator model.
-#'            \item scaConvergence: (scalar) 
-#'            Convergence status of optim on impulse model.
-#'          }
-#'          \item lsConstFit: (list) List of constant fit parameters and results.
-#'          \itemize{
-#'            \item scaMu: (scalar) Maximum likelihood estimator of
-#'            negative binomial mean parameter.
-#'            \item lsvecBatchFactors: (list length number of confounders)
-#'            List of vectors of scalar batch correction factors for each sample.
-#'            These are also maximum likelihood estimators.
-#'            NULL if no confounders given.
-#'            \item scaDispParam: (scalar) Dispersion parameter estimate
-#'            used in fitting (hyper-parameter).
-#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
-#'            estimator model.
-#'            \item scaConvergence: (scalar) 
-#'            Convergence status of optim on constant model.
-#'          }
-#'          \item ls SigmoidFit: (list) List of sigmoidal fit parameters and results.
-#'          \itemize{
-#'            \item vecSigmoidParam: (numeric vector length 4)
-#'            {beta, h0, h1, t}
-#'            Maximum likelihood estimators of sigmoidal model parameters.
-#'            \item vecSigmoidValue: (numeric vector length number of time points)
-#'            Values of sigmoid model fit at time points used for fit.
-#'            \item lsvecBatchFactors: (list length number of confounders)
-#'            List of vectors of scalar batch correction factors for each sample.
-#'            These are also maximum likelihood estimators.
-#'            NULL if no confounders given.
-#'            \item scaDispParam: (scalar) Dispersion parameter estimate
-#'            used in fitting (hyper-parameter).
-#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
-#'            estimator model.
-#'            \item scaConvergence: (scalar) 
-#'            Convergence status of optim on sigmoidal model.
-#'        }
-#'      }
-#'    }
+#' @param objectImpulseDE2: (object class ImpulseDE2Object)
+#'    Object containing fits to be evaluated.
 #' @param vecAllIDs: (string vector length number of all originally given genes)
 #'    IDs of all originally given genes.
 #' @param boolCaseCtrl: (bool) 
@@ -106,7 +28,7 @@
 #'    genes. This involves an additional fitting of sigmoidal models
 #'    and hypothesis testing between constant, sigmoidal and impulse model.
 #' 
-#' @return dfDEAnalysis (data frame genes x reported characteristics) 
+#' @return dfDEAnalysis (data frame samples x reported characteristics) 
 #'    Summary of fitting procedure and 
 #'    differential expression results for each gene.
 #'    \itemize{
@@ -162,13 +84,16 @@
 #' @author David Sebastian Fischer
 #' 
 #' @export
-runDEAnalysis <- function(matCountDataProc,
-                        dfAnnotationProc, 
-                        lsModelFits,
-                        vecAllIDs,
-												boolCaseCtrl,
-												vecConfounders,
-												boolIdentifyTransients){
+runDEAnalysis <- function(objectImpulseDE2,
+                          vecAllIDs=NULL,
+                          boolCaseCtrl,
+                          vecConfounders,
+                          boolIdentifyTransients){
+  
+  # Load objects from output class
+  matCountDataProc <- objectImpulseDE2@matCountDataProc
+  dfAnnotationProc <- objectImpulseDE2@dfAnnotationProc
+  lsModelFits <- objectImpulseDE2@lsModelFits
   
   if(!boolCaseCtrl){
     # Case-only:
