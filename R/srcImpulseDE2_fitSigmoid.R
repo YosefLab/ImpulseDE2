@@ -205,13 +205,13 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
   })
   
   # Extract parameter estimates
-  vecSigmoidParam <- lsFit$par[1:6]
-  vecSigmoidParam[2:4] <- exp(vecSigmoidParam[2:4])
+  vecSigmoidParam <- lsFit$par[1:4]
+  vecSigmoidParam[2:3] <- exp(vecSigmoidParam[2:3])
   names(vecSigmoidParam) <- c("beta", "h0", "h1", "t")
   vecSigmoidValue <- evalSigmoid_comp(vecSigmoidParam=vecSigmoidParam,
                                       vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
   names(vecSigmoidValue) <- names(vecCounts)
-  scaNParamUsed <- 6
+  scaNParamUsed <- 4
   if(!is.null(lsvecidxBatch)){
     lsvecBatchFactors <- lapply(lsvecidxBatch, function(vecidxConfounder){
       scaNBatchFactors <- max(vecidxConfounder)-1 # Batches are counted from 1
@@ -224,7 +224,7 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
       vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
       return(vecBatchFactorsConfounder)
     })
-  }
+  } else { lsvecBatchFactors <- NULL }
   
   return(list( vecSigmoidParam=vecSigmoidParam,
                vecSigmoidValue=vecSigmoidValue,

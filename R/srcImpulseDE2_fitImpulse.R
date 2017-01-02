@@ -225,7 +225,7 @@ fitConstModel <- function(vecCounts,
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
   		return(vecBatchFactorsConfounder)
   	})
-  }
+  } else { lsvecBatchFactors <- NULL }
 
   return(list( scaMu=scaMu,
                lsvecBatchFactors=lsvecBatchFactors,
@@ -369,7 +369,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   		vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
   		return(vecBatchFactorsConfounder)
   	})
-  }
+  } else { lsvecBatchFactors <- NULL }
   
   return(list( vecImpulseParam=vecImpulseParam,
                vecImpulseValue=vecImpulseValue,
@@ -632,7 +632,7 @@ fitConstImpulse <- function(matCountDataProcCondition,
   vecTimepointsUnique <- sort(unique( vecTimepoints ))
   vecidxTimepoint <- match(vecTimepoints, vecTimepointsUnique)
   # Get batch assignments
-  if(!is.null(lsvecBatches)){
+  if(length(lsvecBatches)>0){
     lsvecBatchUnique <- list()
     lsvecidxBatch <- list()
     for(batchfactor in lsvecBatches){
@@ -807,7 +807,7 @@ fitModels <- function(objectImpulseDE2,
   if(!is.null(vecConfounders)){
   	lsvecBatches <- lapply(vecConfounders, function(confounder){
   	  vecBatches <- dfAnnotationProc[,confounder]
-  	  names(vecBatches) <- 	colnames(matCountDataProc)
+  	  names(vecBatches) <- 	dfAnnotationProc$Gene
   	  return(vecBatches)
   	})
   	names(lsvecBatches) <- vecConfounders
