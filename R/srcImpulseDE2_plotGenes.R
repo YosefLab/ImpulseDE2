@@ -5,18 +5,30 @@
 #' Plots the impulse fits and data
 #' 
 #' Plots the impulse fits and data to pdf and return a list of gplots. Points
-#' are size factor normalised data.
+#' are size factor normalised data. Consider using boolSimplePlot=TRUE
+#' if the plot seems to crowded.
 #' 
 #' @seealso Called by separately by user.
 #' 
-#' @param vecGeneIDs: (string vector) Gene names to be plotted,
-#'     Must be in rownames of matCountDataProc.
+#' @param vecGeneIDs: (string vector) [Default NULL]
+#'    Gene names to be plotted. Must be in rownames of matCountDataProc.
+#'    Supply either vecGeneIDs or scaNTopIDs.
+#' @param scaNTopIDs: (int) [Default NULL]
+#'    Number of top differentially expressed (by q-value) genes to 
+#'    be plotted
+#'    Supply either vecGeneIDs or scaNTopIDs.
 #' @param objectImpulseDE2: (ImpulseDE2 object)
 #'    Object previously fitted to be used for plotting.
 #' @param boolCaseCtrl: (bool) Whether to create case-ctrl plot.
 #' @param dirOut: (dir) Directory into which pdf is printed.
 #' @param strFileName: (str) [Default "ImpulseDE2_Trajectories.pdf"]
 #'    File name of pdf with plots.
+#' @param boolMultiplePlotsPerPage: (bool) [Default TRUE]
+#'    Whether to create grid with multiple plots on each page of pdf.
+#' @param boolSimplePlot: (bool) [Default TRUE]
+#'    Whether to omit batch structure in plotting of model fits
+#'    and only plot fit to first batch/all data (if no confounders were given).
+#'    This strongly simplifies plots and is recommended e.g. for case-ctrl data.
 #' @param vecRefPval: (vector length vecGeneIDs) [Default NULL]
 #'    P/Q-values to be displayed alongside ImpulseDE2 q-value
 #'    for differential expression in plot titles.
@@ -55,6 +67,7 @@ plotGenes <- function(vecGeneIDs=NULL,
   scaNPlotsPerPage <- 4
   
   # Check input
+  if(is.null(lsModelFits)) error("objectImpulseDE2 does not contain model fits. Run ImpulseDE2_main first.")
   if(is.null(vecGeneIDs) & is.null(scaNTopIDs)) stop("Supply either vecGeneIDs or scaNTopIDs.")
   if(!is.null(vecGeneIDs) & !is.null(scaNTopIDs)) stop("Only one of the two: vecGeneIDs or scaNTopIDs.")
   if(is.null(objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique) & !is.null(boolSimplePlot)){

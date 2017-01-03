@@ -40,7 +40,8 @@
 #'      \item loglik_red: Loglikelihood of reduced model.
 #'      \item df_full: Degrees of freedom of full model.
 #'      \item df_red: Degrees of freedom of reduced model
-#'      \item mean: Inferred mean parameter of constant model over all samples.
+#'      \item mean: Inferred mean parameter of constant model of first batch.
+#'      From combined samples in case-ctrl. 
 #'      \item allZero: (bool) Whether there were no observed non-zero observations of this gene.
 #'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
 #'    }
@@ -88,7 +89,8 @@ runDEAnalysis <- function(objectImpulseDE2,
                           vecAllIDs=NULL,
                           boolCaseCtrl,
                           vecConfounders,
-                          boolIdentifyTransients){
+                          boolIdentifyTransients,
+                          scaQThresTransients=0.001){
   
   # Load objects from output class
   matCountDataProc <- objectImpulseDE2@matCountDataProc
@@ -103,7 +105,7 @@ runDEAnalysis <- function(objectImpulseDE2,
     # The reduced model is the mean fit.
     vecLogLikRed <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaLL )
     # Mean inferred expression:
-    vecMu <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaMu )
+    vecMuCase <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaMu )
     if(!is.null(vecConfounders)){
     	scaNBatchFactors <- sum(sapply(vecConfounders, function(confounder){ 
     		length(unique(dfAnnotationProc[,confounder]))-1 
@@ -128,7 +130,7 @@ runDEAnalysis <- function(objectImpulseDE2,
     # The reduced model is the combined data fit.
     vecLogLikRed <- sapply(lsModelFits$combined, function(fit) fit$lsImpulseFit$scaLL )
     # Mean inferred expression: On combined data
-    vecMu <- sapply(lsModelFits$combined, function(fit) fit$lsConstFit$scaMu )
+    vecMuCombined <- sapply(lsModelFits$combined, function(fit) fit$lsConstFit$scaMu )
     if(!is.null(vecConfounders)){
     	scaNBatchFactorsFull <- sum(sapply(vecConfounders, function(confounder){ 
     		length(unique(dfAnnotationProc[dfAnnotationProc$Condition=="case",confounder]))-1+
@@ -173,7 +175,7 @@ runDEAnalysis <- function(objectImpulseDE2,
       loglik_red=vecLogLikRed,
       df_full=rep(scaDegFreedomFull, scaNGenes),
       df_red=rep(scaDegFreedomRed, scaNGenes),
-      mean=vecMu,
+      mean=vecMuCase,
       converge_impulse=vecConvergenceImpulse,
       converge_const=vecConvergenceConst,
       stringsAsFactors = FALSE)
@@ -187,7 +189,7 @@ runDEAnalysis <- function(objectImpulseDE2,
       loglik_red=vecLogLikRed,
       df_full=rep(scaDegFreedomFull, scaNGenes),
       df_red=rep(scaDegFreedomRed, scaNGenes),
-      mean=vecMu,
+      mean=vecMuCombined,
       converge_combined=vecConvergenceImpulseCombined,
       converge_case=vecConvergenceImpulseCase,
       converge_control=vecConvergenceImpulseControl,
@@ -206,14 +208,23 @@ runDEAnalysis <- function(objectImpulseDE2,
     scaDegFreedomSigmoid <- 4 + 1 + scaNBatchFactors
     scaDegFreedomConst <- 1 + 1 + scaNBatchFactors
     
-    # Compare impulse to sigmoid: Trajectory is transient if this is significant
+    # Compare impulse to sigmoid
     vecDevianceImpulseSigmoid <- 2*(vecLogLikImpulse - vecLogLikSigmoid)
     vecPvalueImpulseSigmoid <- pchisq(vecDevianceImpulseSigmoid,
                         df=scaDegFreedomImpulse-scaDegFreedomSigmoid,
                         lower.tail=FALSE)
     vecPvalueImpulseSigmoidBH <- p.adjust(vecPvalueImpulseSigmoid, method = "BH")
     
-    # Compare sigmoid to constant: Trajectory is constant if this is not significant
+    # Compare impulse to constant
+    # This is the same as the differential expression p-value if 
+    # DE analysis is case-only
+    vecDevianceImpulseConst <- 2*(vecLogLikImpulse - vecLogLikConst)
+    vecPvalueImpulseConst <- pchisq(vecDevianceImpulseConst,
+                                      df=scaDegFreedomImpulse-scaDegFreedomConst,
+                                      lower.tail=FALSE)
+    vecPvalueImpulseConstBH <- p.adjust(vecPvalueImpulseConst, method = "BH")
+    
+    # Compare sigmoid to constant
     # Trajectory is montonous if this is significant but vecPvalueImpulseSigmoidBH is not
     vecDevianceSigmoidConst <- 2*(vecLogLikSigmoid - vecLogLikConst)
     vecPvalueSigmoidConst <- pchisq(vecDevianceSigmoidConst,
@@ -227,9 +238,27 @@ runDEAnalysis <- function(objectImpulseDE2,
     dfDEAnalysis$impulseTOsigmoid_padj <- as.numeric(vecPvalueImpulseSigmoidBH)
     dfDEAnalysis$sigmoidTOconst_p <- as.numeric(vecPvalueSigmoidConst)
     dfDEAnalysis$sigmoidTOconst_padj <- as.numeric(vecPvalueSigmoidConstBH)
-    dfDEAnalysis$isTransient <- vecPvalueImpulseSigmoidBH <= 0.01
-    dfDEAnalysis$isMonotonous <- (vecPvalueSigmoidConst <= 0.01) &
-      (vecPvalueImpulseSigmoidBH > 0.01)
+    # Classify trajectories as tranient change or monotonous change (transition).
+    # Note that significant impulse vs sigmoid hits include monotonous fits which
+    # are better fit by impulse than by sigmoid, this is corrected for here.
+    vecTimePointsCase <- sort(objectImpulseDE2@lsModelFits$IdxGroups$case$vecTimepointsUnique, decreasing=FALSE)
+    vecboolMonotonousImpulseTraject <- sapply(lsModelFits$case, function(fit){
+      # Do not use stored per sample fits from lsModelFits here:
+      # These fits contain batch factors and we are only interested in the
+      # raw structure of the fit.
+      vecImpulseValues <- evalImpulse_comp(vecImpulseParam=fit$lsImpulseFit$vecImpulseParam,
+                                           vecTimepoints=vecTimePointsCase)
+      boolMonotonous <- (max(vecImpulseValues[2:length((vecImpulseValues)-1)]) <= max(vecImpulseValues[c(1,length(vecImpulseValues))]) &
+                        min(vecImpulseValues[2:length((vecImpulseValues)-1)]) >= min(vecImpulseValues[c(1,length(vecImpulseValues))]) )
+      return(boolMonotonous)
+    })
+    # Is transient if significantly better fit by impulse than sigmoidal model and not monotonous
+    dfDEAnalysis$isTransient <- vecPvalueImpulseSigmoidBH <= scaQThresTransients & !vecboolMonotonousImpulseTraject
+    # Is transition (monotonous) if (1) not significantly better fit by impulse than sigmoidal model or 
+    # is monotonous trajectory (which is better fit by impulse than sigmoid) and (2) is differentially
+    # expressed, defined as significantly better fit by sigmoid than constant.
+    dfDEAnalysis$isMonotonous <- (vecPvalueImpulseSigmoidBH > scaQThresTransients | vecboolMonotonousImpulseTraject) &
+      vecPvalueSigmoidConstBH <= scaQThresTransients
   }
   
   dfDEAnalysis <- dfDEAnalysis[match(vecAllIDs,dfDEAnalysis$Gene),]

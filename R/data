@@ -1,0 +1,23 @@
+ImpulseDE2 v1.0 for count data
+# Process inputProcessing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 0,12,24,36,72,96
+Case: Found the samples at time point 0: H9_rep1,H9_rep2,H9_rep3
+Case: Found the samples at time point 12: H9_12h_rep1,H9_12h_rep2,H9_12h_rep3
+Case: Found the samples at time point 24: H9_24h_rep1,H9_24h_rep2,H9_24h_rep3
+Case: Found the samples at time point 36: H9_36h_rep1,H9_36h_rep2,H9_36h_rep3
+Case: Found the samples at time point 72: H9_72h_rep1,H9_72h_rep2,H9_72h_rep3
+Case: Found the samples at time point 96: H9_96h_rep1,H9_96h_rep2,H9_96h_rep3
+Input contained 19097 genes/regions.
+WARNING: 1655 out of 19097 genes do not have obserserved non-zero counts and are excluded.
+Selected 17442 genes/regions for analysis.
+# Run DESeq2: Using dispersion factors computed by DESeq2.
+Consumed time: 0.15 min.
+# Compute size factors
+# Fitting null and alternative model to the genes
+Consumed time: 4.86 min.
+# Fitting sigmoid model to case condition
+Consumed time: 1.66 min.
+# Differentially expression analysis based on model fits
+Finished running ImpulseDE2.
+TOTAL consumed time: 6.71 min.

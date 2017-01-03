@@ -829,7 +829,10 @@ fitModels <- function(objectImpulseDE2,
       vecDispersions=vecDispersions,
       vecTimepoints=vecTimepoints[lsSamplesByCond[[label]]],
       lsvecBatches=lapply(lsvecBatches, function(confounder) confounder[lsSamplesByCond[[label]]] ),
-      boolFitConst= !boolCaseCtrl | label=="combined" )
+      boolFitConst=TRUE) 
+    # Note: Don't need constant fit with case-control other than for
+    # results table and transient identification. It is however fast and
+    # the inferred means may be of interest - do for all conditions.
     return(lsFitResults)
   })
   lsModelFitsByCondFormat <- lapply(lsFitResultsByCond, function(res) res$lsFits)

@@ -74,23 +74,13 @@ plotHeatmap <- function(objectImpulseDE2,
   
   if(boolIdentifyTransients){
     # Group into transients and monotonous
-    # Note that isTransient does include monotonous fits which
-    # are better fit by impulse than by sigmoid, this is corrected for here.
-    vecboolSignImpulseToSimgoidANDmonot <- sapply(vecSignificantIDs, function(id){
-      vecCounts <- matImpulseValue[id,]
-      boolBounded <- (max(vecCounts[2:length((vecCounts)-1)]) <= max(vecCounts[c(1,length(vecCounts))]) &
-                        min(vecCounts[2:length((vecCounts)-1)]) >= min(vecCounts[c(1,length(vecCounts))]) )
-      return(dfImpulseDE2Results[id,]$isTransient & boolBounded)
-    })
-    vecboolTransient <- dfImpulseDE2Results[vecSignificantIDs,]$isTransient
-    vecidxTransient <- which(vecboolTransient & !vecboolSignImpulseToSimgoidANDmonot)
+    vecidxTransient <- which(dfImpulseDE2Results[vecSignificantIDs,]$isTransient)
     #vecidxTransientSort <- vecidxTransient[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxTransient,1]))]
     
-    vecboolMonotonous <- dfImpulseDE2Results[vecSignificantIDs,]$isMonotonous
-    vecidxMonotonous <- which(vecboolMonotonous | vecboolSignImpulseToSimgoidANDmonot)
+    vecidxMonotonous <- which(dfImpulseDE2Results[vecSignificantIDs,]$isMonotonous)
     #vecidxMonotonousSort <- vecidxMonotonous[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxMonotonous,1]))]
     
-    # Finbe sort montonous transition signals into up/down
+    # Fine sort montonous transition signals into up/down
     vecboolMonotonousUp <- apply(matImpulseValue[vecidxMonotonous,], 1, function(gene){
       gene[1] < gene[scaNTPtoEvaluate]
     })
@@ -103,7 +93,6 @@ plotHeatmap <- function(objectImpulseDE2,
     
     # Fine sort transitive signals into off/on
     vecboolTransientValley <- apply(matImpulseValue[vecidxTransient,], 1, function(genevalues){
-      # Assume no complete constant fit initially
       boolValley <- any(genevalues[2:(scaNTPtoEvaluate-1)] < genevalues[1] &
                           genevalues[2:(scaNTPtoEvaluate-1)] < genevalues[scaNTPtoEvaluate])
       return(boolValley)
@@ -166,10 +155,8 @@ plotHeatmap <- function(objectImpulseDE2,
   # Create heatmap of raw data, ordered by fits
   complexHeatmapRaw <- Heatmap(matDataHeatZ[vecidxAllSort,],
                                gap                  =unit(5, "mm"),
-                               #row_order           = vecidxAllSort,
                                split                = vecTrajectoryType,
                                cluster_rows         = FALSE,
-                               #show_row_dend       = FALSE,
                                cluster_columns      = FALSE,
                                heatmap_legend_param = list(title = "z-score") )
   
@@ -185,11 +172,8 @@ plotHeatmap <- function(objectImpulseDE2,
   # Create heatmap of raw data, ordered by fits
   complexHeatmapFit <- Heatmap(matDataHeatZ[vecidxAllSort,],
                                gap                  = unit(5, "mm"),
-                               #row_order           = vecidxAllSort,
                                split                = vecTrajectoryType,
-                               #km                  = 6, # Number of k-means clusters
-                               cluster_rows         = FALSE, #hclustObject,
-                               #show_row_dend       = FALSE,
+                               cluster_rows         = FALSE,
                                cluster_columns      = FALSE,
                                heatmap_legend_param = list(title = "z-score") )
   

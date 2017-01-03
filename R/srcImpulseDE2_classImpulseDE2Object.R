@@ -20,7 +20,8 @@
 #'      \item loglik_red: Loglikelihood of reduced model.
 #'      \item df_full: Degrees of freedom of full model.
 #'      \item df_red: Degrees of freedom of reduced model
-#'      \item mean: Inferred mean parameter of constant model over all samples.
+#'      \item mean: Inferred mean parameter of constant model of first batch.
+#'      From combined samples in case-ctrl. 
 #'      \item allZero: (bool) Whether there were no observed non-zero observations of this gene.
 #'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
 #'    }
