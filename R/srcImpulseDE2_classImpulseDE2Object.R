@@ -217,82 +217,82 @@ setClass(
 #' @return \code{lsModelFits} retrieves lsModelFits
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('lsModelFits', function(object) standardGeneric('lsModelFits'), valueClass = 'listORNULL')
+setGeneric('get_lsModelFits', function(object) standardGeneric('get_lsModelFits'), valueClass = 'listORNULL')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('lsModelFits', 'ImpulseDE2Object', function(object) object@lsModelFits)
+setMethod('get_lsModelFits', 'ImpulseDE2Object', function(object) object@lsModelFits)
 
 #' @return \code{matCountDataProc} retrieves matCountDataProc
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('matCountDataProc', function(object) standardGeneric('matCountDataProc'), valueClass = 'matrix')
+setGeneric('get_matCountDataProc', function(object) standardGeneric('get_matCountDataProc'), valueClass = 'matrix')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('matCountDataProc', 'ImpulseDE2Object', function(object) object@matCountDataProc)
+setMethod('get_matCountDataProc', 'ImpulseDE2Object', function(object) object@matCountDataProc)
 
 #' @return \code{dfAnnotationProc} retrieves dfAnnotationProc
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('dfAnnotationProc', function(object) standardGeneric('dfAnnotationProc'), valueClass = 'data.frame')
+setGeneric('get_dfAnnotationProc', function(object) standardGeneric('get_dfAnnotationProc'), valueClass = 'data.frame')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('dfAnnotationProc', 'ImpulseDE2Object', function(object) object@dfAnnotationProc)
+setMethod('get_dfAnnotationProc', 'ImpulseDE2Object', function(object) object@dfAnnotationProc)
 
 #' @return \code{vecSizeFactors} retrieves vecSizeFactors
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('vecSizeFactors', function(object) standardGeneric('vecSizeFactors'), valueClass = 'numeric')
+setGeneric('get_vecSizeFactors', function(object) standardGeneric('get_vecSizeFactors'), valueClass = 'numeric')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('vecSizeFactors', 'ImpulseDE2Object', function(object) object@vecSizeFactors)
+setMethod('get_vecSizeFactors', 'ImpulseDE2Object', function(object) object@vecSizeFactors)
 
 #' @return \code{vecDispersions} retrieves vecDispersions
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('vecDispersions', function(object) standardGeneric('vecDispersions'), valueClass = 'numeric')
+setGeneric('get_vecDispersions', function(object) standardGeneric('get_vecDispersions'), valueClass = 'numeric')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('vecDispersions', 'ImpulseDE2Object', function(object) object@vecDispersions)
+setMethod('get_vecDispersions', 'ImpulseDE2Object', function(object) object@vecDispersions)
 
 #' @return \code{boolCaseCtrl} retrieves boolCaseCtrl
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('boolCaseCtrl', function(object) standardGeneric('boolCaseCtrl'), valueClass = 'logical')
+setGeneric('get_boolCaseCtrl', function(object) standardGeneric('get_boolCaseCtrl'), valueClass = 'logical')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('boolCaseCtrl', 'ImpulseDE2Object', function(object) object@boolCaseCtrl)
+setMethod('get_boolCaseCtrl', 'ImpulseDE2Object', function(object) object@boolCaseCtrl)
 
 #' @return \code{vecConfounders} retrieves vecConfounders
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('vecConfounders', function(object) standardGeneric('vecConfounders'), valueClass = 'characterORNULL')
+setGeneric('get_vecConfounders', function(object) standardGeneric('get_vecConfounders'), valueClass = 'characterORNULL')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('vecConfounders', 'ImpulseDE2Object', function(object) object@vecConfounders)
+setMethod('get_vecConfounders', 'ImpulseDE2Object', function(object) object@vecConfounders)
 
 #' @return \code{scaNProc} retrieves scaNProc
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('scaNProc', function(object) standardGeneric('scaNProc'), valueClass = 'numeric')
+setGeneric('get_scaNProc', function(object) standardGeneric('get_scaNProc'), valueClass = 'numeric')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('scaNProc', 'ImpulseDE2Object', function(object) object@scaNProc)
+setMethod('get_scaNProc', 'ImpulseDE2Object', function(object) object@scaNProc)
 
 #' @return \code{scaQThres} retrieves scaQThres
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('scaQThres', function(object) standardGeneric('scaQThres'), valueClass = 'numericOrNULL')
+setGeneric('get_scaQThres', function(object) standardGeneric('get_scaQThres'), valueClass = 'numericOrNULL')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('scaQThres', 'ImpulseDE2Object', function(object) object@scaQThres)
+setMethod('get_scaQThres', 'ImpulseDE2Object', function(object) object@scaQThres)
 
 #' @return \code{strReport} retrieves strReport
 #' @name ImpulseDEObject generics
 #' @export
-setGeneric('strReport', function(object) standardGeneric('strReport'), valueClass = 'characterORNULL')
+setGeneric('get_strReport', function(object) standardGeneric('get_strReport'), valueClass = 'characterORNULL')
 #' @name ImpulseDEObject accessors
 #' @export
-setMethod('strReport', 'ImpulseDE2Object', function(object) object@strReport)
+setMethod('get_strReport', 'ImpulseDE2Object', function(object) object@strReport)
 
 ### 2. Enable accession of public elements via list-like
 ### properties of ImpulseDE2Object.

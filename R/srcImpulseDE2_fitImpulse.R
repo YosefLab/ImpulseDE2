@@ -807,7 +807,7 @@ fitModels <- function(objectImpulseDE2,
   if(!is.null(vecConfounders)){
   	lsvecBatches <- lapply(vecConfounders, function(confounder){
   	  vecBatches <- dfAnnotationProc[,confounder]
-  	  names(vecBatches) <- 	dfAnnotationProc$Gene
+  	  names(vecBatches) <- 	dfAnnotationProc$Sample
   	  return(vecBatches)
   	})
   	names(lsvecBatches) <- vecConfounders

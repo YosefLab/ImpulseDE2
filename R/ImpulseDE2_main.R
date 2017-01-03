@@ -68,11 +68,11 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' \itemize{
 #'    \item scaNProc to set the number of processes for parallelisation.
 #'    \item scaQThres to set the cut off for your DE gene list. 
-#'    \item boolPlotting and boolSimplePlot to control plotting behaviour.
 #'    \item vecDispersionsExternal to supply external dispersion parameters
 #'    which may be necessary depending on your confounding factors (runImpulseDE2
 #'    will tell you if it is necessary).
 #'    \item vecSizeFactorsExternal to supply external size factors.
+#'    \item boolVerbose to control stdout output.
 #'    \item dirTemp to save temporary data to the given directory 
 #'    (recommended for trouble shooting and reproducibility of results).
 #' }
@@ -90,8 +90,7 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' \code{\link{computeNormConst}},
 #' \code{\link{fitModels},
 #' \code{\link{fitSigmoidModels},
-#' \code{\link{runDEAnalysis}}, 
-#' \code{\link{plotGenes}}.
+#' \code{\link{runDEAnalysis}}. 
 #' The following functions are additionally available to the user:
 #' \code{\link{fitSigmoidModels}},
 #' \code{\link{plotGenes}},  
@@ -128,12 +127,6 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'    Whether to identify transiently activated or deactivated 
 #'    genes. This involves an additional fitting of sigmoidal models
 #'    and hypothesis testing between constant, sigmoidal and impulse model.
-#' @param boolPlotting: (bool) [Default FALSE] 
-#'    Whether to plot significant DE genes into output pdf.
-#'    Consider setting FALSE for large data sets with many hits.
-#' @param boolSimplePlot: (bool) [Default FALSE]
-#'    Whether to reduce plot to data points and impulse trace without
-#'    batch information.
 #' @param boolVerbose: (bool) [Default TRUE] Whether to print
 #'    progress to stdout.
 #' @param dirTemp: (dir) Directory to which temporary results are saved.
@@ -210,8 +203,6 @@ runImpulseDE2 <- function(matCountData=NULL,
   vecDispersionsExternal=NULL,
   vecSizeFactorsExternal=NULL,
   boolIdentifyTransients=FALSE,
-  boolPlotting=FALSE,
-  boolSimplePlot=FALSE,
   boolVerbose=TRUE,
   dirTemp=NULL ){
   

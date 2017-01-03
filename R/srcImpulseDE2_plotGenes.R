@@ -4,7 +4,8 @@
 
 #' Plots the impulse fits and data
 #' 
-#' Plots the impulse fits and data to pdf and return a list of gplots.
+#' Plots the impulse fits and data to pdf and return a list of gplots. Points
+#' are size factor normalised data.
 #' 
 #' @seealso Called by separately by user.
 #' 
@@ -31,11 +32,14 @@
 #' @author David Sebastian Fischer
 #' 
 #' @export
-plotGenes <- function(vecGeneIDs, 
+plotGenes <- function(vecGeneIDs=NULL,
+                      scaNTopIDs=NULL,
                       objectImpulseDE2,
                       boolCaseCtrl,
                       dirOut,
                       strFileName="ImpulseDE2_Trajectories.pdf",
+                      boolMultiplePlotsPerPage=TRUE,
+                      boolSimplePlot=TRUE,
                       vecRefPval=NULL, 
                       strNameRefMethod=NULL){
   
@@ -48,15 +52,22 @@ plotGenes <- function(vecGeneIDs,
   vecConfounders <- objectImpulseDE2@vecConfounders
   
   # Set graphical parameters
-  scaNPlotsPerPage <- 6
-  scaRefTextSize <- 14
-  scaResScale <- 2
-  scaLabelsScale <- 2
+  scaNPlotsPerPage <- 4
   
   # Check input
+  if(is.null(vecGeneIDs) & is.null(scaNTopIDs)) stop("Supply either vecGeneIDs or scaNTopIDs.")
+  if(!is.null(vecGeneIDs) & !is.null(scaNTopIDs)) stop("Only one of the two: vecGeneIDs or scaNTopIDs.")
+  if(is.null(objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique) & !is.null(boolSimplePlot)){
+    print("Setting boolSimplePlot=TRUE as no batch structure was found.")
+    boolSimplePlot <- TRUE
+  }
   if(is.null(dirOut) | !file.exists(dirOut)) stop("Output directory dirOut not available.")
   if(!is.null(vecRefPval)) if(names(vecRefPval) != vecGeneIDs) stop("Names of vecRefPval have to be IDs from vecGeneIDs.")
+  if(!boolSimplePlot & boolCaseCtrl & boolMultiplePlotsPerPage) 
+    warning("Plots are likely overloaded. Consider switching to boolSimplePlot=TRUE or boolMultiplePlotsPerPage=FALSE.")
   
+  # Use top scaNTopIDs IDs if no specific IDs were supplied.
+  if(is.null(vecGeneIDs)) vecGeneIDs <- objectImpulseDE2$dfImpulseDE2Results[with(objectImpulseDE2$dfImpulseDE2Results, order(padj)),]$Gene[1:scaNTopIDs]
   scaNIDs <- length(vecGeneIDs)
   lsgplotsID <- list()
   for(id in vecGeneIDs){
@@ -69,7 +80,7 @@ plotGenes <- function(vecGeneIDs,
     # Can only resolve one level of batch effects as this is plotted
     # as different function fits to the indididual batches
     if(!is.null(vecConfounders)){
-      vecCaseBatchFactors <- objectImpulseDE2@lsModelFits$case[[id]]$lsvecBatchFactors[[1]]
+      vecCaseBatchFactors <- objectImpulseDE2@lsModelFits$case[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
       vecBatchLabelsCase <- objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique[[1]]
     } else {
       vecCaseBatchFactors <- 1
@@ -94,32 +105,53 @@ plotGenes <- function(vecGeneIDs,
       vecCombinedImpulseValue <- evalImpulse_comp(vecImpulseParam=vecCombinedImpulseParam,
                                                   vecTimepoints=vecTimePointsFit)
       
-      vecControlBatchFactors <- objectImpulseDE2@lsModelFits$ctrl[[id]]$lsvecBatchFactors[[1]]
-      vecCombinedBatchFactors <- objectImpulseDE2@lsModelFits$comb[[id]]$lsvecBatchFactors[[1]]
+      vecControlBatchFactors <- objectImpulseDE2@lsModelFits$control[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
+      vecCombinedBatchFactors <- objectImpulseDE2@lsModelFits$combined[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
       
-      vecBatchLabelsCtrl <- objectImpulseDE2@lsModelFits$IdxGroups$ctrl$lsvecBatchUnique[[1]]
-      vecBatchLabelsComb <- objectImpulseDE2@lsModelFits$IdxGroups$comb$lsvecBatchUnique[[1]]
+      vecBatchLabelsCtrl <- objectImpulseDE2@lsModelFits$IdxGroups$control$lsvecBatchUnique[[1]]
+      vecBatchLabelsComb <- objectImpulseDE2@lsModelFits$IdxGroups$combined$lsvecBatchUnique[[1]]
       
-      vecValueToPlotCtrl <- do.call(c, lapply(vecCtrlBatchFactors, function(f) vecControlImpulseValue*f) )
-      vecValueToPlotComb <- do.call(c, lapply(vecCombBatchFactors, function(f) vecCombinedImpulseValue*f) )
+      vecValueToPlotCtrl <- do.call(c, lapply(vecControlBatchFactors, function(f) vecControlImpulseValue*f) )
+      vecValueToPlotComb <- do.call(c, lapply(vecCombinedBatchFactors, function(f) vecCombinedImpulseValue*f) )
       
-      dfFit <- data.frame(
-        time=c(rep(vecTimePointsFit, length(vecCaseBatchFactors)),
-               rep(vecTimePointsFit, length(vecCtrlBatchFactors)),
-               rep(vecTimePointsFit, length(vecCombBatchFactors))),
-        value=c(vecValueToPlotCase,
-                vecValueToPlotCtrl,
-                vecValueToPlotComb),
-        Condition=c(rep(rep("case", length(vecTimePointsFit)), length(vecCaseBatchFactors)),
-                    rep(rep("ctrl", length(vecTimePointsFit)), length(vecCtrlBatchFactors)),
-                    rep(rep("comb", length(vecTimePointsFit)), length(vecCombBatchFactors))),
-        Fit=c(sapply(vecBatchLabelsCase, function(label) rep(label, length(vecTimePointsFit)) ),
-                sapply(vecBatchLabelsCtrl, function(label) rep(label, length(vecTimePointsFit)) ),
-                sapply(vecBatchLabelsComb, function(label) rep(label, length(vecTimePointsFit)) ) )
-      )
-      gplotGene <- ggplot() +
-        geom_point(data=dfRaw, aes(x=time, y=normCounts, colour=Condition, shape=Batch), size=2) +
-        geom_line(data=dfFit, aes(x=time, y=value, colour=Condition, linetype=Fit), size=1)
+      if(boolSimplePlot){
+        dfFit <- data.frame(
+          time=rep(vecTimePointsFit, 3),
+          value=c(vecCaseImpulseValue,
+                  vecControlImpulseValue,
+                  vecCombinedImpulseValue),
+          Condition=c(rep("case", length(vecTimePointsFit)), 
+                      rep("control", length(vecTimePointsFit)),
+                      rep("combined", length(vecTimePointsFit)) )
+        )
+        if(!is.null(vecBatchLabelsComb)){
+          gplotGene <- ggplot() +
+            geom_point(data=dfRaw, aes(x=time, y=normCounts, colour=Condition, shape=Batch)) +
+            geom_line(data=dfFit, aes(x=time, y=value, colour=Condition))
+        } else {
+          gplotGene <- ggplot() +
+            geom_point(data=dfRaw, aes(x=time, y=normCounts, colour=Condition)) +
+            geom_line(data=dfFit, aes(x=time, y=value, colour=Condition))
+        }
+      } else {
+        dfFit <- data.frame(
+          time=c(rep(vecTimePointsFit, length(vecCaseBatchFactors)),
+                 rep(vecTimePointsFit, length(vecControlBatchFactors)),
+                 rep(vecTimePointsFit, length(vecCombinedBatchFactors))),
+          value=c(vecValueToPlotCase,
+                  vecValueToPlotCtrl,
+                  vecValueToPlotComb),
+          Condition=c(rep(rep("case", length(vecTimePointsFit)), length(vecCaseBatchFactors)),
+                      rep(rep("control", length(vecTimePointsFit)), length(vecControlBatchFactors)),
+                      rep(rep("combined", length(vecTimePointsFit)), length(vecCombinedBatchFactors))),
+          BatchFit=c(sapply(vecBatchLabelsCase, function(label) rep(label, length(vecTimePointsFit)) ),
+                     sapply(vecBatchLabelsCtrl, function(label) rep(label, length(vecTimePointsFit)) ),
+                     sapply(vecBatchLabelsComb, function(label) rep(label, length(vecTimePointsFit)) ) )
+        )
+        gplotGene <- ggplot() +
+          geom_point(data=dfRaw, aes(x=time, y=normCounts, colour=Condition, shape=Batch)) +
+          geom_line(data=dfFit, aes(x=time, y=value, colour=Condition, linetype=BatchFit))
+      }
     } else {
       vecSamples <- dfAnnotationProc[dfAnnotationProc$Condition=="case",]$Sample
       if(!is.null(vecConfounders)){ vecBatches <- dfAnnotationProc[vecSamples,vecConfounders[1]]
@@ -132,15 +164,32 @@ plotGenes <- function(vecGeneIDs,
         condition=dfAnnotationProc[vecSamples,]$Condition
       )
       
-      dfFit <- data.frame(
-        time=rep(vecTimePointsFit, length(vecCaseBatchFactors)),
-        value=vecValueToPlotCase,
-        condition=rep(rep("case", length(vecTimePointsFit)), length(vecCaseBatchFactors)),
-        Batch=as.vector(sapply(vecBatchLabelsCase, function(label) rep(label, length(vecTimePointsFit)) ))
-      )
-      gplotGene <- ggplot() +
-        geom_point(data=dfRaw, aes(x=time, y=normCounts, colour=Batch, shape=Batch), size=2) +
-        geom_line(data=dfFit, aes(x=time, y=value, colour=Batch, linetype=Batch), size=1)
+      if(boolSimplePlot){
+        dfFit <- data.frame(
+          time=vecTimePointsFit,
+          value=vecCaseImpulseValue,
+          Batch=rep(vecBatchLabelsCase[1], length(vecTimePointsFit))
+        )
+        if(!is.null(vecBatchLabelsCase)){
+          gplotGene <- ggplot() +
+            geom_point(data=dfRaw, aes(x=time, y=normCounts, shape=Batch)) +
+            geom_line(data=dfFit, aes(x=time, y=value, linetype=Batch))
+        } else {
+          gplotGene <- ggplot() +
+            geom_point(data=dfRaw, aes(x=time, y=normCounts)) +
+            geom_line(data=dfFit, aes(x=time, y=value))
+        }
+      } else {
+        dfFit <- data.frame(
+          time=rep(vecTimePointsFit, length(vecCaseBatchFactors)),
+          value=vecValueToPlotCase,
+          condition=rep(rep("case", length(vecTimePointsFit)), length(vecCaseBatchFactors)),
+          BatchFit=as.vector(sapply(vecBatchLabelsCase, function(label) rep(label, length(vecTimePointsFit)) ))
+        )
+        gplotGene <- ggplot() +
+          geom_point(data=dfRaw, aes(x=time, y=normCounts, colour=Batch, shape=Batch)) +
+          geom_line(data=dfFit, aes(x=time, y=value, colour=BatchFit, linetype=BatchFit))
+      }
     }
     gplotID <- gplotGene + 
       xlab("time [hours]") +
@@ -150,13 +199,11 @@ plotGenes <- function(vecGeneIDs,
         labs(title=paste0(id, ": ImpulseDE2 [",
                           round(log(objectImpulseDE2$dfImpulseDE2Results[id,]$padj)/log(10), 2), 
                           "] ", strNameRefMethod," [", 
-                          round(log(vecRefPval[id])/log(10), 2), "]" ),
-             colour="Batch", linetype="Batch", shape="Batch")
+                          round(log(vecRefPval[id])/log(10), 2), "]" ))
     } else {
       gplotID <- gplotID +
-        labs(title=paste0(id, ": ImpulseDE2 [",
-                          round(log(objectImpulseDE2$dfImpulseDE2Results[id,]$padj)/log(10), 2), 
-                          "] "))
+        labs(title=paste0(id, ": log10 q = ",
+                          round(log(objectImpulseDE2$dfImpulseDE2Results[id,]$padj)/log(10), 2)))
     }
     lsgplotsID[[length(lsgplotsID)+1]] <- gplotID
   }
@@ -165,15 +212,24 @@ plotGenes <- function(vecGeneIDs,
   dirFileOut <- paste0(dirOut, strFileName)
   print(paste0("Creating ", dirFileOut))
   graphics.off()
-  pdf(dirFileOut)
-  for(p in seq(0,scaNIDs %/% scaNPlotsPerPage)){
-    if(p < scaNIDs %/% scaNPlotsPerPage){ vecidxPlots <- seq((p*scaNPlotsPerPage+1),((p+1)*(scaNPlotsPerPage)))
-    } else { vecidxPlots <- seq((p*scaNPlotsPerPage+1),scaNIDs) }
-    print(plot_grid(plotlist=lsgplotsID[vecidxPlots],
-                    align="h",
-                    nrow=3, ncol=2,
-                    rel_widths=c(1,1),
-                    rel_heights=c(1,1,1)))
+  if(boolMultiplePlotsPerPage){
+    pdf(dirFileOut)
+    scaNPages <- scaNIDs %/% scaNPlotsPerPage
+    if(scaNIDs %% scaNPlotsPerPage == 0) scaNPages <- scaNPages-1
+    for(p in seq(0,scaNPages)){
+      if(p < scaNIDs %/% scaNPlotsPerPage){ vecidxPlots <- seq((p*scaNPlotsPerPage+1),((p+1)*(scaNPlotsPerPage)))
+      } else { vecidxPlots <- seq((p*scaNPlotsPerPage+1),scaNIDs) }
+      print(plot_grid(plotlist=lsgplotsID[vecidxPlots],
+                      align="h",
+                      nrow=scaNPlotsPerPage/2, ncol=2,
+                      rel_widths=c(1,1),
+                      rel_heights=c(1,1,1)))
+    }
+  } else {
+    pdf(dirFileOut)
+    for(p in seq(1,scaNIDs)){
+      print(lsgplotsID[[p]])
+    }
   }
   dev.off()
   graphics.off()
