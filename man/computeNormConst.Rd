@@ -2,58 +2,23 @@
 % Please edit documentation in R/srcImpulseDE2_computeNormConst.R
 \name{computeNormConst}
 \alias{computeNormConst}
-\title{Compute normalisation constant for each replicate}
+\title{Compute a normalisation constant for each sample}
 \usage{
-computeNormConst(matCountDataProcFull, matCountDataProc, vecDispersions,
-  scaSmallRun = NULL, dfAnnotationProc, strCaseName, strControlName = NULL,
-  strMode = "batch", vecSizeFactorsExternal = NULL)
+computeNormConst(matCountDataProc, vecSizeFactorsExternal = NULL)
 }
 \arguments{
-\item{strCaseName}{(str) Name of the case condition in \code{dfAnnotationRedFull}.}
+\item{matCountDataProc}{(matrix genes x samples)
+Read count data.}
 
-\item{matCountDataProcFull:}{(matrix genes x samples)
-Count data: Reduced version of \code{matCountData}. 
-For internal use. This is the entire data set.}
-
-\item{matCountDataProc:}{(matrix genes x samples)
-Count data: Reduced version of \code{matCountData}. 
-For internal use. This is the data set reduced to the
-genes which are supposed to be analysed.}
-
-\item{scaSmallRun:}{(integer) [Default NULL] Number of rows
-on which ImpulseDE2 is supposed to be run, the full
-data set is only used for size factor estimation.}
-
-\item{dfAnnotationProc:}{(Table) Processed annotation table. 
-Lists co-variables of samples: 
-Sample, Condition, Time (numeric), TimeCateg (str)
-(and LongitudinalSeries). For internal use.}
-
-\item{strControlName:}{(str) [Default NULL] Name of the control condition in 
-\code{dfAnnotationRedFull}.}
-
-\item{strMode:}{(str) [Default "batch"] 
-{"batch","longitudinal","singlecell"}
-Mode of model fitting.}
-
-\item{vecSizeFactorsExternal:}{(numeric vector number of cells) 
-Model scaling factors for each observation which take
-sequencing depth into account (size factors). One size
-factor per cell. These are supplied to ImpulseDE, if this variable
-is not set, size factors are computed in this function.}
+\item{vecSizeFactorsExternal}{(vector length number of
+cells in matCountData) [Default NULL]
+Externally generated list of size factors which override
+size factor computation in ImpulseDE2.}
 }
 \value{
-(list {lsMatTranslationFactors,matSizeFactors})
-   \itemize{
-     \item matTranslationFactors: (numeric matrix genes x samples) 
-     Model scaling factors for each observation which take
-     longitudinal time series mean within a gene into account 
-     (translation factors). Computed based based on all samples.
-     \item matSizeFactors: (numeric matrix genes x samples) 
-       Model scaling factors for each observation which take
-       sequencing depth into account (size factors). One size
-       factor per sample - rows of this matrix are equal.
-     }
+vecSizeFactors (numeric vector number of samples) 
+   Model scaling factors for each sample which take
+   sequencing depth into account (size factors).
 }
 \description{
 The normalisation constant is the median of the ratio of gene counts versus
@@ -69,9 +34,11 @@ in the framework of ImpulseDE2.
 There is the option to supply size factors to this function to override
 its size factor choice.
 }
+\author{
+David Sebastian Fischer
+}
 \seealso{
-Called by \code{runImpulseDE2}. 
-Calls \code{computeTranslationFactors} and
-\code{computeSizeFactors}.
+Called by \link{runImpulseDE2}. 
+Calls \link{computeSizeFactors}.
 }
 

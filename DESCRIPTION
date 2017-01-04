@@ -1,10 +1,47 @@
 Package: ImpulseDE2
 Type: Package
-Title: What the package does (short line)
-Version: 1.0
-Date: 2016-04-22
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
+Title: Differential expression analysis of longitudinal count data sets
+Version: 0.99.0
+Date: 2017-01-02
+Author: David Sebastian Fischer [aut, cre],
+    Nir Yosef [aut]
+Maintainer: David Sebastian Fischer <david.seb.fischer@gmail.com>,
+    Nir Yosef <niryosef@berkeley.edu>
+Description: Differential expression analysis of longitudinal count data sets,
+    such nex-generation sequencing data: RNA-seq, ATAC-seq, DNaseI-seq, ChIP-seq.
+License: GPL-3
+biocViews: Software,
+    StatisticalMethod,
+    TimeCourse
+Imports:
+    methods,
+    stats,
+    compiler,
+    DESeq2,
+    S4Vectors,
+    BiocParallel,
+    Matrix,
+    grDevices,
+    ggplot2,
+    ComplexHeatmap,
+    circlize,
+    cowplot
+Collate:
+    'ImpulseDE2_main.R'
+    'srcImpulseDE2_CostFunctionsFit.R'
+    'srcImpulseDE2_classUnions.R'
+    'srcImpulseDE2_classImpulseDE2Object.R'
+    'srcImpulseDE2_computeNormConst.R'
+    'srcImpulseDE2_evalImpulse.R'
+    'srcImpulseDE2_evalSigmoid.R'
+    'srcImpulseDE2_fitImpulse.R'
+    'srcImpulseDE2_fitSigmoid.R'
+    'srcImpulseDE2_plotGenes.R'
+    'srcImpulseDE2_plotHeatmap.R'
+    'srcImpulseDE2_processData.R'
+    'srcImpulseDE2_runDEAnalysis.R'
+    'srcImpulseDE2_runDESeq2.R'
+    'srcImpulseDE2_simulateDataSet.R'
 RoxygenNote: 5.0.1
+URL: https://github.com/YosefLab/ImpulseDE2
+BugReports: https://github.com/YosefLab/ImpulseDE2/issues

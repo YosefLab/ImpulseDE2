@@ -22,7 +22,7 @@
 #'      \item df_red: Degrees of freedom of reduced model
 #'      \item mean: Inferred mean parameter of constant model of first batch.
 #'      From combined samples in case-ctrl. 
-#'      \item allZero: (bool) Whether there were no observed non-zero observations of this gene.
+#'      \item allZero (bool) Whether there were no observed non-zero observations of this gene.
 #'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
 #'    }
 #'    Entries only present in case-only DE analysis:
@@ -47,23 +47,23 @@
 #'      sigmoid model fit to samples of case condition.
 #'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
 #'      impulse model fit versus sigmoidal model on samples of case condition.
-#'      \item dfDEAnalysis$impulseTOsigmoid_padj: Benjamini-Hochberg 
+#'      \item impulseTOsigmoid_padj: Benjamini-Hochberg 
 #'      false-discovery rate corrected p-value of loglikelihood ratio test
 #'      impulse model fit versus sigmoid model on samples of case condition.
-#'      \item dfDEAnalysis$sigmoidTOconst_p: P-value of loglikelihood ratio test
+#'      \item sigmoidTOconst_p: P-value of loglikelihood ratio test
 #'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item dfDEAnalysis$sigmoidTOconst_padj: Benjamini-Hochberg 
+#'      \item sigmoidTOconst_padj: Benjamini-Hochberg 
 #'      false-discovery rate corrected p-value of loglikelihood ratio test
 #'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item dfDEAnalysis$isTransient: (bool) Whether gene is transiently
+#'      \item isTransient (bool) Whether gene is transiently
 #'      activated or deactivated and differentially expressed.
-#'      \item dfDEAnalysis$isMonotonous: (bool) Whether gene is not transiently
+#'      \item isMonotonous (bool) Whether gene is not transiently
 #'      activated or deactivated and differentially expressed. This scenario
 #'      corresponds to a montonous expression level increase or decrease.
 #'    }
-#' @slot vecDEGenes: (list number of genes) Genes IDs identified
+#' @slot vecDEGenes (list number of genes) Genes IDs identified
 #'    as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.
-#' @slot lsModelFits: (list length number of conditions fit (1 or 3))
+#' @slot lsModelFits (list length number of conditions fit (1 or 3))
 #'    {"case"} or {"case", "control", "combined"}
 #'    One model fitting object for each condition:
 #'    In case-only DE analysis, only the condition {"case"} is fit.
@@ -75,24 +75,24 @@
 #'    At this level, the sigmoid model fit can be added later.
 #'    Each model fit per gene is a list of fitting parameters and results.
 #'    \itemize{
-#'       \item IdxGroups: (list length number of conditions)
+#'       \item IdxGroups (list length number of conditions)
 #'       Samples grouped by time points and by batches and time point vectors. 
 #'       Sample groups are stored in the form of index vectors in which
 #'       samples of the same time point or batch have the same index.
 #'       \itemize{
-#'         \item Condition ID: (list length 3)
+#'         \item Condition ID (list length 3)
 #'         List of index vectors and time points.
 #'         One entry of this format for each condition.
 #'         \itemize{
-#'           \item vecTimepointsUnique: (numeric vector length number of unique
+#'           \item vecTimepointsUnique (numeric vector length number of unique
 #'         timepoints) Vector of unique time coordinates observed in this condition.
-#'           \item vecidxTimepoint: (idx vector length number of samples)
+#'           \item vecidxTimepoint (idx vector length number of samples)
 #'         Index of the time coordinates of each sample (reference is
 #'         vecTimepointsUnique).
-#'           \item lsvecBatchUnique: (list number of confounders)
+#'           \item lsvecBatchUnique (list number of confounders)
 #'         List of string vectors. One vector per confounder: vector of unique batches
 #'         in this confounder.
-#'           \item lsvecidxBatches: (idx list length number of confounding variables)
+#'           \item lsvecidxBatches (idx list length number of confounding variables)
 #'    		   List of index vectors. 
 #'    		   One vector per confounding variable.
 #'    		   Each vector has one entry per sample with the index of the batch ID
@@ -100,94 +100,96 @@
 #'    		   is the list of unique batch ids for each confounding variable.
 #'         }
 #'       }
-#'       \item Condition ID: (list length number of genes)
+#'       \item Condition ID (list length number of genes)
 #'       List of fits for each gene to the samples of this condition.
 #'       One entry of this format for all conditions fit.
 #'       \itemize{
-#'         \item Gene ID: (list length 2)
+#'         \item Gene ID (list length 2)
 #'         Impulse and constant model fit to gene observations.
 #'         One entry of this format for all gene IDs.
 #'         \itemize{
-#'           \item lsImpulseFit: (list) List of impulse fit parameters and results.
+#'           \item lsImpulseFit (list) List of impulse fit parameters and results.
 #'           \itemize{
-#'             \item vecImpulseParam: (numeric vector length 6)
+#'             \item vecImpulseParam (numeric vector length 6)
 #'           {beta, h0, h1, h2, t1, t2}
 #'           Maximum likelihood estimators of impulse model parameters.
-#'             \item vecImpulseValue: (numeric vector length number of time points)
+#'             \item vecImpulseValue (numeric vector length number of time points)
 #'           Values of impulse model fit at time points used for fit.
-#'             \item lsvecBatchFactors: (list length number of confounders)
+#'             \item lsvecBatchFactors (list length number of confounders)
 #'           List of vectors of scalar batch correction factors for each sample.
 #'           These are also maximum likelihood estimators.
 #'           NULL if no confounders given.
-#'             \item scaDispParam: (scalar) Dispersion parameter estimate
+#'             \item scaDispParam (scalar) Dispersion parameter estimate
 #'           used in fitting (hyper-parameter).
-#'             \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'             \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'           estimator model.
-#'             \item scaConvergence: (scalar) 
+#'             \item scaConvergence (scalar) 
 #'           Convergence status of optim on impulse model.
 #'           }
-#'           \item lsConstFit: (list) List of constant fit parameters and results.
+#'           \item lsConstFit (list) List of constant fit parameters and results.
 #'           \itemize{
-#'             \item scaMu: (scalar) Maximum likelihood estimator of
+#'             \item scaMu (scalar) Maximum likelihood estimator of
 #'           negative binomial mean parameter.
-#'             \item lsvecBatchFactors: (list length number of confounders)
+#'             \item lsvecBatchFactors (list length number of confounders)
 #'           List of vectors of scalar batch correction factors for each sample.
 #'           These are also maximum likelihood estimators.
 #'           NULL if no confounders given.
-#'             \item scaDispParam: (scalar) Dispersion parameter estimate
+#'             \item scaDispParam (scalar) Dispersion parameter estimate
 #'           used in fitting (hyper-parameter).
-#'             \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'             \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'           estimator model.
-#'             \item scaConvergence: (scalar) 
+#'             \item scaConvergence (scalar) 
 #'           Convergence status of optim on constant model.
 #'           }
-#'           \item ls SigmoidFit: (list) List of sigmoidal fit parameters and results.
+#'           \item ls SigmoidFit (list) List of sigmoidal fit parameters and results.
 #'           NULL if boolIdentifyTransients is FALSE.
 #'           \itemize{
-#'             \item vecSigmoidParam: (numeric vector length 4)
+#'             \item vecSigmoidParam (numeric vector length 4)
 #'           {beta, h0, h1, t}
 #'           Maximum likelihood estimators of sigmoidal model parameters.
-#'             \item vecSigmoidValue: (numeric vector length number of time points)
+#'             \item vecSigmoidValue (numeric vector length number of time points)
 #'           Values of sigmoid model fit at time points used for fit.
-#'             \item lsvecBatchFactors: (list length number of confounders)
+#'             \item lsvecBatchFactors (list length number of confounders)
 #'           List of vectors of scalar batch correction factors for each sample.
 #'           These are also maximum likelihood estimators.
 #'           NULL if no confounders given.
-#'             \item scaDispParam: (scalar) Dispersion parameter estimate
+#'             \item scaDispParam (scalar) Dispersion parameter estimate
 #'           used in fitting (hyper-parameter).
-#'             \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'             \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'           estimator model.
-#'             \item scaConvergence: (scalar) 
+#'             \item scaConvergence (scalar) 
 #'           Convergence status of optim on sigmoidal model.
 #'           }
 #'         }
 #'       }
 #'     }
-#' @slot matCountDataProc: (matrix genes x samples) [Default NULL] 
+#' @slot matCountDataProc (matrix genes x samples) [Default NULL] 
 #'    Read count data, unobserved entries are NA. Processed matrix.
-#' @slot dfAnnotationProc: (data frame samples x covariates) 
+#' @slot dfAnnotationProc (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Annotation table with covariates for each sample.
 #'    Processed table.
-#' @slot vecDispersions: (numeric vector number of samples) 
+#' @slot vecDispersions (numeric vector number of samples) 
 #'    Gene-wise negative binomial dispersion hyper-parameters.
-#' @slot vecSizeFactors: (numeric vector number of samples) 
+#' @slot vecSizeFactors (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @slot boolCaseCtrl: (bool) 
+#' @slot boolCaseCtrl (bool) 
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
-#' @slot vecConfounders: (vector of strings number of confounding variables)
+#' @slot vecConfounders (vector of strings number of confounding variables)
 #' 		Factors to correct for during batch correction. Have to 
 #' 		supply dispersion factors if more than one is supplied.
 #' 		Names refer to columns in dfAnnotation.
-#' @slot scaNProc: (scalar) Number of processes for 
+#' @slot scaNProc (scalar) Number of processes for 
 #'    parallelisation.
-#' @slot scaQThres: (scalar)
+#' @slot scaQThres (scalar)
 #'    FDR-corrected p-value cutoff for significance.
-#' @slot strReport: (str)
+#' @slot strReport (str)
 #'    ImpulseDE2 stdout report.
+#'    
+#' @name ImpulseDE2Object-class
 #'      
 #' @author David Sebastian Fischer
 setClass(
@@ -210,88 +212,131 @@ setClass(
 
 ### 2. Enable accession of private elements via functions
 ### which carry the same name as the element.
+
+#' ImpulseDE2Object accessor method generics
+#' 
+#' Generics for methods which operate on ImpulseDE2Object.
+#'  
+#' @param object (object) Object from which to retrieve data.
+#' 
+#' @aliases get_lsModelFits 
+#'    get_matCountDataProc 
+#'    get_dfAnnotationProc 
+#'    get_vecSizeFactors
+#'    get_vecDispersions 
+#'    get_boolCaseCtrl
+#'    get_vecConfounders 
+#'    get_scaNProc
+#'    get_scaQThres
+#'    get_strReport
+#' 
+#' @name ImpulseDE2Object_Generics_Accessors
+NULL
+
+#' ImpulseDE2Object accession methods
+#' 
+#' Get internal data of ImpulseDE2 output object.
+#' 
+#' @param object (objectImpulseDE2)  A ImpulseDE2 output object.
+#' 
+#' @return The internal data object specified by the function.
+#' 
+#' @aliases get_lsModelFits,ImpulseDE2Object-method
+#'    get_matCountDataProc,ImpulseDE2Object-method
+#'    get_dfAnnotationProc,ImpulseDE2Object-method
+#'    get_vecSizeFactors,ImpulseDE2Object-method
+#'    get_vecDispersions,ImpulseDE2Object-method
+#'    get_boolCaseCtrl,ImpulseDE2Object-method
+#'    get_vecConfounders,ImpulseDE2Object-method
+#'    get_scaNProc,ImpulseDE2Object-method
+#'    get_scaQThres,ImpulseDE2Object-method
+#'    get_strReport,ImpulseDE2Object-method
+#' 
+#' @name ImpulseDE2Object_Accessors
+NULL
+
 ### I. Set generic function which defines string as a function:
 ### setGeneric('funName', function(object) standardGeneric('funName'), valueClass = 'funOutputClass')
 ### II. Define function on ImpulseDE2Object:
 ### setMethod('funName', 'ImpulseDE2Object', function(object) object@funName)
 
-#' @return \code{lsModelFits} retrieves lsModelFits
-#' @name ImpulseDEObject generics
+#' @return (list) lsModelFits
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
 setGeneric('get_lsModelFits', function(object) standardGeneric('get_lsModelFits'), valueClass = 'listORNULL')
-#' @name ImpulseDEObject accessors
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_lsModelFits', 'ImpulseDE2Object', function(object) object@lsModelFits)
 
-#' @return \code{matCountDataProc} retrieves matCountDataProc
-#' @name ImpulseDEObject generics
+#' @return (numeric matrix size genes x samples) matCountDataProc
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
 setGeneric('get_matCountDataProc', function(object) standardGeneric('get_matCountDataProc'), valueClass = 'matrix')
-#' @name ImpulseDEObject accessors
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_matCountDataProc', 'ImpulseDE2Object', function(object) object@matCountDataProc)
 
-#' @return \code{dfAnnotationProc} retrieves dfAnnotationProc
-#' @name ImpulseDEObject generics
+#' @return (data frame size genes x reported characteristics) dfAnnotationProc
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
 setGeneric('get_dfAnnotationProc', function(object) standardGeneric('get_dfAnnotationProc'), valueClass = 'data.frame')
-#' @name ImpulseDEObject accessors
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_dfAnnotationProc', 'ImpulseDE2Object', function(object) object@dfAnnotationProc)
 
-#' @return \code{vecSizeFactors} retrieves vecSizeFactors
-#' @name ImpulseDEObject generics
+#' @return (numeric vector length number of samples) vecSizeFactors
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
 setGeneric('get_vecSizeFactors', function(object) standardGeneric('get_vecSizeFactors'), valueClass = 'numeric')
-#' @name ImpulseDEObject accessors
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_vecSizeFactors', 'ImpulseDE2Object', function(object) object@vecSizeFactors)
 
-#' @return \code{vecDispersions} retrieves vecDispersions
-#' @name ImpulseDEObject generics
+#' @return (numeric vector length number of genes) vecDispersions
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
 setGeneric('get_vecDispersions', function(object) standardGeneric('get_vecDispersions'), valueClass = 'numeric')
-#' @name ImpulseDEObject accessors
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_vecDispersions', 'ImpulseDE2Object', function(object) object@vecDispersions)
 
-#' @return \code{boolCaseCtrl} retrieves boolCaseCtrl
-#' @name ImpulseDEObject generics
+#' @return (bool) boolCaseCtrl
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
-setGeneric('get_boolCaseCtrl', function(object) standardGeneric('get_boolCaseCtrl'), valueClass = 'logical')
-#' @name ImpulseDEObject accessors
+setGeneric('get_boolCaseCtrl', function(object) standardGeneric('get_boolCaseCtrl'), valueClass = 'characterORNULL')
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_boolCaseCtrl', 'ImpulseDE2Object', function(object) object@boolCaseCtrl)
 
-#' @return \code{vecConfounders} retrieves vecConfounders
-#' @name ImpulseDEObject generics
+#' @return (str vector) vecConfounders
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
 setGeneric('get_vecConfounders', function(object) standardGeneric('get_vecConfounders'), valueClass = 'characterORNULL')
-#' @name ImpulseDEObject accessors
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_vecConfounders', 'ImpulseDE2Object', function(object) object@vecConfounders)
 
-#' @return \code{scaNProc} retrieves scaNProc
-#' @name ImpulseDEObject generics
+#' @return (scalar) scaNProc
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
 setGeneric('get_scaNProc', function(object) standardGeneric('get_scaNProc'), valueClass = 'numeric')
-#' @name ImpulseDEObject accessors
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_scaNProc', 'ImpulseDE2Object', function(object) object@scaNProc)
 
-#' @return \code{scaQThres} retrieves scaQThres
-#' @name ImpulseDEObject generics
+#' @return (scalar) scaQThres
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
 setGeneric('get_scaQThres', function(object) standardGeneric('get_scaQThres'), valueClass = 'numericOrNULL')
-#' @name ImpulseDEObject accessors
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_scaQThres', 'ImpulseDE2Object', function(object) object@scaQThres)
 
-#' @return \code{strReport} retrieves strReport
-#' @name ImpulseDEObject generics
+#' @return (str) strReport
+#' @name ImpulseDE2Object_Generics_Accessors
 #' @export
 setGeneric('get_strReport', function(object) standardGeneric('get_strReport'), valueClass = 'characterORNULL')
-#' @name ImpulseDEObject accessors
+#' @name ImpulseDE2Object_Accessors
 #' @export
 setMethod('get_strReport', 'ImpulseDE2Object', function(object) object@strReport)
 
@@ -299,32 +344,105 @@ setMethod('get_strReport', 'ImpulseDE2Object', function(object) object@strReport
 ### properties of ImpulseDE2Object.
 
 # a) Enable names()
-#' @name extractions
+#' List-like accessor methods for ImpulseDE2Object: names()
+#' 
+#' names() function for ImpulseDE2Object.
+#' Allow usage of ImpulseDE2 ouput object like a list with
+#' respect to the most relevant output:
+#' dfImpulseDE2Results and vecDEGenes.
+#' List of all available list-object like accessors:
+#' \link{names,ImpulseDE2Object-method},
+#' \link{[[,ImpulseDE2Object,character,missing-method},
+#' \link{$,ImpulseDE2Object-method}.
+#' 
+#' @param x (ImpulseDE2Object) ImpulseDE2 output object.
+#' 
+#' @return Names of elements in x available via list-like accessors.
+#' 
+#' @name names,ImpulseDE2Object-method
+#' 
 #' @export
 setMethod('names', 'ImpulseDE2Object', function(x) {
   return( c("dfImpulseDE2Results", "vecDEGenes") )
 })
 
 # b) Enable object[[ element ]] operator
-#' @name extractions
+#' List-like accessor methods for ImpulseDE2Object: names()
+#' 
+#' names() function for ImpulseDE2Object.
+#' Allow usage of ImpulseDE2 ouput object like a list with
+#' respect to the most relevant output:
+#' dfImpulseDE2Results and vecDEGenes.
+#' List of all available list-object like accessors:
+#' \link{names,ImpulseDE2Object-method},
+#' \link{[[,ImpulseDE2Object,character,missing-method},
+#' \link{$,ImpulseDE2Object-method}.
+#' 
+#' @param x (ImpulseDE2Object) ImpulseDE2 output object.
+#' @param i (str) Element from x list to be retrieved.
+#' @param j () Ignored argument to generic.
+#' @param ...  () Ignored argument to generic.
+#' 
+#' @return Target element from x.
+#' 
+#' @name [[,ImpulseDE2Object,character,missing-method
+#' 
 #' @export
-setMethod('[[', c('ImpulseDE2Object', 'character', 'missing'), function(x, i, j, ...) {
+setMethod('[[', c('ImpulseDE2Object', 'character', 'missing'), function(x, i, j, ...){
   if(identical(i, "dfImpulseDE2Results")){ return(x@dfImpulseDE2Results)
   } else if(identical(i, "vecDEGenes")){ return(x@vecDEGenes)
   } else { return(NULL) }
 })
 
 # c) Enable object$element operator, which relies on [[ ]]
-#' @name extractions
+#' List-like accessor methods for ImpulseDE2Object: $
+#' 
+#' $ accessor function for ImpulseDE2Object, relies on [[ ]].
+#' Allow usage of ImpulseDE2 ouput object like a list with
+#' respect to the most relevant output:
+#' dfImpulseDE2Results and vecDEGenes.
+#' List of all available list-object like accessors:
+#' \link{names,ImpulseDE2Object-method},
+#' \link{[[,ImpulseDE2Object,character,missing-method},
+#' \link{$,ImpulseDE2Object-method}.
+#' 
+#' @param x (ImpulseDE2Object) ImpulseDE2 output object.
+#' @param name (str) Element from x list to be retrieved.
+#' 
+#' @return Target element from x.
+#' 
+#' @name $,ImpulseDE2Object-method
+#' 
 #' @export
 setMethod('$', 'ImpulseDE2Object', function(x, name) x[[name]] )
 
-### 3. Enable printing of report to .txt file
+### 3. Functions on ImpulseDE2Object that perform specific tasks
 
-#' @return \code{writeReportToFile} writes strReport to file
-#' @name ImpulseDEObject generics
+# a) Enable printing of report to .txt file
+
+#' Print ImpulseDE2 report string to .txt file
+#'
+#' @param object (ImpulseDE2Object) Output object of ImpulseDE2.
+#' @param fileReport (file) File to print report to.
+#' 
+#' @return NULL
+#'  
+#' @name writeReportToFile
 #' @export
 setGeneric('writeReportToFile', function(object, fileReport) standardGeneric('writeReportToFile'), valueClass = 'NULL')
+
+#' Print ImpulseDE2 report string to .txt file
+#' 
+#' Print ImpulseDE2 report string to .txt file
+#' 
+#' @param object (ImpulseDE2Object) Output object of ImpulseDE2.
+#' @param fileReport (file) File to print report to.
+#' 
+#' @return NULL
+#' 
+#' @author David Sebastian Fischer
+#' 
+#' @name writeReportToFile,ImpulseDE2Object,character-method
 #' @export
 setMethod('writeReportToFile', signature(object='ImpulseDE2Object', fileReport='character'), 
           function(object, fileReport) write(object@strReport, file=fileReport, ncolumns=1) 

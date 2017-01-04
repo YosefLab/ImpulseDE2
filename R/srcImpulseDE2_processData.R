@@ -5,8 +5,8 @@
 #' Check and process input to runImpulseDE2()
 #' 
 #' Check validity of input and process count data matrix and annotation
-#' into data structures used later in \code{runImpulseDE2}.
-#' \code{processData} is structure in the following way:
+#' into data structures used later in \link{runImpulseDE2}.
+#' \link{processData} is structure in the following way:
 #' \itemize{
 #'    \item Subhelper functions:
 #'    \itemize{
@@ -29,44 +29,44 @@
 #'    \item Script body
 #' }
 #' 
-#' @seealso Called by \code{runImpulseDE2}.
+#' @seealso Called by \link{runImpulseDE2}.
 #' 
-#' @param matCountData: (matrix genes x samples) [Default NULL] 
+#' @param matCountData (matrix genes x samples) [Default NULL] 
 #'    Read count data, unobserved entries are NA.
-#' @param dfAnnotationProc: (data frame samples x covariates) 
+#' @param dfAnnotation (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Annotation table with covariates for each sample.
-#' @param boolCaseCtrl: (bool) 
+#' @param boolCaseCtrl (bool) 
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
-#' @param vecConfounders: (vector of strings number of confounding variables)
+#' @param vecConfounders (vector of strings number of confounding variables)
 #' 		Factors to correct for during batch correction. Have to 
 #' 		supply dispersion factors if more than one is supplied.
 #' 		Names refer to columns in dfAnnotation.
-#' @param vecDispersionsExternal: (vector length number of
+#' @param vecDispersionsExternal (vector length number of
 #'    genes in matCountData) [Default NULL]
 #'    Externally generated list of gene-wise dispersion factors
 #'    which overides DESeq2 generated dispersion factors.
-#' @param vecSizeFactorsExternal: (vector length number of
+#' @param vecSizeFactorsExternal (vector length number of
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
 #'    
 #' @return (list length 4)
 #' \itemize{
-#'    \item matCountDataProc: (matrix genes x samples)
+#'    \item matCountDataProc (matrix genes x samples)
 #'    Read count data.
-#'    \item dfAnnotationProc: (data frame samples x covariates) 
+#'    \item dfAnnotationProc (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Processed annotation table with covariates for each sample.
-#'    \item vecSizeFactorsExternalProc: (numeric vector number of samples) 
+#'    \item vecSizeFactorsExternalProc (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#'    \item vecDispersionsExternalProc: (vector number of genes) Gene-wise 
+#'    \item vecDispersionsExternalProc (vector number of genes) Gene-wise 
 #'    negative binomial dispersion hyper-parameter.
-#'    \item strReportProcessing: (str) String of stdout of processData().
+#'    \item strReportProcessing (str) String of stdout of processData().
 #' }
 #' 
 #' @author David Sebastian Fischer

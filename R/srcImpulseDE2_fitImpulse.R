@@ -11,16 +11,16 @@
 #' The peak model models a maximum between start and end time,
 #' the valley model models a minimum between start and end time.
 #' 
-#' @seealso Called by \code{fitConstImpulseGene}.
+#' @seealso Called by \link{fitConstImpulseGene}.
 #' 
-#' @param vecCounts: (numeric vector number of samples)
+#' @param vecCounts (numeric vector number of samples)
 #'    Read count data.
-#' @param vecTimepoints: (numeric vector length number of samples)
+#' @param vecTimepoints (numeric vector length number of samples)
 #'    Time coordinates of each sample.
-#' @param vecSizeFactors: (numeric vector number of samples) 
+#' @param vecSizeFactors (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @param lsvecidxBatch: (list length number of confounding variables)
+#' @param lsvecidxBatch (list length number of confounding variables)
 #' 		List of index vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the index batch
@@ -29,11 +29,11 @@
 #'    
 #' @return (list length 2)
 #'    \itemize{
-#'      \item peak: (numeric vector length 6)
-#'      {beta, h0, h1, h2, t1, t2}
+#'      \item peak (numeric vector length 6)
+#'      \{beta, h0, h1, h2, t1, t2\}
 #'      Peak model initialisations of impulse model parameters.
-#'      \item valley: (numeric vector length 6)
-#'      {beta, h0, h1, h2, t1, t2}
+#'      \item valley (numeric vector length 6)
+#'      \{beta, h0, h1, h2, t1, t2\}
 #'      Valley model initialisations of impulse model parameters.
 #'    }
 #'    
@@ -120,47 +120,47 @@ estimateImpulseParam <- function(vecCounts,
 #' This function executes numerical optimisaiton and error-handling
 #' thereof.
 #' 
-#' @seealso Called by \code{fitConstImpulseGene} to fit constant
+#' @seealso Called by \link{fitConstImpulseGene} to fit constant
 #'    model to samples of one condition and one gene.
 #'    Calls constant model cost function 
-#'    \code{evalLogLikMu_comp} within \code{optim}.
+#'    \link{evalLogLikMu} within \link{optim}.
 #' 
-#' @param vecCounts: (numeric vector number of samples)
+#' @param vecCounts (numeric vector number of samples)
 #'    Read count data.
-#' @param scaDisp: (scalar) Gene-wise 
+#' @param scaDisp (scalar) Gene-wise 
 #'    negative binomial dispersion hyper-parameter.
-#' @param vecSizeFactors: (numeric vector number of samples) 
+#' @param vecSizeFactors (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @param lsvecidxBatch: (list length number of confounding variables)
+#' @param lsvecidxBatch (list length number of confounding variables)
 #' 		List of index vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the index batch
 #' 		within the given confounding variable of the given sample.
 #' 		Batches are enumerated from 1 to number of batches.
-#' @param MAXIT: (scalar) [Default 1000] 
-#'    Maximum number of BFGS iterations for model fitting with \code{optim}.
-#' @param RELTOL: (scalar) [Default 10^(-8)]
+#' @param MAXIT (scalar) [Default 1000] 
+#'    Maximum number of BFGS iterations for model fitting with \link{optim}.
+#' @param RELTOL (scalar) [Default 10^(-8)]
 #'    Maximum relative change in loglikelihood to reach convergence in
-#'    numerical optimisation by BFGS in \code{optim}.
-#' @param trace: (scalar) [Defaul 0]
-#'    Reporting parameter of \code{optim}.
-#' @param REPORT: (scalar) [Default 10]
-#'    Reporting parameter of \code{optim}.
+#'    numerical optimisation by BFGS in \link{optim}.
+#' @param trace (scalar) [Defaul 0]
+#'    Reporting parameter of \link{optim}.
+#' @param REPORT (scalar) [Default 10]
+#'    Reporting parameter of \link{optim}.
 #'     
 #' @return (list) List of constant fit parameters and results.
 #'    \itemize{
-#'      \item scaMu: (scalar) Maximum likelihood estimator of
+#'      \item scaMu (scalar) Maximum likelihood estimator of
 #'      negative binomial mean parameter.
-#'      \itme lsvecBatchFactors: (list length number of confounders)
+#'      \item lsvecBatchFactors (list length number of confounders)
 #'      List of vectors of scalar batch correction factors for each sample.
 #'      These are also maximum likelihood estimators.
 #'      NULL if no confounders given.
-#'      \item scaDispParam: (scalar) Dispersion parameter estimate
+#'      \item scaDispParam (scalar) Dispersion parameter estimate
 #'      used in fitting (hyper-parameter).
-#'      \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'      \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'      estimator model.
-#'      \item scaConvergence: (scalar) 
+#'      \item scaConvergence (scalar) 
 #'      Convergence status of optim on constant model.
 #'    }
 #'    
@@ -184,7 +184,7 @@ fitConstModel <- function(vecCounts,
   lsFit <- tryCatch({
     optim(
       par=vecParamGuess,
-      evalLogLikMu_comp,
+      fn=evalLogLikMu_comp,
       vecCounts=vecCounts,
       scaDisp=scaDisp, 
       vecSizeFactors=vecSizeFactors,
@@ -241,59 +241,59 @@ fitConstModel <- function(vecCounts,
 #' This function executes numerical optimisaiton and error-handling
 #' thereof.
 #' 
-#' @seealso Called by \code{fitConstImpulseGene} to fit impulse
+#' @seealso Called by \link{fitConstImpulseGene} to fit impulse
 #'    model to samples of one condition and one gene.
 #'    Calls impulse model cost function 
-#'    \code{evalLogLikImpulse_comp} within \code{optim}.
+#'    \link{evalLogLikImpulse_comp} within \link{optim}.
 #' 
-#' @param vecImpulseParamGuess: (numeric vector length 6)
-#'      {beta, h0, h1, h2, t1, t2}
+#' @param vecImpulseParamGuess (numeric vector length 6)
+#'      \{beta, h0, h1, h2, t1, t2\}
 #'      Initialisations of impulse model parameters.
-#' @param vecCounts: (numeric vector number of samples)
+#' @param vecCounts (numeric vector number of samples)
 #'    Read count data.
-#' @param scaDisp: (scalar) Gene-wise 
+#' @param scaDisp (scalar) Gene-wise 
 #'    negative binomial dispersion hyper-parameter.
-#' @param vecSizeFactors: (numeric vector number of samples) 
+#' @param vecSizeFactors (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @param lsvecidxBatch: (list length number of confounding variables)
+#' @param lsvecidxBatch (list length number of confounding variables)
 #' 		List of index vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the index batch
 #' 		within the given confounding variable of the given sample.
 #' 		Batches are enumerated from 1 to number of batches.
-#' @param vecTimepointsUnique: 
+#' @param vecTimepointsUnique
 #'    (numeric vector length number of unique time points)
 #'    Unique time points of set of time points of given samples.
-#' @param vecidxTimepoint: (index vector length number of samples)
+#' @param vecidxTimepoint (index vector length number of samples)
 #'    Index of of time point assigned to each sample in vector
 #'    vecTimepointsUnique.
-#' @param MAXIT: (scalar) [Default 1000] 
-#'    Maximum number of BFGS iterations for model fitting with \code{optim}.
-#' @param RELTOL: (scalar) [Default 10^(-8)]
+#' @param MAXIT (scalar) [Default 1000] 
+#'    Maximum number of BFGS iterations for model fitting with \link{optim}.
+#' @param RELTOL (scalar) [Default 10^(-8)]
 #'    Maximum relative change in loglikelihood to reach convergence in
-#'    numerical optimisation by BFGS in \code{optim}.
-#' @param trace: (scalar) [Defaul 0]
-#'    Reporting parameter of \code{optim}.
-#' @param REPORT: (scalar) [Default 10]
-#'    Reporting parameter of \code{optim}.
+#'    numerical optimisation by BFGS in \link{optim}.
+#' @param trace (scalar) [Defaul 0]
+#'    Reporting parameter of \link{optim}.
+#' @param REPORT (scalar) [Default 10]
+#'    Reporting parameter of \link{optim}.
 #'   
 #' @return (list) List of impulse fit parameters and results.
 #'    \itemize{
-#'      \item vecImpulseParam: (numeric vector length 6)
-#'      {beta, h0, h1, h2, t1, t2}
+#'      \item vecImpulseParam (numeric vector length 6)
+#'      \{beta, h0, h1, h2, t1, t2\}
 #'      Maximum likelihood estimators of impulse model parameters.
-#'      \item vecImpulseValue: (numeric vector length number of time points)
+#'      \item vecImpulseValue (numeric vector length number of time points)
 #'      Values of impulse model fit at time points used for fit.
-#'      \item lsvecBatchFactors: (list length number of confounders)
+#'      \item lsvecBatchFactors (list length number of confounders)
 #'      List of vectors of scalar batch correction factors for each sample.
 #'      These are also maximum likelihood estimators.
 #'      NULL if no confounders given.
-#'      \item scaDispParam: (scalar) Dispersion parameter estimate
+#'      \item scaDispParam (scalar) Dispersion parameter estimate
 #'      used in fitting (hyper-parameter).
-#'      \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'      \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'      estimator model.
-#'      \item scaConvergence: (scalar) 
+#'      \item scaConvergence (scalar) 
 #'      Convergence status of optim on impulse model.
 #'    }
 #'    
@@ -397,69 +397,69 @@ fitImpulseModel <- function(vecImpulseParamGuess,
 #'    \item Fit constant model (if constant model is to be fit).
 #' }
 #' 
-#' @seealso Called by \code{fitConstImpulseGene} to fit constant and impulse
+#' @seealso Called by \link{fitConstImpulseGene} to fit constant and impulse
 #'    model to samples of one condition and one gene.
 #'    Calls impulse parameter initialisation function
-#'    \code{estimateImpulseParam} and 
+#'    \link{estimateImpulseParam} and 
 #'    optimisation wrappers 
-#'    \code{fitImpulseModel} and \code{fitConstModel}.
+#'    \link{fitImpulseModel} and \link{fitConstModel}.
 #' 
-#' @param vecCounts: (numeric vector number of samples)
+#' @param vecCounts (numeric vector number of samples)
 #'    Read count data.
-#' @param scaDisp: (scalar) Gene-wise 
+#' @param scaDisp (scalar) Gene-wise 
 #'    negative binomial dispersion hyper-parameter.
-#' @param vecSizeFactors: (numeric vector number of samples) 
+#' @param vecSizeFactors (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @param vecTimepointsUnique: (numeric vector length number of unique
+#' @param vecTimepointsUnique (numeric vector length number of unique
 #'    timepoints) Vector of unique time coordinates observed in this condition.
-#' @param vecidxTimepoint: (numeric vector length number of samples)
+#' @param vecidxTimepoint (numeric vector length number of samples)
 #'    Index of the time coordinates of each sample (reference is
 #'    vecTimepointsUnique).
-#' @param lsvecidxBatches: (idx list length number of confounding variables)
+#' @param lsvecidxBatch (idx list length number of confounding variables)
 #' 		List of vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the index of the batch ID
 #' 		within the given confounding variable of the given sample. Reference
 #' 		is the list of unique batch ids for each confounding variable.
-#' @param boolFitConst: (bool) Whether to fit a constant model.
-#' @param MAXIT: (scalar) [Default 1000] 
-#'    Maximum number of BFGS iterations for model fitting with \code{optim}.
+#' @param boolFitConst (bool) Whether to fit a constant model.
+#' @param MAXIT (scalar) [Default 1000] 
+#'    Maximum number of BFGS iterations for model fitting with \link{optim}.
 #' 
 #' @return (list length 2)
 #'    Impulse and constant model fit to gene observations.
 #'    \itemize{
-#'      \item lsImpulseFit: (list) List of impulse fit parameters and results.
+#'      \item lsImpulseFit (list) List of impulse fit parameters and results.
 #'      \itemize{
-#'        \item vecImpulseParam: (numeric vector length 6)
-#'        {beta, h0, h1, h2, t1, t2}
+#'        \item vecImpulseParam (numeric vector length 6)
+#'        \{beta, h0, h1, h2, t1, t2\}
 #'        Maximum likelihood estimators of impulse model parameters.
-#'        \item vecImpulseValue: (numeric vector length number of time points)
+#'        \item vecImpulseValue (numeric vector length number of time points)
 #'        Values of impulse model fit at time points used for fit.
-#'        \item lsvecBatchFactors: (list length number of confounders)
+#'        \item lsvecBatchFactors (list length number of confounders)
 #'        List of vectors of scalar batch correction factors for each sample.
 #'        These are also maximum likelihood estimators.
 #'        NULL if no confounders given.
-#'        \item scaDispParam: (scalar) Dispersion parameter estimate
+#'        \item scaDispParam (scalar) Dispersion parameter estimate
 #'        used in fitting (hyper-parameter).
-#'        \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'        \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'        estimator model.
-#'        \item scaConvergence: (scalar) 
+#'        \item scaConvergence (scalar) 
 #'        Convergence status of optim on impulse model.
 #'      }
-#'      \item lsConstFit: (list) List of constant fit parameters and results.
+#'      \item lsConstFit (list) List of constant fit parameters and results.
 #'      \itemize{
-#'        \item scaMu: (scalar) Maximum likelihood estimator of
+#'        \item scaMu (scalar) Maximum likelihood estimator of
 #'        negative binomial mean parameter.
-#'        \itme lsvecBatchFactors: (list length number of confounders)
+#'        \item lsvecBatchFactors (list length number of confounders)
 #'        List of vectors of scalar batch correction factors for each sample.
 #'        These are also maximum likelihood estimators.
 #'        NULL if no confounders given.
-#'        \item scaDispParam: (scalar) Dispersion parameter estimate
+#'        \item scaDispParam (scalar) Dispersion parameter estimate
 #'        used in fitting (hyper-parameter).
-#'        \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'        \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'        estimator model.
-#'        \item scaConvergence: (scalar) 
+#'        \item scaConvergence (scalar) 
 #'        Convergence status of optim on constant model.
 #'      }
 #'    }
@@ -533,28 +533,28 @@ fitConstImpulseGene <- function(vecCounts,
 #' This secondary fitting wrapper performs parralelisation of 
 #' model fitting across genes.
 #' 
-#' @seealso Called by \code{fitModels} to fit constant and impulse
+#' @seealso Called by \link{fitModels} to fit constant and impulse
 #'    model to samples of one condition.
-#'    Calls \code{fitConstImpulseGene} to perform fitting on each gene.
+#'    Calls \link{fitConstImpulseGene} to perform fitting on each gene.
 #'   
-#' @param matCountDataProcCondition: (matrix genes x samples)
+#' @param matCountDataProcCondition (matrix genes x samples)
 #'    Read count data.
-#' @param vecSizeFactors: (numeric vector number of samples) 
+#' @param vecSizeFactors (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
-#' @param vecDispersions: (vector number of genes)  Gene-wise 
+#' @param vecDispersions (vector number of genes)  Gene-wise 
 #'    negative binomial dispersion hyper-parameters.
-#' @param vecTimepoints: (numeric vector length number of samples)
+#' @param vecTimepoints (numeric vector length number of samples)
 #'    Time coordinates of each sample.
-#' @param lsvecBatches: (list length number of confounding variables)
+#' @param lsvecBatches (list length number of confounding variables)
 #' 		List of vectors. 
 #' 		One vector per confounding variable.
 #' 		Each vector has one entry per sample with the name of the batch ID
 #' 		within the given confounding variable of the given sample.
-#' @param boolFitConst: (bool) Whether to fit a constant model.
+#' @param boolFitConst (bool) Whether to fit a constant model.
 #' 
 #' @return (list length 5)
-#'    \itemize
+#'    \itemize{
 #'      \item lsFits (list of lists length number of genes) 
 #'      List of model fits for each gene.
 #'      Each gene entry is a list of model fits to the individual models:
@@ -562,59 +562,60 @@ fitConstImpulseGene <- function(vecCounts,
 #'      At this level, the sigmoid model fit can be added later.
 #'      Each model fit per gene is a list of fitting parameters and results.
 #'      \itemize{
-#'        \item Gene ID: (list length 2)
+#'        \item Gene ID (list length 2)
 #'      Impulse and constant model fit to gene observations.
 #'      One entry of this format for all gene IDs.
 #'      \itemize{
-#'        \item lsImpulseFit: (list) List of impulse fit parameters and results.
+#'        \item lsImpulseFit (list) List of impulse fit parameters and results.
 #'        \itemize{
-#'          \item vecImpulseParam: (numeric vector length 6)
-#'        {beta, h0, h1, h2, t1, t2}
+#'          \item vecImpulseParam (numeric vector length 6)
+#'        \{beta, h0, h1, h2, t1, t2\}
 #'        Maximum likelihood estimators of impulse model parameters.
-#'          \item vecImpulseValue: (numeric vector length number of time points)
+#'          \item vecImpulseValue (numeric vector length number of time points)
 #'        Values of impulse model fit at time points used for fit.
-#'          \item lsvecBatchFactors: (list length number of confounders)
+#'          \item lsvecBatchFactors (list length number of confounders)
 #'        List of vectors of scalar batch correction factors for each sample.
 #'        These are also maximum likelihood estimators.
 #'        NULL if no confounders given.
-#'          \item scaDispParam: (scalar) Dispersion parameter estimate
+#'          \item scaDispParam (scalar) Dispersion parameter estimate
 #'        used in fitting (hyper-parameter).
-#'          \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'          \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'        estimator model.
-#'          \item scaConvergence: (scalar) 
+#'          \item scaConvergence (scalar) 
 #'        Convergence status of optim on impulse model.
 #'        }
-#'        \item lsConstFit: (list) List of constant fit parameters and results.
+#'        \item lsConstFit (list) List of constant fit parameters and results.
 #'        \itemize{
-#'          \item scaMu: (scalar) Maximum likelihood estimator of
+#'          \item scaMu (scalar) Maximum likelihood estimator of
 #'        negative binomial mean parameter.
-#'          \item lsvecBatchFactors: (list length number of confounders)
+#'          \item lsvecBatchFactors (list length number of confounders)
 #'        List of vectors of scalar batch correction factors for each sample.
 #'        These are also maximum likelihood estimators.
 #'        NULL if no confounders given.
-#'          \item scaDispParam: (scalar) Dispersion parameter estimate
+#'          \item scaDispParam (scalar) Dispersion parameter estimate
 #'        used in fitting (hyper-parameter).
-#'          \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'          \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'        estimator model.
-#'          \item scaConvergence: (scalar) 
+#'          \item scaConvergence (scalar) 
 #'        Convergence status of optim on constant model.
 #'        }
 #'      }
-#'      \item vecTimepointsUnique: (numeric vector length number of unique
+#'      \item vecTimepointsUnique (numeric vector length number of unique
 #'      timepoints) Vector of unique time coordinates observed in this condition.
-#'      \item vecidxTimepoint: (idx vector length number of samples)
+#'      \item vecidxTimepoint (idx vector length number of samples)
 #'      Index of the time coordinates of each sample (reference is
 #'      vecTimepointsUnique).
-#'      \item lsvecBatchUnique: (list number of confounders)
+#'      \item lsvecBatchUnique (list number of confounders)
 #'      List of string vectors. One vector per confounder: vector of unique batches
 #'      in this confounder.
-#'      \item lsvecidxBatches: (idx list length number of confounding variables)
+#'      \item lsvecidxBatches (idx list length number of confounding variables)
 #' 		  List of index vectors. 
 #' 		  One vector per confounding variable.
 #' 		  Each vector has one entry per sample with the index of the batch ID
 #' 		  within the given confounding variable of the given sample. Reference
 #' 		  is the list of unique batch ids for each confounding variable.
 #'    }
+#'  }
 #'    
 #' @author David Sebastian Fischer
 fitConstImpulse <- function(matCountDataProcCondition, 
@@ -673,99 +674,99 @@ fitConstImpulse <- function(matCountDataProcCondition,
 #' to separate conditions according to the differential expression
 #' mode (case-only or case-control).
 #'  
-#' @seealso Calls \code{fitConstImpulse}
+#' @seealso Calls \link{fitConstImpulse}
 #' once for each condition with the appropriate parameters and samples.
 #'  
-#' @param objectImpulseDE2: (object class ImpulseDE2Object)
+#' @param objectImpulseDE2 (object class ImpulseDE2Object)
 #'    Object to be fit.
-#' @param vecConfounders: (vector of strings number of confounding variables)
+#' @param vecConfounders (vector of strings number of confounding variables)
 #' 		Factors to correct for during batch correction.
 #' 		Names refer to columns in dfAnnotation.
-#' @param boolCaseCtrl: (bool) 
+#' @param boolCaseCtrl (bool) 
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
 #' 
-#' @return objectImpulseDE2: (object class ImpulseDE2Object)
+#' @return objectImpulseDE2 (object class ImpulseDE2Object)
 #'    Object with sigmoidal fit added: objectImpulseDE2@lsModelFits
 #'    is updated to:
 #'    lsModelFits (list length number of conditions fit (1 or 3) +1)
-#'    {"case"} or {"case", "control", "combined"}
+#'    \{"case"\} or \{"case", "control", "combined"\}
 #'    One model fitting object for each condition:
-#'    In case-only DE analysis, only the condition {"case"} is fit.
+#'    In case-only DE analysis, only the condition \{"case"\} is fit.
 #'    In case-control DE analysis, the conditions 
-#'    {"case", "control","combined} are fit.
+#'    \{"case", "control","combined\} are fit.
 #'    Each condition entry is a list of model fits for each gene.
 #'    Each gene entry is a list of model fits to the individual models:
 #'    Impulse model and constant model (if boolFitConst is TRUE).
 #'    At this level, the sigmoid model fit can be added later.
 #'    Each model fit per gene is a list of fitting parameters and results.
 #'    \itemize{
-#'      \item IdxGroups: (list length number of conditions)
+#'      \item IdxGroups (list length number of conditions)
 #'      Samples grouped by time points and by batches and time point vectors. 
 #'      Sample groups are stored in the form of index vectors in which
 #'      samples of the same time point or batch have the same index.
 #'      \itemize{
-#'        \item Condition ID: (list length 5)
+#'        \item Condition ID (list length 5)
 #'        List of index vectors and time points.
 #'        One entry of this format for each condition.
 #'        \itemize{
-#'          \item vecTimepointsUnique: (numeric vector length number of unique
+#'          \item vecTimepointsUnique (numeric vector length number of unique
 #'        timepoints) Vector of unique time coordinates observed in this condition.
-#'          \item vecidxTimepoint: (idx vector length number of samples)
+#'          \item vecidxTimepoint (idx vector length number of samples)
 #'        Index of the time coordinates of each sample (reference is
 #'        vecTimepointsUnique).
-#'          \item lsvecBatchUnique: (list number of confounders)
+#'          \item lsvecBatchUnique (list number of confounders)
 #'        List of string vectors. One vector per confounder: vector of unique batches
 #'        in this confounder.
-#'          \item lsvecidxBatches: (idx list length number of confounding variables)
+#'          \item lsvecidxBatches (idx list length number of confounding variables)
 #' 		    List of index vectors. 
 #' 		    One vector per confounding variable.
 #' 		    Each vector has one entry per sample with the index of the batch ID
 #' 		    within the given confounding variable of the given sample. Reference
 #' 		    is the list of unique batch ids for each confounding variable.
-#' 		      \item vecSamples: (vector number of samples) Names of samples fit
+#' 		      \item vecSamples (vector number of samples) Names of samples fit
 #' 		    for this condition in same order as index vectors above.
 #'        }
 #'      }
-#'      \item Condition ID: (list length number of genes)
+#'      \item Condition ID (list length number of genes)
 #'      List of fits for each gene to the samples of this condition.
 #'      One entry of this format for all conditions fit.
 #'      \itemize{
-#'        \item Gene ID: (list length 2)
+#'        \item Gene ID (list length 2)
 #'        Impulse and constant model fit to gene observations.
 #'        One entry of this format for all gene IDs.
 #'        \itemize{
-#'          \item lsImpulseFit: (list) List of impulse fit parameters and results.
+#'          \item lsImpulseFit (list) List of impulse fit parameters and results.
 #'          \itemize{
-#'            \item vecImpulseParam: (numeric vector length 6)
-#'            {beta, h0, h1, h2, t1, t2}
+#'            \item vecImpulseParam (numeric vector length 6)
+#'            \{beta, h0, h1, h2, t1, t2\}
 #'            Maximum likelihood estimators of impulse model parameters.
-#'            \item vecImpulseValue: (numeric vector length number of time points)
+#'            \item vecImpulseValue (numeric vector length number of time points)
 #'            Values of impulse model fit at time points used for fit.
-#'            \item lsvecBatchFactors: (list length number of confounders)
+#'            \item lsvecBatchFactors (list length number of confounders)
 #'            List of vectors of scalar batch correction factors for each sample.
 #'            These are also maximum likelihood estimators.
 #'            NULL if no confounders given.
-#'            \item scaDispParam: (scalar) Dispersion parameter estimate
+#'            \item scaDispParam (scalar) Dispersion parameter estimate
 #'            used in fitting (hyper-parameter).
-#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'            \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'            estimator model.
-#'            \item scaConvergence: (scalar) 
+#'            \item scaConvergence (scalar) 
 #'            Convergence status of optim on impulse model.
 #'          }
-#'          \item lsConstFit: (list) List of constant fit parameters and results.
+#'          \item lsConstFit (list) List of constant fit parameters and results.
 #'          \itemize{
-#'            \item scaMu: (scalar) Maximum likelihood estimator of
+#'            \item scaMu (scalar) Maximum likelihood estimator of
 #'            negative binomial mean parameter.
-#'            \item lsvecBatchFactors: (list length number of confounders)
+#'            \item lsvecBatchFactors (list length number of confounders)
 #'            List of vectors of scalar batch correction factors for each sample.
 #'            These are also maximum likelihood estimators.
 #'            NULL if no confounders given.
-#'            \item scaDispParam: (scalar) Dispersion parameter estimate
+#'            \item scaDispParam (scalar) Dispersion parameter estimate
 #'            used in fitting (hyper-parameter).
-#'            \item scaLL: (scalar) Loglikelihood of data under maximum likelihood
+#'            \item scaLL (scalar) Loglikelihood of data under maximum likelihood
 #'            estimator model.
-#'            \item scaConvergence: (scalar) 
+#'            \item scaConvergence (scalar) 
 #'            Convergence status of optim on constant model.
 #'          }
 #'        }

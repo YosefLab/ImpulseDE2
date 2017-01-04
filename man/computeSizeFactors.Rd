@@ -2,28 +2,18 @@
 % Please edit documentation in R/srcImpulseDE2_computeNormConst.R
 \name{computeSizeFactors}
 \alias{computeSizeFactors}
-\title{Compute size factors for a dataset}
+\title{Compute a size factor for each sample}
 \usage{
-computeSizeFactors(matCountDataProc, scaSmallRun = NULL, strMode)
+computeSizeFactors(matCountDataProc)
 }
 \arguments{
-\item{matCountDataProc:}{(matrix genes x samples)
-Count data: Reduced version of \code{matCountData}. 
-For internal use.}
-
-\item{scaSmallRun:}{(integer) [Default NULL] Number of rows
-on which ImpulseDE2 is supposed to be run, the full
-data set is only used for size factor estimation.}
-
-\item{strMode:}{(str) [Default "batch"] 
-{"batch","longitudinal","singlecell"}
-Mode of model fitting.}
+\item{matCountDataProc}{(matrix genes x samples)
+Read count data.}
 }
 \value{
-matSizeFactors: (numeric matrix genes x samples) 
-   Model scaling factors for each observation which take
-   sequencing depth into account (size factors). One size
-   factor per sample - rows of this matrix are equal.
+vecSizeFactors (numeric vector number of samples) 
+   Model scaling factors for each sample which take
+   sequencing depth into account (size factors).
 }
 \description{
 This function computes size factors for each sample
@@ -36,7 +26,10 @@ computed differently: Median ratio of data to geometric mean
 for bul data and normalised relative sequencing depth for
 single-cell data.
 }
+\author{
+David Sebastian Fischer
+}
 \seealso{
-Called by \code{computeNormConst}.
+Called by \link{computeNormConst}.
 }
 

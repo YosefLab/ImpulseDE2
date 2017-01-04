@@ -11,22 +11,26 @@
 #' and an impulse fit for differentially expressed genes which is used
 #' to define transiently activated or deactivated genes.
 #' 
-#' @seealso Called by \code{runImpulseDE2}.
+#' @seealso Called by \link{runImpulseDE2}.
 #' 
-#' @param objectImpulseDE2: (object class ImpulseDE2Object)
+#' @param objectImpulseDE2 (object class ImpulseDE2Object)
 #'    Object containing fits to be evaluated.
-#' @param vecAllIDs: (string vector length number of all originally given genes)
+#' @param vecAllIDs (string vector length number of all originally given genes)
 #'    IDs of all originally given genes.
-#' @param boolCaseCtrl: (bool) 
+#' @param boolCaseCtrl (bool) 
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
-#' @param vecConfounders: (vector of strings number of confounding variables)
+#' @param vecConfounders (vector of strings number of confounding variables)
 #' 		Factors to correct for during batch correction.
 #' 		Names refer to columns in dfAnnotation.
-#' @param boolIdentifyTransients: (bool) [Defaul FALSE]
+#' @param boolIdentifyTransients (bool) [Defaul FALSE]
 #'    Whether to identify transiently activated or deactivated 
 #'    genes. This involves an additional fitting of sigmoidal models
 #'    and hypothesis testing between constant, sigmoidal and impulse model.
+#' @param scaQThresTransients (scalar) [Default 0.001]
+#'    FDR-corrected p-value threshold for hypothesis tests between
+#'    impulse, sigmoidal and constant model used to identify transiently
+#'    regulated genes.
 #' 
 #' @return dfDEAnalysis (data frame samples x reported characteristics) 
 #'    Summary of fitting procedure and 
@@ -42,7 +46,7 @@
 #'      \item df_red: Degrees of freedom of reduced model
 #'      \item mean: Inferred mean parameter of constant model of first batch.
 #'      From combined samples in case-ctrl. 
-#'      \item allZero: (bool) Whether there were no observed non-zero observations of this gene.
+#'      \item allZero (bool) Whether there were no observed non-zero observations of this gene.
 #'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
 #'    }
 #'    Entries only present in case-only DE analysis:
@@ -67,20 +71,19 @@
 #'      sigmoid model fit to samples of case condition.
 #'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
 #'      impulse model fit versus sigmoidal model on samples of case condition.
-#'      \item dfDEAnalysis$impulseTOsigmoid_padj: Benjamini-Hochberg 
+#'      \item impulseTOsigmoid_padj: Benjamini-Hochberg 
 #'      false-discovery rate corrected p-value of loglikelihood ratio test
 #'      impulse model fit versus sigmoid model on samples of case condition.
-#'      \item dfDEAnalysis$sigmoidTOconst_p: P-value of loglikelihood ratio test
+#'      \item sigmoidTOconst_p: P-value of loglikelihood ratio test
 #'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item dfDEAnalysis$sigmoidTOconst_padj: Benjamini-Hochberg 
+#'      \item sigmoidTOconst_padj: Benjamini-Hochberg 
 #'      false-discovery rate corrected p-value of loglikelihood ratio test
 #'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item dfDEAnalysis$isTransient: (bool) Whether gene is transiently
+#'      \item isTransient (bool) Whether gene is transiently
 #'      activated or deactivated and differentially expressed.
-#'      \item dfDEAnalysis$isMonotonous: (bool) Whether gene is not transiently
+#'      \item isMonotonous (bool) Whether gene is not transiently
 #'      activated or deactivated and differentially expressed. This scenario
-#'      corresponds to a montonous expression level increase or decrease.
-#'    }
+#'      corresponds to a montonous expression level increase or decrease.#'    }
 #'    
 #' @author David Sebastian Fischer
 #' 

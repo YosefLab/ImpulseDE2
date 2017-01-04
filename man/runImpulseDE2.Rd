@@ -3,197 +3,172 @@
 \name{runImpulseDE2}
 \alias{ImpulseDE2}
 \alias{runImpulseDE2}
-\title{Differential expression analysis using impulse models}
+\alias{wrapper}
+\title{ImpulseDE2 wrapper}
 \usage{
 runImpulseDE2(matCountData = NULL, dfAnnotation = NULL,
-  strCaseName = NULL, strControlName = NULL, strMode = "batch",
-  strSCMode = "clustered", scaWindowRadius = NULL, nProc = 1,
-  Q_value = 0.01, scaSmallRun = NULL, boolPlotting = TRUE,
-  lsPseudoDE = NULL, vecDispersionsExternal = NULL,
-  vecSizeFactorsExternal = NULL, boolRunDESeq2 = TRUE,
-  boolSimplePlot = FALSE, boolLogPlot = FALSE)
+  boolCaseCtrl = NULL, vecConfounders = NULL, scaNProc = 1,
+  scaQThres = NULL, vecDispersionsExternal = NULL,
+  vecSizeFactorsExternal = NULL, boolIdentifyTransients = FALSE,
+  boolVerbose = TRUE, dirTemp = NULL)
 }
 \arguments{
-\item{matCountData:}{(matrix genes x replicates) [Default NULL] 
-Count data of all conditions, unobserved entries are NA.}
+\item{matCountData}{(matrix genes x samples) [Default NULL] 
+Read count data, unobserved entries are NA.}
 
-\item{dfAnnotation:}{(Table) [Default NULL] 
-Lists co-variables of samples: 
-Sample, Condition, Time (numeric), (and Timecourse).}
+\item{dfAnnotation}{(data frame samples x covariates) 
+{Sample, Condition, Time (numeric), TimeCateg (str)
+(and confounding variables if given).}
+Annotation table with covariates for each sample.}
 
-\item{strCaseName:}{(str) [Default NULL] 
-Name of the case condition in \code{dfAnnotation}.}
+\item{boolCaseCtrl}{(bool) 
+Whether to perform case-control analysis. Does case-only
+analysis if FALSE.}
 
-\item{strControlName:}{(str) [Default NULL] 
-Name of the control condition in \code{dfAnnotation}.}
+\item{vecConfounders}{(vector of strings number of confounding variables)
+Factors to correct for during batch correction. Have to 
+supply dispersion factors if more than one is supplied.
+Names refer to columns in dfAnnotation.}
 
-\item{strMode:}{(str) [Default "batch"] 
-{"batch","longitudinal","singlecell"}
-Mode of model fitting.}
-
-\item{nProc:}{(scalar) [Default 1] Number of processes for 
+\item{scaNProc}{(scalar) [Default 1] Number of processes for 
 parallelisation.}
 
-\item{Q_value:}{(scalar) [Default 0.01] 
+\item{scaQThres}{(scalar) [Default NULL] 
 FDR-corrected p-value cutoff for significance.}
 
-\item{scaSmallRun:}{(integer) [Default NULL] Number of rows
-on which ImpulseDE2 is supposed to be run, the full
-data set is only used for size factor estimation.}
-
-\item{boolPlotting:}{(bool) [TRUE] 
-Whether to plot significant DE genes into output pdf.
-Consider setting FALSE for large data sets with many hits.}
-
-\item{lsPseudoDE:}{(list) [Defaul NULL]}
-
-\item{vecDispersionsExternal:}{(vector length number of
+\item{vecDispersionsExternal}{(vector length number of
 genes in matCountData) [Default NULL]
 Externally generated list of gene-wise dispersion factors
 which overides DESeq2 generated dispersion factors.}
 
-\item{vecSizeFactorsExternal:}{(vector length number of
+\item{vecSizeFactorsExternal}{(vector length number of
 cells in matCountData) [Default NULL]
 Externally generated list of size factors which override
 size factor computation in ImpulseDE2.}
 
-\item{boolRunDESeq2:}{(bool) [Default TRUE]
-Whether to run DESeq2.}
+\item{boolIdentifyTransients}{(bool) [Defaul FALSE]
+Whether to identify transiently activated or deactivated 
+genes. This involves an additional fitting of sigmoidal models
+and hypothesis testing between constant, sigmoidal and impulse model.}
 
-\item{boolSimplePlot:}{(bool) [Default FALSE]
-Whether to reduce plot to data points and impulse trace.}
+\item{boolVerbose}{(bool) [Default TRUE] Whether to print
+progress to stdout.}
 
-\item{boolLogPlot:}{(bool) [Default FALSE]
-Whether to plot in counts in log space.}
+\item{dirTemp}{(dir) [Default NULL]
+Directory to which temporary results are saved as .RData files.
+No results are saved to files if NULL.}
 }
 \value{
-(list length 4)
+(object of class ImpulseDE2Object)
+This object can be treated as a list with 2 elements:
+(list length 2)
 \itemize{
-   \item vecDEGenes: (list number of genes) Genes IDs identified
-       as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
-   \item dfImpulseResults: (data frame) ImpulseDE2 results.
-   \item lsImpulseFits: (list) List of matrices which
-       contain parameter fits and model values for given time course for the
-       case condition (and control and combined if control is present).
-       Each parameter matrix is called parameter_'condition' and has the form
-       (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
-       converge_H0]) where beta to t2 are parameters of the impulse
-       model, mu is the single parameter of the mean model, logL are
-       log likelihoods of full (H1) and reduced model (H0) respectively, converge
-       is convergence status of numerical optimisation of model fitting by
-       \code{optim} from \code{stats} of either model. Each value matrix is called
-       value_'condition' and has the form (genes x time points) and contains the
-       counts predicted by the impulse model at the observed time points.
-   \item dfDESeq2Results: (data frame) DESeq2 results. NULL if DESeq2 is not run.
-}
-Additionally, \code{ImpulseDE2} saves the following objects and tables into
-the working directory:
-\itemize{
-   \item \code{ImpulseDE2_matCountDataProc.RData} (2D array genes x replicates) 
-       Count data: Reduced version of \code{matCountData}. For internal use.
-   \item \code{ImpulseDE2_dfAnnotationProc.RData} (data frame) Annotation table.
-   \item \code{ImpulseDE2_matSizeFactors.RData} (numeric matrix genes x samples) 
-       Model scaling factors for each observation which take
-       sequencing depth into account (size factors). One size
-       factor per sample - rows of this matrix are equal.
-   \item \code{ImpulseDE2_matTranslationFactors.RData} 
-       (numeric matrix genes x samples) Model scaling factors for each observation 
-       which take longitudinal time series mean within a gene into account 
-       (translation factors). Computed based based on all samples.
-   \item \code{ImpulseDE2_vecDispersions.RData} (vector number of genes) Inverse 
-       of gene-wise negative binomial dispersion coefficients computed by DESeq2.
-   \item \code{ImpulseDE2_dfDESeq2Results.RData} (data frame) DESeq2 results.
-   \item \code{ImpulseDE2_lsImpulseFits.RData} (list) List of matrices which
-       contain parameter fits and model values for given time course for the
-       case condition (and control and combined if control is present).
-       Each parameter matrix is called parameter_'condition' and has the form
-       (genes x [beta, h0, h1, h2, t1, t2, logL_H1, converge_H1, mu, logL_H0, 
-       converge_H0]) where beta to t2 are parameters of the impulse
-       model, mu is the single parameter of the mean model, logL are
-       log likelihoods of full (H1) and reduced model (H0) respectively, converge
-       is convergence status of numerical optimisation of model fitting by
-       \code{optim} from \code{stats} of either model. Each value matrix is called
-       value_'condition' and has the form (genes x time points) and contains the
-       counts predicted by the impulse model at the observed time points.
-   \item \code{ImpulseDE2_dfImpulseResults.RData} (data frame) ImpulseDE2 results.
-   \item \code{ImpulseDE2_vecDEGenes.RData} (list number of genes) Genes IDs identified
-       as differentially expressed by ImpulseDE2 at threshold \code{Q_value}.
-   \item \code{ImpulseDE2_ClusterOut.txt} Text-file with stdout and stderr from
-       cluster created in \code{fitImpulse}.
+   \item vecDEGenes (list number of genes) Genes IDs identified
+   as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.
+   \item dfDEAnalysis (data frame samples x reported characteristics) 
+   Summary of fitting procedure and 
+   differential expression results for each gene.
+   \itemize{
+     \item Gene: Gene ID.
+     \item p: P-value for differential expression.
+     \item padj: Benjamini-Hochberg false-discovery rate corrected p-value
+     for differential expression analysis.
+     \item loglik_full: Loglikelihood of full model.
+     \item loglik_red: Loglikelihood of reduced model.
+     \item df_full: Degrees of freedom of full model.
+     \item df_red: Degrees of freedom of reduced model
+     \item mean: Inferred mean parameter of constant model of first batch.
+     From combined samples in case-ctrl. 
+     \item allZero (bool) Whether there were no observed non-zero observations of this gene.
+     If TRUE, fitting and DE analsysis were skipped and entry is NA.
+   }
+   Entries only present in case-only DE analysis:
+   \itemize{
+     \item converge_impulse: Convergence status of optim for 
+     impulse model fit (full model).
+     \item converge_const: Convergence status of optim for 
+     constant model fit (reduced model).
+   }
+   Entries only present in case-control DE analysis:
+   \itemize{
+     \item converge_combined: Convergence status of optim for 
+     impulse model fit to case and control samples combined (reduced model).
+     \item converge_case: Convergence status of optim for 
+     impulse model fit to samples of case condition (full model 1/2).
+     \item converge_control: Convergence status of optim for 
+     impulse model fit to samples of control condition (full model 2/2).
+   }
+   Entries only present if boolIdentifyTransients is TRUE:
+   \itemize{
+     \item converge_sigmoid: Convergence status of optim for 
+     sigmoid model fit to samples of case condition.
+     \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
+     impulse model fit versus sigmoidal model on samples of case condition.
+     \item impulseTOsigmoid_padj: Benjamini-Hochberg 
+     false-discovery rate corrected p-value of loglikelihood ratio test
+     impulse model fit versus sigmoid model on samples of case condition.
+     \item sigmoidTOconst_p: P-value of loglikelihood ratio test
+     sigmoidal model fit versus constant model on samples of case condition.
+     \item sigmoidTOconst_padj: Benjamini-Hochberg 
+     false-discovery rate corrected p-value of loglikelihood ratio test
+     sigmoidal model fit versus constant model on samples of case condition.
+     \item isTransient (bool) Whether gene is transiently
+     activated or deactivated and differentially expressed.
+     \item isMonotonous (bool) Whether gene is not transiently
+     activated or deactivated and differentially expressed. This scenario
+     corresponds to a montonous expression level increase or decrease.
+   }
 }
 }
 \description{
-Fits an impulse model to time course data and uses this model as a basis
-to detect differentially expressed genes. Differential expression is
-either differential expression of a gene over time within one condition
-or differential expression of a gene over time between two conditions (
-case and control). With a single condition, the alternative model is the
-impulse fit to the time course data and the null model is the mean fit.
-The mean fit models no differential behaviour over time. With two 
-conditions, the alternative model is separate impulse fits to case and
-control data and the null model is an impulse fit to the combined data.
-Here, the impulse fit to the combined data models no differential expression
-between the conditions.
+Wrapper to run ImpulseDE2 on bulk omics count data.
+This wrapper can perform the entire analysis pipeline of 
+ImpulseDE2 on its own if the right parameters are supplied.
+Core results are returned, additional objects may be saved to
+a directory supplied by the user.
+To run ImpulseDE2 on bulk omics count data, use the minimal
+parameter set:
+\itemize{
+   \item matCountData
+   \item dfAnnotation
+   \item boolCaseCtrl
+   \item vecConfounders
+}
+Additionally, you can provide:
+\itemize{
+   \item scaNProc to set the number of processes for parallelisation.
+   \item scaQThres to set the cut off for your DE gene list. 
+   \item vecDispersionsExternal to supply external dispersion parameters
+   which may be necessary depending on your confounding factors (runImpulseDE2
+   will tell you if it is necessary).
+   \item vecSizeFactorsExternal to supply external size factors.
+   \item boolVerbose to control stdout output.
+   \item dirTemp to save temporary data to the given directory 
+   (recommended for trouble shooting and reproducibility of results).
+}
 }
 \details{
-\code{ImpulseDE2} is based on the impulse model proposed by
-Chechik and Koller (Chechik and Koller, 2009). The impulse model
-models the response of gene activity read outs (such as RNAseq counts)
-to environmental or developmental stimuli as the product
-of two simgoids. This model can capture simple time course
-patterns, such as plateaus, increase and decrease. ImpulseDE2 uses
-the impulse model to identify differential activity over time on any
-type of count data which follows the negative binomial distribution
-(as frequently encountered in sequencing data). ImpulseDE2 performs
-fitting of the impulse model and a mean model to data and evaluates
-the fit. The computational complexity of ImpulseDE2 is linear in the
+ImpulseDE2 is based on the impulse model proposed by
+Chechik and Koller (Chechik and Koller, 2009).
+The computational complexity of ImpulseDE2 is linear in the
 number of genes and linear in the number of samples.
-\enumerate{
- \item Impulse fitting: The impulse model is fitted based on the assumption
-   that the input count data follow a negative binomial distribution with
-   dispersion as identified by DESeq2. The impulse model does not have
-   a closed form maximum likelihood parameter estimate and must therefore
-   be inferred from numerical optimisation.
- \enumerate{
-   \item Initialisation: Initialisation is performed twice for each gene,
-     based on a peak and a valley model. The parameters representing these 
-     models reflect the form that these two models would have given the count
-     data of each gene and are specific to each gene.
-   \item Optimisation: The cost function for the fit is the log likelihood
-     of the data which is evaluated based on negative binomial likelihoods
-     at each observed time point, with the value of the impulse model as the
-     mean and the gene dispersion inferred using DESeq2 as the 
-     dispersion. Numerical optimisation is performed using the
-     BFGS algorithm. In analogy to generalised linear models for count data,
-     the fitting of the parameters representing limit behaviours of the two
-     sigmoids (which are counts) are fitted in log space so that they cannot
-     adopt negative values.
-   \item Fit selection: The fit with the higher log likelihood of the two
-     initialisation is selected and kept as a maximum likelihood estimate.
- }
- \item Mean fitting: The mean model is a single negative binomial and
-   serves as the null model in the case of differential expression over
-   time within a single condition. The maximum likelihood estimate of
-   the mean of a negative binomial distribution given the data  and 
-   the dispersion is the sample average. This closed form solution 
-   is used here.
- \item Fit evaluation: The model comparison statistic is the deviance
-   2 * (loglikelihood(H1) - loglikelihood(H0)). The deviance is chi-squared
-   distributed with the difference in degrees of freedom of both models
-   as degrees of freedom if the null model is contained in the alternative
-   model, which is given in both modes of differential expression analysis
-   with ImpulseDE (with and without control). Therefore p-values for 
-   differential expression are computed based on the chi-squared distribution.
-   The p-values are the FDR corrected (Benjamini and Hochberg, 1995).
-}
 }
 \author{
 David Sebastian Fischer
 }
 \seealso{
 Calls the following functions:
-\code{\link{processData}}, \code{\link{runDESeq2}},
-\code{\link{fitImpulse}},
-\code{\link{computePval}}, \code{\link{plotDEGenes}}.
+\link{processData}, 
+\link{runDESeq2},
+\link{computeNormConst},
+\link{fitModels},
+\link{fitSigmoidModels},
+\link{runDEAnalysis}. 
+The following functions are additionally available to the user:
+\link{fitSigmoidModels},
+\link{plotGenes},  
+\link{plotHeatmap},
+\link{runDEAnalysis},   
+\link{simulateDataSetImpulseDE2}.
 }
 

@@ -14,12 +14,12 @@
 #' for bul data and normalised relative sequencing depth for
 #' single-cell data.
 #' 
-#' @seealso Called by \code{computeNormConst}.
+#' @seealso Called by \link{computeNormConst}.
 #' 
-#' @param matCountDataProc: (matrix genes x samples)
+#' @param matCountDataProc (matrix genes x samples)
 #'    Read count data.
 #' 
-#' @return vecSizeFactors: (numeric vector number of samples) 
+#' @return vecSizeFactors (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
 #' 
@@ -65,17 +65,17 @@ computeSizeFactors <- function(matCountDataProc){
 #' There is the option to supply size factors to this function to override
 #' its size factor choice.
 #' 
-#' @seealso Called by \code{runImpulseDE2}. 
-#' Calls \code{computeSizeFactors}.
+#' @seealso Called by \link{runImpulseDE2}. 
+#' Calls \link{computeSizeFactors}.
 #' 
-#' @param matCountDataProc: (matrix genes x samples)
+#' @param matCountDataProc (matrix genes x samples)
 #'    Read count data.
-#' @param vecSizeFactorsExternal: (vector length number of
+#' @param vecSizeFactorsExternal (vector length number of
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
 #'     
-#' @return vecSizeFactors: (numeric vector number of samples) 
+#' @return vecSizeFactors (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
 #' 

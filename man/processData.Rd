@@ -2,64 +2,86 @@
 % Please edit documentation in R/srcImpulseDE2_processData.R
 \name{processData}
 \alias{processData}
-\title{Process annotation and count data}
+\title{Check and process input to runImpulseDE2()}
 \usage{
-processData(dfAnnotation = NULL, matCountData = NULL, scaSmallRun = NULL,
-  strCaseName = NULL, strControlName = NULL, strMode = NULL,
-  strSCMode = NULL, scaWindowRadius = NULL, lsPseudoDE = NULL,
-  vecDispersionsExternal = NULL, vecSizeFactorsExternal = NULL,
-  boolRunDESeq2 = NULL)
+processData(dfAnnotation, matCountData, boolCaseCtrl, vecConfounders,
+  vecDispersionsExternal, vecSizeFactorsExternal)
 }
 \arguments{
-\item{strCaseName}{(str) [Default NULL] 
-Name of the case condition in \code{dfAnnotation}.}
+\item{dfAnnotation}{(data frame samples x covariates) 
+{Sample, Condition, Time (numeric), TimeCateg (str)
+(and confounding variables if given).}
+Annotation table with covariates for each sample.}
 
-\item{matCountData:}{(matrix genes x samples) [Default NULL] 
-Count data of all conditions, unobserved entries are NA.}
+\item{matCountData}{(matrix genes x samples) [Default NULL] 
+Read count data, unobserved entries are NA.}
 
-\item{dfAnnotation:}{(Table) [Default NULL] 
-Annotation table. Lists co-variables of samples: 
-Sample, Condition, Time (and LongitudinalSeries). 
-Time must be numeric.}
+\item{boolCaseCtrl}{(bool) 
+Whether to perform case-control analysis. Does case-only
+analysis if FALSE.}
 
-\item{strControlName:}{(str) [Default NULL] 
-Name of the control condition in \code{dfAnnotation}.}
+\item{vecConfounders}{(vector of strings number of confounding variables)
+Factors to correct for during batch correction. Have to 
+supply dispersion factors if more than one is supplied.
+Names refer to columns in dfAnnotation.}
 
-\item{strMode:}{(str) [Default "batch"] 
-{"batch","longitudinal","singlecell"}
-Mode of model fitting.}
+\item{vecDispersionsExternal}{(vector length number of
+genes in matCountData) [Default NULL]
+Externally generated list of gene-wise dispersion factors
+which overides DESeq2 generated dispersion factors.}
+
+\item{vecSizeFactorsExternal}{(vector length number of
+cells in matCountData) [Default NULL]
+Externally generated list of size factors which override
+size factor computation in ImpulseDE2.}
 }
 \value{
-(list length 3) with the following elements:
+(list length 4)
 \itemize{
- \item \code{matCountDataProc}: (count matrix  genes x samples) 
-     Count data: Reduced version of \code{matCountData}. 
- \item \code{matProbNB} (probability matrix genes x samples)
-     Probability of each observation to originate from the negative
-     binomial component in the zero inflated negative binomial
-     mixture model. All entries are 1 if not operating in 
-     strMode=="singlecell".
+   \item matCountDataProc (matrix genes x samples)
+   Read count data.
+   \item dfAnnotationProc (data frame samples x covariates) 
+   {Sample, Condition, Time (numeric), TimeCateg (str)
+   (and confounding variables if given).}
+   Processed annotation table with covariates for each sample.
+   \item vecSizeFactorsExternalProc (numeric vector number of samples) 
+   Model scaling factors for each sample which take
+   sequencing depth into account (size factors).
+   \item vecDispersionsExternalProc (vector number of genes) Gene-wise 
+   negative binomial dispersion hyper-parameter.
+   \item strReportProcessing (str) String of stdout of processData().
 }
 }
 \description{
 Check validity of input and process count data matrix and annotation
-into data structures used later in \code{runImpulseDE2}.
-\code{processData} is structure in the following way:
-(I) Subhelper functions:
-   checkNull() Check whether object was supplied (is not NULL).
-   checkDimMatch() Checks whether dimensions of matrices agree.
-   checkElementMatch() Checks whether vectors are identical.
-   checkNumeric() Checks whether elements are numeric.
-   checkProbability() Checks whether elements are probabilities.
-   checkCounts() Checks whether elements are count data.
-(II) Helper functions:
-   checkData() Check format and presence of input data.
-   nameGenes() Name genes if names are not given.
-   procAnnotation() Add categorial time variable to annotation table.
-   reduceCountData() Reduce count data to data which are utilised later.
-(III) Script body
+into data structures used later in \link{runImpulseDE2}.
+\link{processData} is structure in the following way:
+\itemize{
+   \item Subhelper functions:
+   \itemize{
+     \item checkNull() Check whether object was supplied (is not NULL).
+     \item checkDimMatch() Checks whether dimensions of matrices agree.
+     \item checkElementMatch() Checks whether vectors are identical.
+     \item checkNumeric() Checks whether elements are numeric.
+     \item checkProbability() Checks whether elements are probabilities.
+     \item checkCounts() Checks whether elements are count data.
+   }
+   \item Helper functions:
+   \itemize{
+     \item checkData() Check format and presence of input data.
+     \item nameGenes() Name genes if names are not given.
+     \item procAnnotation() Add categorial time variable to annotation table.
+     Add nested batch column if necessary.
+     Reduce to samples used.
+     \item reduceCountData() Reduce count data to data which are utilised later.
+   }
+   \item Script body
+}
+}
+\author{
+David Sebastian Fischer
 }
 \seealso{
-Called by \code{runImpulseDE2}.
+Called by \link{runImpulseDE2}.
 }
 

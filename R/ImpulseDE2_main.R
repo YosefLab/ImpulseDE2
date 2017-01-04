@@ -1,49 +1,21 @@
-################################################################################
-########################     ImpulseDE2 package     ############################
-################################################################################
-
-### Version 1.0
-### Author David Sebastian Fischer
-
-################################################################################
-### Libraries and source code
-################################################################################
-
-library(compiler)
-library(DESeq2)
-library(BiocParallel)
-library(Matrix)
-library(ComplexHeatmap)
-library(circlize)
-library(gridExtra)
-library(cowplot)
+#' @import methods
+#' @importFrom stats dnbinom median optim p.adjust pchisq rnbinom rnorm runif sd time
+#' @importFrom compiler cmpfun
+#' @import DESeq2
+#' @import BiocParallel
+#' @import Matrix
+#' @import ggplot2
+#' @import ComplexHeatmap
+#' @import circlize
+# @import gridExtra
+#' @importFrom cowplot plot_grid
+#' @importFrom grDevices dev.off graphics.off pdf
+NULL
 
 # Source functions in .R files from same directory as this function.
 #setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
 #setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
-setwd("/home/david/gitDevelopment/ImpulseDE2/R")
-
-source("srcImpulseDE2_classUnions.R")
-source("srcImpulseDE2_classImpulseDE2Object.R")
-source("srcImpulseDE2_evalImpulse.R")
-source("srcImpulseDE2_evalSigmoid.R")
-source("srcImpulseDE2_computeNormConst.R")
-source("srcImpulseDE2_CostFunctionsFit.R")
-source("srcImpulseDE2_fitImpulse.R")
-source("srcImpulseDE2_fitSigmoid.R")
-source("srcImpulseDE2_plotGenes.R")
-source("srcImpulseDE2_plotHeatmap.R")
-source("srcImpulseDE2_processData.R")
-source("srcImpulseDE2_runDEAnalysis.R")
-source("srcImpulseDE2_runDESeq2.R")
-source("srcImpulseDE2_simulateDataSet.R")
-
-# Compile functions
-evalImpulse_comp <- cmpfun(evalImpulse)
-evalSigmoid_comp <- cmpfun(evalSigmoid)
-evalLogLikMu_comp <- cmpfun(evalLogLikMu)
-evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
-evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
+#setwd("/home/david/gitDevelopment/ImpulseDE2/R")
 
 ################################################################################
 ### Main function / Wrapper function
@@ -62,7 +34,7 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'    \item matCountData
 #'    \item dfAnnotation
 #'    \item boolCaseCtrl
-#'    \itme vecConfounders
+#'    \item vecConfounders
 #' }
 #' Additionally, you can provide:
 #' \itemize{
@@ -85,57 +57,59 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #' @aliases ImpulseDE2 wrapper
 #' 
 #' @seealso Calls the following functions:
-#' \code{\link{processData}}, 
-#' \code{\link{runDESeq2}},
-#' \code{\link{computeNormConst}},
-#' \code{\link{fitModels},
-#' \code{\link{fitSigmoidModels},
-#' \code{\link{runDEAnalysis}}. 
+#' \link{processData}, 
+#' \link{runDESeq2},
+#' \link{computeNormConst},
+#' \link{fitModels},
+#' \link{fitSigmoidModels},
+#' \link{runDEAnalysis}. 
 #' The following functions are additionally available to the user:
-#' \code{\link{fitSigmoidModels}},
-#' \code{\link{plotGenes}},  
-#' \code{\link{plotHeatmap}},
-#' \code{\link{runDEAnalysis}},   
-#' \code{\link{simulateDataSet}}.
+#' \link{fitSigmoidModels},
+#' \link{plotGenes},  
+#' \link{plotHeatmap},
+#' \link{runDEAnalysis},   
+#' \link{simulateDataSetImpulseDE2}.
 #' 
-#' @param matCountData: (matrix genes x samples) [Default NULL] 
+#' @param matCountData (matrix genes x samples) [Default NULL] 
 #'    Read count data, unobserved entries are NA.
-#' @param dfAnnotation: (data frame samples x covariates) 
+#' @param dfAnnotation (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Annotation table with covariates for each sample.
-#' @param boolCaseCtrl: (bool) 
+#' @param boolCaseCtrl (bool) 
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
-#' @param vecConfounders: (vector of strings number of confounding variables)
+#' @param vecConfounders (vector of strings number of confounding variables)
 #' 		Factors to correct for during batch correction. Have to 
 #' 		supply dispersion factors if more than one is supplied.
 #' 		Names refer to columns in dfAnnotation.
-#' @param scaNProc: (scalar) [Default 1] Number of processes for 
+#' @param scaNProc (scalar) [Default 1] Number of processes for 
 #'    parallelisation.
-#' @param scaQThres: (scalar) [Default NULL] 
+#' @param scaQThres (scalar) [Default NULL] 
 #'    FDR-corrected p-value cutoff for significance.
-#' @param vecDispersionsExternal: (vector length number of
+#' @param vecDispersionsExternal (vector length number of
 #'    genes in matCountData) [Default NULL]
 #'    Externally generated list of gene-wise dispersion factors
 #'    which overides DESeq2 generated dispersion factors.
-#' @param vecSizeFactorsExternal: (vector length number of
+#' @param vecSizeFactorsExternal (vector length number of
 #'    cells in matCountData) [Default NULL]
 #'    Externally generated list of size factors which override
 #'    size factor computation in ImpulseDE2.
-#' @param boolIdentifyTransients: (bool) [Defaul FALSE]
+#' @param boolIdentifyTransients (bool) [Defaul FALSE]
 #'    Whether to identify transiently activated or deactivated 
 #'    genes. This involves an additional fitting of sigmoidal models
 #'    and hypothesis testing between constant, sigmoidal and impulse model.
-#' @param boolVerbose: (bool) [Default TRUE] Whether to print
+#' @param boolVerbose (bool) [Default TRUE] Whether to print
 #'    progress to stdout.
-#' @param dirTemp: (dir) Directory to which temporary results are saved.
+#' @param dirTemp (dir) [Default NULL]
+#'    Directory to which temporary results are saved as .RData files.
+#'    No results are saved to files if NULL.
 #' 
 #' @return (object of class ImpulseDE2Object)
 #' This object can be treated as a list with 2 elements:
 #' (list length 2)
 #' \itemize{
-#'    \item vecDEGenes: (list number of genes) Genes IDs identified
+#'    \item vecDEGenes (list number of genes) Genes IDs identified
 #'    as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.
 #'    \item dfDEAnalysis (data frame samples x reported characteristics) 
 #'    Summary of fitting procedure and 
@@ -151,7 +125,7 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'      \item df_red: Degrees of freedom of reduced model
 #'      \item mean: Inferred mean parameter of constant model of first batch.
 #'      From combined samples in case-ctrl. 
-#'      \item allZero: (bool) Whether there were no observed non-zero observations of this gene.
+#'      \item allZero (bool) Whether there were no observed non-zero observations of this gene.
 #'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
 #'    }
 #'    Entries only present in case-only DE analysis:
@@ -176,17 +150,17 @@ evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)
 #'      sigmoid model fit to samples of case condition.
 #'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
 #'      impulse model fit versus sigmoidal model on samples of case condition.
-#'      \item dfDEAnalysis$impulseTOsigmoid_padj: Benjamini-Hochberg 
+#'      \item impulseTOsigmoid_padj: Benjamini-Hochberg 
 #'      false-discovery rate corrected p-value of loglikelihood ratio test
 #'      impulse model fit versus sigmoid model on samples of case condition.
-#'      \item dfDEAnalysis$sigmoidTOconst_p: P-value of loglikelihood ratio test
+#'      \item sigmoidTOconst_p: P-value of loglikelihood ratio test
 #'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item dfDEAnalysis$sigmoidTOconst_padj: Benjamini-Hochberg 
+#'      \item sigmoidTOconst_padj: Benjamini-Hochberg 
 #'      false-discovery rate corrected p-value of loglikelihood ratio test
 #'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item dfDEAnalysis$isTransient: (bool) Whether gene is transiently
+#'      \item isTransient (bool) Whether gene is transiently
 #'      activated or deactivated and differentially expressed.
-#'      \item dfDEAnalysis$isMonotonous: (bool) Whether gene is not transiently
+#'      \item isMonotonous (bool) Whether gene is not transiently
 #'      activated or deactivated and differentially expressed. This scenario
 #'      corresponds to a montonous expression level increase or decrease.
 #'    }

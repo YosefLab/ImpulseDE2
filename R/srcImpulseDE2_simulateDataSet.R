@@ -3,7 +3,7 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 #' Simulate a data set for ImpulseDE2
-
+#' 
 #' Simulates a data set with genes with constant and impulse
 #' expression traces. Expression strength and variation in impulse
 #' like traces are parameterised and random. All temporary files
@@ -14,55 +14,52 @@
 #' 
 #' @seealso Called by separately by user.
 #' 
-#' @param vecTimePointsA: (numeric vector number of time points)
+#' @param vecTimePointsA (numeric vector number of time points)
 #'    Number of time points in batch A.
-#' @param vecTimePointsB: (numeric vector number of time points)
+#' @param vecTimePointsB (numeric vector number of time points)
 #'    Number of time points in batch B.
-#' @param boolCaseCtrl: (bool) [Defaul FALSE] Whether A and B are 
-#'    are case and control data (used for annotation data frame).
-#' @param boolCaseCtrlBatch: (bool) [Defaul FALSE] Whether to 
-#'    simulate batch effects in case-control: assume all time-points
-#'    are shared between batches, each replicate is one batch.
-#' @param scaNConst: (scalar) Number of constant genes in data set.
-#' @param scaNImp: (scalar) Number of impulse distributed genes in data set.
-#' @param scaNLin: (scalar) Number of linear distributed genes in data set.
-#' @param scaNSig: (scalar) Number of sigmoid distributed genes in data set.
-#' @param scaNRand: (scalar) [Default NULL] Number of random distributed genes in data set.
-#' @param scaMumax: (scalar) [Default 1000]
+#' @param vecBatchesA (str vector number of samples in vecTimePointsA) [Default NULL]
+#'    Batch IDs of each sample in condition A. Set to NULL if 
+#'    simulating without batch effects.
+#' @param vecBatchesB (str vector number of samples in vecTimePointsB) [Default NULL]
+#'    Batch IDs of each sample in condition B. Set to NULL if 
+#'    simulating without batch effects.
+#' @param scaNConst (scalar) Number of constant genes in data set.
+#' @param scaNImp (scalar) Number of impulse distributed genes in data set.
+#' @param scaNLin (scalar) Number of linear distributed genes in data set.
+#' @param scaNSig (scalar) Number of sigmoid distributed genes in data set.
+#' @param scaNRand (scalar) [Default NULL] Number of random distributed genes in data set.
+#' @param scaMumax (scalar) [Default 1000]
 #'    Maximum expression mean parameter to be used.
-#' @param scaSDExpressionChange: (scalar) [Default 1]
+#' @param scaSDExpressionChange (scalar) [Default 1]
 #'    Standard deviation of normal distribution from which the 
 #'    amplitude change within an impulse trace is drawn.
-#' @param scaSDRand: (scalar) [Default 0]
+#' @param scaSDRand (scalar) [Default 0]
 #'    Standard deviation of normal distribution from which the 
 #'    random deviations are drawn.
-#' @param scaMuSizeEffect: (numeric vector number of genes) [Default NULL]
+#' @param scaMuSizeEffect (numeric vector number of genes) [Default NULL]
 #'    Mean of normal distribution of which scaNLing factor for 
 #'    size effects per sample are drawn.
-#' @param scaSDSizeEffect: (numeric vector number of genes) [Default NULL]
+#' @param scaSDSizeEffect (numeric vector number of genes) [Default NULL]
 #'    Standard deviation of normal distribution of which scaling factor for 
 #'    size effects per sample are drawn.
-#' @param scaMuBatchEffect: (numeric vector number of genes) [Default NULL]
+#' @param scaMuBatchEffect (numeric vector number of genes) [Default NULL]
 #'    Mean of normal distribution of which scaling factor for 
 #'    batch effects per gene are drawn (reference is batch A).
-#' @param scaSDBatchEffect: (numeric vector number of genes) [Default NULL]
+#' @param scaSDBatchEffect (numeric vector number of genes) [Default NULL]
 #'    Standard deviation of normal distribution of which scaling factor for 
 #'    batch effects per gene are drawn (reference is batch A).
-#' @param vecNormConstExternal: (numeric vector number of cells)
-#'    [Default NULL]
-#'    Size factors for data set. Size factors are set to 1 if this is
-#'    not specified (NULL).
-#' @param dirOutSimulation: (directory)
+#' @param dirOutSimulation (directory)
 #'    Directory to which simulated parameter objects are 
 #'    saved to.
 #' 
-#' @return list: (length 2)
+#' @return list (length 2)
 #' \itemize{
-#'    \item dfAnnotation: (data frame samples x covariates) 
+#'    \item dfAnnotation (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Annotation table with covariates for each sample.
-#'    \item matSampledCountsObserved: (matrix genes x cells)
+#'    \item matSampledCountsObserved (matrix genes x cells)
 #'    Sampled count data of all cells after drop-out.
 #' }
 #'    

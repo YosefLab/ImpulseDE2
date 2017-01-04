@@ -4,45 +4,41 @@
 \alias{runDESeq2}
 \title{Wrapper function for running DESeq2}
 \usage{
-runDESeq2(dfAnnotationProc, matCountDataProc, nProc = 1, strCaseName = NULL,
-  strControlName = NULL, strMode = "batch")
+runDESeq2(dfAnnotationProc, matCountDataProc, boolCaseCtrl, vecConfounders)
 }
 \arguments{
-\item{matCountDataProc:}{(matrix genes x samples)
-Count data: Reduced version of \code{matCountData}. 
-For internal use.}
+\item{dfAnnotationProc}{(data frame samples x covariates) 
+{Sample, Condition, Time (numeric), TimeCateg (str)
+(and confounding variables if given).}
+Processed annotation table with covariates for each sample.}
 
-\item{dfAnnotationProc:}{(Table) Processed annotation table. 
-Lists co-variables of samples: 
-Sample, Condition, Time (numeric), TimeCateg (str)
-(and Timecourse). For internal use.}
+\item{matCountDataProc}{(matrix genes x samples)
+Read count data.}
 
-\item{nProc:}{(scalar) [Default 1] 
-Number of processes for parallelisation.}
+\item{boolCaseCtrl}{(bool) 
+Whether to perform case-control analysis. Does case-only
+analysis if FALSE.}
 
-\item{strCaseName:}{(str) [Default NULL] 
-Name of the case condition in \code{dfAnnotation}.}
-
-\item{strControlName:}{(str) [Default NULL] 
-Name of the control condition in \code{dfAnnotation}.}
-
-\item{strMode:}{(str) [Default "batch"] 
-{"batch","longitudinal","singlecell"}
-Mode of model fitting.}
+\item{vecConfounders}{(vector of strings number of confounding variables)
+Factors to correct for during batch correction. Have to 
+supply dispersion factors if more than one is supplied.
+Names refer to columns in dfAnnotationProc.}
 }
 \value{
-(list length 2) with the following elements:
-\itemize{
- \item \code{dds_dispersions} (vector number of genes) Inverse of gene-wise 
-     negative binomial dispersion coefficients computed by DESeq2.
- \item \code{dds_resultsTable} (data frame) DESeq2 results.
-}
+(numeric vector length number of genes)
+   Dispersion parameter estimates for each gene.
+   In format of parameter size of \link{dnbinom}
+   which is 1/dispersion factor of DESeq2.
 }
 \description{
-Run DESeq2 and extract differential expression analysis results and 
-overdispersion coefficients.
+Run DESeq2 and extract dispersion parameter estimates.
+Catch and remove dispersion outlier exception on samples
+with zero-count observations.
+}
+\author{
+David Sebastian Fischer
 }
 \seealso{
-Called by \code{runImpulseDE2}.
+Called by \link{runImpulseDE2}.
 }
 

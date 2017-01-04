@@ -8,26 +8,29 @@
 #' Catch and remove dispersion outlier exception on samples
 #' with zero-count observations.
 #' 
-#' @seealso Called by \code{runImpulseDE2}.
+#' @seealso Called by \link{runImpulseDE2}.
 #' 
-#' @param dfAnnotationProc: (data frame samples x covariates) 
+#' @param dfAnnotationProc (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Processed annotation table with covariates for each sample.
-#' @param matCountDataProc: (matrix genes x samples)
+#' @param matCountDataProc (matrix genes x samples)
 #'    Read count data.
-#' @param boolCaseCtrl: (bool) 
+#' @param boolCaseCtrl (bool) 
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
-#' @param vecConfounders: (vector of strings number of confounding variables)
+#' @param vecConfounders (vector of strings number of confounding variables)
 #' 		Factors to correct for during batch correction. Have to 
 #' 		supply dispersion factors if more than one is supplied.
 #' 		Names refer to columns in dfAnnotationProc.
 #' 		
 #' @return (numeric vector length number of genes)
 #'    Dispersion parameter estimates for each gene.
-#'    In format of parameter size of \code{dnbinom}
+#'    In format of parameter size of \link{dnbinom}
 #'    which is 1/dispersion factor of DESeq2.
+#'    
+#' @import DESeq2
+#' @importFrom S4Vectors mcols
 #' 
 #' @author David Sebastian Fischer
 runDESeq2 <- function(dfAnnotationProc, 
@@ -163,10 +166,10 @@ runDESeq2 <- function(dfAnnotationProc,
       }, finally={
         if(is.null(dds)){
           matModelMatrixBatches <- do.call(cbind, lapply(vecConfounders, function(confounder){
-            match(dfAnnotation[,confounder], unique(dfAnnotation[,confounder]))
+            match(dfAnnotationProc[,confounder], unique(dfAnnotationProc[,confounder]))
           }))
           matModelMatrixBatchesTime <- cbind(matModelMatrixBatches,
-                                             match(dfAnnotation$Time, unique(dfAnnotation$Time)))
+                                             match(dfAnnotationProc$Time, unique(dfAnnotationProc$Time)))
           boolFullRankBatchTime <- rankMatrix(matModelMatrixBatchesTime)[1] == dim(matModelMatrixBatchesTime)[2]
           if(!boolFullRankBatchTime){
             paste0("Model matrix based on confounding variables {", vecConfounders,

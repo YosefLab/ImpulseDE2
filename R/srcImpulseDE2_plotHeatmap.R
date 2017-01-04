@@ -10,29 +10,29 @@
 #' 
 #' @seealso Called seperately by used.
 #' 
-#' @param objectImpulseDE2: (instance of class ImpulseDE2Object)
+#' @param objectImpulseDE2 (instance of class ImpulseDE2Object)
 #'    ImpulseDE2 output object to create heatmap from.
-#' @param strCondition: (str) {"case","control","combined}
+#' @param strCondition (str) {"case","control","combined}
 #'    Heatmap is created from samples of this condition.
-#' @param boolIdentifyTransients: (bool) 
+#' @param boolIdentifyTransients (bool) 
 #'    Whether to structure heatmap into transient and transition
 #'    trajectories, only possible if sigmoids were fit to the
 #'    indicated condition.
-#' @param scaQThres: (scalar) FDR-corrected p-value threshold
+#' @param scaQThres (scalar) FDR-corrected p-value threshold
 #'    for calling differentially expressed genes: Only genes
 #'    below this threshold are included in the heatmap.
 #'    
 #' @return (list length 3)
 #'    \itemize{
-#'      \item complexHeatmapRaw: (complexHeatmap plot)
+#'      \item complexHeatmapRaw (complexHeatmap plot)
 #'      Heatmap of raw data by time point: Average of the
 #'      size factor (and batch factor) normalised counts 
 #'      per time point and gene.
 #'      Plot with draw(complexHeatmapRaw).
-#'      \item complexHeatmapFit: (complexHeatmap plot)
+#'      \item complexHeatmapFit (complexHeatmap plot)
 #'      Heatmap of impulse-fitted data by time point.
 #'      Plot with draw(complexHeatmapFit).
-#'      \item lsvecGeneGroups: (list)
+#'      \item lsvecGeneGroups (list)
 #'      List of gene ID vectors: One per heatmap group 
 #'      with all gene IDs of the the profiles displayed
 #'      in the heatmap.
