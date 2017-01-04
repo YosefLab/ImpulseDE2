@@ -29,7 +29,6 @@ Imports:
 Collate:
     'ImpulseDE2_main.R'
     'srcImpulseDE2_CostFunctionsFit.R'
-    'srcImpulseDE2_classUnions.R'
     'srcImpulseDE2_classImpulseDE2Object.R'
     'srcImpulseDE2_computeNormConst.R'
     'srcImpulseDE2_evalImpulse.R'

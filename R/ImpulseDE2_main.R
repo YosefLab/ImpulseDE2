@@ -311,7 +311,7 @@ runImpulseDE2 <- function(matCountData=NULL,
     strMessage <- "# Differentially expression analysis based on model fits"
     if(boolVerbose) print(strMessage)
     objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
-    dfImpulseDE2Results <- runDEAnalysis(
+    objectImpulseDE2 <- runDEAnalysis(
       objectImpulseDE2=objectImpulseDE2,
       vecAllIDs=rownames(matCountData),
       boolCaseCtrl=boolCaseCtrl,
@@ -320,7 +320,7 @@ runImpulseDE2 <- function(matCountData=NULL,
     
     if(!is.null(scaQThres)){
       vecDEGenes <- as.vector( 
-        dfImpulseDE2Results[as.numeric(dfImpulseDE2Results$padj) <= scaQThres,"Gene"] )
+        objectImpulseDE2@dfImpulseDE2Results[as.numeric(objectImpulseDE2@dfImpulseDE2Results$padj) <= scaQThres,"Gene"] )
       strMessage <- paste0("Found ", length(vecDEGenes)," DE genes",
         " at a FDR corrected p-value cut off of ", scaQThres, ".")
       if(boolVerbose) print(strMessage)
@@ -328,14 +328,13 @@ runImpulseDE2 <- function(matCountData=NULL,
     } else {
       vecDEGenes <- NULL
     }
+    objectImpulseDE2@vecDEGenes <- vecDEGenes
     if(!is.null(dirTemp)){
-      save(dfImpulseDE2Results,file=file.path(dirTemp,"ImpulseDE2_dfImpulseDE2Results.RData"))
+      save(objectImpulseDE2@dfImpulseDE2Results,file=file.path(dirTemp,"ImpulseDE2_dfImpulseDE2Results.RData"))
       if(!is.null(scaQThres)){
-        save(vecDEGenes,file=file.path(dirTemp,"ImpulseDE2_vecDEGenes.RData"))
+        save(objectImpulseDE2@vecDEGenes,file=file.path(dirTemp,"ImpulseDE2_vecDEGenes.RData"))
       }
     }
-    objectImpulseDE2@dfImpulseDE2Results <- dfImpulseDE2Results
-    objectImpulseDE2@vecDEGenes <- vecDEGenes
   })
   strMessage <- "Finished running ImpulseDE2."
   if(boolVerbose) print(strMessage)

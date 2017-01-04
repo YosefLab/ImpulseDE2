@@ -32,7 +32,9 @@
 #'    impulse, sigmoidal and constant model used to identify transiently
 #'    regulated genes.
 #' 
-#' @return dfDEAnalysis (data frame samples x reported characteristics) 
+#' @return objectImpulseDE2 (ImpulseDE2Object)
+#'    Input object with dfDEAnalysis updated to:
+#'    dfDEAnalysis (data frame samples x reported characteristics) 
 #'    Summary of fitting procedure and 
 #'    differential expression results for each gene.
 #'    \itemize{
@@ -83,7 +85,8 @@
 #'      activated or deactivated and differentially expressed.
 #'      \item isMonotonous (bool) Whether gene is not transiently
 #'      activated or deactivated and differentially expressed. This scenario
-#'      corresponds to a montonous expression level increase or decrease.#'    }
+#'      corresponds to a montonous expression level increase or decrease.
+#'    }
 #'    
 #' @author David Sebastian Fischer
 #' 
@@ -110,9 +113,9 @@ runDEAnalysis <- function(objectImpulseDE2,
     # Mean inferred expression:
     vecMuCase <- sapply(lsModelFits$case, function(fit) fit$lsConstFit$scaMu )
     if(!is.null(vecConfounders)){
-    	scaNBatchFactors <- sum(sapply(vecConfounders, function(confounder){ 
-    		length(unique(dfAnnotationProc[,confounder]))-1 
-    	}))
+      scaNBatchFactors <- sum(sapply(vecConfounders, function(confounder){ 
+        length(unique(dfAnnotationProc[,confounder]))-1 
+      }))
     } else { scaNBatchFactors <- 0 }
     # 6 impulse model parameters, 1 dispersion estimate and 
     # 1 batch factor for each batch (except for the first one) for each confounder.
@@ -135,16 +138,16 @@ runDEAnalysis <- function(objectImpulseDE2,
     # Mean inferred expression: On combined data
     vecMuCombined <- sapply(lsModelFits$combined, function(fit) fit$lsConstFit$scaMu )
     if(!is.null(vecConfounders)){
-    	scaNBatchFactorsFull <- sum(sapply(vecConfounders, function(confounder){ 
-    		length(unique(dfAnnotationProc[dfAnnotationProc$Condition=="case",confounder]))-1+
-    			length(unique(dfAnnotationProc[dfAnnotationProc$Condition=="control",confounder]))-1
-    	}))
-    	scaNBatchFactorsRed <- sum(sapply(vecConfounders, function(confounder){ 
-    		length(unique(dfAnnotationProc[,confounder]))-1
-    	}))
+      scaNBatchFactorsFull <- sum(sapply(vecConfounders, function(confounder){ 
+        length(unique(dfAnnotationProc[dfAnnotationProc$Condition=="case",confounder]))-1+
+          length(unique(dfAnnotationProc[dfAnnotationProc$Condition=="control",confounder]))-1
+      }))
+      scaNBatchFactorsRed <- sum(sapply(vecConfounders, function(confounder){ 
+        length(unique(dfAnnotationProc[,confounder]))-1
+      }))
     } else { 
-    	scaNBatchFactorsFull <- 0
-    	scaNBatchFactorsRed <- 0
+      scaNBatchFactorsFull <- 0
+      scaNBatchFactorsRed <- 0
     }
     # 6 impulse model parameters for each case and control, 
     # 1 dispersion estimate and 
@@ -214,8 +217,8 @@ runDEAnalysis <- function(objectImpulseDE2,
     # Compare impulse to sigmoid
     vecDevianceImpulseSigmoid <- 2*(vecLogLikImpulse - vecLogLikSigmoid)
     vecPvalueImpulseSigmoid <- pchisq(vecDevianceImpulseSigmoid,
-                        df=scaDegFreedomImpulse-scaDegFreedomSigmoid,
-                        lower.tail=FALSE)
+                                      df=scaDegFreedomImpulse-scaDegFreedomSigmoid,
+                                      lower.tail=FALSE)
     vecPvalueImpulseSigmoidBH <- p.adjust(vecPvalueImpulseSigmoid, method = "BH")
     
     # Compare impulse to constant
@@ -223,16 +226,16 @@ runDEAnalysis <- function(objectImpulseDE2,
     # DE analysis is case-only
     vecDevianceImpulseConst <- 2*(vecLogLikImpulse - vecLogLikConst)
     vecPvalueImpulseConst <- pchisq(vecDevianceImpulseConst,
-                                      df=scaDegFreedomImpulse-scaDegFreedomConst,
-                                      lower.tail=FALSE)
+                                    df=scaDegFreedomImpulse-scaDegFreedomConst,
+                                    lower.tail=FALSE)
     vecPvalueImpulseConstBH <- p.adjust(vecPvalueImpulseConst, method = "BH")
     
     # Compare sigmoid to constant
     # Trajectory is montonous if this is significant but vecPvalueImpulseSigmoidBH is not
     vecDevianceSigmoidConst <- 2*(vecLogLikSigmoid - vecLogLikConst)
     vecPvalueSigmoidConst <- pchisq(vecDevianceSigmoidConst,
-                                      df=scaDegFreedomSigmoid-scaDegFreedomConst,
-                                      lower.tail=FALSE)
+                                    df=scaDegFreedomSigmoid-scaDegFreedomConst,
+                                    lower.tail=FALSE)
     vecPvalueSigmoidConstBH = p.adjust(vecPvalueSigmoidConst, method = "BH")
     
     # Add entries into DE table
@@ -252,7 +255,7 @@ runDEAnalysis <- function(objectImpulseDE2,
       vecImpulseValues <- evalImpulse_comp(vecImpulseParam=fit$lsImpulseFit$vecImpulseParam,
                                            vecTimepoints=vecTimePointsCase)
       boolMonotonous <- (max(vecImpulseValues[2:length((vecImpulseValues)-1)]) <= max(vecImpulseValues[c(1,length(vecImpulseValues))]) &
-                        min(vecImpulseValues[2:length((vecImpulseValues)-1)]) >= min(vecImpulseValues[c(1,length(vecImpulseValues))]) )
+                           min(vecImpulseValues[2:length((vecImpulseValues)-1)]) >= min(vecImpulseValues[c(1,length(vecImpulseValues))]) )
       return(boolMonotonous)
     })
     # Is transient if significantly better fit by impulse than sigmoidal model and not monotonous
@@ -269,5 +272,93 @@ runDEAnalysis <- function(objectImpulseDE2,
   vecboolAllZero <- !(vecAllIDs %in% rownames(matCountDataProc))
   dfDEAnalysis$allZero <- vecboolAllZero
   
-  return(dfDEAnalysis)
+  objectImpulseDE2@dfImpulseDE2Results <- dfDEAnalysis
+  return(objectImpulseDE2)
+}
+
+#' Update dfImpulseDE2Results after sigmoids have been fit 
+#' through external call
+#' 
+#' This is a userfriendly wrapper of runDEAnalysis for this update
+#' scenoario.
+#' 
+#' @seealso Called by separately by user.
+#' 
+#' @param objectImpulseDE2 (object class ImpulseDE2Object)
+#'    Object containing fits to be evaluated.
+#' @param scaQThresTransients (scalar) [Default 0.001]
+#'    FDR-corrected p-value threshold for hypothesis tests between
+#'    impulse, sigmoidal and constant model used to identify transiently
+#'    regulated genes.
+#' 
+#' @return objectImpulseDE2 (ImpulseDE2Object)
+#'    Input object with dfDEAnalysis updated to:
+#'    dfDEAnalysis (data frame samples x reported characteristics) 
+#'    Summary of fitting procedure and 
+#'    differential expression results for each gene.
+#'    \itemize{
+#'      \item Gene: Gene ID.
+#'      \item p: P-value for differential expression.
+#'      \item padj: Benjamini-Hochberg false-discovery rate corrected p-value
+#'      for differential expression analysis.
+#'      \item loglik_full: Loglikelihood of full model.
+#'      \item loglik_red: Loglikelihood of reduced model.
+#'      \item df_full: Degrees of freedom of full model.
+#'      \item df_red: Degrees of freedom of reduced model
+#'      \item mean: Inferred mean parameter of constant model of first batch.
+#'      From combined samples in case-ctrl. 
+#'      \item allZero (bool) Whether there were no observed non-zero observations of this gene.
+#'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
+#'    }
+#'    Entries only present in case-only DE analysis:
+#'    \itemize{
+#'      \item converge_impulse: Convergence status of optim for 
+#'      impulse model fit (full model).
+#'      \item converge_const: Convergence status of optim for 
+#'      constant model fit (reduced model).
+#'    }
+#'    Entries only present in case-control DE analysis:
+#'    \itemize{
+#'      \item converge_combined: Convergence status of optim for 
+#'      impulse model fit to case and control samples combined (reduced model).
+#'      \item converge_case: Convergence status of optim for 
+#'      impulse model fit to samples of case condition (full model 1/2).
+#'      \item converge_control: Convergence status of optim for 
+#'      impulse model fit to samples of control condition (full model 2/2).
+#'    }
+#'    Entries only present if boolIdentifyTransients is TRUE:
+#'    \itemize{
+#'      \item converge_sigmoid: Convergence status of optim for 
+#'      sigmoid model fit to samples of case condition.
+#'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
+#'      impulse model fit versus sigmoidal model on samples of case condition.
+#'      \item impulseTOsigmoid_padj: Benjamini-Hochberg 
+#'      false-discovery rate corrected p-value of loglikelihood ratio test
+#'      impulse model fit versus sigmoid model on samples of case condition.
+#'      \item sigmoidTOconst_p: P-value of loglikelihood ratio test
+#'      sigmoidal model fit versus constant model on samples of case condition.
+#'      \item sigmoidTOconst_padj: Benjamini-Hochberg 
+#'      false-discovery rate corrected p-value of loglikelihood ratio test
+#'      sigmoidal model fit versus constant model on samples of case condition.
+#'      \item isTransient (bool) Whether gene is transiently
+#'      activated or deactivated and differentially expressed.
+#'      \item isMonotonous (bool) Whether gene is not transiently
+#'      activated or deactivated and differentially expressed. This scenario
+#'      corresponds to a montonous expression level increase or decrease.
+#'    }
+#'    
+#' @author David Sebastian Fischer
+#' 
+#' @export
+updateDEAnalysis <- function(objectImpulseDE2,
+                             scaQThresTransients=0.001){
+  
+  objectImpulseDE2 <- runDEAnalysis(objectImpulseDE2=objectImpulseDE2,
+                                    vecAllIDs=rownames(objectImpulseDE2$dfImpulseDE2Results),
+                                    boolCaseCtrl=objectImpulseDE2@boolCaseCtrl,
+                                    vecConfounders=objectImpulseDE2@vecConfounders,
+                                    boolIdentifyTransients=TRUE,
+                                    scaQThresTransients=scaQThresTransients)
+  
+  return(objectImpulseDE2)
 }

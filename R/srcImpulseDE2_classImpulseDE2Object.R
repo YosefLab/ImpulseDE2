@@ -4,6 +4,12 @@
 
 ### 1. Define output container class
 
+# Define class unions for slots
+setClassUnion('numericORNULL', members = c('numeric', 'NULL'))
+setClassUnion('characterORNULL', members = c('character', 'NULL'))
+setClassUnion('listORNULL', members = c('list', 'NULL'))
+setClassUnion('data.frameORNULL', members = c('data.frame', 'NULL'))
+
 #' Container class for ImpulseDE2 output
 #' 
 #' ImpulseDE2 output and intermediate results such as model fits.

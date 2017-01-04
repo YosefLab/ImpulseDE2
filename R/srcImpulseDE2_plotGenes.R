@@ -2,6 +2,10 @@
 #++++++++++++++++++++++     Plot impulse fits    ++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+#' @include srcImpulseDE2_evalImpulse.R
+#' @include srcImpulseDE2_classImpulseDE2Object.R
+NULL
+
 #' Plots the impulse fits and data
 #' 
 #' Plots the impulse fits and data to pdf and return a list of gplots. Points
