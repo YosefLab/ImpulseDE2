@@ -40,6 +40,9 @@
 #'    
 #' @author David Sebastian Fischer
 #' 
+#' @import ComplexHeatmap
+#' @import circlize
+#' 
 #' @export
 plotHeatmap <- function(objectImpulseDE2,
                         strCondition,

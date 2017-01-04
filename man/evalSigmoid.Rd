@@ -27,6 +27,6 @@ errors during model fitting.
 David Sebastian Fischer
 }
 \seealso{
-Compiled version: \link{evalSigmoid_comp}
+Compiled version: evalSigmoid_comp
 }
 

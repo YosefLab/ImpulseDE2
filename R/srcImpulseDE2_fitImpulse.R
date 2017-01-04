@@ -174,7 +174,7 @@ fitConstModel <- function(vecCounts,
                           trace=0,
                           REPORT=10){
   
-  vecParamGuess <- log(mean(vecCounts, na.rm=TRUE))
+  vecParamGuess <- log(mean(vecCounts, na.rm=TRUE)+1)
   if(!is.null(lsvecidxBatch)){
   	for(vecidxConfounder in lsvecidxBatch){
   		vecParamGuess <- c(vecParamGuess, rep(0, length(unique(vecidxConfounder))-1))
@@ -196,7 +196,7 @@ fitConstModel <- function(vecCounts,
                    fnscale=-1)
     )[c("par","value","convergence")]
   }, error=function(strErrorMsg){
-    print(paste0("ERROR: Fitting null model: fitrMu().",
+    print(paste0("ERROR: Fitting null model: fitConstModel().",
                  " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
     print(paste0("vecParamGuess ", paste(vecParamGuess,collapse=" ")))
     print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))
@@ -335,7 +335,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
                    fnscale=-1)
     )[c("par","value","convergence")]
   }, error=function(strErrorMsg){
-    print(paste0("ERROR: Fitting impulse model: optimiseImpulseModelFit().",
+    print(paste0("ERROR: Fitting impulse model: fitImpulseModel().",
                  " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
     print(paste0("vecParamGuess ", paste(vecParamGuess,collapse=" ")))
     print(paste0("vecCounts ", paste(vecCounts,collapse=" ")))

@@ -7,15 +7,9 @@
 #' @import ggplot2
 #' @import ComplexHeatmap
 #' @import circlize
-# @import gridExtra
 #' @importFrom cowplot plot_grid
 #' @importFrom grDevices dev.off graphics.off pdf
 NULL
-
-# Source functions in .R files from same directory as this function.
-#setwd("/Users/davidsebastianfischer/gitDevelopment/ImpulseDE2/R")
-#setwd("/data/yosef2/users/fischerd/code/ImpulseDE2/R")
-#setwd("/home/david/gitDevelopment/ImpulseDE2/R")
 
 ################################################################################
 ### Main function / Wrapper function
