@@ -8,7 +8,7 @@ simulateDataSetImpulseDE2(vecTimePointsA, vecTimePointsB, vecBatchesA,
   vecBatchesB, scaNConst, scaNImp, scaNLin, scaNSig, scaNRand = 0,
   scaMumax = 1000, scaSDExpressionChange = 1, scaSDRand = NULL,
   scaMuSizeEffect = 1, scaSDSizeEffect = 0.1, scaMuBatchEffect = NULL,
-  scaSDBatchEffect = NULL, dirOutSimulation)
+  scaSDBatchEffect = NULL, dirOutSimulation = NULL)
 }
 \arguments{
 \item{vecTimePointsA}{(numeric vector number of time points)
@@ -62,7 +62,7 @@ batch effects per gene are drawn (reference is batch A).}
 Standard deviation of normal distribution of which scaling factor for 
 batch effects per gene are drawn (reference is batch A).}
 
-\item{dirOutSimulation}{(directory)
+\item{dirOutSimulation}{(directory) [Default NULL]
 Directory to which simulated parameter objects are 
 saved to.}
 }

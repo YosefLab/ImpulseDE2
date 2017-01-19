@@ -49,7 +49,7 @@
 #' @param scaSDBatchEffect (numeric vector number of genes) [Default NULL]
 #'    Standard deviation of normal distribution of which scaling factor for 
 #'    batch effects per gene are drawn (reference is batch A).
-#' @param dirOutSimulation (directory)
+#' @param dirOutSimulation (directory) [Default NULL]
 #'    Directory to which simulated parameter objects are 
 #'    saved to.
 #' 
@@ -67,29 +67,29 @@
 #' 
 #' @export
 simulateDataSetImpulseDE2 <- function(vecTimePointsA,
-  vecTimePointsB,
-  vecBatchesA,
-  vecBatchesB,
-  scaNConst,
-  scaNImp,
-  scaNLin,
-  scaNSig,
-  scaNRand=0,
-  scaMumax=1000,
-  scaSDExpressionChange=1,
-  scaSDRand=NULL,
-  scaMuSizeEffect=1,
-  scaSDSizeEffect=0.1,
-  scaMuBatchEffect=NULL,
-  scaSDBatchEffect=NULL,
-  dirOutSimulation){
+                                      vecTimePointsB,
+                                      vecBatchesA,
+                                      vecBatchesB,
+                                      scaNConst,
+                                      scaNImp,
+                                      scaNLin,
+                                      scaNSig,
+                                      scaNRand=0,
+                                      scaMumax=1000,
+                                      scaSDExpressionChange=1,
+                                      scaSDRand=NULL,
+                                      scaMuSizeEffect=1,
+                                      scaSDSizeEffect=0.1,
+                                      scaMuBatchEffect=NULL,
+                                      scaSDBatchEffect=NULL,
+                                      dirOutSimulation=NULL){
   
   ####
   # Internal functions
   # Evalute impulse model at time points
   evalImpulse <- function(t,beta,t1,t2,h0,h1,h2){
     return(1/h1* (h0+(h1-h0)*1/(1+exp(-beta*(t-t1))))*
-        (h2+(h1-h2)*1/(1+exp(beta*(t-t2)))))
+             (h2+(h1-h2)*1/(1+exp(beta*(t-t2)))))
   }
   # Evalute sigmoid model at time points
   evalSigmoid <- function(t,beta,t1,h0,h1){
@@ -102,13 +102,13 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   vecSamplesA <- vecTimePointsA
   names(vecSamplesA) <- sapply(seq(1, length(vecSamplesA)), function(i){
     paste0("A_", vecSamplesA[i], "_Rep", 
-      match(i, which(vecSamplesA==vecSamplesA[i]) ))
+           match(i, which(vecSamplesA==vecSamplesA[i]) ))
   })
   vecSamplesB <- vecTimePointsB
   if(!is.null(vecSamplesB)){
     names(vecSamplesB) <- sapply(seq(1, length(vecSamplesB)), function(i){
       paste0("B_", vecSamplesB[i], "_Rep", 
-        match(i, which(vecSamplesB==vecSamplesB[i]) ))
+             match(i, which(vecSamplesB==vecSamplesB[i]) ))
     })
     boolCaseCtrl <- TRUE
   } else {
@@ -120,7 +120,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   vecindTimePointAssign <- match(vecSamples, vecTimePointsUnique)
   vecTimePointsUniqueB <- unique(vecSamplesB)
   vecindTimePointAssignB <- match(vecSamplesB, vecTimePointsUniqueB)
-    
+  
   if(is.null(vecBatchesA)){
     print("Setting no batch structure.")
     vecBatchesA <- rep("B_NULL", length(vecSamplesA))
@@ -227,7 +227,7 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     matMuImpulseHidden <- NULL
     matImpulseModelHidden <- NULL
   }
-
+  
   
   # c. Linear functions
   # Draw linear model parameters
@@ -319,37 +319,37 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   
   # f. Merge data
   matMuHidden <- do.call(rbind, list(matMuConstHidden, 
-    matMuImpulseHidden,
-    matMuLinHidden,
-    matMuSigHidden,
-    matMuRandHidden))
+                                     matMuImpulseHidden,
+                                     matMuLinHidden,
+                                     matMuSigHidden,
+                                     matMuRandHidden))
   if(boolCaseCtrl){
     vecCaseCtrlDEIDs <- c(vecImpulseIDs[1:scaNImpDE],
-                           vecLinIDs[1:scaNLinDE],
-                           vecSigIDs[1:scaNSigDE])
+                          vecLinIDs[1:scaNLinDE],
+                          vecSigIDs[1:scaNSigDE])
   }
   
   # Add scaling factors
   # a) Sample size factors
   vecSizeFactorsHidden <- rnorm(n=scaNSamples, 
-    mean=scaMuSizeEffect, sd=scaSDSizeEffect)
+                                mean=scaMuSizeEffect, sd=scaSDSizeEffect)
   vecSizeFactorsHidden[vecSizeFactorsHidden<0.1] <- 0.1
   vecSizeFactorsHidden[vecSizeFactorsHidden>10] <- 10
   names(vecSizeFactorsHidden) <- names(vecSamples)
   # Scale by size factors
   matMuHiddenScaled <- matMuHidden*
     matrix(vecSizeFactorsHidden,
-      nrow=dim(matMuHidden)[1],
-      ncol=dim(matMuHidden)[2], byrow=TRUE)
+           nrow=dim(matMuHidden)[1],
+           ncol=dim(matMuHidden)[2], byrow=TRUE)
   # b) Batch factors
   vecBatchesUnique <- unique(dfAnnotation$Batch)
   vecindBatches <- match(dfAnnotation$Batch, vecBatchesUnique)
   # Check that batches dont coincide with case-ctrl split of samples
   if(boolCaseCtrl & length(vecBatchesUnique)==2){
     if(setequal( dfAnnotation[dfAnnotation$Batch==vecBatchesUnique[1],]$Sample,
-      dfAnnotation[dfAnnotation$Condition=="case",]$Sample ) |
-        setequal( dfAnnotation[dfAnnotation$Batch==vecBatchesUnique[1],]$Sample,
-          dfAnnotation[dfAnnotation$Condition=="ctrl",]$Sample ) ){
+                 dfAnnotation[dfAnnotation$Condition=="case",]$Sample ) |
+       setequal( dfAnnotation[dfAnnotation$Batch==vecBatchesUnique[1],]$Sample,
+                 dfAnnotation[dfAnnotation$Condition=="ctrl",]$Sample ) ){
       stop("Batch structure coincides with case-control structure.")
     }
   }
@@ -357,11 +357,11 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     matBatchFactorsUnqiueHidden <- do.call(rbind, lapply(seq(1,scaNGenes), function(i){
       c(1, 
         rnorm(n=length(vecBatchesUnique)-1, 
-          mean=scaMuBatchEffect, 
-          sd=scaSDBatchEffect)
+              mean=scaMuBatchEffect, 
+              sd=scaSDBatchEffect)
       )
     }))
-                                          
+    
     matBatchFactorsUnqiueHidden[matBatchFactorsUnqiueHidden<0.1] <- 0.1
     matBatchFactorsUnqiueHidden[matBatchFactorsUnqiueHidden>10] <- 10
     matBatchFactorsHidden <- matBatchFactorsUnqiueHidden[,vecindBatches]
@@ -394,29 +394,31 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   }))
   rownames(matObservedData) <- rownames(matMuHiddenScaled)
   colnames(matObservedData) <- colnames(matMuHiddenScaled)
-    
+  
   #  Counts
   matObservedCounts <- round(matObservedData)
   
   # Save simulation
-  save(vecSamples,file=file.path(dirOutSimulation,"Simulation_vecPT.RData"))
-  
-  save(vecConstIDs,file=file.path(dirOutSimulation,"Simulation_vecConstIDs.RData"))
-  save(vecImpulseIDs,file=file.path(dirOutSimulation,"Simulation_vecImpulseIDs.RData"))
-  save(vecLinIDs,file=file.path(dirOutSimulation,"Simulation_vecLinIDs.RData"))
-  save(vecSigIDs,file=file.path(dirOutSimulation,"Simulation_vecSigIDs.RData"))
-  save(vecSigIDs,file=file.path(dirOutSimulation,"Simulation_vecRandIDs.RData"))
-  
-  save(vecSizeFactorsHidden,file=file.path(dirOutSimulation,"Simulation_vecSizeFactorsHidden.RData"))
-  if(length(vecBatchesUnique)>1) { save(matBatchFactorsHidden,file=file.path(dirOutSimulation,"Simulation_matBatchFactorsHidden.RData")) }
-  if(boolCaseCtrl){ save(vecCaseCtrlDEIDs,file=file.path(dirOutSimulation,"Simulation_vecCaseCtrlDEIDs.RData")) }
-  
-  save(matDispHidden,file=file.path(dirOutSimulation,"Simulation_matDispHidden.RData"))
-  save(matImpulseModelHidden,file=file.path(dirOutSimulation,"Simulation_matImpulseModelHidden.RData"))
-  save(matMuHidden,file=file.path(dirOutSimulation,"Simulation_matMuHidden.RData"))
-  save(matMuHiddenScaled,file=file.path(dirOutSimulation,"Simulation_matMuHiddenScaled.RData"))
-  save(matObservedData,file=file.path(dirOutSimulation,"Simulation_matObservedData.RData"))
-  save(matObservedCounts,file=file.path(dirOutSimulation,"Simulation_matObservedCounts.RData"))
+  if(!is.null(dirOutSimulation)){
+    save(vecSamples,file=file.path(dirOutSimulation,"Simulation_vecPT.RData"))
+    
+    save(vecConstIDs,file=file.path(dirOutSimulation,"Simulation_vecConstIDs.RData"))
+    save(vecImpulseIDs,file=file.path(dirOutSimulation,"Simulation_vecImpulseIDs.RData"))
+    save(vecLinIDs,file=file.path(dirOutSimulation,"Simulation_vecLinIDs.RData"))
+    save(vecSigIDs,file=file.path(dirOutSimulation,"Simulation_vecSigIDs.RData"))
+    save(vecSigIDs,file=file.path(dirOutSimulation,"Simulation_vecRandIDs.RData"))
+    
+    save(vecSizeFactorsHidden,file=file.path(dirOutSimulation,"Simulation_vecSizeFactorsHidden.RData"))
+    if(length(vecBatchesUnique)>1) { save(matBatchFactorsHidden,file=file.path(dirOutSimulation,"Simulation_matBatchFactorsHidden.RData")) }
+    if(boolCaseCtrl){ save(vecCaseCtrlDEIDs,file=file.path(dirOutSimulation,"Simulation_vecCaseCtrlDEIDs.RData")) }
+    
+    save(matDispHidden,file=file.path(dirOutSimulation,"Simulation_matDispHidden.RData"))
+    save(matImpulseModelHidden,file=file.path(dirOutSimulation,"Simulation_matImpulseModelHidden.RData"))
+    save(matMuHidden,file=file.path(dirOutSimulation,"Simulation_matMuHidden.RData"))
+    save(matMuHiddenScaled,file=file.path(dirOutSimulation,"Simulation_matMuHiddenScaled.RData"))
+    save(matObservedData,file=file.path(dirOutSimulation,"Simulation_matObservedData.RData"))
+    save(matObservedCounts,file=file.path(dirOutSimulation,"Simulation_matObservedCounts.RData"))
+  }
   
   return(list( dfAnnotation      = dfAnnotation,
                matObservedCounts = matObservedCounts ))
