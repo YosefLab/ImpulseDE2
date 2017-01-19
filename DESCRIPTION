@@ -7,8 +7,8 @@ Author: David Sebastian Fischer [aut, cre],
     Nir Yosef [aut]
 Maintainer: David Sebastian Fischer <david.seb.fischer@gmail.com>,
     Nir Yosef <niryosef@berkeley.edu>
-Description: Differential expression analysis of longitudinal count data sets,
-    such nex-generation sequencing data: RNA-seq, ATAC-seq, DNaseI-seq, ChIP-seq.
+Description: ImpulseDE2 is a differential expression algorithm for longitudinal count data sets
+which arise in sequencing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
 License: GPL-3
 biocViews: Software,
     StatisticalMethod,

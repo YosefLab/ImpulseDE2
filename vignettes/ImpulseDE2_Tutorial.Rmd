@@ -1,5 +1,5 @@
 ---
-title: "ImpulseDE2_Tutorial"
+title: "ImpulseDE2 Tutorial"
 author: "David S. Fischer"
 date: "January 17, 2017"
 #bibliography: bibFile.bib
@@ -23,7 +23,8 @@ options(getClass.msg=FALSE)
 
 ## Introduction
 
-ImpulseDE2 is a differential expression algorithm for longitudinal count data sets.
+ImpulseDE2 is a differential expression algorithm for longitudinal count data sets
+which arise in sequencing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
 ImpulseDE2 can correct for batch effects (from multiple confounding variables) and library depth.
 We distinguish case-only and case-control differential expression analysis:
 Case-only differential expression analysis tests, whether the expression level of a gene changes over time.
