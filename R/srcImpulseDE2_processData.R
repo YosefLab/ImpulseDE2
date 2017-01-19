@@ -339,9 +339,9 @@ processData <- function(dfAnnotation,
 		  # Create one new column for each nested batch
 		  for(confounder in vecConfounders){
 		    vecBatchesCase <- dfAnnotationProc[dfAnnotationProc$Condition=="case",confounder]
-		    vecNestedBatchesCase <- match(vecBatchesCase, unique(vecBatchesCase))
+		    vecNestedBatchesCase <- paste0("NestedBatch", match(vecBatchesCase, unique(vecBatchesCase)))
 		    vecBatchesCtrl <- dfAnnotationProc[dfAnnotationProc$Condition=="control",confounder]
-		    vecNestedBatchesCtrl <- match(vecBatchesCtrl, unique(vecBatchesCtrl))
+		    vecNestedBatchesCtrl <- paste0("NestedBatch", match(vecBatchesCtrl, unique(vecBatchesCtrl)))
 		    vecBatchesNested <- array(NA, dim(dfAnnotationProc)[1])
 		    vecBatchesNested[dfAnnotationProc$Condition=="case"] <- vecNestedBatchesCase
 		    vecBatchesNested[dfAnnotationProc$Condition=="control"] <- vecNestedBatchesCtrl

@@ -27,6 +27,6 @@ errors during model fitting.
 David Sebastian Fischer
 }
 \seealso{
-Compiled version: evalImpulse_comp
+Compiled version: \link{evalImpulse_comp}
 }
 

@@ -5,15 +5,12 @@
 \title{Perform differential expression analysis and identification
 of transiently activated or deactivated genes.}
 \usage{
-runDEAnalysis(objectImpulseDE2, vecAllIDs = NULL, boolCaseCtrl,
-  vecConfounders, boolIdentifyTransients, scaQThresTransients = 0.001)
+runDEAnalysis(objectImpulseDE2, boolCaseCtrl, vecConfounders,
+  boolIdentifyTransients, scaQThresTransients = 0.001)
 }
 \arguments{
 \item{objectImpulseDE2}{(object class ImpulseDE2Object)
 Object containing fits to be evaluated.}
-
-\item{vecAllIDs}{(string vector length number of all originally given genes)
-IDs of all originally given genes.}
 
 \item{boolCaseCtrl}{(bool) 
 Whether to perform case-control analysis. Does case-only
@@ -32,6 +29,9 @@ and hypothesis testing between constant, sigmoidal and impulse model.}
 FDR-corrected p-value threshold for hypothesis tests between
 impulse, sigmoidal and constant model used to identify transiently
 regulated genes.}
+
+\item{vecAllIDs}{(string vector length number of all originally given genes)
+IDs of all originally given genes.}
 }
 \value{
 objectImpulseDE2 (ImpulseDE2Object)

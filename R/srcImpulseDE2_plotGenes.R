@@ -58,7 +58,7 @@ plotGenes <- function(vecGeneIDs=NULL,
                       dirOut,
                       strFileName="ImpulseDE2_Trajectories.pdf",
                       boolMultiplePlotsPerPage=TRUE,
-                      boolSimplePlot=TRUE,
+                      boolSimplePlot=FALSE,
                       vecRefPval=NULL, 
                       strNameRefMethod=NULL){
   
@@ -72,6 +72,8 @@ plotGenes <- function(vecGeneIDs=NULL,
   
   # Set graphical parameters
   scaNPlotsPerPage <- 4
+  # Colour-blind palette
+  cbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
   
   # Check input
   if(is.null(lsModelFits)) error("objectImpulseDE2 does not contain model fits. Run ImpulseDE2_main first.")
@@ -81,7 +83,7 @@ plotGenes <- function(vecGeneIDs=NULL,
     print("Setting boolSimplePlot=TRUE as no batch structure was found.")
     boolSimplePlot <- TRUE
   }
-  if(is.null(dirOut) | !file.exists(dirOut)) stop("Output directory dirOut not available.")
+  if(!is.null(dirOut) & !file.exists(dirOut)) stop("Output directory dirOut not available.")
   if(!is.null(vecRefPval)) if(names(vecRefPval) != vecGeneIDs) stop("Names of vecRefPval have to be IDs from vecGeneIDs.")
   if(!boolSimplePlot & boolCaseCtrl & boolMultiplePlotsPerPage) 
     warning("Plots are likely overloaded. Consider switching to boolSimplePlot=TRUE or boolMultiplePlotsPerPage=FALSE.")
@@ -211,7 +213,7 @@ plotGenes <- function(vecGeneIDs=NULL,
           geom_line(data=dfFit, aes(x=time, y=value, colour=BatchFit, linetype=BatchFit))
       }
     }
-    gplotID <- gplotGene + 
+    gplotID <- gplotGene +  scale_colour_manual(values=cbPalette) +
       xlab("time [hours]") +
       ylab("Read counts")
     if(!is.null(strNameRefMethod)){
@@ -228,31 +230,33 @@ plotGenes <- function(vecGeneIDs=NULL,
     lsgplotsID[[length(lsgplotsID)+1]] <- gplotID
   }
   
-  # Printing to file
-  dirFileOut <- paste0(dirOut, strFileName)
-  print(paste0("Creating ", dirFileOut))
-  graphics.off()
-  if(boolMultiplePlotsPerPage){
-    pdf(dirFileOut)
-    scaNPages <- scaNIDs %/% scaNPlotsPerPage
-    if(scaNIDs %% scaNPlotsPerPage == 0) scaNPages <- scaNPages-1
-    for(p in seq(0,scaNPages)){
-      if(p < scaNIDs %/% scaNPlotsPerPage){ vecidxPlots <- seq((p*scaNPlotsPerPage+1),((p+1)*(scaNPlotsPerPage)))
-      } else { vecidxPlots <- seq((p*scaNPlotsPerPage+1),scaNIDs) }
-      print(plot_grid(plotlist=lsgplotsID[vecidxPlots],
-                      align="h",
-                      nrow=scaNPlotsPerPage/2, ncol=2,
-                      rel_widths=c(1,1),
-                      rel_heights=c(1,1,1)))
+  # Print to file
+  if(!is.null(dirOut)){
+    dirFileOut <- paste0(dirOut, strFileName)
+    print(paste0("Creating ", dirFileOut))
+    graphics.off()
+    if(boolMultiplePlotsPerPage){
+      pdf(dirFileOut)
+      scaNPages <- scaNIDs %/% scaNPlotsPerPage
+      if(scaNIDs %% scaNPlotsPerPage == 0) scaNPages <- scaNPages-1
+      for(p in seq(0,scaNPages)){
+        if(p < scaNIDs %/% scaNPlotsPerPage){ vecidxPlots <- seq((p*scaNPlotsPerPage+1),((p+1)*(scaNPlotsPerPage)))
+        } else { vecidxPlots <- seq((p*scaNPlotsPerPage+1),scaNIDs) }
+        print(plot_grid(plotlist=lsgplotsID[vecidxPlots],
+                        align="h",
+                        nrow=scaNPlotsPerPage/2, ncol=2,
+                        rel_widths=c(1,1),
+                        rel_heights=c(1,1,1)))
+      }
+    } else {
+      pdf(dirFileOut)
+      for(p in seq(1,scaNIDs)){
+        print(lsgplotsID[[p]])
+      }
     }
-  } else {
-    pdf(dirFileOut)
-    for(p in seq(1,scaNIDs)){
-      print(lsgplotsID[[p]])
-    }
+    dev.off()
+    graphics.off()
   }
-  dev.off()
-  graphics.off()
   
   # Return raw list of gplots
   return(lsgplotsID)

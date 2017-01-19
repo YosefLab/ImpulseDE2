@@ -20,6 +20,8 @@
 #'     Model values for given time points.
 #'     
 #' @author David Sebastian Fischer
+#' 
+#' @export
 evalImpulse <- function(vecImpulseParam,
                         vecTimepoints){
   
@@ -59,4 +61,6 @@ evalImpulse <- function(vecImpulseParam,
 #'     Model values for given time points.
 #' 
 #' @author David Sebastian Fischer
+#' 
+#' @export
 evalImpulse_comp <- cmpfun(evalImpulse)

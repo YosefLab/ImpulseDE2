@@ -7,10 +7,10 @@
 \title{ImpulseDE2 wrapper}
 \usage{
 runImpulseDE2(matCountData = NULL, dfAnnotation = NULL,
-  boolCaseCtrl = NULL, vecConfounders = NULL, scaNProc = 1,
+  boolCaseCtrl = FALSE, vecConfounders = NULL, scaNProc = 1,
   scaQThres = NULL, vecDispersionsExternal = NULL,
   vecSizeFactorsExternal = NULL, boolIdentifyTransients = FALSE,
-  boolVerbose = TRUE, dirTemp = NULL)
+  boolVerbose = TRUE)
 }
 \arguments{
 \item{matCountData}{(matrix genes x samples) [Default NULL] 
@@ -21,7 +21,7 @@ Read count data, unobserved entries are NA.}
 (and confounding variables if given).}
 Annotation table with covariates for each sample.}
 
-\item{boolCaseCtrl}{(bool) 
+\item{boolCaseCtrl}{(bool) [Default FALSE]
 Whether to perform case-control analysis. Does case-only
 analysis if FALSE.}
 
@@ -53,10 +53,6 @@ and hypothesis testing between constant, sigmoidal and impulse model.}
 
 \item{boolVerbose}{(bool) [Default TRUE] Whether to print
 progress to stdout.}
-
-\item{dirTemp}{(dir) [Default NULL]
-Directory to which temporary results are saved as .RData files.
-No results are saved to files if NULL.}
 }
 \value{
 (object of class ImpulseDE2Object)
@@ -124,8 +120,6 @@ This object can be treated as a list with 2 elements:
 Wrapper to run ImpulseDE2 on bulk omics count data.
 This wrapper can perform the entire analysis pipeline of 
 ImpulseDE2 on its own if the right parameters are supplied.
-Core results are returned, additional objects may be saved to
-a directory supplied by the user.
 To run ImpulseDE2 on bulk omics count data, use the minimal
 parameter set:
 \itemize{
@@ -143,8 +137,6 @@ Additionally, you can provide:
    will tell you if it is necessary).
    \item vecSizeFactorsExternal to supply external size factors.
    \item boolVerbose to control stdout output.
-   \item dirTemp to save temporary data to the given directory 
-   (recommended for trouble shooting and reproducibility of results).
 }
 }
 \details{

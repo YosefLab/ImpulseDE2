@@ -6,7 +6,7 @@
 \usage{
 plotGenes(vecGeneIDs = NULL, scaNTopIDs = NULL, objectImpulseDE2,
   boolCaseCtrl, dirOut, strFileName = "ImpulseDE2_Trajectories.pdf",
-  boolMultiplePlotsPerPage = TRUE, boolSimplePlot = TRUE,
+  boolMultiplePlotsPerPage = TRUE, boolSimplePlot = FALSE,
   vecRefPval = NULL, strNameRefMethod = NULL)
 }
 \arguments{

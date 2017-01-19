@@ -24,6 +24,8 @@
 #'    sequencing depth into account (size factors).
 #' 
 #' @author David Sebastian Fischer
+#' 
+#' @export
 computeSizeFactors <- function(matCountDataProc){
   
   # Compute geometric count mean over replicates
@@ -80,6 +82,8 @@ computeSizeFactors <- function(matCountDataProc){
 #'    sequencing depth into account (size factors).
 #' 
 #' @author David Sebastian Fischer
+#' 
+#' @export
 computeNormConst <- function(matCountDataProc,
                              vecSizeFactorsExternal=NULL){
   

@@ -20,8 +20,6 @@ NULL
 #' Wrapper to run ImpulseDE2 on bulk omics count data.
 #' This wrapper can perform the entire analysis pipeline of 
 #' ImpulseDE2 on its own if the right parameters are supplied.
-#' Core results are returned, additional objects may be saved to
-#' a directory supplied by the user.
 #' To run ImpulseDE2 on bulk omics count data, use the minimal
 #' parameter set:
 #' \itemize{
@@ -39,8 +37,6 @@ NULL
 #'    will tell you if it is necessary).
 #'    \item vecSizeFactorsExternal to supply external size factors.
 #'    \item boolVerbose to control stdout output.
-#'    \item dirTemp to save temporary data to the given directory 
-#'    (recommended for trouble shooting and reproducibility of results).
 #' }
 #' 
 #' @details ImpulseDE2 is based on the impulse model proposed by
@@ -70,7 +66,7 @@ NULL
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
 #'    Annotation table with covariates for each sample.
-#' @param boolCaseCtrl (bool) 
+#' @param boolCaseCtrl (bool) [Default FALSE]
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
 #' @param vecConfounders (vector of strings number of confounding variables)
@@ -95,9 +91,6 @@ NULL
 #'    and hypothesis testing between constant, sigmoidal and impulse model.
 #' @param boolVerbose (bool) [Default TRUE] Whether to print
 #'    progress to stdout.
-#' @param dirTemp (dir) [Default NULL]
-#'    Directory to which temporary results are saved as .RData files.
-#'    No results are saved to files if NULL.
 #' 
 #' @return (object of class ImpulseDE2Object)
 #' This object can be treated as a list with 2 elements:
@@ -165,15 +158,14 @@ NULL
 #' @export
 runImpulseDE2 <- function(matCountData=NULL, 
   dfAnnotation=NULL,
-  boolCaseCtrl=NULL,
+  boolCaseCtrl=FALSE,
   vecConfounders=NULL,
   scaNProc=1, 
   scaQThres=NULL,
   vecDispersionsExternal=NULL,
   vecSizeFactorsExternal=NULL,
   boolIdentifyTransients=FALSE,
-  boolVerbose=TRUE,
-  dirTemp=NULL ){
+  boolVerbose=TRUE ){
   
   strMessage <- "ImpulseDE2 v1.0 for count data"
   if(boolVerbose) print(strMessage)
@@ -199,17 +191,9 @@ runImpulseDE2 <- function(matCountData=NULL,
     if(boolVerbose) write(lsProcessedData$strReportProcessing, file="", ncolumns=1)
     strReport <- paste0(strReport, lsProcessedData$strReportProcessing)
     
-    # Check temp directory
-    if(!is.null(dirTemp)) if(!file.exists(dirTemp)) stop(paste0("ERROR: dirTemp not available."))
-    
     # Set parallelisation
     if(scaNProc > 1){ register(MulticoreParam(workers=scaNProc)) 
     } else { register(SerialParam()) }
-    
-    if(!is.null(dirTemp)){
-      save(matCountDataProc,file=file.path(dirTemp,"ImpulseDE2_matCountDataProc.RData"))
-      save(dfAnnotationProc,file=file.path(dirTemp,"ImpulseDE2_dfAnnotationProc.RData"))
-    }
     
     # 2. Run DESeq2
     # Use dispersion factors from DESeq2 if
@@ -234,9 +218,6 @@ runImpulseDE2 <- function(matCountData=NULL,
       strReport <- paste0(strReport, "\n", strMessage)
       vecDispersions <- vecDispersionsExternalProc
     }
-    if(!is.null(dirTemp)){
-      save(vecDispersions,file=file.path(dirTemp,"ImpulseDE2_vecDispersions.RData"))
-    }
     
     # 3. Compute size factors
     strMessage <- "# Compute size factors"
@@ -245,9 +226,6 @@ runImpulseDE2 <- function(matCountData=NULL,
     vecSizeFactors <- computeNormConst(
     	matCountDataProc=matCountDataProc,
       vecSizeFactorsExternal=vecSizeFactorsExternalProc )
-    if(!is.null(dirTemp)){
-      save(vecSizeFactors,file=file.path(dirTemp,"ImpulseDE2_vecSizeFactors.RData"))
-    }
     
     # 4. Create instance of ImpulseDE2Object
     # Create ImpulseDE2 object
@@ -275,9 +253,6 @@ runImpulseDE2 <- function(matCountData=NULL,
         vecConfounders=vecConfounders,
         boolCaseCtrl=boolCaseCtrl)
     })
-    if(!is.null(dirTemp)){
-      save(objectImpulseDE2@lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
-    }
     strMessage <- paste0("Consumed time: ",round(tm_fitImpulse["elapsed"]/60,2)," min.")
     if(boolVerbose) print(strMessage)
     objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
@@ -293,9 +268,6 @@ runImpulseDE2 <- function(matCountData=NULL,
           vecConfounders=vecConfounders,
           strCondition="case")
       })
-      if(!is.null(dirTemp)){
-        save(objectImpulseDE2@lsModelFits,file=file.path(dirTemp,"ImpulseDE2_lsModelFits.RData"))
-      }
       strMessage <- paste0("Consumed time: ",round(tm_fitSigmoid["elapsed"]/60,2)," min.")
       if(boolVerbose) print(strMessage)
       objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
@@ -323,12 +295,6 @@ runImpulseDE2 <- function(matCountData=NULL,
       vecDEGenes <- NULL
     }
     objectImpulseDE2@vecDEGenes <- vecDEGenes
-    if(!is.null(dirTemp)){
-      save(objectImpulseDE2@dfImpulseDE2Results,file=file.path(dirTemp,"ImpulseDE2_dfImpulseDE2Results.RData"))
-      if(!is.null(scaQThres)){
-        save(objectImpulseDE2@vecDEGenes,file=file.path(dirTemp,"ImpulseDE2_vecDEGenes.RData"))
-      }
-    }
   })
   strMessage <- "Finished running ImpulseDE2."
   if(boolVerbose) print(strMessage)

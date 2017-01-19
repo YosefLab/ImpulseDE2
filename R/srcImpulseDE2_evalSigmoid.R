@@ -20,6 +20,8 @@
 #'    Model values for given time points.
 #'    
 #' @author David Sebastian Fischer
+#' 
+#' @export
 evalSigmoid <- function(vecSigmoidParam,
                         vecTimepoints){
   
@@ -54,4 +56,6 @@ evalSigmoid <- function(vecSigmoidParam,
 #'    Model values for given time points.
 #' 
 #' @author David Sebastian Fischer
+#' 
+#' @export
 evalSigmoid_comp <- cmpfun(evalSigmoid)
