@@ -205,6 +205,7 @@ setClass(
     vecDEGenes          = "characterORNULL",
     lsModelFits         = "listORNULL",
     matCountDataProc    = "matrix",
+    vecAllIDs           = "characterORNULL",
     dfAnnotationProc    = "data.frame",
     vecSizeFactors      = "numeric",
     vecDispersions      = "numeric",

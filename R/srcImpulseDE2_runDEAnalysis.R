@@ -15,8 +15,6 @@
 #' 
 #' @param objectImpulseDE2 (object class ImpulseDE2Object)
 #'    Object containing fits to be evaluated.
-#' @param vecAllIDs (string vector length number of all originally given genes)
-#'    IDs of all originally given genes.
 #' @param boolCaseCtrl (bool) 
 #' 		Whether to perform case-control analysis. Does case-only
 #' 		analysis if FALSE.
@@ -241,7 +239,7 @@ runDEAnalysis <- function(objectImpulseDE2,
     # Classify trajectories as tranient change or monotonous change (transition).
     # Note that significant impulse vs sigmoid hits include monotonous fits which
     # are better fit by impulse than by sigmoid, this is corrected for here.
-    vecTimePointsCase <- sort(objectImpulseDE2@objectImpulseDE2@lsModelFits$IdxGroups$case$vecTimepointsUnique, decreasing=FALSE)
+    vecTimePointsCase <- sort(objectImpulseDE2@lsModelFits$IdxGroups$case$vecTimepointsUnique, decreasing=FALSE)
     vecboolMonotonousImpulseTraject <- sapply(objectImpulseDE2@lsModelFits$case, function(fit){
       # Do not use stored per sample fits from objectImpulseDE2@lsModelFits here:
       # These fits contain batch factors and we are only interested in the
@@ -261,9 +259,9 @@ runDEAnalysis <- function(objectImpulseDE2,
       vecPvalueSigmoidConstBH <= scaQThresTransients
   }
   
-  dfDEAnalysis <- dfDEAnalysis[match(vecAllIDs,dfDEAnalysis$Gene),]
-  rownames(dfDEAnalysis) <- vecAllIDs
-  vecboolAllZero <- !(vecAllIDs %in% rownames(objectImpulseDE2@matCountDataProc))
+  dfDEAnalysis <- dfDEAnalysis[match(objectImpulseDE2@vecAllIDs,dfDEAnalysis$Gene),]
+  rownames(dfDEAnalysis) <- objectImpulseDE2@vecAllIDs
+  vecboolAllZero <- !(objectImpulseDE2@vecAllIDs %in% rownames(objectImpulseDE2@matCountDataProc))
   dfDEAnalysis$allZero <- vecboolAllZero
   
   objectImpulseDE2@dfImpulseDE2Results <- dfDEAnalysis
@@ -348,7 +346,6 @@ updateDEAnalysis <- function(objectImpulseDE2,
                              scaQThresTransients=0.001){
   
   objectImpulseDE2 <- runDEAnalysis(objectImpulseDE2=objectImpulseDE2,
-                                    vecAllIDs=rownames(objectImpulseDE2$dfImpulseDE2Results),
                                     boolCaseCtrl=objectImpulseDE2@boolCaseCtrl,
                                     vecConfounders=objectImpulseDE2@vecConfounders,
                                     boolIdentifyTransients=TRUE,

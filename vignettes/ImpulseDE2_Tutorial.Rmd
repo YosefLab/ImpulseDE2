@@ -5,7 +5,6 @@ date: "January 17, 2017"
 #bibliography: bibFile.bib
 output:
 BiocStyle::html_document:
-toc: true
 vignette: >
   %\VignetteEncoding{UTF-8}
 ---
@@ -14,9 +13,9 @@ vignette: >
 ```{r options, include=FALSE, cache=FALSE, results='hide', message=FALSE}
 
 knitr::opts_chunk$set(fig.align="center", cache=FALSE,error=FALSE,
-                      fig.width=6,fig.height=6,autodep=TRUE,
+                      fig.width=6,fig.height=6,
                       out.width="600px", out.height="600px",
-                      results="markup", echo=TRUE, eval=TRUE)
+                      message=FALSE, results="markup", echo=TRUE, eval=TRUE)
 
 options(getClass.msg=FALSE)
 ```
@@ -85,7 +84,7 @@ objectImpulseDE2 <- runImpulseDE2(matCountData    = lsSimulatedData$matObservedC
                                   dfAnnotation    = lsSimulatedData$dfAnnotation,
                                   boolCaseCtrl    = FALSE,
                                   vecConfounders  = NULL,
-                                  scaNProc        = 1 )
+                                  scaNProc        = 3 )
 head(objectImpulseDE2$dfImpulseDE2Results)
 ```
 
@@ -123,7 +122,7 @@ objectImpulseDE2 <- runImpulseDE2(matCountData    = lsSimulatedData$matObservedC
                                   dfAnnotation    = lsSimulatedData$dfAnnotation,
                                   boolCaseCtrl    = FALSE,
                                   vecConfounders  = c("Batch"),
-                                  scaNProc        = 1 )
+                                  scaNProc        = 3 )
 head(objectImpulseDE2$dfImpulseDE2Results)
 ```
 
@@ -190,7 +189,7 @@ objectImpulseDE2 <- runImpulseDE2(matCountData    = lsSimulatedData$matObservedC
                                   dfAnnotation    = lsSimulatedData$dfAnnotation,
                                   boolCaseCtrl    = TRUE,
                                   vecConfounders  = c("Batch"),
-                                  scaNProc        = 1 )
+                                  scaNProc        = 3 )
 head(objectImpulseDE2$dfImpulseDE2Results)
 ```
 
@@ -221,7 +220,7 @@ objectImpulseDE2 <- runImpulseDE2(matCountData           = lsSimulatedData$matOb
                                   boolCaseCtrl           = FALSE,
                                   vecConfounders         = c("Batch"),
                                   boolIdentifyTransients = TRUE,
-                                  scaNProc               = 1 )
+                                  scaNProc               = 3 )
 head(objectImpulseDE2$dfImpulseDE2Results)
 ```
 
@@ -242,7 +241,8 @@ this is usually the case condition.
 Finally, a false-discovery rate corrected p-value threshold for the model selection of the transient regulation analysis has to be set via scaQThres.
 
 The output of plotHeatmap includes two objects of the class ComplexHeatmap which can be plotted with draw().
-```{r heatmap}
+
+```{r heatmap, echo=TRUE}
 # Continuing script of "Transiently regulated genes"
 library(ComplexHeatmap)
 lsHeatmaps <- plotHeatmap(objectImpulseDE2       = objectImpulseDE2,
@@ -250,5 +250,4 @@ lsHeatmaps <- plotHeatmap(objectImpulseDE2       = objectImpulseDE2,
                           boolIdentifyTransients = TRUE,
                           scaQThres              = 0.01)
 draw(lsHeatmaps$complexHeatmapRaw) # Heatmap based on normalised counts
-draw(lsHeatmaps$complexHeatmapFit) # Heatmap based on expression model fits
 ```

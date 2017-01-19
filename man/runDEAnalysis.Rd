@@ -29,9 +29,6 @@ and hypothesis testing between constant, sigmoidal and impulse model.}
 FDR-corrected p-value threshold for hypothesis tests between
 impulse, sigmoidal and constant model used to identify transiently
 regulated genes.}
-
-\item{vecAllIDs}{(string vector length number of all originally given genes)
-IDs of all originally given genes.}
 }
 \value{
 objectImpulseDE2 (ImpulseDE2Object)

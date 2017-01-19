@@ -83,7 +83,7 @@ plotGenes <- function(vecGeneIDs=NULL,
     print("Setting boolSimplePlot=TRUE as no batch structure was found.")
     boolSimplePlot <- TRUE
   }
-  if(!is.null(dirOut) & !file.exists(dirOut)) stop("Output directory dirOut not available.")
+  if(!is.null(dirOut)) if(!file.exists(dirOut)) stop("Output directory dirOut not available.")
   if(!is.null(vecRefPval)) if(names(vecRefPval) != vecGeneIDs) stop("Names of vecRefPval have to be IDs from vecGeneIDs.")
   if(!boolSimplePlot & boolCaseCtrl & boolMultiplePlotsPerPage) 
     warning("Plots are likely overloaded. Consider switching to boolSimplePlot=TRUE or boolMultiplePlotsPerPage=FALSE.")

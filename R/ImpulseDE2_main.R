@@ -234,6 +234,7 @@ runImpulseDE2 <- function(matCountData=NULL,
                             vecDEGenes          = NULL,
                             lsModelFits         = NULL,
                             matCountDataProc    = matCountDataProc,
+                            vecAllIDs           = rownames(matCountData),
                             dfAnnotationProc    = dfAnnotationProc,
                             vecSizeFactors      = vecSizeFactors,
                             vecDispersions      = vecDispersions,
@@ -279,7 +280,6 @@ runImpulseDE2 <- function(matCountData=NULL,
     objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
     objectImpulseDE2 <- runDEAnalysis(
       objectImpulseDE2=objectImpulseDE2,
-      vecAllIDs=rownames(matCountData),
       boolCaseCtrl=boolCaseCtrl,
       vecConfounders=vecConfounders,
       boolIdentifyTransients=boolIdentifyTransients)
