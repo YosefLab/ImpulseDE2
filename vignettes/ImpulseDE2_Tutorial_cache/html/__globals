@@ -1,0 +1,19 @@
+case-only	library	rep	seq	simulateDataSetImpulseDE2
+case-only-batch	c	library	rep	seq	simulateDataSetImpulseDE2
+plot-genes	[[	library	objectImpulseDE2	plotGenes	print
+case-control-batch	c	rep	seq	simulateDataSetImpulseDE2
+transients	$	c	library	rep	runImpulseDE2	seq	simulateDataSetImpulseDE2
+heatmap	$	draw	library	objectImpulseDE2	plotHeatmap
+case-only-results	$	head	objectImpulseDE2
+case-only-batch-results	$	head	objectImpulseDE2
+case-cntrol-results	$	head	objectImpulseDE2
+case-control-results	$	head	objectImpulseDE2
+transient-results	$	head	objectImpulseDE2
+session	sessionInfo
+case-only-annotation	$	lsSimulatedData
+case-only2	$	lsSimulatedData	runImpulseDE2
+case-only-batch-annotation	$	lsSimulatedData
+case-only-batchc2	$	c	lsSimulatedData	runImpulseDE2
+case-control-annotation	$	lsSimulatedData
+case-control2	$	c	lsSimulatedData	runImpulseDE2
+case-only-batch2	$	c	lsSimulatedData	runImpulseDE2

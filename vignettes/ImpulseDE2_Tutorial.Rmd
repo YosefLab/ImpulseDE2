@@ -1,30 +1,41 @@
 ---
-title: "ImpulseDE2_Tutorial"
+title: "ImpulseDE2 Tutorial"
 author: "David S. Fischer"
-date: "January 17, 2017"
-#bibliography: bibFile.bib
+date: "`r Sys.Date()`"
 output:
-BiocStyle::html_document:
-toc: true
+  BiocStyle::html_document:
+    toc: true
 vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+<!--
+%\VignetteEngine{knitr::rmarkdown}
+%\VignetteIndexEntry{ImpulseDE2 Vignette}
+-->
 
-```{r options, include=FALSE, cache=FALSE, results='hide', message=FALSE}
+```{r options, cache=FALSE, include=FALSE, results='hide', message=FALSE, warning=FALSE}
 
-knitr::opts_chunk$set(fig.align="center", cache=FALSE,error=FALSE,
-                      fig.width=6,fig.height=6,autodep=TRUE,
-                      out.width="600px", out.height="600px",
-                      results="markup", echo=TRUE, eval=TRUE)
+knitr::opts_chunk$set(fig.align="center", 
+                      cache=TRUE,
+                      error=FALSE,
+                      fig.width=6,fig.height=6,
+                      autodep=TRUE,
+                      out.width="600px", 
+                      out.height="600px",
+                      message=FALSE,
+                      warning=FALSE,
+                      results="hide", 
+                      echo=TRUE, 
+                      eval=TRUE)
 
 options(getClass.msg=FALSE)
 ```
 
+# Introduction
 
-## Introduction
-
-ImpulseDE2 is a differential expression algorithm for longitudinal count data sets.
+ImpulseDE2 is a parallelizable differential expression algorithm for longitudinal count data sets
+which arise in sequencing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
 ImpulseDE2 can correct for batch effects (from multiple confounding variables) and library depth.
 We distinguish case-only and case-control differential expression analysis:
 Case-only differential expression analysis tests, whether the expression level of a gene changes over time.
@@ -33,20 +44,23 @@ Here, we demonstrate the usage of ImpulseDE2 in different scenarios based on sim
 
 To run ImpulseDE2 on bulk omics count data, a user should consider the minimal parameter set for 
 the wrapper function runImpulseDE2:
-*  matCountData
-*  dfAnnotation
-*  boolCaseCtrl
-*  vecConfounders
+
+* matCountData
+* dfAnnotation
+* boolCaseCtrl
+* vecConfounders
+
 Additionally, one can provide:
-*  scaNProc to set the number of processes for parallelisation.
-*  scaQThres to set the cut off for your DE gene list. 
-*  vecDispersionsExternal to supply external dispersion parameters
+
+* scaNProc to set the number of processes for parallelisation.
+* scaQThres to set the cut off for your DE gene list. 
+* vecDispersionsExternal to supply external dispersion parameters
 which may be necessary depending on your confounding factors (runImpulseDE2
 will tell you if it is necessary).
-*  vecSizeFactorsExternal to supply external size factors.
-*  boolVerbose to control stdout output.
+* vecSizeFactorsExternal to supply external size factors.
+* boolVerbose to control stdout output.
 
-## Case-only differential expression analysis
+# Case-only differential expression analysis
 
 Here, we present a case-only differential expression scenario without batch effects.
 We simulate data from 8 time points (1 to 8 with arbitrary unit) with three replicates each (vecTimepointsA).
@@ -67,29 +81,38 @@ The differential expression results can be accessed as a data frame in the outpu
 via objectImpulseDE2$dfImpulseDE2Results.
 The output object is an instance of the class ImpulseDE2Object which carries additional internal data
 which can be accessed via accessor functions starting with "get_".
+
 ```{r case-only}
 library(ImpulseDE2)
-dirOutSimulation <- getwd()
-lsSimulatedData <- simulateDataSetImpulseDE2(vecTimePointsA   = rep(seq(1,8),3),
-                                             vecTimePointsB   = NULL,
-                                             vecBatchesA      = NULL,
-                                             vecBatchesB      = NULL,
-                                             scaNConst        = 300,
-                                             scaNImp          = 100,
-                                             scaNLin          = 100,
-                                             scaNSig          = 100,
-                                             scaMuBatchEffect = NULL,
-                                             scaSDBatchEffect = NULL,
-                                             dirOutSimulation = dirOutSimulation)
-objectImpulseDE2 <- runImpulseDE2(matCountData    = lsSimulatedData$matObservedCounts, 
-                                  dfAnnotation    = lsSimulatedData$dfAnnotation,
-                                  boolCaseCtrl    = FALSE,
-                                  vecConfounders  = NULL,
-                                  scaNProc        = 1 )
+lsSimulatedData <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = NULL,
+  vecBatchesA      = NULL,
+  vecBatchesB      = NULL,
+  scaNConst        = 30,
+  scaNImp          = 10,
+  scaNLin          = 10,
+  scaNSig          = 10,
+  scaMuBatchEffect = NULL,
+  scaSDBatchEffect = NULL,
+  dirOutSimulation = NULL)
+```
+```{r case-only-annotation, results='markdown'}
+lsSimulatedData$dfAnnotation
+```
+```{r case-only2}
+objectImpulseDE2 <- runImpulseDE2(
+  matCountData    = lsSimulatedData$matObservedCounts, 
+  dfAnnotation    = lsSimulatedData$dfAnnotation,
+  boolCaseCtrl    = FALSE,
+  vecConfounders  = NULL,
+  scaNProc        = 1 )
+```
+```{r case-only-results, results='markdown'}
 head(objectImpulseDE2$dfImpulseDE2Results)
 ```
 
-## Batch effects
+# Batch effects
 
 Here, we present a case-only differential expression scenario with batch effects.
 Refer to "Case-only differential expression analysis" for details.
@@ -106,28 +129,35 @@ we turn on ImpulseDE2 batch effect correction for this confounding variable.
 
 ```{r case-only-batch}
 library(ImpulseDE2)
-dirOutSimulation <- getwd()
-lsSimulatedData <- simulateDataSetImpulseDE2(vecTimePointsA   = rep(seq(1,8),3),
-                                             vecTimePointsB   = NULL,
-                                             vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
-                                             vecBatchesB      = NULL,
-                                             scaNConst        = 300,
-                                             scaNImp          = 100,
-                                             scaNLin          = 100,
-                                             scaNSig          = 100,
-                                             scaMuBatchEffect = 1,
-                                             scaSDBatchEffect = 0.2,
-                                             dirOutSimulation = dirOutSimulation)
-head(lsSimulatedData$dfAnnotation)
-objectImpulseDE2 <- runImpulseDE2(matCountData    = lsSimulatedData$matObservedCounts, 
-                                  dfAnnotation    = lsSimulatedData$dfAnnotation,
-                                  boolCaseCtrl    = FALSE,
-                                  vecConfounders  = c("Batch"),
-                                  scaNProc        = 1 )
+lsSimulatedData <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = NULL,
+  vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
+  vecBatchesB      = NULL,
+  scaNConst        = 30,
+  scaNImp          = 10,
+  scaNLin          = 10,
+  scaNSig          = 10,
+  scaMuBatchEffect = 1,
+  scaSDBatchEffect = 0.2,
+  dirOutSimulation = NULL)
+```
+```{r case-only-batch-annotation, results='markdown'}
+lsSimulatedData$dfAnnotation
+```
+```{r case-only-batch2}
+objectImpulseDE2 <- runImpulseDE2(
+  matCountData    = lsSimulatedData$matObservedCounts, 
+  dfAnnotation    = lsSimulatedData$dfAnnotation,
+  boolCaseCtrl    = FALSE,
+  vecConfounders  = c("Batch"),
+  scaNProc        = 1 )
+```
+```{r case-only-batch-results, results='markdown'}
 head(objectImpulseDE2$dfImpulseDE2Results)
 ```
 
-## Plot gene-wise trajectories
+# Plot gene-wise trajectories
 
 Here, we present the visualization of gene-wise expression trajectory fits.
 Refer to "Batch effects" for details on the data and the inferred model.
@@ -152,19 +182,19 @@ The model is not fit on normalised data but the model is normalised itself based
 ```{r plot-genes}
 # Continue script of "Batch effects"
 library(ggplot2)
-dirOutPlots <- getwd()
-lsgplotsGenes <- plotGenes(vecGeneIDs       = NULL,
-                           scaNTopIDs       = 20,
-                           objectImpulseDE2 = objectImpulseDE2,
-                           boolCaseCtrl     = FALSE,
-                           dirOut           = NULL,
-                           strFileName      = NULL,
-                           vecRefPval       = NULL, 
-                           strNameRefMethod = NULL)
+lsgplotsGenes <- plotGenes(
+  vecGeneIDs       = NULL,
+  scaNTopIDs       = 10,
+  objectImpulseDE2 = objectImpulseDE2,
+  boolCaseCtrl     = FALSE,
+  dirOut           = NULL,
+  strFileName      = NULL,
+  vecRefPval       = NULL, 
+  strNameRefMethod = NULL)
 print(lsgplotsGenes[[1]])
 ```
 
-## Case-control differential expression analysis
+# Case-control differential expression analysis
 
 Here, we present a case-control differential expression scenario with batch effects.
 Refer to "Batch effects" for details.
@@ -173,28 +203,35 @@ Building on the scenarios presented previously, we now have samples from two con
 Here, the batches do not overlap the conditions.
 
 ```{r case-control-batch}
-library(ImpulseDE2)
-dirOutSimulation <- getwd()
-lsSimulatedData <- simulateDataSetImpulseDE2(vecTimePointsA   = rep(seq(1,8),3),
-                                             vecTimePointsB   = rep(seq(1,8),3),
-                                             vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
-                                             vecBatchesB      = c(rep("C1",8), rep("C2",8), rep("C3",8)),
-                                             scaNConst        = 300,
-                                             scaNImp          = 100,
-                                             scaNLin          = 100,
-                                             scaNSig          = 100,
-                                             scaMuBatchEffect = 1,
-                                             scaSDBatchEffect = 0.1,
-                                             dirOutSimulation = dirOutSimulation)
-objectImpulseDE2 <- runImpulseDE2(matCountData    = lsSimulatedData$matObservedCounts, 
-                                  dfAnnotation    = lsSimulatedData$dfAnnotation,
-                                  boolCaseCtrl    = TRUE,
-                                  vecConfounders  = c("Batch"),
-                                  scaNProc        = 1 )
+lsSimulatedData <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = rep(seq(1,8),3),
+  vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
+  vecBatchesB      = c(rep("C1",8), rep("C2",8), rep("C3",8)),
+  scaNConst        = 30,
+  scaNImp          = 10,
+  scaNLin          = 10,
+  scaNSig          = 10,
+  scaMuBatchEffect = 1,
+  scaSDBatchEffect = 0.1,
+  dirOutSimulation = NULL)
+```
+```{r case-control-annotation, results='markdown'}
+lsSimulatedData$dfAnnotation
+```
+```{r case-control2}
+objectImpulseDE2 <- runImpulseDE2(
+  matCountData    = lsSimulatedData$matObservedCounts, 
+  dfAnnotation    = lsSimulatedData$dfAnnotation,
+  boolCaseCtrl    = TRUE,
+  vecConfounders  = c("Batch"),
+  scaNProc        = 1 )
+```
+```{r case-control-results, results='markdown'}
 head(objectImpulseDE2$dfImpulseDE2Results)
 ```
 
-## Transiently regulated genes
+# Transiently regulated genes
 
 Here, we present the identification of transiently regulated genes.
 Refer to "Batch effects" for details.
@@ -204,28 +241,31 @@ The results of this analysis are are also in the results table objectImpulseDE2$
 
 ```{r transients}
 library(ImpulseDE2)
-dirOutSimulation <- getwd()
-lsSimulatedData <- simulateDataSetImpulseDE2(vecTimePointsA   = rep(seq(1,8),3),
-                                             vecTimePointsB   = NULL,
-                                             vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
-                                             vecBatchesB      = NULL,
-                                             scaNConst        = 300,
-                                             scaNImp          = 100,
-                                             scaNLin          = 100,
-                                             scaNSig          = 100,
-                                             scaMuBatchEffect = 1,
-                                             scaSDBatchEffect = 0.2,
-                                             dirOutSimulation = dirOutSimulation)
-objectImpulseDE2 <- runImpulseDE2(matCountData           = lsSimulatedData$matObservedCounts, 
-                                  dfAnnotation           = lsSimulatedData$dfAnnotation,
-                                  boolCaseCtrl           = FALSE,
-                                  vecConfounders         = c("Batch"),
-                                  boolIdentifyTransients = TRUE,
-                                  scaNProc               = 1 )
+lsSimulatedData <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = NULL,
+  vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
+  vecBatchesB      = NULL,
+  scaNConst        = 100,
+  scaNImp          = 700,
+  scaNLin          = 100,
+  scaNSig          = 100,
+  scaMuBatchEffect = 1,
+  scaSDBatchEffect = 0.2,
+  dirOutSimulation = NULL)
+objectImpulseDE2 <- runImpulseDE2(
+  matCountData           = lsSimulatedData$matObservedCounts, 
+  dfAnnotation           = lsSimulatedData$dfAnnotation,
+  boolCaseCtrl           = FALSE,
+  vecConfounders         = c("Batch"),
+  boolIdentifyTransients = TRUE,
+  scaNProc               = 1 )
+```
+```{r transient-results, results='markdown'}
 head(objectImpulseDE2$dfImpulseDE2Results)
 ```
 
-## Plot global heatmap of expression trajectories
+# Plot global heatmap of expression trajectories
 
 Here, we present the visualisation of global expression patterns via a heatmap.
 We base this analysis on a classification of differntially expressed genes by the transient regulation scheme.
@@ -246,10 +286,10 @@ The output of plotHeatmap includes two objects of the class ComplexHeatmap which
 ```{r heatmap}
 # Continuing script of "Transiently regulated genes"
 library(ComplexHeatmap)
-lsHeatmaps <- plotHeatmap(objectImpulseDE2       = objectImpulseDE2,
-                          strCondition           = "case",
-                          boolIdentifyTransients = TRUE,
-                          scaQThres              = 0.01)
+lsHeatmaps <- plotHeatmap(
+  objectImpulseDE2       = objectImpulseDE2,
+  strCondition           = "case",
+  boolIdentifyTransients = TRUE,
+  scaQThres              = 0.01)
 draw(lsHeatmaps$complexHeatmapRaw) # Heatmap based on normalised counts
-draw(lsHeatmaps$complexHeatmapFit) # Heatmap based on expression model fits
 ```

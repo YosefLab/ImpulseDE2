@@ -1,0 +1,19 @@
+case-only	lsSimulatedData
+case-only-batch	lsSimulatedData
+plot-genes	lsgplotsGenes
+case-control-batch	lsSimulatedData
+transients	lsSimulatedData	objectImpulseDE2
+heatmap	lsHeatmaps
+case-only-results	
+case-only-batch-results	
+case-cntrol-results	
+case-control-results	
+transient-results	
+session	
+case-only-annotation	
+case-only2	objectImpulseDE2	first_time
+case-only-batch-annotation	
+case-only-batchc2	objectImpulseDE2
+case-control-annotation	
+case-control2	objectImpulseDE2
+case-only-batch2	objectImpulseDE2
