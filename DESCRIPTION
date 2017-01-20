@@ -4,6 +4,7 @@ Title: Differential expression analysis of longitudinal count data sets
 Version: 0.99.0
 Date: 2017-01-02
 Author: David Sebastian Fischer [aut, cre],
+    Fabian Theis [aut],
     Nir Yosef [aut]
 Maintainer: David Sebastian Fischer <david.seb.fischer@gmail.com>,
     Nir Yosef <niryosef@berkeley.edu>
