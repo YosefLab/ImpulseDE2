@@ -84,7 +84,9 @@ plotHeatmap <- function(objectImpulseDE2,
     #vecidxMonotonousSort <- vecidxMonotonous[do.call(order, as.data.frame(matidxMaxTimeSort[vecidxMonotonous,1]))]
     
     # Fine sort montonous transition signals into up/down
-    vecboolMonotonousUp <- apply(matImpulseValue[vecidxMonotonous,], 1, function(gene){
+    if(length(vecidxMonotonous) == 1) matImpulseMonot <- t(matImpulseValue[vecidxMonotonous,])
+    else matImpulseMonot <- matImpulseValue[vecidxMonotonous,]
+    vecboolMonotonousUp <- apply(matImpulseMonot, 1, function(gene){
       gene[1] < gene[scaNTPtoEvaluate]
     })
     vecboolMonotonousDown <- !vecboolMonotonousUp
@@ -95,7 +97,9 @@ plotHeatmap <- function(objectImpulseDE2,
     vecidxMonotonousDownSort <- vecidxMonotonousDown[do.call(order, as.data.frame(matidxMinTimeSort[vecidxMonotonousDown,1]))]
     
     # Fine sort transitive signals into off/on
-    vecboolTransientValley <- apply(matImpulseValue[vecidxTransient,], 1, function(genevalues){
+    if(length(vecidxTransient) == 1) matImpulseTransient <- t(matImpulseValue[vecidxTransient,])
+    else matImpulseTransient <- matImpulseValue[vecidxTransient,]
+    vecboolTransientValley <- apply(matImpulseTransient, 1, function(genevalues){
       boolValley <- any(genevalues[2:(scaNTPtoEvaluate-1)] < genevalues[1] &
                           genevalues[2:(scaNTPtoEvaluate-1)] < genevalues[scaNTPtoEvaluate])
       return(boolValley)
