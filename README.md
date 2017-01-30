@@ -7,7 +7,10 @@ which arise in sequencing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DN
 ### INSTALLATION
 
 Clone the GitHub repository first into you local target directory
-and then install the package via R CMD INSTALL.
+and then install the package via "R CMD INSTALL .".
+
+### VIGNETTE
+View the vignette (.html) in your browser by double clicking on "vignettes/ImpulseDE2_Tutorial.html".
 
 
 
