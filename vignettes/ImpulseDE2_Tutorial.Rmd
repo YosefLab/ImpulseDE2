@@ -17,7 +17,7 @@ vignette: >
 ```{r options, cache=FALSE, include=FALSE, results='hide', message=FALSE, warning=FALSE}
 
 knitr::opts_chunk$set(fig.align="center", 
-                      cache=TRUE,
+                      cache=FALSE,
                       error=FALSE,
                       fig.width=6,fig.height=6,
                       autodep=TRUE,
