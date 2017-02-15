@@ -227,8 +227,6 @@ runDESeq2 <- function(dfAnnotationProc,
   # DESeq2 uses alpha=1/phi as dispersion
   vecDispersions <- 1/vecDispersionsInv
   names(vecDispersions) <- rownames(dds)
-  #vecDispersions <- 1/dispersions(ddsDESeqObject)
-  #names(vecDispersions) <- rownames(ddsDESeqObject)
   
   return(vecDispersions)
 }

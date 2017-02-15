@@ -24,8 +24,6 @@
 #'    sequencing depth into account (size factors).
 #' 
 #' @author David Sebastian Fischer
-#' 
-#' @export
 computeSizeFactors <- function(matCountDataProc){
   
   # Compute geometric count mean over replicates
@@ -80,6 +78,19 @@ computeSizeFactors <- function(matCountDataProc){
 #' @return vecSizeFactors (numeric vector number of samples) 
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
+#' 
+#' @examples
+#' lsSimulatedData <- simulateDataSetImpulseDE2(
+#' vecTimePointsA   = rep(seq(1,8),3),
+#' vecTimePointsB   = NULL,
+#' vecBatchesA      = NULL,
+#' vecBatchesB      = NULL,
+#' scaNConst        = 100,
+#' scaNImp          = 200,
+#' scaNLin          = 100,
+#' scaNSig          = 200)
+#' vecSizeFactors <- computeNormConst(
+#' matCountData = lsSimulatedData$matObservedCounts)
 #' 
 #' @author David Sebastian Fischer
 #' 

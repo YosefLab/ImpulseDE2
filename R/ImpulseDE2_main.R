@@ -153,6 +153,24 @@ NULL
 #'    }
 #' }
 #' 
+#' @examples
+#' lsSimulatedData <- simulateDataSetImpulseDE2(
+#' vecTimePointsA   = rep(seq(1,8),3),
+#' vecTimePointsB   = NULL,
+#' vecBatchesA      = NULL,
+#' vecBatchesB      = NULL,
+#' scaNConst        = 30,
+#' scaNImp          = 10,
+#' scaNLin          = 10,
+#' scaNSig          = 10)
+#' objectImpulseDE2 <- runImpulseDE2(
+#' matCountData    = lsSimulatedData$matObservedCounts, 
+#' dfAnnotation    = lsSimulatedData$dfAnnotation,
+#' boolCaseCtrl    = FALSE,
+#' vecConfounders  = NULL,
+#' scaNProc        = 1 )
+#' head(objectImpulseDE2$dfImpulseDE2Results)
+#' 
 #' @author David Sebastian Fischer
 #' 
 #' @export

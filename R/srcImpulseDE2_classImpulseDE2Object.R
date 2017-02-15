@@ -5,6 +5,8 @@
 ### 1. Define output container class
 
 # Define class unions for slots
+
+#' @importFrom methods setClassUnion
 setClassUnion('numericORNULL', members = c('numeric', 'NULL'))
 setClassUnion('characterORNULL', members = c('character', 'NULL'))
 setClassUnion('listORNULL', members = c('list', 'NULL'))
@@ -237,7 +239,7 @@ setClass(
 #'    get_scaQThres
 #'    get_strReport
 #' 
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 NULL
 
 #' ImpulseDE2Object accession methods
@@ -258,8 +260,38 @@ NULL
 #'    get_scaNProc,ImpulseDE2Object-method
 #'    get_scaQThres,ImpulseDE2Object-method
 #'    get_strReport,ImpulseDE2Object-method
+#'
+#' @examples    
+#' lsSimulatedData <- simulateDataSetImpulseDE2(
+#' vecTimePointsA   = rep(seq(1,8),3),
+#' vecTimePointsB   = NULL,
+#' vecBatchesA      = NULL,
+#' vecBatchesB      = NULL,
+#' scaNConst        = 30,
+#' scaNImp          = 10,
+#' scaNLin          = 10,
+#' scaNSig          = 10)
+#' objectImpulseDE2 <- runImpulseDE2(
+#' matCountData    = lsSimulatedData$matObservedCounts, 
+#' dfAnnotation    = lsSimulatedData$dfAnnotation,
+#' boolCaseCtrl    = FALSE,
+#' vecConfounders  = NULL,
+#' scaNProc        = 1 )
+#' # Extract hidden auxillary result and processed input objects.
+#' lsModelFits <- get_lsModelFits(objectImpulseDE2)
+#' matCountDataProc <- get_matCountDataProc(objectImpulseDE2)
+#' dfAnnotationProc <- get_dfAnnotationProc(objectImpulseDE2)
+#' vecSizeFactors <- get_vecSizeFactors(objectImpulseDE2)
+#' vecDispersions <- get_vecDispersions(objectImpulseDE2)
+#' boolCaseCtrl <- get_boolCaseCtrl(objectImpulseDE2)
+#' vecConfounders <- get_vecConfounders(objectImpulseDE2)
+#' scaNProc <- get_scaNProc(objectImpulseDE2)
+#' scaQThres <- get_scaQThres(objectImpulseDE2)
+#' strReport <- get_strReport(objectImpulseDE2)
 #' 
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
+#' 
+#' @author David Sebastian Fischer
 NULL
 
 ### I. Set generic function which defines string as a function:
@@ -268,132 +300,141 @@ NULL
 ### setMethod('funName', 'ImpulseDE2Object', function(object) object@funName)
 
 #' @return (list) lsModelFits
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_lsModelFits', function(object) standardGeneric('get_lsModelFits'), valueClass = 'listORNULL')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_lsModelFits', 'ImpulseDE2Object', function(object) object@lsModelFits)
 
 #' @return (numeric matrix size genes x samples) matCountDataProc
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_matCountDataProc', function(object) standardGeneric('get_matCountDataProc'), valueClass = 'matrix')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_matCountDataProc', 'ImpulseDE2Object', function(object) object@matCountDataProc)
 
 #' @return (data frame size genes x reported characteristics) dfAnnotationProc
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_dfAnnotationProc', function(object) standardGeneric('get_dfAnnotationProc'), valueClass = 'data.frame')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_dfAnnotationProc', 'ImpulseDE2Object', function(object) object@dfAnnotationProc)
 
 #' @return (numeric vector length number of samples) vecSizeFactors
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_vecSizeFactors', function(object) standardGeneric('get_vecSizeFactors'), valueClass = 'numeric')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_vecSizeFactors', 'ImpulseDE2Object', function(object) object@vecSizeFactors)
 
 #' @return (numeric vector length number of genes) vecDispersions
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_vecDispersions', function(object) standardGeneric('get_vecDispersions'), valueClass = 'numeric')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_vecDispersions', 'ImpulseDE2Object', function(object) object@vecDispersions)
 
 #' @return (bool) boolCaseCtrl
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_boolCaseCtrl', function(object) standardGeneric('get_boolCaseCtrl'), valueClass = 'characterORNULL')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_boolCaseCtrl', 'ImpulseDE2Object', function(object) object@boolCaseCtrl)
 
 #' @return (str vector) vecConfounders
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_vecConfounders', function(object) standardGeneric('get_vecConfounders'), valueClass = 'characterORNULL')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_vecConfounders', 'ImpulseDE2Object', function(object) object@vecConfounders)
 
 #' @return (scalar) scaNProc
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_scaNProc', function(object) standardGeneric('get_scaNProc'), valueClass = 'numeric')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_scaNProc', 'ImpulseDE2Object', function(object) object@scaNProc)
 
 #' @return (scalar) scaQThres
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_scaQThres', function(object) standardGeneric('get_scaQThres'), valueClass = 'numericOrNULL')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_scaQThres', 'ImpulseDE2Object', function(object) object@scaQThres)
 
 #' @return (str) strReport
-#' @name ImpulseDE2Object_Generics_Accessors
+#' @name generics_get_accessors
 #' @export
 setGeneric('get_strReport', function(object) standardGeneric('get_strReport'), valueClass = 'characterORNULL')
-#' @name ImpulseDE2Object_Accessors
+#' @name get_accessors
 #' @export
 setMethod('get_strReport', 'ImpulseDE2Object', function(object) object@strReport)
 
 ### 2. Enable accession of public elements via list-like
 ### properties of ImpulseDE2Object.
 
-# a) Enable names()
-#' List-like accessor methods for ImpulseDE2Object: names()
+#' List-like accessor methods for ImpulseDE2Object
 #' 
-#' names() function for ImpulseDE2Object.
 #' Allow usage of ImpulseDE2 ouput object like a list with
-#' respect to the most relevant output:
+#' respect to the core output:
 #' dfImpulseDE2Results and vecDEGenes.
-#' List of all available list-object like accessors:
-#' \link{names,ImpulseDE2Object-method},
-#' \link{[[,ImpulseDE2Object,character,missing-method},
-#' \link{$,ImpulseDE2Object-method}.
 #' 
 #' @param x (ImpulseDE2Object) ImpulseDE2 output object.
+#' @param i,name (idx or str) Name or index of core output element of ImpulseDE2Object.
+#' @param j       Not used, only vectors.
+#' @param ...     Not used.
 #' 
-#' @return Names of elements in x available via list-like accessors.
+#' @examples
+#' lsSimulatedData <- simulateDataSetImpulseDE2(
+#' vecTimePointsA   = rep(seq(1,8),3),
+#' vecTimePointsB   = NULL,
+#' vecBatchesA      = NULL,
+#' vecBatchesB      = NULL,
+#' scaNConst        = 30,
+#' scaNImp          = 10,
+#' scaNLin          = 10,
+#' scaNSig          = 10)
+#' objectImpulseDE2 <- runImpulseDE2(
+#' matCountData    = lsSimulatedData$matObservedCounts, 
+#' dfAnnotation    = lsSimulatedData$dfAnnotation,
+#' boolCaseCtrl    = FALSE,
+#' vecConfounders  = NULL,
+#' scaNProc        = 1 )
+#' names(objectImpulseDE2) # Display core output
+#' # With respect to this core output, objectImpulseDE2
+#' # can be treated like a list.
+#' head(objectImpulseDE2[["dfImpulseDE2Results"]])
+#' head(objectImpulseDE2$dfImpulseDE2Results)
+#' head(objectImpulseDE2[["vecDEGenes"]])
+#' head(objectImpulseDE2$vecDEGenes)
 #' 
-#' @name names,ImpulseDE2Object-method
+#' @name list_accession
+#' @aliases names.ImpulseDE2Object 
+#' names,ImpulseDE2Object-method          
+#' $,ImpulseDE2Object-method          
+#' [[,ImpulseDE2Object,character,missing-method
 #' 
+#' @author David Sebastian Fischer
+NULL
+
+#' @return Names of core output in ImpulseDE2Object.
+#' @name list_accession
 #' @export
 setMethod('names', 'ImpulseDE2Object', function(x) {
   return( c("dfImpulseDE2Results", "vecDEGenes") )
 })
 
-# b) Enable object[[ element ]] operator
-#' List-like accessor methods for ImpulseDE2Object: names()
-#' 
-#' names() function for ImpulseDE2Object.
-#' Allow usage of ImpulseDE2 ouput object like a list with
-#' respect to the most relevant output:
-#' dfImpulseDE2Results and vecDEGenes.
-#' List of all available list-object like accessors:
-#' \link{names,ImpulseDE2Object-method},
-#' \link{[[,ImpulseDE2Object,character,missing-method},
-#' \link{$,ImpulseDE2Object-method}.
-#' 
-#' @param x (ImpulseDE2Object) ImpulseDE2 output object.
-#' @param i (str) Element from x list to be retrieved.
-#' @param j () Ignored argument to generic.
-#' @param ...  () Ignored argument to generic.
-#' 
-#' @return Target element from x.
-#' 
-#' @name [[,ImpulseDE2Object,character,missing-method
-#' 
+#' @return Target element from ImpulseDE2Object.
+#' @name list_accession
 #' @export
 setMethod('[[', c('ImpulseDE2Object', 'character', 'missing'), function(x, i, j, ...){
   if(identical(i, "dfImpulseDE2Results")){ return(x@dfImpulseDE2Results)
@@ -401,25 +442,8 @@ setMethod('[[', c('ImpulseDE2Object', 'character', 'missing'), function(x, i, j,
   } else { return(NULL) }
 })
 
-# c) Enable object$element operator, which relies on [[ ]]
-#' List-like accessor methods for ImpulseDE2Object: $
-#' 
-#' $ accessor function for ImpulseDE2Object, relies on [[ ]].
-#' Allow usage of ImpulseDE2 ouput object like a list with
-#' respect to the most relevant output:
-#' dfImpulseDE2Results and vecDEGenes.
-#' List of all available list-object like accessors:
-#' \link{names,ImpulseDE2Object-method},
-#' \link{[[,ImpulseDE2Object,character,missing-method},
-#' \link{$,ImpulseDE2Object-method}.
-#' 
-#' @param x (ImpulseDE2Object) ImpulseDE2 output object.
-#' @param name (str) Element from x list to be retrieved.
-#' 
-#' @return Target element from x.
-#' 
-#' @name $,ImpulseDE2Object-method
-#' 
+#' @return Target element from ImpulseDE2Object.
+#' @name list_accession
 #' @export
 setMethod('$', 'ImpulseDE2Object', function(x, name) x[[name]] )
 
@@ -432,24 +456,36 @@ setMethod('$', 'ImpulseDE2Object', function(x, name) x[[name]] )
 #' @param object (ImpulseDE2Object) Output object of ImpulseDE2.
 #' @param fileReport (file) File to print report to.
 #' 
-#' @return NULL
-#'  
-#' @name writeReportToFile
-#' @export
-setGeneric('writeReportToFile', function(object, fileReport) standardGeneric('writeReportToFile'), valueClass = 'NULL')
-
-#' Print ImpulseDE2 report string to .txt file
+#' @return No value.
 #' 
-#' Print ImpulseDE2 report string to .txt file
-#' 
-#' @param object (ImpulseDE2Object) Output object of ImpulseDE2.
-#' @param fileReport (file) File to print report to.
-#' 
-#' @return NULL
+#' @examples
+#' dirPWD <- getwd() # Will save into current working directory.
+#' lsSimulatedData <- simulateDataSetImpulseDE2(
+#' vecTimePointsA   = rep(seq(1,8),3),
+#' vecTimePointsB   = NULL,
+#' vecBatchesA      = NULL,
+#' vecBatchesB      = NULL,
+#' scaNConst        = 30,
+#' scaNImp          = 10,
+#' scaNLin          = 10,
+#' scaNSig          = 10)
+#' objectImpulseDE2 <- runImpulseDE2(
+#' matCountData    = lsSimulatedData$matObservedCounts, 
+#' dfAnnotation    = lsSimulatedData$dfAnnotation,
+#' boolCaseCtrl    = FALSE,
+#' vecConfounders  = NULL,
+#' scaNProc        = 1 )
+#' writeReportToFile(
+#' object=objectImpulseDE2,
+#' file=paste0(dirPWD, "ImpulseDE2Report.txt")
+#' )
 #' 
 #' @author David Sebastian Fischer
-#' 
-#' @name writeReportToFile,ImpulseDE2Object,character-method
+#'  
+#' @name writeReportToFile
+setGeneric('writeReportToFile', function(object, fileReport) standardGeneric('writeReportToFile'), valueClass = 'NULL')
+
+#' @name writeReportToFile
 #' @export
 setMethod('writeReportToFile', signature(object='ImpulseDE2Object', fileReport='character'), 
           function(object, fileReport) write(object@strReport, file=fileReport, ncolumns=1) 

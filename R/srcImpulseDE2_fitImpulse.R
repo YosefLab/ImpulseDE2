@@ -774,8 +774,6 @@ fitConstImpulse <- function(matCountDataProcCondition,
 #'    }
 #'    
 #' @author David Sebastian Fischer
-#' 
-#' @export
 fitModels <- function(objectImpulseDE2,
 											vecConfounders,
 											boolCaseCtrl){

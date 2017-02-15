@@ -4,8 +4,9 @@
 
 #' Plot structured z-value heatmaps of differentially expressed genes
 #' 
-#' Creates a complexHeatmap heatmap structured into subsets of genes according
-#' to their behaviour and sorted by peak time for raw counts and for the
+#' Creates a complexHeatmap heatmap structured into 
+#' subsets of genes according to their behaviour and 
+#' sorted by peak time for raw counts and for the
 #' fitted signal.
 #' 
 #' @seealso Called seperately by used.
@@ -38,6 +39,30 @@
 #'      in the heatmap.
 #'    }
 #'    
+#' @examples
+#' lsSimulatedData <- simulateDataSetImpulseDE2(
+#' vecTimePointsA   = rep(seq(1,8),3),
+#' vecTimePointsB   = NULL,
+#' vecBatchesA      = NULL,
+#' vecBatchesB      = NULL,
+#' scaNConst        = 0,
+#' scaNImp          = 200,
+#' scaNLin          = 100,
+#' scaNSig          = 200)
+#' objectImpulseDE2 <- runImpulseDE2(
+#' matCountData    = lsSimulatedData$matObservedCounts, 
+#' dfAnnotation    = lsSimulatedData$dfAnnotation,
+#' boolCaseCtrl    = FALSE,
+#' vecConfounders  = NULL,
+#' boolIdentifyTransients = TRUE,
+#' scaNProc        = 1 )
+#' lsHeatmaps <- plotHeatmap(
+#' objectImpulseDE2=objectImpulseDE2,
+#' strCondition="case",
+#' boolIdentifyTransients=TRUE,
+#' scaQThres=0.01)
+#' draw(lsHeatmaps$complexHeatmapRaw)
+#' 
 #' @author David Sebastian Fischer
 #' 
 #' @import ComplexHeatmap

@@ -13,7 +13,10 @@ Description: ImpulseDE2 is a differential expression algorithm for longitudinal 
 License: file LICENSE
 biocViews: Software,
     StatisticalMethod,
-    TimeCourse
+    TimeCourse,
+    Sequencing,
+    DifferentialExpression,
+    GeneExpression
 Imports:
     methods,
     stats,

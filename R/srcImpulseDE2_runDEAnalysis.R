@@ -87,8 +87,6 @@
 #'    }
 #'    
 #' @author David Sebastian Fischer
-#' 
-#' @export
 runDEAnalysis <- function(objectImpulseDE2,
                           boolCaseCtrl,
                           vecConfounders,
@@ -272,7 +270,7 @@ runDEAnalysis <- function(objectImpulseDE2,
 #' through external call
 #' 
 #' This is a userfriendly wrapper of runDEAnalysis for this update
-#' scenoario.
+#' scenario.
 #' 
 #' @seealso Called by separately by user.
 #' 
@@ -338,6 +336,35 @@ runDEAnalysis <- function(objectImpulseDE2,
 #'      activated or deactivated and differentially expressed. This scenario
 #'      corresponds to a montonous expression level increase or decrease.
 #'    }
+#'  
+#' @examples
+#' lsSimulatedData <- simulateDataSetImpulseDE2(
+#' vecTimePointsA   = rep(seq(1,8),3),
+#' vecTimePointsB   = NULL,
+#' vecBatchesA      = NULL,
+#' vecBatchesB      = NULL,
+#' scaNConst        = 0,
+#' scaNImp          = 200,
+#' scaNLin          = 100,
+#' scaNSig          = 200)
+#' objectImpulseDE2 <- runImpulseDE2(
+#' matCountData    = lsSimulatedData$matObservedCounts, 
+#' dfAnnotation    = lsSimulatedData$dfAnnotation,
+#' boolCaseCtrl    = FALSE,
+#' vecConfounders  = NULL,
+#' boolIdentifyTransients = FALSE,
+#' scaNProc        = 1 )
+#' # You could have used boolIdentifyTransients=TRUE
+#' # to avoid the following post wrapper fitting.
+#' objectImpulseDE2 <- fitSigmoidModels(
+#' objectImpulseDE2 = objectImpulseDE2,
+#' vecConfounders   = NULL,
+#' strCondition     = "case")
+#' objectImpulseDE2 <- updateDEAnalysis(
+#' objectImpulseDE2=objectImpulseDE2,
+#' scaQThresTransients=0.001)
+#' head(objectImpulseDE2$dfImpulseDE2Results)
+#' # dfImpulseDE2Results now contain 'transients-analysis'.
 #'    
 #' @author David Sebastian Fischer
 #' 

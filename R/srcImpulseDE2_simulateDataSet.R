@@ -29,8 +29,13 @@
 #' @param scaNLin (scalar) Number of linear distributed genes in data set.
 #' @param scaNSig (scalar) Number of sigmoid distributed genes in data set.
 #' @param scaNRand (scalar) [Default NULL] Number of random distributed genes in data set.
+#' @param scaSeedInit (scalar) [Default 1] Scalar based on which seeds are chosen.
+#'   One vlaue correspond sto a unique set of seeds for all random number generations.
 #' @param scaMumax (scalar) [Default 1000]
 #'    Maximum expression mean parameter to be used.
+#' @param boolOneConstMu (bool) [Default False]
+#'    Don't sample constant trajectories from uniform [0,scaMumax]
+#'    but set all to scaMumax
 #' @param scaSDExpressionChange (scalar) [Default 1]
 #'    Standard deviation of normal distribution from which the 
 #'    amplitude change within an impulse trace is drawn.
@@ -62,6 +67,17 @@
 #'    \item matSampledCountsObserved (matrix genes x cells)
 #'    Sampled count data of all cells after drop-out.
 #' }
+#' 
+#' @examples
+#' lsSimulatedData <- simulateDataSetImpulseDE2(
+#' vecTimePointsA   = rep(seq(1,8),3),
+#' vecTimePointsB   = NULL,
+#' vecBatchesA      = NULL,
+#' vecBatchesB      = NULL,
+#' scaNConst        = 30,
+#' scaNImp          = 10,
+#' scaNLin          = 10,
+#' scaNSig          = 10)
 #'    
 #' @author David Sebastian Fischer
 #' 
@@ -75,7 +91,9 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
                                       scaNLin,
                                       scaNSig,
                                       scaNRand=0,
+                                      scaSeedInit=1,
                                       scaMumax=1000,
+                                      boolOneConstMu=FALSE,
                                       scaSDExpressionChange=1,
                                       scaSDRand=NULL,
                                       scaMuSizeEffect=1,
@@ -153,10 +171,15 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   
   scaNGenes <- scaNConst+scaNImp+scaNLin+scaNSig+scaNRand
   scaEps <- 0.00001
+  scaSeedsUsed <- 0
   
   # a. Draw means from uniform (first half of genes): one mean per gene
   if(scaNConst>0){
-    vecMuConstHidden <- runif(scaNConst)*scaMumax
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
+    if(boolOneConstMu) vecMuConstHidden <- rep(scaMumax, scaNConst)
+    else vecMuConstHidden <- runif(scaNConst)*scaMumax
+    
     vecMuConstHidden[vecMuConstHidden < scaEps] <- scaEps
     matMuConstHidden <- matrix(vecMuConstHidden,
                                nrow=scaNConst,
@@ -168,15 +191,27 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   
   # b. Draw means from impulse model
   if(scaNImp>0){
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     beta <- runif(scaNImp)*2+0.5
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     ta <- runif(scaNImp)*max(vecTimePointsUnique)
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     tb <- runif(scaNImp)*max(vecTimePointsUnique)
     t1 <- ta
     t1[tb < ta] <- tb[tb < ta]
     t2 <- tb
     t2[tb < ta] <- ta[tb < ta]
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     h0 <- runif(scaNImp)*scaMumax
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     h1 <- h0*abs(rnorm(n=scaNImp, mean=1, sd=scaSDExpressionChange))
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     h2 <- h0*abs(rnorm(n=scaNImp, mean=1, sd=scaSDExpressionChange))
     h0[h0<scaEps] <- scaEps
     h1[h1<scaEps] <- scaEps
@@ -195,17 +230,27 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     rownames(matImpulseModelHidden) <- vecImpulseIDs
     rownames(matMuImpulseHidden) <- vecImpulseIDs
     colnames(matMuImpulseHidden) <- names(vecSamples)
-    if(boolCaseCtrl){
+    if(boolCaseCtrl & scaNImp>1){
       # Keep start point the same, this doesn't work well for impulse model
       scaNImpDE <- round(scaNImp/2)
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       betaDE <- runif(scaNImpDE)*2+0.5
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       ta <- runif(scaNImpDE)*max(vecTimePointsUniqueB)
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       tb <- runif(scaNImpDE)*max(vecTimePointsUniqueB)
       t1DE <- ta
       t1DE[tb < ta] <- tb[tb < ta]
       t2DE <- tb
       t2DE[tb < ta] <- ta[tb < ta]
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       h1DE <- h0[1:scaNImpDE]*abs(rnorm(n=scaNImpDE, mean=1,sd=scaSDExpressionChange))
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       h2DE <- h0[1:scaNImpDE]*abs(rnorm(n=scaNImpDE, mean=1,sd=scaSDExpressionChange))
       h1DE[h1<scaEps] <- scaEps
       h2DE[h2<scaEps] <- scaEps
@@ -232,7 +277,11 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   # c. Linear functions
   # Draw linear model parameters
   if(scaNLin>0){
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     vecInitialLevel <- runif(scaNLin)*scaMumax
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     vecFinalLevel <- vecInitialLevel*abs(rnorm(n=scaNLin, mean=1,sd=scaSDExpressionChange))
     vecInitialLevel[vecInitialLevel < scaEps] <-scaEps
     vecFinalLevel[vecFinalLevel < scaEps] <- scaEps
@@ -244,9 +293,11 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     }))
     rownames(matMuLinHidden) <- vecLinIDs
     colnames(matMuLinHidden) <- names(vecSamples)
-    if(boolCaseCtrl){
+    if(boolCaseCtrl & scaNLin>1){
       # Keep start point the same, this doesn't work well for impulse model
       scaNLinDE <- round(scaNLin/2)
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       vecFinalLevelDE <- vecInitialLevel[1:scaNLinDE]*abs(rnorm(n=scaNLinDE, mean=1,sd=scaSDExpressionChange))
       vecFinalLevelDE[vecFinalLevelDE < scaEps] <- scaEps
       # Evaluate linear functions
@@ -264,9 +315,17 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   # d. Sigmoid functions
   if(scaNSig>0){
     # Draw sigmoid model parameters
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     vech0 <- runif(scaNSig)*scaMumax
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     vech1 <- vech0*abs(rnorm(n=scaNSig, mean=1,sd=scaSDExpressionChange))
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     vecBeta <- runif(scaNSig)*4+0.5
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     vecT1 <- runif(scaNSig)*(max(vecTimePointsUnique)-min(vecTimePointsUnique))+min(vecTimePointsUnique)
     vech0[vech0 < scaEps] <- scaEps
     vech1[vech1 < scaEps] <- scaEps
@@ -280,11 +339,17 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
     }))
     rownames(matMuSigHidden) <- vecSigIDs
     colnames(matMuSigHidden) <- names(vecSamples)
-    if(boolCaseCtrl){
+    if(boolCaseCtrl & scaNSig>1){
       # Keep start point the same, this doesn't work well for impulse model
       scaNSigDE <- round(scaNSig/2)
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       vech1DE <- vech0[1:scaNSigDE]*abs(rnorm(n=scaNSigDE, mean=1,sd=scaSDExpressionChange))
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       vecBetaDE <- runif(scaNSigDE)*4+0.5
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       vecT1DE <- runif(scaNSigDE)*(max(vecTimePointsUniqueB)-min(vecTimePointsUniqueB))+
         min(vecTimePointsUniqueB)
       vech1DE[vech1DE < scaEps] <- scaEps
@@ -304,11 +369,15 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   
   # e. Random data: random fluctuations around mean
   if(scaNRand>0){
+    set.seed(scaSeedInit+scaSeedsUsed)
+    scaSeedsUsed <- scaSeedsUsed + 1
     vecMu <- runif(scaNRand)*scaMumax
     vecMu[vecMu < scaEps] <- scaEps
     if(is.null(scaSDRand)){ scaSDRand <- scaSDExpressionChange }
     # Evaluate sigmoid functions
     matMuRandHidden <- do.call(rbind, lapply(seq(1, scaNRand), function(i){
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
       vecRands <- vecMu[i]*abs(rnorm(n=length(vecSamples), mean=1, sd=scaSDRand))
       vecRands[vecRands < scaEps] <- scaEps
       return(vecRands)
@@ -324,13 +393,16 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
                                      matMuSigHidden,
                                      matMuRandHidden))
   if(boolCaseCtrl){
-    vecCaseCtrlDEIDs <- c(vecImpulseIDs[1:scaNImpDE],
-                          vecLinIDs[1:scaNLinDE],
-                          vecSigIDs[1:scaNSigDE])
+    vecCaseCtrlDEIDs <- c()
+    if(scaNImp>1) vecCaseCtrlDEIDs <- c(vecCaseCtrlDEIDs,vecImpulseIDs[1:scaNImpDE])
+    if(scaNLin>1) vecCaseCtrlDEIDs <- c(vecCaseCtrlDEIDs,vecLinIDs[1:scaNLinDE])
+    if(scaNSig>1) vecCaseCtrlDEIDs <- c(vecCaseCtrlDEIDs,vecSigIDs[1:scaNSigDE])
   }
   
   # Add scaling factors
   # a) Sample size factors
+  set.seed(scaSeedInit+scaSeedsUsed)
+  scaSeedsUsed <- scaSeedsUsed + 1
   vecSizeFactorsHidden <- rnorm(n=scaNSamples, 
                                 mean=scaMuSizeEffect, sd=scaSDSizeEffect)
   vecSizeFactorsHidden[vecSizeFactorsHidden<0.1] <- 0.1
@@ -355,10 +427,12 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   }
   if(length(vecBatchesUnique)>1){
     matBatchFactorsUnqiueHidden <- do.call(rbind, lapply(seq(1,scaNGenes), function(i){
-      c(1, 
+      set.seed(scaSeedInit+scaSeedsUsed)
+      scaSeedsUsed <- scaSeedsUsed + 1
+      return(c(1, 
         rnorm(n=length(vecBatchesUnique)-1, 
               mean=scaMuBatchEffect, 
-              sd=scaSDBatchEffect)
+              sd=scaSDBatchEffect))
       )
     }))
     
@@ -373,6 +447,8 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
   colnames(matMuHiddenScaled) <- colnames(matMuHidden)
   
   # e. draw dispersions by gene - one per condition in case-control
+  set.seed(scaSeedInit+scaSeedsUsed)
+  scaSeedsUsed <- scaSeedsUsed + 1
   vecDispHidden <- rnorm(dim(matMuHiddenScaled)[1], mean=1, sd =0.1)*10
   names(vecDispHidden) <- rownames(matMuHiddenScaled)
   vecDispHidden[vecDispHidden<1] <- 1
