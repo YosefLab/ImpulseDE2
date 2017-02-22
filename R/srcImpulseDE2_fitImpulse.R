@@ -352,6 +352,7 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   # Extract parameter estimates
   vecImpulseParam <- lsFit$par[1:6]
   vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
+  vecImpulseParam[2:4][vecImpulseParam[2:4] < 10^(-10)] <- 10^(-10)
   names(vecImpulseParam) <- c("beta", "h0", "h1", "h2", "t1", "t2")
   vecImpulseValue <- evalImpulse_comp(vecImpulseParam=vecImpulseParam,
                                       vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]

@@ -33,9 +33,6 @@ evalSigmoid <- function(vecSigmoidParam,
       (1/(1+exp(-vecSigmoidParam[1]*(t-vecSigmoidParam[4]))))
   })
   
-  # Catch lower bound on mu space
-  vecSigmoidValue[vecSigmoidValue < 10^(-10)] <- 10^(-10)
-  
   return(vecSigmoidValue)
 }
 

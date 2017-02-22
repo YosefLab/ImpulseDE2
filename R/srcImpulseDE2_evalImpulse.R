@@ -38,9 +38,6 @@ evalImpulse <- function(vecImpulseParam,
          (1/(1+exp(vecImpulseParam[1]*(t-vecImpulseParam[6])))))
   })
   
-  # Catch lower bound on mu space
-  vecImpulseValue[vecImpulseValue < 10^(-10)] <- 10^(-10)
-  
   return(vecImpulseValue)
 }
 

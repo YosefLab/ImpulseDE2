@@ -207,6 +207,7 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
   # Extract parameter estimates
   vecSigmoidParam <- lsFit$par[1:4]
   vecSigmoidParam[2:3] <- exp(vecSigmoidParam[2:3])
+  vecSigmoidParam[2:3][vecSigmoidParam[2:3] < 10^(-10)] <- 10^(-10)
   names(vecSigmoidParam) <- c("beta", "h0", "h1", "t")
   vecSigmoidValue <- evalSigmoid_comp(vecSigmoidParam=vecSigmoidParam,
                                       vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]

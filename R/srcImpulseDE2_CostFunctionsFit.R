@@ -112,7 +112,7 @@ evalLogLikMu_comp <- cmpfun(evalLogLikMu)
 #' Implements log linker function for the amplitude parameters
 #' and the batch correction factors.
 #' Implements upper and lower sensitivity bound of likelihood with respect
-#' to batch correction factors.
+#' to batch correction factors and lower bound for amplitude paramters.
 #' 
 #' @seealso Compiled version: \link{evalLogLikImpulse_comp}
 #' 
@@ -155,6 +155,7 @@ evalLogLikImpulse <- function(vecTheta,
   # Compute normalised impulse function value:
   vecImpulseParam <- vecTheta[1:6]
   vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
+  vecImpulseParam[2:4][vecImpulseParam[2:4] < 10^(-10)] <- 10^(-10)
   vecImpulseValue <- evalImpulse_comp(vecImpulseParam=vecImpulseParam,
                                       vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
   scaNParamUsed <- 6
@@ -230,7 +231,7 @@ evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 #' Implements log linker function for the amplitude parameters
 #' and the batch correction factors.
 #' Implements upper and lower sensitivity bound of likelihood with respect
-#' to batch correction factors.
+#' to batch correction factors and lower bound for amplitude paramters.
 #' 
 #' @seealso Compiled version: \link{evalLogLikSigmoid_comp}
 #' 
@@ -273,6 +274,7 @@ evalLogLikSigmoid <- function(vecTheta,
   # Compute normalised impulse function value:
   vecSigmoidParam <- vecTheta[1:4]
   vecSigmoidParam[2:3] <- exp(vecSigmoidParam[2:3])
+  vecSigmoidParam[2:3][vecSigmoidParam[2:3] < 10^(-10)] <- 10^(-10)
   vecSigmoidValue <- evalSigmoid_comp(vecSigmoidParam=vecSigmoidParam,
                                       vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
   scaNParamUsed <- 4
