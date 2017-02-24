@@ -5,12 +5,14 @@
 ### 1. Define output container class
 
 # Define class unions for slots
+# DO NOT USE SPACE BETWEEN members=c(..)
+# THAT CAUSES ERROR DURING R CMD BUILD
 
 #' @importFrom methods setClassUnion
-setClassUnion('numericORNULL', members = c('numeric', 'NULL'))
-setClassUnion('characterORNULL', members = c('character', 'NULL'))
-setClassUnion('listORNULL', members = c('list', 'NULL'))
-setClassUnion('data.frameORNULL', members = c('data.frame', 'NULL'))
+setClassUnion('numericORNULL', members=c('numeric', 'NULL'))
+setClassUnion('characterORNULL', members=c('character', 'NULL'))
+setClassUnion('listORNULL', members=c('list', 'NULL'))
+setClassUnion('data.frameORNULL', members=c('data.frame', 'NULL'))
 
 #' Container class for ImpulseDE2 output
 #' 

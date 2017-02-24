@@ -45,6 +45,6 @@ Collate:
     'srcImpulseDE2_runDEAnalysis.R'
     'srcImpulseDE2_runDESeq2.R'
     'srcImpulseDE2_simulateDataSet.R'
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
 URL: https://github.com/YosefLab/ImpulseDE2
 BugReports: https://github.com/YosefLab/ImpulseDE2/issues
