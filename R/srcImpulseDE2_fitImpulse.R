@@ -480,7 +480,7 @@ fitConstImpulseGene <- function(vecCounts,
   # 1. Compute initialisations
   lsParamGuesses <- estimateImpulseParam(
     vecCounts=vecCounts,
-    vecTimepoints=vecTimepointsUnique, 
+    vecTimepoints=vecTimepointsUnique[vecidxTimepoint], 
     lsvecidxBatch=lsvecidxBatch,
     vecSizeFactors=vecSizeFactors )
   vecParamGuessPeak <- lsParamGuesses$peak
