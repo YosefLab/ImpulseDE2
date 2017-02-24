@@ -15,7 +15,7 @@ NULL
 #' @seealso Called by separately by user.
 #' 
 #' @param vecGeneIDs (string vector) [Default NULL]
-#'  Gene names to be plotted. Must be in rownames of matCountDataProc.
+#'  Gene names to be plotted. Must be in rownames of objectImpulseDE2@matCountDataProc.
 #'  Supply either vecGeneIDs or scaNTopIDs.
 #' @param scaNTopIDs (int) [Default NULL]
 #'  Number of top differentially expressed (by q-value) genes to 
@@ -60,7 +60,7 @@ NULL
 #' matCountData    = lsSimulatedData$matObservedCounts, 
 #' dfAnnotation    = lsSimulatedData$dfAnnotation,
 #' boolCaseCtrl    = FALSE,
-#' vecConfounders  = NULL,
+#' objectImpulseDE2@vecConfounders  = NULL,
 #' boolIdentifyTransients = FALSE,
 #' scaNProc        = 1 )
 #' lsgplotsID <- plotGenes(
@@ -88,24 +88,16 @@ plotGenes <- function(vecGeneIDs=NULL,
                       vecRefPval=NULL, 
                       strNameRefMethod=NULL){
   
-  # Load objects from output class
-  matCountDataProc <- objectImpulseDE2@matCountDataProc
-  dfAnnotationProc <- objectImpulseDE2@dfAnnotationProc
-  lsModelFits <- objectImpulseDE2@lsModelFits
-  vecSizeFactors <- objectImpulseDE2@vecSizeFactors
-  vecDispersions <- objectImpulseDE2@vecDispersions
-  vecConfounders <- objectImpulseDE2@vecConfounders
-  
   # Set graphical parameters
   scaNPlotsPerPage <- 4
   # Colour-blind palette
   cbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
   
   # Check input
-  if(is.null(lsModelFits)) error("objectImpulseDE2 does not contain model fits. Run ImpulseDE2_main first.")
+  if(is.null(objectImpulseDE2@lsModelFits)) error("objectImpulseDE2 does not contain model fits. Run ImpulseDE2_main first.")
   if(is.null(vecGeneIDs) & is.null(scaNTopIDs)) stop("Supply either vecGeneIDs or scaNTopIDs.")
   if(!is.null(vecGeneIDs) & !is.null(scaNTopIDs)) stop("Only one of the two: vecGeneIDs or scaNTopIDs.")
-  if(is.null(objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique) & !is.null(boolSimplePlot)){
+  if(is.null(objectImpulseDE2@objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique) & !is.null(boolSimplePlot)){
     print("Setting boolSimplePlot=TRUE as no batch structure was found.")
     boolSimplePlot <- TRUE
   }
@@ -120,16 +112,16 @@ plotGenes <- function(vecGeneIDs=NULL,
   lsgplotsID <- list()
   for(id in vecGeneIDs){
     
-    vecTimePointsFit <- seq(min(dfAnnotationProc$Time), max(dfAnnotationProc$Time), length.out=100)
-    vecCaseImpulseParam <- objectImpulseDE2@lsModelFits$case[[id]]$lsImpulseFit$vecImpulseParam
+    vecTimePointsFit <- seq(min(objectImpulseDE2@dfAnnotationProc$Time), max(objectImpulseDE2@dfAnnotationProc$Time), length.out=100)
+    vecCaseImpulseParam <- objectImpulseDE2@objectImpulseDE2@lsModelFits$case[[id]]$lsImpulseFit$vecImpulseParam
     vecCaseImpulseValue <- evalImpulse_comp(vecImpulseParam=vecCaseImpulseParam,
                                             vecTimepoints=vecTimePointsFit)
     
     # Can only resolve one level of batch effects as this is plotted
     # as different function fits to the indididual batches
-    if(!is.null(vecConfounders)){
-      vecCaseBatchFactors <- objectImpulseDE2@lsModelFits$case[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
-      vecBatchLabelsCase <- objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique[[1]]
+    if(!is.null(objectImpulseDE2@vecConfounders)){
+      vecCaseBatchFactors <- objectImpulseDE2@objectImpulseDE2@lsModelFits$case[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
+      vecBatchLabelsCase <- objectImpulseDE2@objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique[[1]]
     } else {
       vecCaseBatchFactors <- 1
       vecBatchLabelsCase <- " "
@@ -138,26 +130,26 @@ plotGenes <- function(vecGeneIDs=NULL,
     vecValueToPlotCase <- do.call(c, lapply(vecCaseBatchFactors, function(f) vecCaseImpulseValue*f) )
     
     if(boolCaseCtrl){
-      vecSamples <- dfAnnotationProc$Sample
+      vecSamples <- objectImpulseDE2@dfAnnotationProc$Sample
       dfRaw <- data.frame(
-        normCounts=matCountDataProc[id,vecSamples]/vecSizeFactors[vecSamples],
-        time=dfAnnotationProc[vecSamples,]$Time,
-        Batch=dfAnnotationProc[vecSamples,vecConfounders[1]],
-        Condition=dfAnnotationProc[vecSamples,]$Condition
+        normCounts=objectImpulseDE2@matCountDataProc[id,vecSamples]/objectImpulseDE2@vecSizeFactors[vecSamples],
+        time=objectImpulseDE2@dfAnnotationProc[vecSamples,]$Time,
+        Batch=objectImpulseDE2@dfAnnotationProc[vecSamples,objectImpulseDE2@vecConfounders[1]],
+        Condition=objectImpulseDE2@dfAnnotationProc[vecSamples,]$Condition
       )
       
-      vecControlImpulseParam <- objectImpulseDE2@lsModelFits$control[[id]]$lsImpulseFit$vecImpulseParam
+      vecControlImpulseParam <- objectImpulseDE2@objectImpulseDE2@lsModelFits$control[[id]]$lsImpulseFit$vecImpulseParam
       vecControlImpulseValue <- evalImpulse_comp(vecImpulseParam=vecControlImpulseParam,
                                                  vecTimepoints=vecTimePointsFit)
-      vecCombinedImpulseParam <- objectImpulseDE2@lsModelFits$combined[[id]]$lsImpulseFit$vecImpulseParam
+      vecCombinedImpulseParam <- objectImpulseDE2@objectImpulseDE2@lsModelFits$combined[[id]]$lsImpulseFit$vecImpulseParam
       vecCombinedImpulseValue <- evalImpulse_comp(vecImpulseParam=vecCombinedImpulseParam,
                                                   vecTimepoints=vecTimePointsFit)
       
-      vecControlBatchFactors <- objectImpulseDE2@lsModelFits$control[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
-      vecCombinedBatchFactors <- objectImpulseDE2@lsModelFits$combined[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
+      vecControlBatchFactors <- objectImpulseDE2@objectImpulseDE2@lsModelFits$control[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
+      vecCombinedBatchFactors <- objectImpulseDE2@objectImpulseDE2@lsModelFits$combined[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
       
-      vecBatchLabelsCtrl <- objectImpulseDE2@lsModelFits$IdxGroups$control$lsvecBatchUnique[[1]]
-      vecBatchLabelsComb <- objectImpulseDE2@lsModelFits$IdxGroups$combined$lsvecBatchUnique[[1]]
+      vecBatchLabelsCtrl <- objectImpulseDE2@objectImpulseDE2@lsModelFits$IdxGroups$control$lsvecBatchUnique[[1]]
+      vecBatchLabelsComb <- objectImpulseDE2@objectImpulseDE2@lsModelFits$IdxGroups$combined$lsvecBatchUnique[[1]]
       
       vecValueToPlotCtrl <- do.call(c, lapply(vecControlBatchFactors, function(f) vecControlImpulseValue*f) )
       vecValueToPlotComb <- do.call(c, lapply(vecCombinedBatchFactors, function(f) vecCombinedImpulseValue*f) )
@@ -201,15 +193,15 @@ plotGenes <- function(vecGeneIDs=NULL,
           geom_line(data=dfFit, aes(x=time, y=value, colour=Condition, linetype=BatchFit))
       }
     } else {
-      vecSamples <- dfAnnotationProc[dfAnnotationProc$Condition=="case",]$Sample
-      if(!is.null(vecConfounders)){ vecBatches <- dfAnnotationProc[vecSamples,vecConfounders[1]]
+      vecSamples <- objectImpulseDE2@dfAnnotationProc[objectImpulseDE2@dfAnnotationProc$Condition=="case",]$Sample
+      if(!is.null(objectImpulseDE2@vecConfounders)){ vecBatches <- objectImpulseDE2@dfAnnotationProc[vecSamples,objectImpulseDE2@vecConfounders[1]]
       } else { vecBatches <- rep(" ", length(vecSamples)) }
       
       dfRaw <- data.frame(
-        normCounts=matCountDataProc[id,vecSamples]/vecSizeFactors[vecSamples],
-        time=dfAnnotationProc[vecSamples,]$Time,
+        normCounts=objectImpulseDE2@matCountDataProc[id,vecSamples]/objectImpulseDE2@vecSizeFactors[vecSamples],
+        time=objectImpulseDE2@dfAnnotationProc[vecSamples,]$Time,
         Batch=vecBatches,
-        condition=dfAnnotationProc[vecSamples,]$Condition
+        condition=objectImpulseDE2@dfAnnotationProc[vecSamples,]$Condition
       )
       
       if(boolSimplePlot){
