@@ -780,12 +780,6 @@ fitModels <- function(objectImpulseDE2,
 											vecConfounders,
 											boolCaseCtrl){
   
-  # Load objects from output class
-  matCountDataProc <- objectImpulseDE2@matCountDataProc
-  dfAnnotationProc <- objectImpulseDE2@dfAnnotationProc
-  vecSizeFactors <- objectImpulseDE2@vecSizeFactors
-  vecDispersions <- objectImpulseDE2@vecDispersions
-  
   lsFitResults_all = list()
   
   # Conditions to be fitted separately
@@ -797,26 +791,26 @@ fitModels <- function(objectImpulseDE2,
   
   # Create lists of samples per condition
   if(boolCaseCtrl){    
-    lsSamplesByCond <- list( combined = dfAnnotationProc$Sample,
-                             case     = dfAnnotationProc[dfAnnotationProc$Condition=="case",]$Sample,
-                             control  = dfAnnotationProc[dfAnnotationProc$Condition=="control",]$Sample )
+    lsSamplesByCond <- list( combined = objectImpulseDE2@dfAnnotationProc$Sample,
+                             case     = objectImpulseDE2@dfAnnotationProc[objectImpulseDE2@dfAnnotationProc$Condition=="case",]$Sample,
+                             control  = objectImpulseDE2@dfAnnotationProc[objectImpulseDE2@dfAnnotationProc$Condition=="control",]$Sample )
   } else {
-    lsSamplesByCond <- list( case = dfAnnotationProc[dfAnnotationProc$Condition=="case",]$Sample )
+    lsSamplesByCond <- list( case = objectImpulseDE2@dfAnnotationProc[objectImpulseDE2@dfAnnotationProc$Condition=="case",]$Sample )
   }
   
   # Get batch assignments of samples
   if(!is.null(vecConfounders)){
   	lsvecBatches <- lapply(vecConfounders, function(confounder){
-  	  vecBatches <- dfAnnotationProc[,confounder]
-  	  names(vecBatches) <- 	dfAnnotationProc$Sample
+  	  vecBatches <- objectImpulseDE2@dfAnnotationProc[,confounder]
+  	  names(vecBatches) <- 	objectImpulseDE2@dfAnnotationProc$Sample
   	  return(vecBatches)
   	})
   	names(lsvecBatches) <- vecConfounders
   } else { lsvecBatches <- NULL }
   
   # Get time point assignments of samples
-  vecTimepoints <- dfAnnotationProc$Time
-  names(vecTimepoints) <- colnames(matCountDataProc)
+  vecTimepoints <- objectImpulseDE2@dfAnnotationProc$Time
+  names(vecTimepoints) <- colnames(objectImpulseDE2@matCountDataProc)
   
   # Fitting for different runs
   # Fit constant model only if doing case-only analysis
@@ -825,9 +819,9 @@ fitModels <- function(objectImpulseDE2,
   # mean parameter for reference.
   lsFitResultsByCond <- lapply(vecLabels, function(label){
     lsFitResults <- fitConstImpulse(
-      matCountDataProcCondition=matCountDataProc[,lsSamplesByCond[[label]]],
-      vecSizeFactors=vecSizeFactors[lsSamplesByCond[[label]]],
-      vecDispersions=vecDispersions,
+      matCountDataProcCondition=objectImpulseDE2@matCountDataProc[,lsSamplesByCond[[label]]],
+      vecSizeFactors=objectImpulseDE2@vecSizeFactors[lsSamplesByCond[[label]]],
+      vecDispersions=objectImpulseDE2@vecDispersions,
       vecTimepoints=vecTimepoints[lsSamplesByCond[[label]]],
       lsvecBatches=lapply(lsvecBatches, function(confounder) confounder[lsSamplesByCond[[label]]] ),
       boolFitConst=TRUE) 
