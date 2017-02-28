@@ -32,6 +32,7 @@ evalSigmoid <- function(vecSigmoidParam,
     vecSigmoidParam[2] + (vecSigmoidParam[3]-vecSigmoidParam[2])*
       (1/(1+exp(-vecSigmoidParam[1]*(t-vecSigmoidParam[4]))))
   })
+  vecSigmoidValue[vecSigmoidValue < 10^(-10)] <- 10^(-10)
   
   return(vecSigmoidValue)
 }

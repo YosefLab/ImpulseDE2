@@ -37,6 +37,7 @@ evalImpulse <- function(vecImpulseParam,
       (vecImpulseParam[4] + (vecImpulseParam[3]-vecImpulseParam[4])*
          (1/(1+exp(vecImpulseParam[1]*(t-vecImpulseParam[6])))))
   })
+  vecImpulseValue[vecImpulseValue < 10^(-10)] <- 10^(-10)
   
   return(vecImpulseValue)
 }
