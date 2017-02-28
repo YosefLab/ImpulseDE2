@@ -155,8 +155,6 @@ evalLogLikImpulse <- function(vecTheta,
   # Compute normalised impulse function value:
   vecImpulseParam <- vecTheta[1:6]
   vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
-  vecImpulseParam[2:4][vecImpulseParam[2:4] < 10^(-10)] <- 10^(-10)
-  vecImpulseParam[2:4][vecImpulseParam[2:4] > 10^(10)] <- 10^(10)
   vecImpulseValue <- evalImpulse_comp(vecImpulseParam=vecImpulseParam,
                                       vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
   scaNParamUsed <- 6
@@ -275,8 +273,6 @@ evalLogLikSigmoid <- function(vecTheta,
   # Compute normalised impulse function value:
   vecSigmoidParam <- vecTheta[1:4]
   vecSigmoidParam[2:3] <- exp(vecSigmoidParam[2:3])
-  vecSigmoidParam[2:3][vecSigmoidParam[2:3] < 10^(-10)] <- 10^(-10)
-  vecSigmoidParam[2:3][vecSigmoidParam[2:3] > 10^(10)] <- 10^(10)
   vecSigmoidValue <- evalSigmoid_comp(vecSigmoidParam=vecSigmoidParam,
                                       vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
   scaNParamUsed <- 4

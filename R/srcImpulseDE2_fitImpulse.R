@@ -44,6 +44,7 @@ estimateImpulseParam <- function(vecCounts,
                                  lsvecidxBatch){
   
   # Compute general statistics for initialisation:
+  vecTimepointsUnique <- unique(vecTimepoints)
   # Expression means by timepoint
   vecCountsSFcorrected <- vecCounts/vecSizeFactors
   if(!is.null(lsvecidxBatch)){
@@ -58,15 +59,15 @@ estimateImpulseParam <- function(vecCounts,
   		vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder[vecidxBatch]
   	}
     vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors
-    vecExpressionMeans <- sapply(vecTimepoints, function(tp){
+    vecExpressionMeans <- sapply(vecTimepointsUnique, function(tp){
       mean(vecCountsSFBatchcorrected[vecTimepoints==tp], na.rm=TRUE)
     })
   } else {
-    vecExpressionMeans <- sapply(vecTimepoints, function(tp){
+    vecExpressionMeans <- sapply(vecTimepointsUnique, function(tp){
       mean(vecCountsSFcorrected[vecTimepoints==tp], na.rm=TRUE)
     })
   }
-  scaNTimepoints <- length(vecTimepoints)
+  scaNTimepoints <- length(vecTimepointsUnique)
   scaMaxMiddleMean <- max(vecExpressionMeans[2:(scaNTimepoints-1)], na.rm=TRUE)
   scaMinMiddleMean <- min(vecExpressionMeans[2:(scaNTimepoints-1)], na.rm=TRUE)
   # +1 to push indicices up from middle stretch to entire window (first is omitted here)
@@ -74,7 +75,7 @@ estimateImpulseParam <- function(vecCounts,
   indMinMiddleMean <- match(scaMinMiddleMean,vecExpressionMeans[2:(scaNTimepoints-1)]) + 1
   # Gradients between neighbouring points
   vecGradients <- unlist( lapply(c(1:(scaNTimepoints-1)),function(x){
-    (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepoints[x+1]-vecTimepoints[x])}) )
+    (vecExpressionMeans[x+1]-vecExpressionMeans[x])/(vecTimepointsUnique[x+1]-vecTimepointsUnique[x])}) )
   vecGradients[is.na(vecGradients) | !is.finite(vecGradients)] <- 0
   
   # Compute peak initialisation
@@ -90,8 +91,8 @@ estimateImpulseParam <- function(vecCounts,
                          log(vecExpressionMeans[1]+1),
                          log(scaMaxMiddleMean+1),
                          log(vecExpressionMeans[scaNTimepoints]+1),
-                         (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
-                         (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2)
+                         (vecTimepointsUnique[indLowerInflexionPoint]+vecTimepointsUnique[indLowerInflexionPoint+1])/2,
+                         (vecTimepointsUnique[indUpperInflexionPoint]+vecTimepointsUnique[indUpperInflexionPoint+1])/2)
   
   # Compute valley initialisation
   # Beta: Has to be negative, Theta1: High, Theta2: Low, Theta3: High
@@ -106,8 +107,8 @@ estimateImpulseParam <- function(vecCounts,
                            log(vecExpressionMeans[1]+1),
                            log(scaMinMiddleMean+1),
                            log(vecExpressionMeans[scaNTimepoints]+1),
-                           (vecTimepoints[indLowerInflexionPoint]+vecTimepoints[indLowerInflexionPoint+1])/2,
-                           (vecTimepoints[indUpperInflexionPoint]+vecTimepoints[indUpperInflexionPoint+1])/2 )
+                           (vecTimepointsUnique[indLowerInflexionPoint]+vecTimepointsUnique[indLowerInflexionPoint+1])/2,
+                           (vecTimepointsUnique[indUpperInflexionPoint]+vecTimepointsUnique[indUpperInflexionPoint+1])/2 )
   
   return(list(peak=vecParamGuessPeak, 
               valley=vecParamGuessValley))
@@ -352,8 +353,6 @@ fitImpulseModel <- function(vecImpulseParamGuess,
   # Extract parameter estimates
   vecImpulseParam <- lsFit$par[1:6]
   vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
-  vecImpulseParam[2:4][vecImpulseParam[2:4] < 10^(-10)] <- 10^(-10)
-  vecImpulseParam[2:4][vecImpulseParam[2:4] > 10^(10)] <- 10^(10)
   names(vecImpulseParam) <- c("beta", "h0", "h1", "h2", "t1", "t2")
   vecImpulseValue <- evalImpulse_comp(vecImpulseParam=vecImpulseParam,
                                       vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]

@@ -42,7 +42,9 @@ estimateSigmoidParam <- function(vecCounts,
                                  vecTimepoints,
                                  vecSizeFactors,
                                  lsvecidxBatch){
+  
   # Compute general statistics for initialisation:
+  vecTimepointsUnique <- unique(vecTimepoints)
   # Expression means by timepoint
   vecCountsSFcorrected <- vecCounts/vecSizeFactors
   if(!is.null(lsvecidxBatch)){
@@ -57,15 +59,15 @@ estimateSigmoidParam <- function(vecCounts,
       vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder[vecidxBatch]
     }
     vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors
-    vecExpressionMeans <- sapply(vecTimepoints, function(tp){
+    vecExpressionMeans <- sapply(vecTimepointsUnique, function(tp){
       mean(vecCountsSFBatchcorrected[vecTimepoints==tp], na.rm=TRUE)
     })
   } else {
-    vecExpressionMeans <- sapply(vecTimepoints, function(tp){
+    vecExpressionMeans <- sapply(vecTimepointsUnique, function(tp){
       mean(vecCountsSFcorrected[vecTimepoints==tp], na.rm=TRUE)
     })
   }
-  scaNTimepoints <- length(vecTimepoints)
+  scaNTimepoints <- length(vecTimepointsUnique)
   idxMiddleTP <- round(scaNTimepoints/2)
   scaMaxEarlyMean <- max(vecExpressionMeans[1:(idxMiddleTP-1)], na.rm=TRUE)
   scaMinEarlyMean <- min(vecExpressionMeans[1:(idxMiddleTP-1)], na.rm=TRUE)
@@ -76,13 +78,13 @@ estimateSigmoidParam <- function(vecCounts,
   vecParamGuessUp <- c(1,
                        log(scaMinEarlyMean+1),
                        log(scaMaxLateMean+1),
-                       vecTimepoints[idxMiddleTP])
+                       vecTimepointsUnique[idxMiddleTP])
   
   # Compute down initialisation
   vecParamGuessDown <- c(1,
                          log(scaMaxEarlyMean+1),
                          log(scaMinLateMean+1),
-                         vecTimepoints[idxMiddleTP])
+                         vecTimepointsUnique[idxMiddleTP])
   
   return(list(up=vecParamGuessUp, 
               down=vecParamGuessDown))
