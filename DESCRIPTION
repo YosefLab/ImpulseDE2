@@ -1,15 +1,14 @@
 Package: ImpulseDE2
 Type: Package
 Title: Differential expression analysis of longitudinal count data sets
-Version: 0.99.0
-Date: 2017-01-02
+Version: 0.98.0.0
+Date: 2017-02-28
 Author: David Sebastian Fischer [aut, cre],
     Fabian Theis [aut],
     Nir Yosef [aut]
 Maintainer: David Sebastian Fischer <david.seb.fischer@gmail.com>,
     Nir Yosef <niryosef@berkeley.edu>
-Description: ImpulseDE2 is a differential expression algorithm for longitudinal count data sets
-    which arise in sequencing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
+Description: ImpulseDE2 is a differential expression algorithm for longitudinal count data sets which arise in sequencing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
 License: file LICENSE
 biocViews: Software,
     StatisticalMethod,

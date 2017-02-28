@@ -60,7 +60,7 @@ NULL
 #' matCountData    = lsSimulatedData$matObservedCounts, 
 #' dfAnnotation    = lsSimulatedData$dfAnnotation,
 #' boolCaseCtrl    = FALSE,
-#' objectImpulseDE2@vecConfounders  = NULL,
+#' vecConfounders  = NULL,
 #' boolIdentifyTransients = FALSE,
 #' scaNProc        = 1 )
 #' lsgplotsID <- plotGenes(
