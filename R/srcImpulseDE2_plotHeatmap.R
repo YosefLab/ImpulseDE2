@@ -40,6 +40,7 @@
 #'    }
 #'    
 #' @examples
+#' library(ComplexHeatmap)
 #' lsSimulatedData <- simulateDataSetImpulseDE2(
 #' vecTimePointsA   = rep(seq(1,8),3),
 #' vecTimePointsB   = NULL,

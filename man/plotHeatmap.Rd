@@ -47,6 +47,7 @@ sorted by peak time for raw counts and for the
 fitted signal.
 }
 \examples{
+library(ComplexHeatmap)
 lsSimulatedData <- simulateDataSetImpulseDE2(
 vecTimePointsA   = rep(seq(1,8),3),
 vecTimePointsB   = NULL,

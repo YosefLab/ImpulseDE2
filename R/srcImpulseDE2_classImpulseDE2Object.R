@@ -451,8 +451,6 @@ setMethod('$', 'ImpulseDE2Object', function(x, name) x[[name]] )
 
 ### 3. Functions on ImpulseDE2Object that perform specific tasks
 
-# a) Enable printing of report to .txt file
-
 #' Print ImpulseDE2 report to .txt file
 #' 
 #' Print ImpulseDE2 report to .txt file.
@@ -485,14 +483,8 @@ setMethod('$', 'ImpulseDE2Object', function(x, name) x[[name]] )
 #' #file=paste0(dirPWD, "ImpulseDE2Report.txt")
 #' #)
 #' 
-#' @name writeReportToFile,ImpulseDE2Object,character
-#' @aliases writeReportToFile,ImpulseDE2Object,character
-#' 
 #' @author David Sebastian Fischer
-setGeneric('writeReportToFile', function(object, fileReport) standardGeneric('writeReportToFile'), valueClass = 'NULL')
-
-#' @name writeReportToFile,ImpulseDE2Object,character
 #' @export
-setMethod('writeReportToFile', c(object='ImpulseDE2Object', fileReport='character'), 
-          function(object, fileReport) write(object@strReport, file=fileReport, ncolumns=1) 
-)
+writeReportToFile <- function(object, fileReport){ 
+  write(object@strReport, file=fileReport, ncolumns=1) 
+}
