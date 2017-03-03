@@ -11,6 +11,9 @@ writeReportToFile(object, fileReport)
 
 \item{fileReport}{(file) File to print report to.}
 }
+\value{
+No return.
+}
 \description{
 Print ImpulseDE2 report to .txt file.
 }

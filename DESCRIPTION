@@ -1,8 +1,8 @@
 Package: ImpulseDE2
 Type: Package
 Title: Differential expression analysis of longitudinal count data sets
-Version: 0.99.0.0
-Date: 2017-03-02
+Version: 0.99.0
+Date: 2017-03-03
 Authors@R: c(
 	person('David S', 'Fischer', NULL, 'david.fischer@helmholtz-muenchen.de', c('aut','cre')),
 	person('Fabian', 'Theis', NULL, 'fabian.theis@helmholtz-muenchen.de', 'ctb'),

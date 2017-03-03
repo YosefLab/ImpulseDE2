@@ -458,7 +458,7 @@ setMethod('$', 'ImpulseDE2Object', function(x, name) x[[name]] )
 #' @param object (ImpulseDE2Object) Output object of ImpulseDE2.
 #' @param fileReport (file) File to print report to.
 #' 
-#' @return NULL
+#' @return No return.
 #' 
 #' @examples
 #' dirPWD <- getwd() # Will save into current working directory.
