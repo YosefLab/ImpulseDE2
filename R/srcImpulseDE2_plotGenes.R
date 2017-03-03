@@ -97,7 +97,7 @@ plotGenes <- function(vecGeneIDs=NULL,
   if(is.null(objectImpulseDE2@lsModelFits)) error("objectImpulseDE2 does not contain model fits. Run ImpulseDE2_main first.")
   if(is.null(vecGeneIDs) & is.null(scaNTopIDs)) stop("Supply either vecGeneIDs or scaNTopIDs.")
   if(!is.null(vecGeneIDs) & !is.null(scaNTopIDs)) stop("Only one of the two: vecGeneIDs or scaNTopIDs.")
-  if(is.null(objectImpulseDE2@objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique) & !is.null(boolSimplePlot)){
+  if(is.null(objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique) & !is.null(boolSimplePlot)){
     print("Setting boolSimplePlot=TRUE as no batch structure was found.")
     boolSimplePlot <- TRUE
   }
@@ -113,15 +113,15 @@ plotGenes <- function(vecGeneIDs=NULL,
   for(id in vecGeneIDs){
     
     vecTimePointsFit <- seq(min(objectImpulseDE2@dfAnnotationProc$Time), max(objectImpulseDE2@dfAnnotationProc$Time), length.out=100)
-    vecCaseImpulseParam <- objectImpulseDE2@objectImpulseDE2@lsModelFits$case[[id]]$lsImpulseFit$vecImpulseParam
+    vecCaseImpulseParam <- objectImpulseDE2@lsModelFits$case[[id]]$lsImpulseFit$vecImpulseParam
     vecCaseImpulseValue <- evalImpulse_comp(vecImpulseParam=vecCaseImpulseParam,
                                             vecTimepoints=vecTimePointsFit)
     
     # Can only resolve one level of batch effects as this is plotted
     # as different function fits to the indididual batches
     if(!is.null(objectImpulseDE2@vecConfounders)){
-      vecCaseBatchFactors <- objectImpulseDE2@objectImpulseDE2@lsModelFits$case[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
-      vecBatchLabelsCase <- objectImpulseDE2@objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique[[1]]
+      vecCaseBatchFactors <- objectImpulseDE2@lsModelFits$case[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
+      vecBatchLabelsCase <- objectImpulseDE2@lsModelFits$IdxGroups$case$lsvecBatchUnique[[1]]
     } else {
       vecCaseBatchFactors <- 1
       vecBatchLabelsCase <- " "
@@ -138,18 +138,18 @@ plotGenes <- function(vecGeneIDs=NULL,
         Condition=objectImpulseDE2@dfAnnotationProc[vecSamples,]$Condition
       )
       
-      vecControlImpulseParam <- objectImpulseDE2@objectImpulseDE2@lsModelFits$control[[id]]$lsImpulseFit$vecImpulseParam
+      vecControlImpulseParam <- objectImpulseDE2@lsModelFits$control[[id]]$lsImpulseFit$vecImpulseParam
       vecControlImpulseValue <- evalImpulse_comp(vecImpulseParam=vecControlImpulseParam,
                                                  vecTimepoints=vecTimePointsFit)
-      vecCombinedImpulseParam <- objectImpulseDE2@objectImpulseDE2@lsModelFits$combined[[id]]$lsImpulseFit$vecImpulseParam
+      vecCombinedImpulseParam <- objectImpulseDE2@lsModelFits$combined[[id]]$lsImpulseFit$vecImpulseParam
       vecCombinedImpulseValue <- evalImpulse_comp(vecImpulseParam=vecCombinedImpulseParam,
                                                   vecTimepoints=vecTimePointsFit)
       
-      vecControlBatchFactors <- objectImpulseDE2@objectImpulseDE2@lsModelFits$control[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
-      vecCombinedBatchFactors <- objectImpulseDE2@objectImpulseDE2@lsModelFits$combined[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
+      vecControlBatchFactors <- objectImpulseDE2@lsModelFits$control[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
+      vecCombinedBatchFactors <- objectImpulseDE2@lsModelFits$combined[[id]]$lsImpulseFit$lsvecBatchFactors[[1]]
       
-      vecBatchLabelsCtrl <- objectImpulseDE2@objectImpulseDE2@lsModelFits$IdxGroups$control$lsvecBatchUnique[[1]]
-      vecBatchLabelsComb <- objectImpulseDE2@objectImpulseDE2@lsModelFits$IdxGroups$combined$lsvecBatchUnique[[1]]
+      vecBatchLabelsCtrl <- objectImpulseDE2@lsModelFits$IdxGroups$control$lsvecBatchUnique[[1]]
+      vecBatchLabelsComb <- objectImpulseDE2@lsModelFits$IdxGroups$combined$lsvecBatchUnique[[1]]
       
       vecValueToPlotCtrl <- do.call(c, lapply(vecControlBatchFactors, function(f) vecControlImpulseValue*f) )
       vecValueToPlotComb <- do.call(c, lapply(vecCombinedBatchFactors, function(f) vecCombinedImpulseValue*f) )

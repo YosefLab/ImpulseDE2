@@ -344,7 +344,7 @@ setMethod('get_vecDispersions', 'ImpulseDE2Object', function(object) object@vecD
 #' @return (bool) boolCaseCtrl
 #' @name generics_get_accessors
 #' @export
-setGeneric('get_boolCaseCtrl', function(object) standardGeneric('get_boolCaseCtrl'), valueClass = 'characterORNULL')
+setGeneric('get_boolCaseCtrl', function(object) standardGeneric('get_boolCaseCtrl'), valueClass = 'logical')
 #' @name get_accessors
 #' @export
 setMethod('get_boolCaseCtrl', 'ImpulseDE2Object', function(object) object@boolCaseCtrl)
@@ -368,7 +368,7 @@ setMethod('get_scaNProc', 'ImpulseDE2Object', function(object) object@scaNProc)
 #' @return (scalar) scaQThres
 #' @name generics_get_accessors
 #' @export
-setGeneric('get_scaQThres', function(object) standardGeneric('get_scaQThres'), valueClass = 'numericOrNULL')
+setGeneric('get_scaQThres', function(object) standardGeneric('get_scaQThres'), valueClass = 'numericORNULL')
 #' @name get_accessors
 #' @export
 setMethod('get_scaQThres', 'ImpulseDE2Object', function(object) object@scaQThres)
@@ -453,12 +453,14 @@ setMethod('$', 'ImpulseDE2Object', function(x, name) x[[name]] )
 
 # a) Enable printing of report to .txt file
 
-#' Print ImpulseDE2 report string to .txt file
+#' Print ImpulseDE2 report to .txt file
+#' 
+#' Print ImpulseDE2 report to .txt file.
 #'
 #' @param object (ImpulseDE2Object) Output object of ImpulseDE2.
 #' @param fileReport (file) File to print report to.
 #' 
-#' @return No value.
+#' @return NULL
 #' 
 #' @examples
 #' dirPWD <- getwd() # Will save into current working directory.
@@ -477,18 +479,20 @@ setMethod('$', 'ImpulseDE2Object', function(x, name) x[[name]] )
 #' boolCaseCtrl    = FALSE,
 #' vecConfounders  = NULL,
 #' scaNProc        = 1 )
-#' writeReportToFile(
-#' object=objectImpulseDE2,
-#' file=paste0(dirPWD, "ImpulseDE2Report.txt")
-#' )
+#' # Uncomment to run:
+#' #writeReportToFile(
+#' #object=objectImpulseDE2,
+#' #file=paste0(dirPWD, "ImpulseDE2Report.txt")
+#' #)
+#' 
+#' @name writeReportToFile,ImpulseDE2Object,character
+#' @aliases writeReportToFile,ImpulseDE2Object,character
 #' 
 #' @author David Sebastian Fischer
-#'  
-#' @name writeReportToFile
 setGeneric('writeReportToFile', function(object, fileReport) standardGeneric('writeReportToFile'), valueClass = 'NULL')
 
-#' @name writeReportToFile
+#' @name writeReportToFile,ImpulseDE2Object,character
 #' @export
-setMethod('writeReportToFile', signature(object='ImpulseDE2Object', fileReport='character'), 
+setMethod('writeReportToFile', c(object='ImpulseDE2Object', fileReport='character'), 
           function(object, fileReport) write(object@strReport, file=fileReport, ncolumns=1) 
 )

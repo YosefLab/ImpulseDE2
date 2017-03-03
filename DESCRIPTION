@@ -1,21 +1,17 @@
 Package: ImpulseDE2
 Type: Package
 Title: Differential expression analysis of longitudinal count data sets
-Version: 0.98.0.0
-Date: 2017-02-28
-Author: David Sebastian Fischer [aut, cre],
-    Fabian Theis [aut],
-    Nir Yosef [aut]
-Maintainer: David Sebastian Fischer <david.seb.fischer@gmail.com>,
-    Nir Yosef <niryosef@berkeley.edu>
-Description: ImpulseDE2 is a differential expression algorithm for longitudinal count data sets which arise in sequencing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
+Version: 0.99.0.0
+Date: 2017-03-02
+Authors@R: c(
+	person('David S', 'Fischer', NULL, 'david.fischer@helmholtz-muenchen.de', c('aut','cre')),
+	person('Fabian', 'Theis', NULL, 'fabian.theis@helmholtz-muenchen.de', 'ctb'),
+	person('Nir', 'Yosef', NULL, 'niryosef@berkeley.edu', 'ctb'))
+Author: David S Fischer [aut, cre], Fabian J Theis [ctb], Nir Yosef [ctb]
+Maintainer: David S Fischer <david.fischer@helmholtz-muenchen.de>
+Description: ImpulseDE2 is a differential expression algorithm for longituinal count data sets which arise in sequeincing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
 License: file LICENSE
-biocViews: Software,
-    StatisticalMethod,
-    TimeCourse,
-    Sequencing,
-    DifferentialExpression,
-    GeneExpression
+Encoding: UTF-8
 Imports:
     methods,
     stats,
@@ -29,6 +25,14 @@ Imports:
     ComplexHeatmap,
     circlize,
     cowplot
+biocViews: Software,
+    StatisticalMethod,
+    TimeCourse,
+    Sequencing,
+    DifferentialExpression,
+    GeneExpression,
+    CellBiology,
+    CellBasedAssays
 Collate:
     'ImpulseDE2_main.R'
     'srcImpulseDE2_CostFunctionsFit.R'
@@ -45,5 +49,4 @@ Collate:
     'srcImpulseDE2_runDESeq2.R'
     'srcImpulseDE2_simulateDataSet.R'
 RoxygenNote: 6.0.1
-URL: https://github.com/YosefLab/ImpulseDE2
 BugReports: https://github.com/YosefLab/ImpulseDE2/issues
