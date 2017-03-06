@@ -6,6 +6,7 @@
 #' @import DESeq2
 #' @import ggplot2
 #' @importFrom grDevices dev.off graphics.off pdf
+#' @import knitr
 #' @import Matrix
 #' @import methods
 #' @importFrom stats dnbinom median optim p.adjust pchisq rnbinom rnorm runif sd time
