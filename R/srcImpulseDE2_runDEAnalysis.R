@@ -344,9 +344,9 @@ runDEAnalysis <- function(objectImpulseDE2,
 #' vecBatchesA      = NULL,
 #' vecBatchesB      = NULL,
 #' scaNConst        = 0,
-#' scaNImp          = 200,
-#' scaNLin          = 100,
-#' scaNSig          = 200)
+#' scaNImp          = 50,
+#' scaNLin          = 0,
+#' scaNSig          = 50)
 #' objectImpulseDE2 <- runImpulseDE2(
 #' matCountData    = lsSimulatedData$matObservedCounts, 
 #' dfAnnotation    = lsSimulatedData$dfAnnotation,

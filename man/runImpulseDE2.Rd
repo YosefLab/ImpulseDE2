@@ -14,7 +14,8 @@ runImpulseDE2(matCountData = NULL, dfAnnotation = NULL,
 }
 \arguments{
 \item{matCountData}{(matrix genes x samples) [Default NULL] 
-Read count data, unobserved entries are NA.}
+Read count data, unobserved entries are NA. 
+Can be SummarizedExperiment object.}
 
 \item{dfAnnotation}{(data frame samples x covariates) 
 {Sample, Condition, Time (numeric), TimeCateg (str)

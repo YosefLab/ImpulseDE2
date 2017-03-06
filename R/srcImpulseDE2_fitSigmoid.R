@@ -450,9 +450,9 @@ fitSigmoidGene <- function(vecCounts,
 #' vecBatchesA      = NULL,
 #' vecBatchesB      = NULL,
 #' scaNConst        = 0,
-#' scaNImp          = 200,
-#' scaNLin          = 100,
-#' scaNSig          = 200)
+#' scaNImp          = 20,
+#' scaNLin          = 10,
+#' scaNSig          = 20)
 #' objectImpulseDE2 <- runImpulseDE2(
 #' matCountData    = lsSimulatedData$matObservedCounts, 
 #' dfAnnotation    = lsSimulatedData$dfAnnotation,

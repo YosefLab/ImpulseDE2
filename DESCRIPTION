@@ -1,7 +1,7 @@
 Package: ImpulseDE2
 Type: Package
 Title: Differential expression analysis of longitudinal count data sets
-Version: 0.99.0
+Version: 0.99.1
 Date: 2017-03-03
 Authors@R: c(
 	person('David S', 'Fischer', NULL, 'david.fischer@helmholtz-muenchen.de', c('aut','cre')),
@@ -13,18 +13,19 @@ Description: ImpulseDE2 is a differential expression algorithm for longituinal c
 License: file LICENSE
 Encoding: UTF-8
 Imports:
-    methods,
-    stats,
-    compiler,
-    DESeq2,
-    S4Vectors,
     BiocParallel,
-    Matrix,
-    grDevices,
-    ggplot2,
     ComplexHeatmap,
     circlize,
-    cowplot
+    compiler,
+    cowplot,
+    DESeq2,
+    ggplot2,
+    grDevices,
+    Matrix,
+    methods,
+    S4Vectors,
+    stats,
+    SummarizedExperiment
 biocViews: Software,
     StatisticalMethod,
     TimeCourse,

@@ -1,14 +1,15 @@
+#' @import BiocParallel
+#' @import circlize
+#' @importFrom compiler cmpfun
+#' @import ComplexHeatmap
+#' @importFrom cowplot plot_grid
+#' @import DESeq2
+#' @import ggplot2
+#' @importFrom grDevices dev.off graphics.off pdf
+#' @import Matrix
 #' @import methods
 #' @importFrom stats dnbinom median optim p.adjust pchisq rnbinom rnorm runif sd time
-#' @importFrom compiler cmpfun
-#' @import DESeq2
-#' @import BiocParallel
-#' @import Matrix
-#' @import ggplot2
-#' @import ComplexHeatmap
-#' @import circlize
-#' @importFrom cowplot plot_grid
-#' @importFrom grDevices dev.off graphics.off pdf
+#' @import SummarizedExperiment
 NULL
 
 ################################################################################
@@ -61,7 +62,8 @@ NULL
 #' \link{simulateDataSetImpulseDE2}.
 #' 
 #' @param matCountData (matrix genes x samples) [Default NULL] 
-#'    Read count data, unobserved entries are NA.
+#'    Read count data, unobserved entries are NA. 
+#'    Can be SummarizedExperiment object.
 #' @param dfAnnotation (data frame samples x covariates) 
 #'    {Sample, Condition, Time (numeric), TimeCateg (str)
 #'    (and confounding variables if given).}
@@ -185,7 +187,7 @@ runImpulseDE2 <- function(matCountData=NULL,
   boolIdentifyTransients=FALSE,
   boolVerbose=TRUE ){
   
-  strMessage <- "ImpulseDE2 v1.0 for count data"
+  strMessage <- "ImpulseDE2 for count data"
   if(boolVerbose) print(strMessage)
   strReport <- strMessage
   
@@ -194,6 +196,8 @@ runImpulseDE2 <- function(matCountData=NULL,
     strMessage <- "# Process input"
     if(boolVerbose) print(strMessage)
     strReport <- paste0(strReport, "\n", strMessage)
+    # Extract count matrix if handed SummarizedExperiment
+    if(class(matCountData) == "SummarizedExperiment") matCountData <- assay(matCountData)
     lsProcessedData <- processData(
       dfAnnotation=dfAnnotation,
       matCountData=matCountData,
