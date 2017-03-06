@@ -1,7 +1,7 @@
 Package: ImpulseDE2
 Type: Package
 Title: Differential expression analysis of longitudinal count data sets
-Version: 0.99.1
+Version: 0.99.2
 Date: 2017-03-03
 Authors@R: c(
 	person('David S', 'Fischer', NULL, 'david.fischer@helmholtz-muenchen.de', c('aut','cre')),
@@ -50,4 +50,5 @@ Collate:
     'srcImpulseDE2_runDESeq2.R'
     'srcImpulseDE2_simulateDataSet.R'
 RoxygenNote: 6.0.1
+VignetteBuilder: knitr
 BugReports: https://github.com/YosefLab/ImpulseDE2/issues

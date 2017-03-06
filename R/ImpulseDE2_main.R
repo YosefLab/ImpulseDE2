@@ -187,7 +187,7 @@ runImpulseDE2 <- function(matCountData=NULL,
   boolIdentifyTransients=FALSE,
   boolVerbose=TRUE ){
   
-  strMessage <- "ImpulseDE2 for count data"
+  strMessage <- paste0("ImpulseDE2 for count data, v", packageDescription("ImpulseDE2", fields = "Version"))
   if(boolVerbose) print(strMessage)
   strReport <- strMessage
   
