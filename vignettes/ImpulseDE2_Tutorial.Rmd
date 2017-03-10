@@ -247,9 +247,9 @@ lsSimulatedData <- simulateDataSetImpulseDE2(
   vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
   vecBatchesB      = NULL,
   scaNConst        = 0,
-  scaNImp          = 150,
+  scaNImp          = 100,
   scaNLin          = 0,
-  scaNSig          = 50,
+  scaNSig          = 0,
   scaMuBatchEffect = 1,
   scaSDBatchEffect = 0.2,
   dirOutSimulation = NULL)
