@@ -1,3 +1,4 @@
+#' @import Biobase
 #' @import BiocParallel
 #' @import circlize
 #' @importFrom compiler cmpfun

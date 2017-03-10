@@ -13,6 +13,7 @@ Description: ImpulseDE2 is a differential expression algorithm for longituinal c
 License: file LICENSE
 Encoding: UTF-8
 Imports:
+    Biobase,
     BiocParallel,
     ComplexHeatmap,
     circlize,
