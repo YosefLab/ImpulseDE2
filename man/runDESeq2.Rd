@@ -16,13 +16,14 @@ Processed annotation table with covariates for each sample.}
 Read count data.}
 
 \item{boolCaseCtrl}{(bool) 
-Whether to perform case-control analysis. Does case-only
-analysis if FALSE.}
+\t\tWhether to perform case-control analysis. Does case-only
+\t\tanalysis if FALSE.}
 
 \item{vecConfounders}{(vector of strings number of confounding variables)
-Factors to correct for during batch correction. Have to 
-supply dispersion factors if more than one is supplied.
-Names refer to columns in dfAnnotationProc.}
+\t\tFactors to correct for during batch correction. Have to 
+\t\tsupply dispersion factors if more than one is supplied.
+\t\tNames refer to columns in dfAnnotationProc.
+\t\t}
 }
 \value{
 (numeric vector length number of genes)

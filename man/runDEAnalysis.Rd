@@ -13,12 +13,12 @@ runDEAnalysis(objectImpulseDE2, boolCaseCtrl, vecConfounders,
 Object containing fits to be evaluated.}
 
 \item{boolCaseCtrl}{(bool) 
-Whether to perform case-control analysis. Does case-only
-analysis if FALSE.}
+\t\tWhether to perform case-control analysis. Does case-only
+\t\tanalysis if FALSE.}
 
 \item{vecConfounders}{(vector of strings number of confounding variables)
-Factors to correct for during batch correction.
-Names refer to columns in dfAnnotation.}
+\t\tFactors to correct for during batch correction.
+\t\tNames refer to columns in dfAnnotation.}
 
 \item{boolIdentifyTransients}{(bool) [Defaul FALSE]
 Whether to identify transiently activated or deactivated 

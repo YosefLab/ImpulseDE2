@@ -20,22 +20,18 @@
 #'    Model values for given time points.
 #'    
 #' @author David Sebastian Fischer
-evalSigmoid <- function(
-  vecSigmoidParam,
-  vecTimepoints){
-  
-  # beta is vecSigmoidParam[1]
-  # h0 is vecSigmoidParam[2]
-  # h1 is vecSigmoidParam[3]
-  # t1 is vecSigmoidParam[4]
-  
-  vecSigmoidValue <- sapply(vecTimepoints, function(t){
-    vecSigmoidParam[2] + (vecSigmoidParam[3]-vecSigmoidParam[2])*
-      (1/(1+exp(-vecSigmoidParam[1]*(t-vecSigmoidParam[4]))))
-  })
-  vecSigmoidValue[vecSigmoidValue < 10^(-10)] <- 10^(-10)
-  
-  return(vecSigmoidValue)
+evalSigmoid <- function(vecSigmoidParam, vecTimepoints) {
+    
+    # beta is vecSigmoidParam[1] h0 is vecSigmoidParam[2] h1 is
+    # vecSigmoidParam[3] t1 is vecSigmoidParam[4]
+    
+    vecSigmoidValue <- sapply(vecTimepoints, function(t) {
+        vecSigmoidParam[2] + (vecSigmoidParam[3] - vecSigmoidParam[2]) * 
+            (1/(1 + exp(-vecSigmoidParam[1] * (t - vecSigmoidParam[4]))))
+    })
+    vecSigmoidValue[vecSigmoidValue < 10^(-10)] <- 10^(-10)
+    
+    return(vecSigmoidValue)
 }
 
 #' Compiled function: evalSigmoid

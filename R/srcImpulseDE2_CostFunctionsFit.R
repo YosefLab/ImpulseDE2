@@ -25,57 +25,52 @@
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
 #' @param lsvecidxBatch (list length number of confounding variables)
-#' 		List of index vectors. 
-#' 		One vector per confounding variable.
-#' 		Each vector has one entry per sample with the index batch
-#' 		within the given confounding variable of the given sample.
-#' 		Batches are enumerated from 1 to number of batches.
+#' \t\tList of index vectors. 
+#' \t\tOne vector per confounding variable.
+#' \t\tEach vector has one entry per sample with the index batch
+#' \t\twithin the given confounding variable of the given sample.
+#' \t\tBatches are enumerated from 1 to number of batches.
 #' @param vecboolObserved (bool vector number of samples)
 #'    Whether sample is observed (finite and not NA).
 #'     
 #' @return scaLogLik (scalar) Value of cost function (loglikelihood) for given gene.
 #' 
 #' @author David Sebastian Fischer
-evalLogLikMu <- function(
-  vecTheta,
-  vecCounts,
-  scaDisp, 
-  vecSizeFactors,
-  lsvecidxBatch,
-  vecboolObserved){
-  
-  scaMu <- exp(vecTheta[1])
-  scaNParamUsed <- 1
-  # Prevent mean shrinkage to zero:
-  if(scaMu < 10^(-10)){ scaMu <- 10^(-10) }
-  
-  vecBatchFactors <- array(1, length(vecCounts))
-  if(!is.null(lsvecidxBatch)){
-    for(vecidxConfounder in lsvecidxBatch){
-      scaNBatchFactors <- max(vecidxConfounder)-1 # Batches are counted from 1
-      # Factor of first batch is one (constant), the remaining
-      # factors scale based on the first batch.
-      vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecidxConfounder]
-      scaNParamUsed <- scaNParamUsed+scaNBatchFactors
-      # Prevent batch factor shrinkage and explosion:
-      vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
-      vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
-      
-      vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder
+evalLogLikMu <- function(vecTheta, vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch, 
+    vecboolObserved) {
+    
+    scaMu <- exp(vecTheta[1])
+    scaNParamUsed <- 1
+    # Prevent mean shrinkage to zero:
+    if (scaMu < 10^(-10)) {
+        scaMu <- 10^(-10)
     }
-  }
-  
-  # Compute log likelihood under constant model by
-  # adding log likelihood of model at each timepoint.
-  scaLogLik <- sum(dnbinom(
-    vecCounts[vecboolObserved], 
-    mu=scaMu*vecBatchFactors[vecboolObserved]*
-      vecSizeFactors[vecboolObserved], 
-    size=scaDisp, 
-    log=TRUE))
-  
-  # Maximise log likelihood: Return likelihood as value to optimisation routine
-  return(scaLogLik)
+    
+    vecBatchFactors <- array(1, length(vecCounts))
+    if (!is.null(lsvecidxBatch)) {
+        for (vecidxConfounder in lsvecidxBatch) {
+            scaNBatchFactors <- max(vecidxConfounder) - 1  # Batches are counted from 1
+            # Factor of first batch is one (constant), the remaining factors scale
+            # based on the first batch.
+            vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed + 
+                1):(scaNParamUsed + scaNBatchFactors)]))[vecidxConfounder]
+            scaNParamUsed <- scaNParamUsed + scaNBatchFactors
+            # Prevent batch factor shrinkage and explosion:
+            vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
+            vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
+            
+            vecBatchFactors <- vecBatchFactors * vecBatchFactorsConfounder
+        }
+    }
+    
+    # Compute log likelihood under constant model by adding log likelihood
+    # of model at each timepoint.
+    scaLogLik <- sum(dnbinom(vecCounts[vecboolObserved], mu = scaMu * vecBatchFactors[vecboolObserved] * 
+        vecSizeFactors[vecboolObserved], size = scaDisp, log = TRUE))
+    
+    # Maximise log likelihood: Return likelihood as value to optimisation
+    # routine
+    return(scaLogLik)
 }
 
 #' Compiled function: evalLogLikMu
@@ -93,11 +88,11 @@ evalLogLikMu <- function(
 #'    Model scaling factors for each sample which take
 #'    sequencing depth into account (size factors).
 #' @param lsvecidxBatch (list length number of confounding variables)
-#' 		List of index vectors. 
-#' 		One vector per confounding variable.
-#' 		Each vector has one entry per sample with the index batch
-#' 		within the given confounding variable of the given sample.
-#' 		Batches are enumerated from 1 to number of batches.
+#' \t\tList of index vectors. 
+#' \t\tOne vector per confounding variable.
+#' \t\tEach vector has one entry per sample with the index batch
+#' \t\twithin the given confounding variable of the given sample.
+#' \t\tBatches are enumerated from 1 to number of batches.
 #' @param vecboolObserved (bool vector number of samples)
 #'    Whether sample is observed (finite and not NA).
 #'     
@@ -133,62 +128,53 @@ evalLogLikMu_comp <- cmpfun(evalLogLikMu)
 #'    Index of of time point assigned to each sample in vector
 #'    vecTimepointsUnique.
 #' @param lsvecidxBatch (list length number of confounding variables)
-#' 		List of index vectors. 
-#' 		One vector per confounding variable.
-#' 		Each vector has one entry per sample with the index batch
-#' 		within the given confounding variable of the given sample.
-#' 		Batches are enumerated from 1 to number of batches.
+#' \t\tList of index vectors. 
+#' \t\tOne vector per confounding variable.
+#' \t\tEach vector has one entry per sample with the index batch
+#' \t\twithin the given confounding variable of the given sample.
+#' \t\tBatches are enumerated from 1 to number of batches.
 #' @param vecboolObserved (bool vector number of samples)
 #'    Whether sample is observed (finite and not NA).
 #'     
 #' @return scaLogLik (scalar) Value of cost function (loglikelihood) for given gene.
 #' 
 #' @author David Sebastian Fischer
-evalLogLikImpulse <- function(
-  vecTheta,
-  vecCounts,
-  scaDisp, 
-  vecSizeFactors,
-  vecTimepointsUnique,
-  vecidxTimepoint,
-  lsvecidxBatch,
-  vecboolObserved){
-  
-  # Compute normalised impulse function value:
-  vecImpulseParam <- vecTheta[1:6]
-  vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
-  vecImpulseValue <- evalImpulse_comp(vecImpulseParam=vecImpulseParam,
-                                      vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
-  scaNParamUsed <- 6
-  
-  vecBatchFactors <- array(1, length(vecCounts))
-  if(!is.null(lsvecidxBatch)){
-    for(vecidxConfounder in lsvecidxBatch){
-      scaNBatchFactors <- max(vecidxConfounder)-1 # Batches are counted from 1
-      # Factor of first batch is one (constant), the remaining
-      # factors scale based on the first batch.
-      vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecidxConfounder]
-      scaNParamUsed <- scaNParamUsed+scaNBatchFactors
-      # Prevent batch factor shrinkage and explosion:
-      vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
-      vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
-      
-      vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder
+evalLogLikImpulse <- function(vecTheta, vecCounts, scaDisp, vecSizeFactors, 
+    vecTimepointsUnique, vecidxTimepoint, lsvecidxBatch, vecboolObserved) {
+    
+    # Compute normalised impulse function value:
+    vecImpulseParam <- vecTheta[1:6]
+    vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
+    vecImpulseValue <- evalImpulse_comp(vecImpulseParam = vecImpulseParam, 
+        vecTimepoints = vecTimepointsUnique)[vecidxTimepoint]
+    scaNParamUsed <- 6
+    
+    vecBatchFactors <- array(1, length(vecCounts))
+    if (!is.null(lsvecidxBatch)) {
+        for (vecidxConfounder in lsvecidxBatch) {
+            scaNBatchFactors <- max(vecidxConfounder) - 1  # Batches are counted from 1
+            # Factor of first batch is one (constant), the remaining factors scale
+            # based on the first batch.
+            vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed + 
+                1):(scaNParamUsed + scaNBatchFactors)]))[vecidxConfounder]
+            scaNParamUsed <- scaNParamUsed + scaNBatchFactors
+            # Prevent batch factor shrinkage and explosion:
+            vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
+            vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
+            
+            vecBatchFactors <- vecBatchFactors * vecBatchFactorsConfounder
+        }
     }
-  }
-  
-  # Compute log likelihood under impulse model by
-  # adding log likelihood of model at each timepoint.
-  scaLogLik <- sum(dnbinom(
-    vecCounts[vecboolObserved], 
-    mu=vecImpulseValue[vecboolObserved]* 
-      vecBatchFactors[vecboolObserved]*
-      vecSizeFactors[vecboolObserved], 
-    size=scaDisp, 
-    log=TRUE))
-  
-  # Maximise log likelihood: Return likelihood as value to optimisation routine
-  return(scaLogLik)
+    
+    # Compute log likelihood under impulse model by adding log likelihood of
+    # model at each timepoint.
+    scaLogLik <- sum(dnbinom(vecCounts[vecboolObserved], mu = vecImpulseValue[vecboolObserved] * 
+        vecBatchFactors[vecboolObserved] * vecSizeFactors[vecboolObserved], 
+        size = scaDisp, log = TRUE))
+    
+    # Maximise log likelihood: Return likelihood as value to optimisation
+    # routine
+    return(scaLogLik)
 }
 
 #' Compiled function: evalLogLikImpulse
@@ -212,11 +198,11 @@ evalLogLikImpulse <- function(
 #'    Index of of time point assigned to each sample in vector
 #'    vecTimepointsUnique.
 #' @param lsvecidxBatch (list length number of confounding variables)
-#' 		List of index vectors. 
-#' 		One vector per confounding variable.
-#' 		Each vector has one entry per sample with the index batch
-#' 		within the given confounding variable of the given sample.
-#' 		Batches are enumerated from 1 to number of batches.
+#' \t\tList of index vectors. 
+#' \t\tOne vector per confounding variable.
+#' \t\tEach vector has one entry per sample with the index batch
+#' \t\twithin the given confounding variable of the given sample.
+#' \t\tBatches are enumerated from 1 to number of batches.
 #' @param vecboolObserved (bool vector number of samples)
 #'    Whether sample is observed (finite and not NA).
 #'     
@@ -252,62 +238,53 @@ evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 #'    Index of of time point assigned to each sample in vector
 #'    vecTimepointsUnique.
 #' @param lsvecidxBatch (list length number of confounding variables)
-#' 		List of index vectors. 
-#' 		One vector per confounding variable.
-#' 		Each vector has one entry per sample with the index batch
-#' 		within the given confounding variable of the given sample.
-#' 		Batches are enumerated from 1 to number of batches.
+#' \t\tList of index vectors. 
+#' \t\tOne vector per confounding variable.
+#' \t\tEach vector has one entry per sample with the index batch
+#' \t\twithin the given confounding variable of the given sample.
+#' \t\tBatches are enumerated from 1 to number of batches.
 #' @param vecboolObserved (bool vector number of samples)
 #'    Whether sample is observed (finite and not NA).
 #'     
 #' @return scaLogLik (scalar) Value of cost function (loglikelihood) for given gene.
 #' 
 #' @author David Sebastian Fischer
-evalLogLikSigmoid <- function(
-  vecTheta,
-  vecCounts,
-  scaDisp, 
-  vecSizeFactors,
-  vecTimepointsUnique,
-  vecidxTimepoint,
-  lsvecidxBatch,
-  vecboolObserved){
-  
-  # Compute normalised impulse function value:
-  vecSigmoidParam <- vecTheta[1:4]
-  vecSigmoidParam[2:3] <- exp(vecSigmoidParam[2:3])
-  vecSigmoidValue <- evalSigmoid_comp(vecSigmoidParam=vecSigmoidParam,
-                                      vecTimepoints=vecTimepointsUnique)[vecidxTimepoint]
-  scaNParamUsed <- 4
-  
-  vecBatchFactors <- array(1, length(vecCounts))
-  if(!is.null(lsvecidxBatch)){
-    for(vecidxConfounder in lsvecidxBatch){
-      scaNBatchFactors <- max(vecidxConfounder)-1 # Batches are counted from 1
-      # Factor of first batch is one (constant), the remaining
-      # factors scale based on the first batch.
-      vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed+1):(scaNParamUsed+scaNBatchFactors)]))[vecidxConfounder]
-      scaNParamUsed <- scaNParamUsed+scaNBatchFactors
-      # Prevent batch factor shrinkage and explosion:
-      vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
-      vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
-      
-      vecBatchFactors <- vecBatchFactors*vecBatchFactorsConfounder
+evalLogLikSigmoid <- function(vecTheta, vecCounts, scaDisp, vecSizeFactors, 
+    vecTimepointsUnique, vecidxTimepoint, lsvecidxBatch, vecboolObserved) {
+    
+    # Compute normalised impulse function value:
+    vecSigmoidParam <- vecTheta[1:4]
+    vecSigmoidParam[2:3] <- exp(vecSigmoidParam[2:3])
+    vecSigmoidValue <- evalSigmoid_comp(vecSigmoidParam = vecSigmoidParam, 
+        vecTimepoints = vecTimepointsUnique)[vecidxTimepoint]
+    scaNParamUsed <- 4
+    
+    vecBatchFactors <- array(1, length(vecCounts))
+    if (!is.null(lsvecidxBatch)) {
+        for (vecidxConfounder in lsvecidxBatch) {
+            scaNBatchFactors <- max(vecidxConfounder) - 1  # Batches are counted from 1
+            # Factor of first batch is one (constant), the remaining factors scale
+            # based on the first batch.
+            vecBatchFactorsConfounder <- c(1, exp(vecTheta[(scaNParamUsed + 
+                1):(scaNParamUsed + scaNBatchFactors)]))[vecidxConfounder]
+            scaNParamUsed <- scaNParamUsed + scaNBatchFactors
+            # Prevent batch factor shrinkage and explosion:
+            vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
+            vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
+            
+            vecBatchFactors <- vecBatchFactors * vecBatchFactorsConfounder
+        }
     }
-  }
-  
-  # Compute log likelihood under impulse model by
-  # adding log likelihood of model at each timepoint.
-  scaLogLik <- sum(dnbinom(
-    vecCounts[vecboolObserved], 
-    mu=vecSigmoidValue[vecboolObserved]* 
-      vecBatchFactors[vecboolObserved]*
-      vecSizeFactors[vecboolObserved], 
-    size=scaDisp, 
-    log=TRUE))
-  
-  # Maximise log likelihood: Return likelihood as value to optimisation routine
-  return(scaLogLik)
+    
+    # Compute log likelihood under impulse model by adding log likelihood of
+    # model at each timepoint.
+    scaLogLik <- sum(dnbinom(vecCounts[vecboolObserved], mu = vecSigmoidValue[vecboolObserved] * 
+        vecBatchFactors[vecboolObserved] * vecSizeFactors[vecboolObserved], 
+        size = scaDisp, log = TRUE))
+    
+    # Maximise log likelihood: Return likelihood as value to optimisation
+    # routine
+    return(scaLogLik)
 }
 
 #' Compiled function: evalLogLikSigmoid
@@ -331,11 +308,11 @@ evalLogLikSigmoid <- function(
 #'    Index of of time point assigned to each sample in vector
 #'    vecTimepointsUnique.
 #' @param lsvecidxBatch (list length number of confounding variables)
-#' 		List of index vectors. 
-#' 		One vector per confounding variable.
-#' 		Each vector has one entry per sample with the index batch
-#' 		within the given confounding variable of the given sample.
-#' 		Batches are enumerated from 1 to number of batches.
+#' \t\tList of index vectors. 
+#' \t\tOne vector per confounding variable.
+#' \t\tEach vector has one entry per sample with the index batch
+#' \t\twithin the given confounding variable of the given sample.
+#' \t\tBatches are enumerated from 1 to number of batches.
 #' @param vecboolObserved (bool vector number of samples)
 #'    Whether sample is observed (finite and not NA).
 #'     

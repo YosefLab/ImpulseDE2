@@ -11,7 +11,7 @@ plotHeatmap(objectImpulseDE2, strCondition, boolIdentifyTransients,
 \item{objectImpulseDE2}{(instance of class ImpulseDE2Object)
 ImpulseDE2 output object to create heatmap from.}
 
-\item{strCondition}{(str) {"case","control","combined}
+\item{strCondition}{(str) {'case','control','combined}
 Heatmap is created from samples of this condition.}
 
 \item{boolIdentifyTransients}{(bool) 
@@ -66,7 +66,7 @@ boolIdentifyTransients = TRUE,
 scaNProc        = 1 )
 lsHeatmaps <- plotHeatmap(
 objectImpulseDE2=objectImpulseDE2,
-strCondition="case",
+strCondition='case',
 boolIdentifyTransients=TRUE,
 scaQThres=0.01)
 draw(lsHeatmaps$complexHeatmapRaw)

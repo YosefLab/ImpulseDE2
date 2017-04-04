@@ -23,10 +23,10 @@ sequencing depth into account (size factors).}
 Time coordinates of each sample.}
 
 \item{lsvecBatches}{(list length number of confounding variables)
-List of vectors. 
-One vector per confounding variable.
-Each vector has one entry per sample with the name of the batch ID
-within the given confounding variable of the given sample.}
+\t\tList of vectors. 
+\t\tOne vector per confounding variable.
+\t\tEach vector has one entry per sample with the name of the batch ID
+\t\twithin the given confounding variable of the given sample.}
 
 \item{boolFitConst}{(bool) Whether to fit a constant model.}
 }
@@ -87,11 +87,11 @@ within the given confounding variable of the given sample.}
      List of string vectors. One vector per confounder: vector of unique batches
      in this confounder.
      \item lsvecidxBatches (idx list length number of confounding variables)
-		  List of index vectors. 
-		  One vector per confounding variable.
-		  Each vector has one entry per sample with the index of the batch ID
-		  within the given confounding variable of the given sample. Reference
-		  is the list of unique batch ids for each confounding variable.
+\t\t  List of index vectors. 
+\t\t  One vector per confounding variable.
+\t\t  Each vector has one entry per sample with the index of the batch ID
+\t\t  within the given confounding variable of the given sample. Reference
+\t\t  is the list of unique batch ids for each confounding variable.
    }
  }
 }

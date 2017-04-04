@@ -99,7 +99,7 @@ scaNProc        = 1 )
 objectImpulseDE2 <- fitSigmoidModels(
 objectImpulseDE2 = objectImpulseDE2,
 vecConfounders   = NULL,
-strCondition     = "case")
+strCondition     = 'case')
 objectImpulseDE2 <- updateDEAnalysis(
 objectImpulseDE2=objectImpulseDE2,
 scaQThresTransients=0.001)

@@ -58,9 +58,9 @@ scaNProc        = 1 )
 names(objectImpulseDE2) # Display core output
 # With respect to this core output, objectImpulseDE2
 # can be treated like a list.
-head(objectImpulseDE2[["dfImpulseDE2Results"]])
+head(objectImpulseDE2[['dfImpulseDE2Results']])
 head(objectImpulseDE2$dfImpulseDE2Results)
-head(objectImpulseDE2[["vecDEGenes"]])
+head(objectImpulseDE2[['vecDEGenes']])
 head(objectImpulseDE2$vecDEGenes)
 
 }

@@ -23,13 +23,13 @@ Can be SummarizedExperiment object.}
 Annotation table with covariates for each sample.}
 
 \item{boolCaseCtrl}{(bool) [Default FALSE]
-Whether to perform case-control analysis. Does case-only
-analysis if FALSE.}
+\t\tWhether to perform case-control analysis. Does case-only
+\t\tanalysis if FALSE.}
 
 \item{vecConfounders}{(vector of strings number of confounding variables)
-Factors to correct for during batch correction. Have to 
-supply dispersion factors if more than one is supplied.
-Names refer to columns in dfAnnotation.}
+\t\tFactors to correct for during batch correction. Have to 
+\t\tsupply dispersion factors if more than one is supplied.
+\t\tNames refer to columns in dfAnnotation.}
 
 \item{scaNProc}{(scalar) [Default 1] Number of processes for 
 parallelisation.}

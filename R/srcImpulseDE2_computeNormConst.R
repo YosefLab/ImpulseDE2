@@ -24,30 +24,31 @@
 #'    sequencing depth into account (size factors).
 #' 
 #' @author David Sebastian Fischer
-computeSizeFactors <- function(matCountDataProc){
-  
-  # Compute geometric count mean over replicates
-  # for genes without zero observations: Samples
-  # with more than half zero observations receive 
-  # size factor =1 otherwise.
-  vecboolZeroObs <- apply(matCountDataProc,1,function(gene){!any(gene==0)})
-  # Take geometric mean
-  vecGeomMean <- apply(matCountDataProc[vecboolZeroObs,], 1, function(gene){
-    ( prod(gene[!is.na(gene)]) )^( 1/sum(!is.na(gene)) )
-  })
-  
-  # Chose median of ratios over genes as size factor
-  vecSizeFactors <- apply(matCountDataProc[vecboolZeroObs,], 2, function(sample){
-    median(sample/vecGeomMean, na.rm=TRUE)
-  })
-  
-  if(any(vecSizeFactors==0)){
-    print("WARNING: Found size factors==0, setting these to 1.")
-    vecSizeFactors[vecSizeFactors==0] <- 1
-  }
-  names(vecSizeFactors) <- colnames(matCountDataProc)
-  
-  return(vecSizeFactors)
+computeSizeFactors <- function(matCountDataProc) {
+    
+    # Compute geometric count mean over replicates for genes without zero
+    # observations: Samples with more than half zero observations receive
+    # size factor =1 otherwise.
+    vecboolZeroObs <- apply(matCountDataProc, 1, function(gene) {
+        !any(gene == 0)
+    })
+    # Take geometric mean
+    vecGeomMean <- apply(matCountDataProc[vecboolZeroObs, ], 1, function(gene) {
+        (prod(gene[!is.na(gene)]))^(1/sum(!is.na(gene)))
+    })
+    
+    # Chose median of ratios over genes as size factor
+    vecSizeFactors <- apply(matCountDataProc[vecboolZeroObs, ], 2, function(sample) {
+        median(sample/vecGeomMean, na.rm = TRUE)
+    })
+    
+    if (any(vecSizeFactors == 0)) {
+        print("WARNING: Found size factors==0, setting these to 1.")
+        vecSizeFactors[vecSizeFactors == 0] <- 1
+    }
+    names(vecSizeFactors) <- colnames(matCountDataProc)
+    
+    return(vecSizeFactors)
 }
 
 #' Compute a normalisation constant for each sample
@@ -95,19 +96,17 @@ computeSizeFactors <- function(matCountDataProc){
 #' @author David Sebastian Fischer
 #' 
 #' @export
-computeNormConst <- function(
-  matCountDataProc,
-  vecSizeFactorsExternal=NULL){
-  
-  # Compute size factors
-  # Size factors account for differential sequencing depth.
-  if(is.null(vecSizeFactorsExternal)){
-    # Compute size factors if not supplied to ImpulseDE2.
-    vecSizeFactors <- computeSizeFactors(matCountDataProc=matCountDataProc)
-  } else {
-    # Chose externally supplied size factors if supplied.
-    vecSizeFactors <- vecSizeFactorsExternal[colnames(matCountDataProc)]
-  }
-  
-  return(vecSizeFactors)
+computeNormConst <- function(matCountDataProc, vecSizeFactorsExternal = NULL) {
+    
+    # Compute size factors Size factors account for differential sequencing
+    # depth.
+    if (is.null(vecSizeFactorsExternal)) {
+        # Compute size factors if not supplied to ImpulseDE2.
+        vecSizeFactors <- computeSizeFactors(matCountDataProc = matCountDataProc)
+    } else {
+        # Chose externally supplied size factors if supplied.
+        vecSizeFactors <- vecSizeFactorsExternal[colnames(matCountDataProc)]
+    }
+    
+    return(vecSizeFactors)
 }

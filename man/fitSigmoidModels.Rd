@@ -13,8 +13,8 @@ Object to be fit with sigmoidal model. Needs to be fitted with impulse
 model before.}
 
 \item{vecConfounders}{(vector of strings number of confounding variables)
-Factors to correct for during batch correction.
-Names refer to columns in dfAnnotation.}
+\t\tFactors to correct for during batch correction.
+\t\tNames refer to columns in dfAnnotation.}
 
 \item{strCondition}{(str)
 Name of condition entry in lsModelFits for which sigmoidal
@@ -25,13 +25,13 @@ objectImpulseDE2 (object class ImpulseDE2Object)
    Object with sigmoidal fit added: objectImpulseDE2@lsModelFits
    is updated to:
    lsModelFits (list length number of conditions fit (1 or 3) +1)
-   \{"case"\} or \{"case", "control", "combined"\}
+   \{'case'\} or \{'case', 'control', 'combined'\}
    This is the lsModelFits object handed to this function with additional
    sigmoid fit entries for every gene for the given condition.
    One model fitting object for each condition:
-   In case-only DE analysis, only the condition \{"case"\} is fit.
+   In case-only DE analysis, only the condition \{'case'\} is fit.
    In case-control DE analysis, the conditions 
-   \{"case", "control","combined\} are fit.
+   \{'case', 'control','combined\} are fit.
    Each condition entry is a list of model fits for each gene.
    Each gene entry is a list of model fits to the individual models:
    Impulse model, constant model and sigmoidal fit.
@@ -55,13 +55,13 @@ objectImpulseDE2 (object class ImpulseDE2Object)
        List of string vectors. One vector per confounder: vector of unique batches
        in this confounder.
          \item lsvecidxBatches (idx list length number of confounding variables)
-		    List of index vectors. 
-		    One vector per confounding variable.
-		    Each vector has one entry per sample with the index of the batch ID
-		    within the given confounding variable of the given sample. Reference
-		    is the list of unique batch ids for each confounding variable.
-		      \item vecSamples (vector number of samples) Names of samples fit
-		    for this condition in same order as index vectors above.
+\t\t    List of index vectors. 
+\t\t    One vector per confounding variable.
+\t\t    Each vector has one entry per sample with the index of the batch ID
+\t\t    within the given confounding variable of the given sample. Reference
+\t\t    is the list of unique batch ids for each confounding variable.
+\t\t      \item vecSamples (vector number of samples) Names of samples fit
+\t\t    for this condition in same order as index vectors above.
        }
      }   
      \item Condition ID (list length number of genes)
@@ -125,7 +125,7 @@ scaNProc        = 1 )
 objectImpulseDE2 <- fitSigmoidModels(
 objectImpulseDE2 = objectImpulseDE2,
 vecConfounders   = NULL,
-strCondition     = "case")
+strCondition     = 'case')
 objectImpulseDE2 <- updateDEAnalysis(
 objectImpulseDE2=objectImpulseDE2,
 scaQThresTransients=0.001)

@@ -37,7 +37,7 @@ scaNProc        = 1 )
 # Uncomment to run:
 #writeReportToFile(
 #object=objectImpulseDE2,
-#file=paste0(dirPWD, "ImpulseDE2Report.txt")
+#file=paste0(dirPWD, 'ImpulseDE2Report.txt')
 #)
 
 }

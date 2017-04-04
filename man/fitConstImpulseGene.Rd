@@ -26,11 +26,11 @@ Index of the time coordinates of each sample (reference is
 vecTimepointsUnique).}
 
 \item{lsvecidxBatch}{(idx list length number of confounding variables)
-List of vectors. 
-One vector per confounding variable.
-Each vector has one entry per sample with the index of the batch ID
-within the given confounding variable of the given sample. Reference
-is the list of unique batch ids for each confounding variable.}
+\t\tList of vectors. 
+\t\tOne vector per confounding variable.
+\t\tEach vector has one entry per sample with the index of the batch ID
+\t\twithin the given confounding variable of the given sample. Reference
+\t\tis the list of unique batch ids for each confounding variable.}
 
 \item{boolFitConst}{(bool) Whether to fit a constant model.}
 

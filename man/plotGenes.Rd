@@ -27,7 +27,7 @@ Object previously fitted to be used for plotting.}
 \item{dirOut}{(dir) [Default NULL]
 Directory into which pdf is printed.}
 
-\item{strFileName}{(str) [Default "ImpulseDE2_Trajectories.pdf"]
+\item{strFileName}{(str) [Default 'ImpulseDE2_Trajectories.pdf']
 File name of pdf with plots.}
 
 \item{boolMultiplePlotsPerPage}{(bool) [Default TRUE]

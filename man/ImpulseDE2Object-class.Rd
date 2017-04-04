@@ -68,11 +68,11 @@ Entries only present if boolIdentifyTransients is TRUE:
 as differentially expressed by ImpulseDE2 at threshold \code{scaQThres}.}
 
 \item{\code{lsModelFits}}{(list length number of conditions fit (1 or 3))
-{"case"} or {"case", "control", "combined"}
+{'case'} or {'case', 'control', 'combined'}
 One model fitting object for each condition:
-In case-only DE analysis, only the condition {"case"} is fit.
+In case-only DE analysis, only the condition {'case'} is fit.
 In case-control DE analysis, the conditions 
-{"case", "control","combined} are fit.
+{'case', 'control','combined} are fit.
 Each condition entry is a list of model fits for each gene.
    Each gene entry is a list of model fits to the individual models:
  Impulse model and constant model (if boolFitConst is TRUE).
@@ -97,11 +97,11 @@ Each model fit per gene is a list of fitting parameters and results.
      List of string vectors. One vector per confounder: vector of unique batches
      in this confounder.
        \item lsvecidxBatches (idx list length number of confounding variables)
-           List of index vectors. 
-           One vector per confounding variable.
-           Each vector has one entry per sample with the index of the batch ID
-           within the given confounding variable of the given sample. Reference
-           is the list of unique batch ids for each confounding variable.
+\t\t   List of index vectors. 
+\t\t   One vector per confounding variable.
+\t\t   Each vector has one entry per sample with the index of the batch ID
+\t\t   within the given confounding variable of the given sample. Reference
+\t\t   is the list of unique batch ids for each confounding variable.
      }
    }
    \item Condition ID (list length number of genes)
@@ -185,13 +185,13 @@ Model scaling factors for each sample which take
 sequencing depth into account (size factors).}
 
 \item{\code{boolCaseCtrl}}{(bool) 
-Whether to perform case-control analysis. Does case-only
-analysis if FALSE.}
+\t\tWhether to perform case-control analysis. Does case-only
+\t\tanalysis if FALSE.}
 
 \item{\code{vecConfounders}}{(vector of strings number of confounding variables)
-Factors to correct for during batch correction. Have to 
-supply dispersion factors if more than one is supplied.
-Names refer to columns in dfAnnotation.}
+\t\tFactors to correct for during batch correction. Have to 
+\t\tsupply dispersion factors if more than one is supplied.
+\t\tNames refer to columns in dfAnnotation.}
 
 \item{\code{scaNProc}}{(scalar) Number of processes for 
 parallelisation.}
