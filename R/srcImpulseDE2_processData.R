@@ -163,10 +163,8 @@ processData <- function(dfAnnotation, matCountData, boolCaseCtrl, vecConfounders
         if (!("case" %in% lsConditions)) {
             stop("ERROR: Condition \"case\" does not occur in annotation table condition column.")
         }
-        if (boolCaseCtrl) {
-            if (!("control" %in% lsConditions)) {
+        if (boolCaseCtrl && !("control" %in% lsConditions)) {
                 stop("ERROR: Condition \"control\" does not occur in annotation table condition column.")
-            }
         }
         ### e) Batch
         if (!is.null(vecConfounders)) {

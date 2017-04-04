@@ -175,8 +175,11 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA, vecTimePointsB, vecBatches
     if (scaNConst > 0) {
         set.seed(scaSeedInit + scaSeedsUsed)
         scaSeedsUsed <- scaSeedsUsed + 1
-        if (boolOneConstMu) 
-            vecMuConstHidden <- rep(scaMumax, scaNConst) else vecMuConstHidden <- runif(scaNConst) * scaMumax
+        if (boolOneConstMu) {
+          vecMuConstHidden <- rep(scaMumax, scaNConst) 
+        } else {
+          vecMuConstHidden <- runif(scaNConst) * scaMumax
+        }
         
         vecMuConstHidden[vecMuConstHidden < scaEps] <- scaEps
         matMuConstHidden <- matrix(vecMuConstHidden, nrow = scaNConst, ncol = scaNSamples, 
@@ -390,12 +393,15 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA, vecTimePointsB, vecBatches
         matMuLinHidden, matMuSigHidden, matMuRandHidden))
     if (boolCaseCtrl) {
         vecCaseCtrlDEIDs <- c()
-        if (scaNImp > 1) 
+        if (scaNImp > 1) {
             vecCaseCtrlDEIDs <- c(vecCaseCtrlDEIDs, vecImpulseIDs[1:scaNImpDE])
-        if (scaNLin > 1) 
+        }
+        if (scaNLin > 1) {
             vecCaseCtrlDEIDs <- c(vecCaseCtrlDEIDs, vecLinIDs[1:scaNLinDE])
-        if (scaNSig > 1) 
+        }
+        if (scaNSig > 1) {
             vecCaseCtrlDEIDs <- c(vecCaseCtrlDEIDs, vecSigIDs[1:scaNSigDE])
+        }
     }
     
     # Add scaling factors a) Sample size factors
