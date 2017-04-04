@@ -16,20 +16,19 @@ Processed annotation table with covariates for each sample.}
 Read count data.}
 
 \item{boolCaseCtrl}{(bool) 
-\t\tWhether to perform case-control analysis. Does case-only
-\t\tanalysis if FALSE.}
+Whether to perform case-control analysis. Does case-only
+analysis if FALSE.}
 
 \item{vecConfounders}{(vector of strings number of confounding variables)
-\t\tFactors to correct for during batch correction. Have to 
-\t\tsupply dispersion factors if more than one is supplied.
-\t\tNames refer to columns in dfAnnotationProc.
-\t\t}
+Factors to correct for during batch correction. Have to 
+supply dispersion factors if more than one is supplied.
+Names refer to columns in dfAnnotationProc.}
 }
 \value{
 (numeric vector length number of genes)
-   Dispersion parameter estimates for each gene.
-   In format of parameter size of \link{dnbinom}
-   which is 1/dispersion factor of DESeq2.
+Dispersion parameter estimates for each gene.
+In format of parameter size of \link{dnbinom}
+which is 1/dispersion factor of DESeq2.
 }
 \description{
 Run DESeq2 and extract dispersion parameter estimates.

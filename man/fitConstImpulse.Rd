@@ -23,77 +23,77 @@ sequencing depth into account (size factors).}
 Time coordinates of each sample.}
 
 \item{lsvecBatches}{(list length number of confounding variables)
-\t\tList of vectors. 
-\t\tOne vector per confounding variable.
-\t\tEach vector has one entry per sample with the name of the batch ID
-\t\twithin the given confounding variable of the given sample.}
+List of vectors. 
+One vector per confounding variable.
+Each vector has one entry per sample with the name of the batch ID
+within the given confounding variable of the given sample.}
 
 \item{boolFitConst}{(bool) Whether to fit a constant model.}
 }
 \value{
 (list length 5)
-   \itemize{
-     \item lsFits (list of lists length number of genes) 
-     List of model fits for each gene.
-     Each gene entry is a list of model fits to the individual models:
-     Impulse model and constant model (if boolFitConst is TRUE).
-     At this level, the sigmoid model fit can be added later.
-     Each model fit per gene is a list of fitting parameters and results.
-     \itemize{
-       \item Gene ID (list length 2)
-     Impulse and constant model fit to gene observations.
-     One entry of this format for all gene IDs.
-     \itemize{
-       \item lsImpulseFit (list) List of impulse fit parameters and results.
-       \itemize{
-         \item vecImpulseParam (numeric vector length 6)
-       \{beta, h0, h1, h2, t1, t2\}
-       Maximum likelihood estimators of impulse model parameters.
-         \item vecImpulseValue (numeric vector length number of time points)
-       Values of impulse model fit at time points used for fit.
-         \item lsvecBatchFactors (list length number of confounders)
-       List of vectors of scalar batch correction factors for each sample.
-       These are also maximum likelihood estimators.
-       NULL if no confounders given.
-         \item scaDispParam (scalar) Dispersion parameter estimate
-       used in fitting (hyper-parameter).
-         \item scaLL (scalar) Loglikelihood of data under maximum likelihood
-       estimator model.
-         \item scaConvergence (scalar) 
-       Convergence status of optim on impulse model.
-       }
-       \item lsConstFit (list) List of constant fit parameters and results.
-       \itemize{
-         \item scaMu (scalar) Maximum likelihood estimator of
-       negative binomial mean parameter.
-         \item lsvecBatchFactors (list length number of confounders)
-       List of vectors of scalar batch correction factors for each sample.
-       These are also maximum likelihood estimators.
-       NULL if no confounders given.
-         \item scaDispParam (scalar) Dispersion parameter estimate
-       used in fitting (hyper-parameter).
-         \item scaLL (scalar) Loglikelihood of data under maximum likelihood
-       estimator model.
-         \item scaConvergence (scalar) 
-       Convergence status of optim on constant model.
-       }
-     }
-     \item vecTimepointsUnique (numeric vector length number of unique
-     timepoints) Vector of unique time coordinates observed in this condition.
-     \item vecidxTimepoint (idx vector length number of samples)
-     Index of the time coordinates of each sample (reference is
-     vecTimepointsUnique).
-     \item lsvecBatchUnique (list number of confounders)
-     List of string vectors. One vector per confounder: vector of unique batches
-     in this confounder.
-     \item lsvecidxBatches (idx list length number of confounding variables)
-\t\t  List of index vectors. 
-\t\t  One vector per confounding variable.
-\t\t  Each vector has one entry per sample with the index of the batch ID
-\t\t  within the given confounding variable of the given sample. Reference
-\t\t  is the list of unique batch ids for each confounding variable.
-   }
- }
+\itemize{
+\item lsFits (list of lists length number of genes) 
+List of model fits for each gene.
+Each gene entry is a list of model fits to the individual models:
+Impulse model and constant model (if boolFitConst is TRUE).
+At this level, the sigmoid model fit can be added later.
+Each model fit per gene is a list of fitting parameters and results.
+\itemize{
+\item Gene ID (list length 2)
+Impulse and constant model fit to gene observations.
+One entry of this format for all gene IDs.
+\itemize{
+\item lsImpulseFit (list) List of impulse fit parameters and results.
+\itemize{
+\item vecImpulseParam (numeric vector length 6)
+\{beta, h0, h1, h2, t1, t2\}
+Maximum likelihood estimators of impulse model parameters.
+\item vecImpulseValue (numeric vector length number of time points)
+Values of impulse model fit at time points used for fit.
+\item lsvecBatchFactors (list length number of confounders)
+List of vectors of scalar batch correction factors for each sample.
+These are also maximum likelihood estimators.
+NULL if no confounders given.
+\item scaDispParam (scalar) Dispersion parameter estimate
+used in fitting (hyper-parameter).
+\item scaLL (scalar) Loglikelihood of data under maximum likelihood
+estimator model.
+\item scaConvergence (scalar) 
+Convergence status of optim on impulse model.
+}
+\item lsConstFit (list) List of constant fit parameters and results.
+\itemize{
+\item scaMu (scalar) Maximum likelihood estimator of
+negative binomial mean parameter.
+\item lsvecBatchFactors (list length number of confounders)
+List of vectors of scalar batch correction factors for each sample.
+These are also maximum likelihood estimators.
+NULL if no confounders given.
+\item scaDispParam (scalar) Dispersion parameter estimate
+used in fitting (hyper-parameter).
+\item scaLL (scalar) Loglikelihood of data under maximum likelihood
+estimator model.
+\item scaConvergence (scalar) 
+Convergence status of optim on constant model.
+}
+}
+\item vecTimepointsUnique (numeric vector length number of unique
+timepoints) Vector of unique time coordinates observed in this condition.
+\item vecidxTimepoint (idx vector length number of samples)
+Index of the time coordinates of each sample (reference is
+vecTimepointsUnique).
+\item lsvecBatchUnique (list number of confounders)
+List of string vectors. One vector per confounder: vector of unique batches
+in this confounder.
+\item lsvecidxBatches (idx list length number of confounding variables)
+  List of index vectors. 
+  One vector per confounding variable.
+  Each vector has one entry per sample with the index of the batch ID
+  within the given confounding variable of the given sample. Reference
+  is the list of unique batch ids for each confounding variable.
+}
+}
 }
 \description{
 [Model fitting function hierarchy: 2 out of 4]
@@ -102,8 +102,8 @@ model fitting across genes.
 }
 \seealso{
 Called by \link{fitModels} to fit constant and impulse
-   model to samples of one condition.
-   Calls \link{fitConstImpulseGene} to perform fitting on each gene.
+model to samples of one condition.
+Calls \link{fitConstImpulseGene} to perform fitting on each gene.
 }
 \author{
 David Sebastian Fischer

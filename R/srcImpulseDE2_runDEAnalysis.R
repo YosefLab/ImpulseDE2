@@ -14,78 +14,78 @@
 #' @seealso Called by \link{runImpulseDE2}.
 #' 
 #' @param objectImpulseDE2 (object class ImpulseDE2Object)
-#'    Object containing fits to be evaluated.
+#' Object containing fits to be evaluated.
 #' @param boolCaseCtrl (bool) 
-#' \t\tWhether to perform case-control analysis. Does case-only
-#' \t\tanalysis if FALSE.
+#' Whether to perform case-control analysis. Does case-only
+#' analysis if FALSE.
 #' @param vecConfounders (vector of strings number of confounding variables)
-#' \t\tFactors to correct for during batch correction.
-#' \t\tNames refer to columns in dfAnnotation.
+#' Factors to correct for during batch correction.
+#' Names refer to columns in dfAnnotation.
 #' @param boolIdentifyTransients (bool) [Defaul FALSE]
-#'    Whether to identify transiently activated or deactivated 
-#'    genes. This involves an additional fitting of sigmoidal models
-#'    and hypothesis testing between constant, sigmoidal and impulse model.
+#' Whether to identify transiently activated or deactivated 
+#' genes. This involves an additional fitting of sigmoidal models
+#' and hypothesis testing between constant, sigmoidal and impulse model.
 #' @param scaQThresTransients (scalar) [Default 0.001]
-#'    FDR-corrected p-value threshold for hypothesis tests between
-#'    impulse, sigmoidal and constant model used to identify transiently
-#'    regulated genes.
+#' FDR-corrected p-value threshold for hypothesis tests between
+#' impulse, sigmoidal and constant model used to identify transiently
+#' regulated genes.
 #' 
 #' @return objectImpulseDE2 (ImpulseDE2Object)
-#'    Input object with dfDEAnalysis updated to:
-#'    dfDEAnalysis (data frame samples x reported characteristics) 
-#'    Summary of fitting procedure and 
-#'    differential expression results for each gene.
-#'    \itemize{
-#'      \item Gene: Gene ID.
-#'      \item p: P-value for differential expression.
-#'      \item padj: Benjamini-Hochberg false-discovery rate corrected p-value
-#'      for differential expression analysis.
-#'      \item loglik_full: Loglikelihood of full model.
-#'      \item loglik_red: Loglikelihood of reduced model.
-#'      \item df_full: Degrees of freedom of full model.
-#'      \item df_red: Degrees of freedom of reduced model
-#'      \item mean: Inferred mean parameter of constant model of first batch.
-#'      From combined samples in case-ctrl. 
-#'      \item allZero (bool) Whether there were no observed non-zero observations of this gene.
-#'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
-#'    }
-#'    Entries only present in case-only DE analysis:
-#'    \itemize{
-#'      \item converge_impulse: Convergence status of optim for 
-#'      impulse model fit (full model).
-#'      \item converge_const: Convergence status of optim for 
-#'      constant model fit (reduced model).
-#'    }
-#'    Entries only present in case-control DE analysis:
-#'    \itemize{
-#'      \item converge_combined: Convergence status of optim for 
-#'      impulse model fit to case and control samples combined (reduced model).
-#'      \item converge_case: Convergence status of optim for 
-#'      impulse model fit to samples of case condition (full model 1/2).
-#'      \item converge_control: Convergence status of optim for 
-#'      impulse model fit to samples of control condition (full model 2/2).
-#'    }
-#'    Entries only present if boolIdentifyTransients is TRUE:
-#'    \itemize{
-#'      \item converge_sigmoid: Convergence status of optim for 
-#'      sigmoid model fit to samples of case condition.
-#'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
-#'      impulse model fit versus sigmoidal model on samples of case condition.
-#'      \item impulseTOsigmoid_padj: Benjamini-Hochberg 
-#'      false-discovery rate corrected p-value of loglikelihood ratio test
-#'      impulse model fit versus sigmoid model on samples of case condition.
-#'      \item sigmoidTOconst_p: P-value of loglikelihood ratio test
-#'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item sigmoidTOconst_padj: Benjamini-Hochberg 
-#'      false-discovery rate corrected p-value of loglikelihood ratio test
-#'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item isTransient (bool) Whether gene is transiently
-#'      activated or deactivated and differentially expressed.
-#'      \item isMonotonous (bool) Whether gene is not transiently
-#'      activated or deactivated and differentially expressed. This scenario
-#'      corresponds to a montonous expression level increase or decrease.
-#'    }
-#'    
+#' Input object with dfDEAnalysis updated to:
+#' dfDEAnalysis (data frame samples x reported characteristics) 
+#' Summary of fitting procedure and 
+#' differential expression results for each gene.
+#' \itemize{
+#' \item Gene: Gene ID.
+#' \item p: P-value for differential expression.
+#' \item padj: Benjamini-Hochberg false-discovery rate corrected p-value
+#' for differential expression analysis.
+#' \item loglik_full: Loglikelihood of full model.
+#' \item loglik_red: Loglikelihood of reduced model.
+#' \item df_full: Degrees of freedom of full model.
+#' \item df_red: Degrees of freedom of reduced model
+#' \item mean: Inferred mean parameter of constant model of first batch.
+#' From combined samples in case-ctrl. 
+#' \item allZero (bool) Whether there were no observed non-zero observations of this gene.
+#' If TRUE, fitting and DE analsysis were skipped and entry is NA.
+#' }
+#' Entries only present in case-only DE analysis:
+#' \itemize{
+#' \item converge_impulse: Convergence status of optim for 
+#' impulse model fit (full model).
+#' \item converge_const: Convergence status of optim for 
+#' constant model fit (reduced model).
+#' }
+#' Entries only present in case-control DE analysis:
+#' \itemize{
+#' \item converge_combined: Convergence status of optim for 
+#' impulse model fit to case and control samples combined (reduced model).
+#' \item converge_case: Convergence status of optim for 
+#' impulse model fit to samples of case condition (full model 1/2).
+#' \item converge_control: Convergence status of optim for 
+#' impulse model fit to samples of control condition (full model 2/2).
+#' }
+#' Entries only present if boolIdentifyTransients is TRUE:
+#' \itemize{
+#' \item converge_sigmoid: Convergence status of optim for 
+#' sigmoid model fit to samples of case condition.
+#' \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
+#' impulse model fit versus sigmoidal model on samples of case condition.
+#' \item impulseTOsigmoid_padj: Benjamini-Hochberg 
+#' false-discovery rate corrected p-value of loglikelihood ratio test
+#' impulse model fit versus sigmoid model on samples of case condition.
+#' \item sigmoidTOconst_p: P-value of loglikelihood ratio test
+#' sigmoidal model fit versus constant model on samples of case condition.
+#' \item sigmoidTOconst_padj: Benjamini-Hochberg 
+#' false-discovery rate corrected p-value of loglikelihood ratio test
+#' sigmoidal model fit versus constant model on samples of case condition.
+#' \item isTransient (bool) Whether gene is transiently
+#' activated or deactivated and differentially expressed.
+#' \item isMonotonous (bool) Whether gene is not transiently
+#' activated or deactivated and differentially expressed. This scenario
+#' corresponds to a montonous expression level increase or decrease.
+#' }
+#' 
 #' @author David Sebastian Fischer
 runDEAnalysis <- function(objectImpulseDE2, boolCaseCtrl, vecConfounders, 
     boolIdentifyTransients, scaQThresTransients = 0.001) {
@@ -279,67 +279,67 @@ runDEAnalysis <- function(objectImpulseDE2, boolCaseCtrl, vecConfounders,
 #' @seealso Called by separately by user.
 #' 
 #' @param objectImpulseDE2 (object class ImpulseDE2Object)
-#'    Object containing fits to be evaluated.
+#' Object containing fits to be evaluated.
 #' @param scaQThresTransients (scalar) [Default 0.001]
-#'    FDR-corrected p-value threshold for hypothesis tests between
-#'    impulse, sigmoidal and constant model used to identify transiently
-#'    regulated genes.
+#' FDR-corrected p-value threshold for hypothesis tests between
+#' impulse, sigmoidal and constant model used to identify transiently
+#' regulated genes.
 #' 
 #' @return objectImpulseDE2 (ImpulseDE2Object)
-#'    Input object with dfDEAnalysis updated to:
-#'    dfDEAnalysis (data frame samples x reported characteristics) 
-#'    Summary of fitting procedure and 
-#'    differential expression results for each gene.
-#'    \itemize{
-#'      \item Gene: Gene ID.
-#'      \item p: P-value for differential expression.
-#'      \item padj: Benjamini-Hochberg false-discovery rate corrected p-value
-#'      for differential expression analysis.
-#'      \item loglik_full: Loglikelihood of full model.
-#'      \item loglik_red: Loglikelihood of reduced model.
-#'      \item df_full: Degrees of freedom of full model.
-#'      \item df_red: Degrees of freedom of reduced model
-#'      \item mean: Inferred mean parameter of constant model of first batch.
-#'      From combined samples in case-ctrl. 
-#'      \item allZero (bool) Whether there were no observed non-zero observations of this gene.
-#'      If TRUE, fitting and DE analsysis were skipped and entry is NA.
-#'    }
-#'    Entries only present in case-only DE analysis:
-#'    \itemize{
-#'      \item converge_impulse: Convergence status of optim for 
-#'      impulse model fit (full model).
-#'      \item converge_const: Convergence status of optim for 
-#'      constant model fit (reduced model).
-#'    }
-#'    Entries only present in case-control DE analysis:
-#'    \itemize{
-#'      \item converge_combined: Convergence status of optim for 
-#'      impulse model fit to case and control samples combined (reduced model).
-#'      \item converge_case: Convergence status of optim for 
-#'      impulse model fit to samples of case condition (full model 1/2).
-#'      \item converge_control: Convergence status of optim for 
-#'      impulse model fit to samples of control condition (full model 2/2).
-#'    }
-#'    Entries only present if boolIdentifyTransients is TRUE:
-#'    \itemize{
-#'      \item converge_sigmoid: Convergence status of optim for 
-#'      sigmoid model fit to samples of case condition.
-#'      \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
-#'      impulse model fit versus sigmoidal model on samples of case condition.
-#'      \item impulseTOsigmoid_padj: Benjamini-Hochberg 
-#'      false-discovery rate corrected p-value of loglikelihood ratio test
-#'      impulse model fit versus sigmoid model on samples of case condition.
-#'      \item sigmoidTOconst_p: P-value of loglikelihood ratio test
-#'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item sigmoidTOconst_padj: Benjamini-Hochberg 
-#'      false-discovery rate corrected p-value of loglikelihood ratio test
-#'      sigmoidal model fit versus constant model on samples of case condition.
-#'      \item isTransient (bool) Whether gene is transiently
-#'      activated or deactivated and differentially expressed.
-#'      \item isMonotonous (bool) Whether gene is not transiently
-#'      activated or deactivated and differentially expressed. This scenario
-#'      corresponds to a montonous expression level increase or decrease.
-#'    }
+#' Input object with dfDEAnalysis updated to:
+#' dfDEAnalysis (data frame samples x reported characteristics) 
+#' Summary of fitting procedure and 
+#' differential expression results for each gene.
+#' \itemize{
+#' \item Gene: Gene ID.
+#' \item p: P-value for differential expression.
+#' \item padj: Benjamini-Hochberg false-discovery rate corrected p-value
+#' for differential expression analysis.
+#' \item loglik_full: Loglikelihood of full model.
+#' \item loglik_red: Loglikelihood of reduced model.
+#' \item df_full: Degrees of freedom of full model.
+#' \item df_red: Degrees of freedom of reduced model
+#' \item mean: Inferred mean parameter of constant model of first batch.
+#' From combined samples in case-ctrl. 
+#' \item allZero (bool) Whether there were no observed non-zero observations of this gene.
+#' If TRUE, fitting and DE analsysis were skipped and entry is NA.
+#' }
+#' Entries only present in case-only DE analysis:
+#' \itemize{
+#' \item converge_impulse: Convergence status of optim for 
+#' impulse model fit (full model).
+#' \item converge_const: Convergence status of optim for 
+#' constant model fit (reduced model).
+#' }
+#' Entries only present in case-control DE analysis:
+#' \itemize{
+#' \item converge_combined: Convergence status of optim for 
+#' impulse model fit to case and control samples combined (reduced model).
+#' \item converge_case: Convergence status of optim for 
+#' impulse model fit to samples of case condition (full model 1/2).
+#' \item converge_control: Convergence status of optim for 
+#' impulse model fit to samples of control condition (full model 2/2).
+#' }
+#' Entries only present if boolIdentifyTransients is TRUE:
+#' \itemize{
+#' \item converge_sigmoid: Convergence status of optim for 
+#' sigmoid model fit to samples of case condition.
+#' \item impulseTOsigmoid_p: P-value of loglikelihood ratio test
+#' impulse model fit versus sigmoidal model on samples of case condition.
+#' \item impulseTOsigmoid_padj: Benjamini-Hochberg 
+#' false-discovery rate corrected p-value of loglikelihood ratio test
+#' impulse model fit versus sigmoid model on samples of case condition.
+#' \item sigmoidTOconst_p: P-value of loglikelihood ratio test
+#' sigmoidal model fit versus constant model on samples of case condition.
+#' \item sigmoidTOconst_padj: Benjamini-Hochberg 
+#' false-discovery rate corrected p-value of loglikelihood ratio test
+#' sigmoidal model fit versus constant model on samples of case condition.
+#' \item isTransient (bool) Whether gene is transiently
+#' activated or deactivated and differentially expressed.
+#' \item isMonotonous (bool) Whether gene is not transiently
+#' activated or deactivated and differentially expressed. This scenario
+#' corresponds to a montonous expression level increase or decrease.
+#' }
 #'  
 #' @examples
 #' lsSimulatedData <- simulateDataSetImpulseDE2(
@@ -369,7 +369,7 @@ runDEAnalysis <- function(objectImpulseDE2, boolCaseCtrl, vecConfounders,
 #' scaQThresTransients=0.001)
 #' head(objectImpulseDE2$dfImpulseDE2Results)
 #' # dfImpulseDE2Results now contain 'transients-analysis'.
-#'    
+#' 
 #' @author David Sebastian Fischer
 #' 
 #' @export

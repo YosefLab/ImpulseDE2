@@ -11,24 +11,24 @@
 #' @seealso Called by \link{runImpulseDE2}.
 #' 
 #' @param dfAnnotationProc (data frame samples x covariates) 
-#'    {Sample, Condition, Time (numeric), TimeCateg (str)
-#'    (and confounding variables if given).}
-#'    Processed annotation table with covariates for each sample.
+#' {Sample, Condition, Time (numeric), TimeCateg (str)
+#' (and confounding variables if given).}
+#' Processed annotation table with covariates for each sample.
 #' @param matCountDataProc (matrix genes x samples)
-#'    Read count data.
+#' Read count data.
 #' @param boolCaseCtrl (bool) 
-#' \t\tWhether to perform case-control analysis. Does case-only
-#' \t\tanalysis if FALSE.
+#' Whether to perform case-control analysis. Does case-only
+#' analysis if FALSE.
 #' @param vecConfounders (vector of strings number of confounding variables)
-#' \t\tFactors to correct for during batch correction. Have to 
-#' \t\tsupply dispersion factors if more than one is supplied.
-#' \t\tNames refer to columns in dfAnnotationProc.
-#' \t\t
+#' Factors to correct for during batch correction. Have to 
+#' supply dispersion factors if more than one is supplied.
+#' Names refer to columns in dfAnnotationProc.
+#' 
 #' @return (numeric vector length number of genes)
-#'    Dispersion parameter estimates for each gene.
-#'    In format of parameter size of \link{dnbinom}
-#'    which is 1/dispersion factor of DESeq2.
-#'    
+#' Dispersion parameter estimates for each gene.
+#' In format of parameter size of \link{dnbinom}
+#' which is 1/dispersion factor of DESeq2.
+#' 
 #' @import DESeq2
 #' @importFrom S4Vectors mcols
 #' 

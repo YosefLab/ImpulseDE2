@@ -15,36 +15,36 @@ NULL
 #' @seealso Called by separately by user.
 #' 
 #' @param vecGeneIDs (string vector) [Default NULL]
-#'  Gene names to be plotted. Must be in rownames of objectImpulseDE2@matCountDataProc.
-#'  Supply either vecGeneIDs or scaNTopIDs.
+#' Gene names to be plotted. Must be in rownames of objectImpulseDE2@matCountDataProc.
+#' Supply either vecGeneIDs or scaNTopIDs.
 #' @param scaNTopIDs (int) [Default NULL]
-#'  Number of top differentially expressed (by q-value) genes to 
-#'  be plotted
-#'  Supply either vecGeneIDs or scaNTopIDs.
+#' Number of top differentially expressed (by q-value) genes to 
+#' be plotted
+#' Supply either vecGeneIDs or scaNTopIDs.
 #' @param objectImpulseDE2 (ImpulseDE2 object)
-#'  Object previously fitted to be used for plotting.
+#' Object previously fitted to be used for plotting.
 #' @param boolCaseCtrl (bool) Whether to create case-ctrl plot.
 #' @param dirOut (dir) [Default NULL]
-#'  Directory into which pdf is printed.
+#' Directory into which pdf is printed.
 #' @param strFileName (str) [Default 'ImpulseDE2_Trajectories.pdf']
-#'  File name of pdf with plots.
+#' File name of pdf with plots.
 #' @param boolMultiplePlotsPerPage (bool) [Default TRUE]
-#'  Whether to create grid with multiple plots on each page of pdf.
+#' Whether to create grid with multiple plots on each page of pdf.
 #' @param boolSimplePlot (bool) [Default TRUE]
-#'  Whether to omit batch structure in plotting of model fits
-#'  and only plot fit to first batch/all data (if no confounders were given).
-#'  This strongly simplifies plots and is recommended e.g. for case-ctrl data.
+#' Whether to omit batch structure in plotting of model fits
+#' and only plot fit to first batch/all data (if no confounders were given).
+#' This strongly simplifies plots and is recommended e.g. for case-ctrl data.
 #' @param vecRefPval (vector length vecGeneIDs) [Default NULL]
-#'  P/Q-values to be displayed alongside ImpulseDE2 q-value
-#'  for differential expression in plot titles.
+#' P/Q-values to be displayed alongside ImpulseDE2 q-value
+#' for differential expression in plot titles.
 #' @param strNameRefMethod (str) [Default NULL]
-#'  Name of reference method used to generate vecRefPval.
-#'  Mentioned in plot titles.
+#' Name of reference method used to generate vecRefPval.
+#' Mentioned in plot titles.
 #' 
 #' @return lsgplotsID (gplot list length vecGeneIDs)
-#'  List of gplots for IDs in vecGeneIDs. This is secondary 
-#'  output next to the .pdf and can be used to extract 
-#'  single plots or assemble plots differently.
+#' List of gplots for IDs in vecGeneIDs. This is secondary 
+#' output next to the .pdf and can be used to extract 
+#' single plots or assemble plots differently.
 #' 
 #' @examples
 #' lsSimulatedData <- simulateDataSetImpulseDE2(

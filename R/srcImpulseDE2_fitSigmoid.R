@@ -14,29 +14,29 @@
 #' @seealso Called by \link{fitSigmoidGene}.
 #' 
 #' @param vecCounts (numeric vector number of samples)
-#'    Read count data.
+#' Read count data.
 #' @param vecTimepoints (numeric vector length number of samples)
-#'    Time coordinates of each sample.
+#' Time coordinates of each sample.
 #' @param vecSizeFactors (numeric vector number of samples) 
-#'    Model scaling factors for each sample which take
-#'    sequencing depth into account (size factors).
+#' Model scaling factors for each sample which take
+#' sequencing depth into account (size factors).
 #' @param lsvecidxBatch (list length number of confounding variables)
-#' \t\tList of index vectors. 
-#' \t\tOne vector per confounding variable.
-#' \t\tEach vector has one entry per sample with the index batch
-#' \t\twithin the given confounding variable of the given sample.
-#' \t\tBatches are enumerated from 1 to number of batches.
-#'    
+#' List of index vectors. 
+#' One vector per confounding variable.
+#' Each vector has one entry per sample with the index batch
+#' within the given confounding variable of the given sample.
+#' Batches are enumerated from 1 to number of batches.
+#' 
 #' @return (list length 2)
-#'    \itemize{
-#'      \item peak (numeric vector length 6)
-#'      \{beta, h0, h1, t\}
-#'      Up model initialisations of sigmoidal model parameters.
-#'      \item valley (numeric vector length 6)
-#'      \{beta, h0, h1, t\}
-#'      Down model initialisations of sigmoidal model parameters.
-#'    }
-#'    
+#' \itemize{
+#' \item peak (numeric vector length 6)
+#' \{beta, h0, h1, t\}
+#' Up model initialisations of sigmoidal model parameters.
+#' \item valley (numeric vector length 6)
+#' \{beta, h0, h1, t\}
+#' Down model initialisations of sigmoidal model parameters.
+#' }
+#' 
 #' @author David Sebastian Fischer
 estimateSigmoidParam <- function(vecCounts, vecTimepoints, vecSizeFactors, 
     lsvecidxBatch) {
@@ -97,61 +97,61 @@ estimateSigmoidParam <- function(vecCounts, vecTimepoints, vecSizeFactors,
 #' thereof.
 #' 
 #' @seealso Called by \link{fitSigmoidGene} to fit sigmoidal
-#'    model to samples of one condition and one gene.
-#'    Calls sigmoidal model cost function 
-#'    \link{evalLogLikSigmoid_comp} within \link{optim}.
+#' model to samples of one condition and one gene.
+#' Calls sigmoidal model cost function 
+#' \link{evalLogLikSigmoid_comp} within \link{optim}.
 #' 
 #' @param vecSigmoidParamGuess (numeric vector length 4)
-#'    \{beta, h0, h1, t\}
-#'    Up model initialisations of sigmoidal model parameters.
+#' \{beta, h0, h1, t\}
+#' Up model initialisations of sigmoidal model parameters.
 #' @param vecCounts (numeric vector number of samples)
-#'    Read count data.
+#' Read count data.
 #' @param scaDisp (scalar) Gene-wise 
-#'    negative binomial dispersion hyper-parameter.
+#' negative binomial dispersion hyper-parameter.
 #' @param vecSizeFactors (numeric vector number of samples) 
-#'    Model scaling factors for each sample which take
-#'    sequencing depth into account (size factors).
+#' Model scaling factors for each sample which take
+#' sequencing depth into account (size factors).
 #' @param lsvecidxBatch (list length number of confounding variables)
-#' \t\tList of index vectors. 
-#' \t\tOne vector per confounding variable.
-#' \t\tEach vector has one entry per sample with the index batch
-#' \t\twithin the given confounding variable of the given sample.
-#' \t\tBatches are enumerated from 1 to number of batches.
+#' List of index vectors. 
+#' One vector per confounding variable.
+#' Each vector has one entry per sample with the index batch
+#' within the given confounding variable of the given sample.
+#' Batches are enumerated from 1 to number of batches.
 #' @param vecTimepointsUnique
-#'    (numeric vector length number of unique time points)
-#'    Unique time points of set of time points of given samples.
+#' (numeric vector length number of unique time points)
+#' Unique time points of set of time points of given samples.
 #' @param vecidxTimepoint (index vector length number of samples)
-#'    Index of of time point assigned to each sample in vector
-#'    vecTimepointsUnique.
+#' Index of of time point assigned to each sample in vector
+#' vecTimepointsUnique.
 #' @param MAXIT (scalar) [Default 1000] 
-#'    Maximum number of BFGS iterations for model fitting with \link{optim}.
+#' Maximum number of BFGS iterations for model fitting with \link{optim}.
 #' @param RELTOL (scalar) [Default 10^(-8)]
-#'    Maximum relative change in loglikelihood to reach convergence in
-#'    numerical optimisation by BFGS in \link{optim}.
+#' Maximum relative change in loglikelihood to reach convergence in
+#' numerical optimisation by BFGS in \link{optim}.
 #' @param trace (scalar) [Defaul 0]
-#'    Reporting parameter of \link{optim}.
+#' Reporting parameter of \link{optim}.
 #' @param REPORT (scalar) [Default 10]
-#'    Reporting parameter of \link{optim}.
-#'   
+#' Reporting parameter of \link{optim}.
+#' 
 #' @return (list) List of sigmoid fit parameters and results.
-#'    \itemize{
-#'      \item vecSigmoidParam (numeric vector length 4)
-#'      \{beta, h0, h1, t\}
-#'      Maximum likelihood estimators of sigmoidal model parameters.
-#'      \item vecSigmoidValue (numeric vector length number of time points)
-#'      Values of sigmoid model fit at time points used for fit.
-#'      \item lsvecBatchFactors (list length number of confounders)
-#'      List of vectors of scalar batch correction factors for each sample.
-#'      These are also maximum likelihood estimators.
-#'      NULL if no confounders given.
-#'      \item scaDispParam (scalar) Dispersion parameter estimate
-#'      used in fitting (hyper-parameter).
-#'      \item scaLL (scalar) Loglikelihood of data under maximum likelihood
-#'      estimator model.
-#'      \item scaConvergence (scalar) 
-#'      Convergence status of optim for sigmoid model.
-#'    }
-#'    
+#' \itemize{
+#' \item vecSigmoidParam (numeric vector length 4)
+#' \{beta, h0, h1, t\}
+#' Maximum likelihood estimators of sigmoidal model parameters.
+#' \item vecSigmoidValue (numeric vector length number of time points)
+#' Values of sigmoid model fit at time points used for fit.
+#' \item lsvecBatchFactors (list length number of confounders)
+#' List of vectors of scalar batch correction factors for each sample.
+#' These are also maximum likelihood estimators.
+#' NULL if no confounders given.
+#' \item scaDispParam (scalar) Dispersion parameter estimate
+#' used in fitting (hyper-parameter).
+#' \item scaLL (scalar) Loglikelihood of data under maximum likelihood
+#' estimator model.
+#' \item scaConvergence (scalar) 
+#' Convergence status of optim for sigmoid model.
+#' }
+#' 
 #' @author David Sebastian Fischer
 fitSigmoidModel <- function(vecSigmoidParamGuess, vecCounts, scaDisp, vecSizeFactors, 
     lsvecidxBatch, vecTimepointsUnique, vecidxTimepoint, MAXIT = 1000, RELTOL = 10^(-8), 
@@ -228,62 +228,62 @@ fitSigmoidModel <- function(vecSigmoidParamGuess, vecCounts, scaDisp, vecSizeFac
 #' observations of this gene.
 #' Structure of this function:
 #' \itemize{
-#'    \item Fit sigmoidal model
-#'    \itemize{
-#'      \item Initialise sigmoidal model parameters (up and down)
-#'      \item Fit sigmoidal model (up initialisation)
-#'      \item Fit sigmoidal model (down initialisation)
-#'    }
-#'    \item Select best sigmoidal model fit from initialisations,
+#' \item Fit sigmoidal model
+#' \itemize{
+#' \item Initialise sigmoidal model parameters (up and down)
+#' \item Fit sigmoidal model (up initialisation)
+#' \item Fit sigmoidal model (down initialisation)
+#' }
+#' \item Select best sigmoidal model fit from initialisations,
 #' }
 #' 
 #' @seealso Called by \link{fitSigmoidModels} to fit
-#'    sigmoidal model to samples of one condition and one gene.
-#'    Calls sigmoidal parameter initialisation function
-#'    \link{estimateSigmoidParam} and 
-#'    optimisation wrapper \link{fitSigmoidModel}.
+#' sigmoidal model to samples of one condition and one gene.
+#' Calls sigmoidal parameter initialisation function
+#' \link{estimateSigmoidParam} and 
+#' optimisation wrapper \link{fitSigmoidModel}.
 #' 
 #' @param vecCounts (numeric vector number of samples)
-#'    Read count data.
+#' Read count data.
 #' @param scaDisp (scalar) Gene-wise 
-#'    negative binomial dispersion hyper-parameter.
+#' negative binomial dispersion hyper-parameter.
 #' @param vecSizeFactors (numeric vector number of samples) 
-#'    Model scaling factors for each sample which take
-#'    sequencing depth into account (size factors).
+#' Model scaling factors for each sample which take
+#' sequencing depth into account (size factors).
 #' @param vecTimepointsUnique (numeric vector length number of unique
-#'    timepoints) Vector of unique time coordinates observed in this condition.
+#' timepoints) Vector of unique time coordinates observed in this condition.
 #' @param vecidxTimepoint (idx vector length number of samples)
-#'    Index of the time coordinates of each sample (reference is
-#'    vecTimepointsUnique).
+#' Index of the time coordinates of each sample (reference is
+#' vecTimepointsUnique).
 #' @param lsvecidxBatch (idx list length number of confounding variables)
-#' \t\tList of vectors. 
-#' \t\tOne vector per confounding variable.
-#' \t\tEach vector has one entry per sample with the index of the batch ID
-#' \t\twithin the given confounding variable of the given sample. Reference
-#' \t\tis the list of unique batch ids for each confounding variable.
+#' List of vectors. 
+#' One vector per confounding variable.
+#' Each vector has one entry per sample with the index of the batch ID
+#' within the given confounding variable of the given sample. Reference
+#' is the list of unique batch ids for each confounding variable.
 #' @param MAXIT (scalar) [Default 1000] 
-#'    Maximum number of BFGS iterations for model fitting with \link{optim}.
+#' Maximum number of BFGS iterations for model fitting with \link{optim}.
 #' 
 #' @return (list) 
-#'    List of sigmoidal fit parameters and results.
-#'    \itemize{
-#'      \item vecSigmoidParam (numeric vector length 4)
-#'      \{beta, h0, h1, t\}
-#'      Maximum likelihood estimators of sigmoidal model parameters.
-#'      \item vecSigmoidValue (numeric vector length number of time points)
-#'      Values of sigmoid model fit at time points used for fit.
-#'      \item lsvecBatchFactors (list length number of confounders)
-#'      List of vectors of scalar batch correction factors for each sample.
-#'      These are also maximum likelihood estimators.
-#'      NULL if no confounders given.
-#'      \item scaDispParam (scalar) Dispersion parameter estimate
-#'      used in fitting (hyper-parameter).
-#'      \item scaLL (scalar) Loglikelihood of data under maximum likelihood
-#'      estimator model.
-#'      \item scaConvergence (scalar) 
-#'      Convergence status of optim on sigmoidal model.
-#'    }
-#'    
+#' List of sigmoidal fit parameters and results.
+#' \itemize{
+#' \item vecSigmoidParam (numeric vector length 4)
+#' \{beta, h0, h1, t\}
+#' Maximum likelihood estimators of sigmoidal model parameters.
+#' \item vecSigmoidValue (numeric vector length number of time points)
+#' Values of sigmoid model fit at time points used for fit.
+#' \item lsvecBatchFactors (list length number of confounders)
+#' List of vectors of scalar batch correction factors for each sample.
+#' These are also maximum likelihood estimators.
+#' NULL if no confounders given.
+#' \item scaDispParam (scalar) Dispersion parameter estimate
+#' used in fitting (hyper-parameter).
+#' \item scaLL (scalar) Loglikelihood of data under maximum likelihood
+#' estimator model.
+#' \item scaConvergence (scalar) 
+#' Convergence status of optim on sigmoidal model.
+#' }
+#' 
 #' @author David Sebastian Fischer
 fitSigmoidGene <- function(vecCounts, scaDisp, vecSizeFactors, vecTimepointsUnique, 
     vecidxTimepoint, lsvecidxBatch, MAXIT = 1000) {
@@ -323,93 +323,93 @@ fitSigmoidGene <- function(vecCounts, scaDisp, vecSizeFactors, vecTimepointsUniq
 #' model fitting across genes.
 #' 
 #' @seealso Calls \link{fitSigmoidGene} to perform fitting on each gene.
-#'   
+#' 
 #' @param objectImpulseDE2 (object class ImpulseDE2Object)
-#'    Object to be fit with sigmoidal model. Needs to be fitted with impulse 
-#'    model before.
+#' Object to be fit with sigmoidal model. Needs to be fitted with impulse 
+#' model before.
 #' @param vecConfounders (vector of strings number of confounding variables)
-#' \t\tFactors to correct for during batch correction.
-#' \t\tNames refer to columns in dfAnnotation.
+#' Factors to correct for during batch correction.
+#' Names refer to columns in dfAnnotation.
 #' @param strCondition (str)
-#'    Name of condition entry in lsModelFits for which sigmoidal
-#'    models are to be fit to each gene.
-#'    
+#' Name of condition entry in lsModelFits for which sigmoidal
+#' models are to be fit to each gene.
+#' 
 #' @return objectImpulseDE2 (object class ImpulseDE2Object)
-#'    Object with sigmoidal fit added: objectImpulseDE2@@lsModelFits
-#'    is updated to:
-#'    lsModelFits (list length number of conditions fit (1 or 3) +1)
-#'    \{'case'\} or \{'case', 'control', 'combined'\}
-#'    This is the lsModelFits object handed to this function with additional
-#'    sigmoid fit entries for every gene for the given condition.
-#'    One model fitting object for each condition:
-#'    In case-only DE analysis, only the condition \{'case'\} is fit.
-#'    In case-control DE analysis, the conditions 
-#'    \{'case', 'control','combined\} are fit.
-#'    Each condition entry is a list of model fits for each gene.
-#'    Each gene entry is a list of model fits to the individual models:
-#'    Impulse model, constant model and sigmoidal fit.
-#'    Each model fit per gene is a list of fitting parameters and results.
-#'    \itemize{
-#'      \item IdxGroups (list length number of conditions)
-#'      Samples grouped by time points and by batches and time point vectors. 
-#'      Sample groups are stored in the form of index vectors in which
-#'      samples of the same time point or batch have the same index.
-#'      \itemize{
-#'        \item Condition ID (list length 5)
-#'        List of index vectors and time points.
-#'        One entry of this format for each condition.
-#'        \itemize{
-#'          \item vecTimepointsUnique (numeric vector length number of unique
-#'        timepoints) Vector of unique time coordinates observed in this condition.
-#'          \item vecidxTimepoint (idx vector length number of samples)
-#'        Index of the time coordinates of each sample (reference is
-#'        vecTimepointsUnique).
-#'          \item lsvecBatchUnique (list number of confounders)
-#'        List of string vectors. One vector per confounder: vector of unique batches
-#'        in this confounder.
-#'          \item lsvecidxBatches (idx list length number of confounding variables)
-#' \t\t    List of index vectors. 
-#' \t\t    One vector per confounding variable.
-#' \t\t    Each vector has one entry per sample with the index of the batch ID
-#' \t\t    within the given confounding variable of the given sample. Reference
-#' \t\t    is the list of unique batch ids for each confounding variable.
-#' \t\t      \item vecSamples (vector number of samples) Names of samples fit
-#' \t\t    for this condition in same order as index vectors above.
-#'        }
-#'      }   
-#'      \item Condition ID (list length number of genes)
-#'      List of fits for each gene to the samples of this condition.
-#'      One entry of this format for all conditions fit.
-#'      \itemize{
-#'        \item Gene ID (list length 2)
-#'        Impulse, constant and sigmoidal model fit to gene observations.
-#'        One entry of this format for all gene IDs.
-#'        \itemize{
-#'          \item lsImpulseFit (list) List of impulse fit parameters and results.
-#'          For details, read the annotation of \link{fitModels}.
-#'          \item lsConstFit (list) List of constant fit parameters and results.
-#'          For details, read the annotation of \link{fitModels}.
-#'          \item ls SigmoidFit (list) List of sigmoidal fit parameters and results.
-#'          \itemize{
-#'            \item vecSigmoidParam (numeric vector length 4)
-#'            \{beta, h0, h1, t\}
-#'            Maximum likelihood estimators of sigmoidal model parameters.
-#'            \item vecSigmoidValue (numeric vector length number of time points)
-#'            Values of sigmoid model fit at time points used for fit.
-#'            \item lsvecBatchFactors (list length number of confounders)
-#'            List of vectors of scalar batch correction factors for each sample.
-#'            These are also maximum likelihood estimators.
-#'            NULL if no confounders given.
-#'            \item scaDispParam (scalar) Dispersion parameter estimate
-#'            used in fitting (hyper-parameter).
-#'            \item scaLL (scalar) Loglikelihood of data under maximum likelihood
-#'            estimator model.
-#'            \item scaConvergence (scalar) 
-#'            Convergence status of optim on sigmoidal model.
-#'        }
-#'      }
-#'    }
-#'  }
+#' Object with sigmoidal fit added: objectImpulseDE2@@lsModelFits
+#' is updated to:
+#' lsModelFits (list length number of conditions fit (1 or 3) +1)
+#' \{'case'\} or \{'case', 'control', 'combined'\}
+#' This is the lsModelFits object handed to this function with additional
+#' sigmoid fit entries for every gene for the given condition.
+#' One model fitting object for each condition:
+#' In case-only DE analysis, only the condition \{'case'\} is fit.
+#' In case-control DE analysis, the conditions 
+#' \{'case', 'control','combined\} are fit.
+#' Each condition entry is a list of model fits for each gene.
+#' Each gene entry is a list of model fits to the individual models:
+#' Impulse model, constant model and sigmoidal fit.
+#' Each model fit per gene is a list of fitting parameters and results.
+#' \itemize{
+#' \item IdxGroups (list length number of conditions)
+#' Samples grouped by time points and by batches and time point vectors. 
+#' Sample groups are stored in the form of index vectors in which
+#' samples of the same time point or batch have the same index.
+#' \itemize{
+#' \item Condition ID (list length 5)
+#' List of index vectors and time points.
+#' One entry of this format for each condition.
+#' \itemize{
+#' \item vecTimepointsUnique (numeric vector length number of unique
+#' timepoints) Vector of unique time coordinates observed in this condition.
+#' \item vecidxTimepoint (idx vector length number of samples)
+#' Index of the time coordinates of each sample (reference is
+#' vecTimepointsUnique).
+#' \item lsvecBatchUnique (list number of confounders)
+#' List of string vectors. One vector per confounder: vector of unique batches
+#' in this confounder.
+#' \item lsvecidxBatches (idx list length number of confounding variables)
+#' List of index vectors. 
+#' One vector per confounding variable.
+#' Each vector has one entry per sample with the index of the batch ID
+#' within the given confounding variable of the given sample. Reference
+#' is the list of unique batch ids for each confounding variable.
+#'   \item vecSamples (vector number of samples) Names of samples fit
+#' for this condition in same order as index vectors above.
+#' }
+#' }   
+#' \item Condition ID (list length number of genes)
+#' List of fits for each gene to the samples of this condition.
+#' One entry of this format for all conditions fit.
+#' \itemize{
+#' \item Gene ID (list length 2)
+#' Impulse, constant and sigmoidal model fit to gene observations.
+#' One entry of this format for all gene IDs.
+#' \itemize{
+#' \item lsImpulseFit (list) List of impulse fit parameters and results.
+#' For details, read the annotation of \link{fitModels}.
+#' \item lsConstFit (list) List of constant fit parameters and results.
+#' For details, read the annotation of \link{fitModels}.
+#' \item ls SigmoidFit (list) List of sigmoidal fit parameters and results.
+#' \itemize{
+#' \item vecSigmoidParam (numeric vector length 4)
+#' \{beta, h0, h1, t\}
+#' Maximum likelihood estimators of sigmoidal model parameters.
+#' \item vecSigmoidValue (numeric vector length number of time points)
+#' Values of sigmoid model fit at time points used for fit.
+#' \item lsvecBatchFactors (list length number of confounders)
+#' List of vectors of scalar batch correction factors for each sample.
+#' These are also maximum likelihood estimators.
+#' NULL if no confounders given.
+#' \item scaDispParam (scalar) Dispersion parameter estimate
+#' used in fitting (hyper-parameter).
+#' \item scaLL (scalar) Loglikelihood of data under maximum likelihood
+#' estimator model.
+#' \item scaConvergence (scalar) 
+#' Convergence status of optim on sigmoidal model.
+#' }
+#' }
+#' }
+#' }
 #'
 #' @examples
 #' lsSimulatedData <- simulateDataSetImpulseDE2(
@@ -439,7 +439,7 @@ fitSigmoidGene <- function(vecCounts, scaDisp, vecSizeFactors, vecTimepointsUniq
 #' scaQThresTransients=0.001)
 #' head(objectImpulseDE2$dfImpulseDE2Results)
 #' # dfImpulseDE2Results now contain 'transients-analysis'.
-#'    
+#' 
 #' @author David Sebastian Fischer
 #' 
 #' @export

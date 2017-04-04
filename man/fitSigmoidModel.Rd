@@ -5,7 +5,7 @@
 \title{Fit a sigmoidal model to data of a gene}
 \usage{
 fitSigmoidModel(vecSigmoidParamGuess, vecCounts, scaDisp, vecSizeFactors,
-  lsvecidxBatch, vecTimepointsUnique, vecidxTimepoint, MAXIT = 100,
+  lsvecidxBatch, vecTimepointsUnique, vecidxTimepoint, MAXIT = 1000,
   RELTOL = 10^(-8), trace = 0, REPORT = 10)
 }
 \arguments{
@@ -24,11 +24,11 @@ Model scaling factors for each sample which take
 sequencing depth into account (size factors).}
 
 \item{lsvecidxBatch}{(list length number of confounding variables)
-\t\tList of index vectors. 
-\t\tOne vector per confounding variable.
-\t\tEach vector has one entry per sample with the index batch
-\t\twithin the given confounding variable of the given sample.
-\t\tBatches are enumerated from 1 to number of batches.}
+List of index vectors. 
+One vector per confounding variable.
+Each vector has one entry per sample with the index batch
+within the given confounding variable of the given sample.
+Batches are enumerated from 1 to number of batches.}
 
 \item{vecTimepointsUnique}{(numeric vector length number of unique time points)
 Unique time points of set of time points of given samples.}
@@ -52,23 +52,23 @@ Reporting parameter of \link{optim}.}
 }
 \value{
 (list) List of sigmoid fit parameters and results.
-   \itemize{
-     \item vecSigmoidParam (numeric vector length 4)
-     \{beta, h0, h1, t\}
-     Maximum likelihood estimators of sigmoidal model parameters.
-     \item vecSigmoidValue (numeric vector length number of time points)
-     Values of sigmoid model fit at time points used for fit.
-     \item lsvecBatchFactors (list length number of confounders)
-     List of vectors of scalar batch correction factors for each sample.
-     These are also maximum likelihood estimators.
-     NULL if no confounders given.
-     \item scaDispParam (scalar) Dispersion parameter estimate
-     used in fitting (hyper-parameter).
-     \item scaLL (scalar) Loglikelihood of data under maximum likelihood
-     estimator model.
-     \item scaConvergence (scalar) 
-     Convergence status of optim for sigmoid model.
-   }
+\itemize{
+\item vecSigmoidParam (numeric vector length 4)
+\{beta, h0, h1, t\}
+Maximum likelihood estimators of sigmoidal model parameters.
+\item vecSigmoidValue (numeric vector length number of time points)
+Values of sigmoid model fit at time points used for fit.
+\item lsvecBatchFactors (list length number of confounders)
+List of vectors of scalar batch correction factors for each sample.
+These are also maximum likelihood estimators.
+NULL if no confounders given.
+\item scaDispParam (scalar) Dispersion parameter estimate
+used in fitting (hyper-parameter).
+\item scaLL (scalar) Loglikelihood of data under maximum likelihood
+estimator model.
+\item scaConvergence (scalar) 
+Convergence status of optim for sigmoid model.
+}
 }
 \description{
 [Model fitting function hierarchy: 3 out of 3]
@@ -78,9 +78,9 @@ thereof.
 }
 \seealso{
 Called by \link{fitSigmoidGene} to fit sigmoidal
-   model to samples of one condition and one gene.
-   Calls sigmoidal model cost function 
-   \link{evalLogLikSigmoid_comp} within \link{optim}.
+model to samples of one condition and one gene.
+Calls sigmoidal model cost function 
+\link{evalLogLikSigmoid_comp} within \link{optim}.
 }
 \author{
 David Sebastian Fischer

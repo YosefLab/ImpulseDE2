@@ -48,9 +48,9 @@ Mentioned in plot titles.}
 }
 \value{
 lsgplotsID (gplot list length vecGeneIDs)
- List of gplots for IDs in vecGeneIDs. This is secondary 
- output next to the .pdf and can be used to extract 
- single plots or assemble plots differently.
+List of gplots for IDs in vecGeneIDs. This is secondary 
+output next to the .pdf and can be used to extract 
+single plots or assemble plots differently.
 }
 \description{
 Plots the impulse fits and data to pdf and return a list of gplots. Points

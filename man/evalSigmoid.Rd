@@ -16,7 +16,7 @@ Time points to be evaluated.}
 }
 \value{
 vecSigmoidValue (numeric vector length of vecTimepoints) 
-   Model values for given time points.
+Model values for given time points.
 }
 \description{
 Compute value of sigmoidal model given parameters.

@@ -11,14 +11,14 @@
 #' @seealso Compiled version: \link{evalSigmoid_comp}
 #' 
 #' @param vecSigmoidParam (numeric vector number of sigmoid model parameters)
-#'    \{beta, h0, h1, t1\}
-#'    Vector of sigmoidal model parameters.
+#' \{beta, h0, h1, t1\}
+#' Vector of sigmoidal model parameters.
 #' @param vecTimepoints (numeric vector length number of time points) 
-#'    Time points to be evaluated.
+#' Time points to be evaluated.
 #' 
 #' @return vecSigmoidValue (numeric vector length of vecTimepoints) 
-#'    Model values for given time points.
-#'    
+#' Model values for given time points.
+#' 
 #' @author David Sebastian Fischer
 evalSigmoid <- function(vecSigmoidParam, vecTimepoints) {
     
@@ -40,13 +40,13 @@ evalSigmoid <- function(vecSigmoidParam, vecTimepoints) {
 #' Refer to \link{evalSigmoid}.
 #' 
 #' @param vecSigmoidParam (numeric vector number of sigmoid model parameters)
-#'    \{beta, h0, h1, t1\}
-#'    Vector of sigmoidal model parameters.
+#' \{beta, h0, h1, t1\}
+#' Vector of sigmoidal model parameters.
 #' @param vecTimepoints (numeric vector length number of time points) 
-#'    Time points to be evaluated.
+#' Time points to be evaluated.
 #' 
 #' @return vecSigmoidValue (numeric vector length of vecTimepoints) 
-#'    Model values for given time points.
+#' Model values for given time points.
 #' 
 #' @author David Sebastian Fischer
 evalSigmoid_comp <- cmpfun(evalSigmoid)

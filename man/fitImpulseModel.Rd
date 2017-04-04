@@ -24,11 +24,11 @@ Model scaling factors for each sample which take
 sequencing depth into account (size factors).}
 
 \item{lsvecidxBatch}{(list length number of confounding variables)
-\t\tList of index vectors. 
-\t\tOne vector per confounding variable.
-\t\tEach vector has one entry per sample with the index batch
-\t\twithin the given confounding variable of the given sample.
-\t\tBatches are enumerated from 1 to number of batches.}
+List of index vectors. 
+One vector per confounding variable.
+Each vector has one entry per sample with the index batch
+within the given confounding variable of the given sample.
+Batches are enumerated from 1 to number of batches.}
 
 \item{vecTimepointsUnique}{(numeric vector length number of unique time points)
 Unique time points of set of time points of given samples.}
@@ -52,23 +52,23 @@ Reporting parameter of \link{optim}.}
 }
 \value{
 (list) List of impulse fit parameters and results.
-   \itemize{
-     \item vecImpulseParam (numeric vector length 6)
-     \{beta, h0, h1, h2, t1, t2\}
-     Maximum likelihood estimators of impulse model parameters.
-     \item vecImpulseValue (numeric vector length number of time points)
-     Values of impulse model fit at time points used for fit.
-     \item lsvecBatchFactors (list length number of confounders)
-     List of vectors of scalar batch correction factors for each sample.
-     These are also maximum likelihood estimators.
-     NULL if no confounders given.
-     \item scaDispParam (scalar) Dispersion parameter estimate
-     used in fitting (hyper-parameter).
-     \item scaLL (scalar) Loglikelihood of data under maximum likelihood
-     estimator model.
-     \item scaConvergence (scalar) 
-     Convergence status of optim on impulse model.
-   }
+\itemize{
+\item vecImpulseParam (numeric vector length 6)
+\{beta, h0, h1, h2, t1, t2\}
+Maximum likelihood estimators of impulse model parameters.
+\item vecImpulseValue (numeric vector length number of time points)
+Values of impulse model fit at time points used for fit.
+\item lsvecBatchFactors (list length number of confounders)
+List of vectors of scalar batch correction factors for each sample.
+These are also maximum likelihood estimators.
+NULL if no confounders given.
+\item scaDispParam (scalar) Dispersion parameter estimate
+used in fitting (hyper-parameter).
+\item scaLL (scalar) Loglikelihood of data under maximum likelihood
+estimator model.
+\item scaConvergence (scalar) 
+Convergence status of optim on impulse model.
+}
 }
 \description{
 [Model fitting function hierarchy: 4 out of 4]
@@ -78,9 +78,9 @@ thereof.
 }
 \seealso{
 Called by \link{fitConstImpulseGene} to fit impulse
-   model to samples of one condition and one gene.
-   Calls impulse model cost function 
-   \link{evalLogLikImpulse_comp} within \link{optim}.
+model to samples of one condition and one gene.
+Calls impulse model cost function 
+\link{evalLogLikImpulse_comp} within \link{optim}.
 }
 \author{
 David Sebastian Fischer

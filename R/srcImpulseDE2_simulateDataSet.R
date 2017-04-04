@@ -15,57 +15,57 @@
 #' @seealso Called by separately by user.
 #' 
 #' @param vecTimePointsA (numeric vector number of time points)
-#'    Number of time points in batch A.
+#' Number of time points in batch A.
 #' @param vecTimePointsB (numeric vector number of time points)
-#'    Number of time points in batch B.
+#' Number of time points in batch B.
 #' @param vecBatchesA (str vector number of samples in vecTimePointsA) [Default NULL]
-#'    Batch IDs of each sample in condition A. Set to NULL if 
-#'    simulating without batch effects.
+#' Batch IDs of each sample in condition A. Set to NULL if 
+#' simulating without batch effects.
 #' @param vecBatchesB (str vector number of samples in vecTimePointsB) [Default NULL]
-#'    Batch IDs of each sample in condition B. Set to NULL if 
-#'    simulating without batch effects.
+#' Batch IDs of each sample in condition B. Set to NULL if 
+#' simulating without batch effects.
 #' @param scaNConst (scalar) Number of constant genes in data set.
 #' @param scaNImp (scalar) Number of impulse distributed genes in data set.
 #' @param scaNLin (scalar) Number of linear distributed genes in data set.
 #' @param scaNSig (scalar) Number of sigmoid distributed genes in data set.
 #' @param scaNRand (scalar) [Default NULL] Number of random distributed genes in data set.
 #' @param scaSeedInit (scalar) [Default 1] Scalar based on which seeds are chosen.
-#'   One vlaue correspond sto a unique set of seeds for all random number generations.
+#' One vlaue correspond sto a unique set of seeds for all random number generations.
 #' @param scaMumax (scalar) [Default 1000]
-#'    Maximum expression mean parameter to be used.
+#' Maximum expression mean parameter to be used.
 #' @param boolOneConstMu (bool) [Default False]
-#'    Don't sample constant trajectories from uniform [0,scaMumax]
-#'    but set all to scaMumax
+#' Don't sample constant trajectories from uniform [0,scaMumax]
+#' but set all to scaMumax
 #' @param scaSDExpressionChange (scalar) [Default 1]
-#'    Standard deviation of normal distribution from which the 
-#'    amplitude change within an impulse trace is drawn.
+#' Standard deviation of normal distribution from which the 
+#' amplitude change within an impulse trace is drawn.
 #' @param scaSDRand (scalar) [Default 0]
-#'    Standard deviation of normal distribution from which the 
-#'    random deviations are drawn.
+#' Standard deviation of normal distribution from which the 
+#' random deviations are drawn.
 #' @param scaMuSizeEffect (numeric vector number of genes) [Default NULL]
-#'    Mean of normal distribution of which scaNLing factor for 
-#'    size effects per sample are drawn.
+#' Mean of normal distribution of which scaNLing factor for 
+#' size effects per sample are drawn.
 #' @param scaSDSizeEffect (numeric vector number of genes) [Default NULL]
-#'    Standard deviation of normal distribution of which scaling factor for 
-#'    size effects per sample are drawn.
+#' Standard deviation of normal distribution of which scaling factor for 
+#' size effects per sample are drawn.
 #' @param scaMuBatchEffect (numeric vector number of genes) [Default NULL]
-#'    Mean of normal distribution of which scaling factor for 
-#'    batch effects per gene are drawn (reference is batch A).
+#' Mean of normal distribution of which scaling factor for 
+#' batch effects per gene are drawn (reference is batch A).
 #' @param scaSDBatchEffect (numeric vector number of genes) [Default NULL]
-#'    Standard deviation of normal distribution of which scaling factor for 
-#'    batch effects per gene are drawn (reference is batch A).
+#' Standard deviation of normal distribution of which scaling factor for 
+#' batch effects per gene are drawn (reference is batch A).
 #' @param dirOutSimulation (directory) [Default NULL]
-#'    Directory to which simulated parameter objects are 
-#'    saved to.
+#' Directory to which simulated parameter objects are 
+#' saved to.
 #' 
 #' @return list (length 2)
 #' \itemize{
-#'    \item dfAnnotation (data frame samples x covariates) 
-#'    {Sample, Condition, Time (numeric), TimeCateg (str)
-#'    (and confounding variables if given).}
-#'    Annotation table with covariates for each sample.
-#'    \item matSampledCountsObserved (matrix genes x cells)
-#'    Sampled count data of all cells after drop-out.
+#' \item dfAnnotation (data frame samples x covariates) 
+#' {Sample, Condition, Time (numeric), TimeCateg (str)
+#' (and confounding variables if given).}
+#' Annotation table with covariates for each sample.
+#' \item matSampledCountsObserved (matrix genes x cells)
+#' Sampled count data of all cells after drop-out.
 #' }
 #' 
 #' @examples
@@ -78,7 +78,7 @@
 #' scaNImp          = 10,
 #' scaNLin          = 10,
 #' scaNSig          = 10)
-#'    
+#' 
 #' @author David Sebastian Fischer
 #' 
 #' @export

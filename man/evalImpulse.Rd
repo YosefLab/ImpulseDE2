@@ -16,7 +16,7 @@ Time points to be evaluated.}
 }
 \value{
 vecImpulseValue (vec number of vecTimepoints) 
-    Model values for given time points.
+Model values for given time points.
 }
 \description{
 Compute value of impulse function given parameters.

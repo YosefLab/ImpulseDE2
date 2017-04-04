@@ -19,11 +19,11 @@ Model scaling factors for each sample which take
 sequencing depth into account (size factors).}
 
 \item{lsvecidxBatch}{(list length number of confounding variables)
-\t\tList of index vectors. 
-\t\tOne vector per confounding variable.
-\t\tEach vector has one entry per sample with the index batch
-\t\twithin the given confounding variable of the given sample.
-\t\tBatches are enumerated from 1 to number of batches.}
+List of index vectors. 
+One vector per confounding variable.
+Each vector has one entry per sample with the index batch
+within the given confounding variable of the given sample.
+Batches are enumerated from 1 to number of batches.}
 
 \item{MAXIT}{(scalar) [Default 1000] 
 Maximum number of BFGS iterations for model fitting with \link{optim}.}
@@ -40,20 +40,20 @@ Reporting parameter of \link{optim}.}
 }
 \value{
 (list) List of constant fit parameters and results.
-   \itemize{
-     \item scaMu (scalar) Maximum likelihood estimator of
-     negative binomial mean parameter.
-     \item lsvecBatchFactors (list length number of confounders)
-     List of vectors of scalar batch correction factors for each sample.
-     These are also maximum likelihood estimators.
-     NULL if no confounders given.
-     \item scaDispParam (scalar) Dispersion parameter estimate
-     used in fitting (hyper-parameter).
-     \item scaLL (scalar) Loglikelihood of data under maximum likelihood
-     estimator model.
-     \item scaConvergence (scalar) 
-     Convergence status of optim on constant model.
-   }
+\itemize{
+\item scaMu (scalar) Maximum likelihood estimator of
+negative binomial mean parameter.
+\item lsvecBatchFactors (list length number of confounders)
+List of vectors of scalar batch correction factors for each sample.
+These are also maximum likelihood estimators.
+NULL if no confounders given.
+\item scaDispParam (scalar) Dispersion parameter estimate
+used in fitting (hyper-parameter).
+\item scaLL (scalar) Loglikelihood of data under maximum likelihood
+estimator model.
+\item scaConvergence (scalar) 
+Convergence status of optim on constant model.
+}
 }
 \description{
 [Model fitting function hierarchy: 4 out of 4]
@@ -63,9 +63,9 @@ thereof.
 }
 \seealso{
 Called by \link{fitConstImpulseGene} to fit constant
-   model to samples of one condition and one gene.
-   Calls constant model cost function 
-   \link{evalLogLikMu} within \link{optim}.
+model to samples of one condition and one gene.
+Calls constant model cost function 
+\link{evalLogLikMu} within \link{optim}.
 }
 \author{
 David Sebastian Fischer

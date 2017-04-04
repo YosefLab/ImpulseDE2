@@ -25,20 +25,20 @@ below this threshold are included in the heatmap.}
 }
 \value{
 (list length 3)
-   \itemize{
-     \item complexHeatmapRaw (complexHeatmap plot)
-     Heatmap of raw data by time point: Average of the
-     size factor (and batch factor) normalised counts 
-     per time point and gene.
-     Plot with draw(complexHeatmapRaw).
-     \item complexHeatmapFit (complexHeatmap plot)
-     Heatmap of impulse-fitted data by time point.
-     Plot with draw(complexHeatmapFit).
-     \item lsvecGeneGroups (list)
-     List of gene ID vectors: One per heatmap group 
-     with all gene IDs of the the profiles displayed
-     in the heatmap.
-   }
+\itemize{
+\item complexHeatmapRaw (complexHeatmap plot)
+Heatmap of raw data by time point: Average of the
+size factor (and batch factor) normalised counts 
+per time point and gene.
+Plot with draw(complexHeatmapRaw).
+\item complexHeatmapFit (complexHeatmap plot)
+Heatmap of impulse-fitted data by time point.
+Plot with draw(complexHeatmapFit).
+\item lsvecGeneGroups (list)
+List of gene ID vectors: One per heatmap group 
+with all gene IDs of the the profiles displayed
+in the heatmap.
+}
 }
 \description{
 Creates a complexHeatmap heatmap structured into 

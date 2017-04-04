@@ -11,14 +11,14 @@
 #' @seealso Compiled version: \link{evalImpulse_comp}
 #' 
 #' @param vecImpulseParam (numeric vector number of impulse model parameters)
-#'    \{beta, h0, h1, h2, t1, t2\}
-#'    Vector of impulse model parameters.
+#' \{beta, h0, h1, h2, t1, t2\}
+#' Vector of impulse model parameters.
 #' @param vecTimepoints (numeric vector length number of time points) 
-#'    Time points to be evaluated.
+#' Time points to be evaluated.
 #' 
 #' @return vecImpulseValue (vec number of vecTimepoints) 
-#'     Model values for given time points.
-#'     
+#' Model values for given time points.
+#' 
 #' @author David Sebastian Fischer
 evalImpulse <- function(vecImpulseParam, vecTimepoints) {
     
@@ -44,13 +44,13 @@ evalImpulse <- function(vecImpulseParam, vecTimepoints) {
 #' Refer to \link{evalImpulse}.
 #' 
 #' @param vecImpulseParam (numeric vector number of impulse model parameters)
-#'    \{beta, h0, h1, h2, t1, t2\}
-#'    Vector of impulse model parameters.
+#' \{beta, h0, h1, h2, t1, t2\}
+#' Vector of impulse model parameters.
 #' @param vecTimepoints (numeric vector length number of time points) 
-#'    Time points to be evaluated.
+#' Time points to be evaluated.
 #' 
 #' @return vecImpulseValue (vec number of vecTimepoints) 
-#'     Model values for given time points.
+#' Model values for given time points.
 #' 
 #' @author David Sebastian Fischer
 evalImpulse_comp <- cmpfun(evalImpulse)

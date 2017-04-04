@@ -19,22 +19,22 @@ Model scaling factors for each sample which take
 sequencing depth into account (size factors).}
 
 \item{lsvecidxBatch}{(list length number of confounding variables)
-\t\tList of index vectors. 
-\t\tOne vector per confounding variable.
-\t\tEach vector has one entry per sample with the index batch
-\t\twithin the given confounding variable of the given sample.
-\t\tBatches are enumerated from 1 to number of batches.}
+List of index vectors. 
+One vector per confounding variable.
+Each vector has one entry per sample with the index batch
+within the given confounding variable of the given sample.
+Batches are enumerated from 1 to number of batches.}
 }
 \value{
 (list length 2)
-   \itemize{
-     \item peak (numeric vector length 6)
-     \{beta, h0, h1, t\}
-     Up model initialisations of sigmoidal model parameters.
-     \item valley (numeric vector length 6)
-     \{beta, h0, h1, t\}
-     Down model initialisations of sigmoidal model parameters.
-   }
+\itemize{
+\item peak (numeric vector length 6)
+\{beta, h0, h1, t\}
+Up model initialisations of sigmoidal model parameters.
+\item valley (numeric vector length 6)
+\{beta, h0, h1, t\}
+Down model initialisations of sigmoidal model parameters.
+}
 }
 \description{
 [Model fitting function hierarchy: helper to level 2 out of 3]

@@ -22,11 +22,11 @@ Model scaling factors for each sample which take
 sequencing depth into account (size factors).}
 
 \item{lsvecidxBatch}{(list length number of confounding variables)
-\t\tList of index vectors. 
-\t\tOne vector per confounding variable.
-\t\tEach vector has one entry per sample with the index batch
-\t\twithin the given confounding variable of the given sample.
-\t\tBatches are enumerated from 1 to number of batches.}
+List of index vectors. 
+One vector per confounding variable.
+Each vector has one entry per sample with the index batch
+within the given confounding variable of the given sample.
+Batches are enumerated from 1 to number of batches.}
 
 \item{vecboolObserved}{(bool vector number of samples)
 Whether sample is observed (finite and not NA).}

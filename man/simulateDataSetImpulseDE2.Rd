@@ -77,12 +77,12 @@ saved to.}
 \value{
 list (length 2)
 \itemize{
-   \item dfAnnotation (data frame samples x covariates) 
-   {Sample, Condition, Time (numeric), TimeCateg (str)
-   (and confounding variables if given).}
-   Annotation table with covariates for each sample.
-   \item matSampledCountsObserved (matrix genes x cells)
-   Sampled count data of all cells after drop-out.
+\item dfAnnotation (data frame samples x covariates) 
+{Sample, Condition, Time (numeric), TimeCateg (str)
+(and confounding variables if given).}
+Annotation table with covariates for each sample.
+\item matSampledCountsObserved (matrix genes x cells)
+Sampled count data of all cells after drop-out.
 }
 }
 \description{
@@ -104,7 +104,7 @@ scaNConst        = 30,
 scaNImp          = 10,
 scaNLin          = 10,
 scaNSig          = 10)
-   
+
 }
 \seealso{
 Called by separately by user.
