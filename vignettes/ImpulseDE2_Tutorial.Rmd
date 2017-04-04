@@ -293,3 +293,9 @@ lsHeatmaps <- plotHeatmap(
   scaQThres              = 0.01)
 draw(lsHeatmaps$complexHeatmapRaw) # Heatmap based on normalised counts
 ```
+
+# Session information
+
+```{r session}
+sessionInfo()
+```

@@ -10,7 +10,7 @@ Authors@R: c(
 Author: David S Fischer [aut, cre], Fabian J Theis [ctb], Nir Yosef [ctb]
 Maintainer: David S Fischer <david.fischer@helmholtz-muenchen.de>
 Description: ImpulseDE2 is a differential expression algorithm for longituinal count data sets which arise in sequeincing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
-License: file LICENSE
+License: Artistic-2.0
 Encoding: UTF-8
 Imports:
     Biobase,
