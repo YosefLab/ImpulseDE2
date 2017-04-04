@@ -87,11 +87,12 @@
 #'    }
 #'    
 #' @author David Sebastian Fischer
-runDEAnalysis <- function(objectImpulseDE2,
-                          boolCaseCtrl,
-                          vecConfounders,
-                          boolIdentifyTransients,
-                          scaQThresTransients=0.001){
+runDEAnalysis <- function(
+  objectImpulseDE2,
+  boolCaseCtrl,
+  vecConfounders,
+  boolIdentifyTransients,
+  scaQThresTransients=0.001){
   
   if(!boolCaseCtrl){
     # Case-only:
@@ -369,14 +370,16 @@ runDEAnalysis <- function(objectImpulseDE2,
 #' @author David Sebastian Fischer
 #' 
 #' @export
-updateDEAnalysis <- function(objectImpulseDE2,
-                             scaQThresTransients=0.001){
+updateDEAnalysis <- function(
+  objectImpulseDE2,
+  scaQThresTransients=0.001){
   
-  objectImpulseDE2 <- runDEAnalysis(objectImpulseDE2=objectImpulseDE2,
-                                    boolCaseCtrl=objectImpulseDE2@boolCaseCtrl,
-                                    vecConfounders=objectImpulseDE2@vecConfounders,
-                                    boolIdentifyTransients=TRUE,
-                                    scaQThresTransients=scaQThresTransients)
+  objectImpulseDE2 <- runDEAnalysis(
+    objectImpulseDE2=objectImpulseDE2,
+    boolCaseCtrl=objectImpulseDE2@boolCaseCtrl,
+    vecConfounders=objectImpulseDE2@vecConfounders,
+    boolIdentifyTransients=TRUE,
+    scaQThresTransients=scaQThresTransients)
   
   return(objectImpulseDE2)
 }

@@ -33,10 +33,11 @@
 #' @importFrom S4Vectors mcols
 #' 
 #' @author David Sebastian Fischer
-runDESeq2 <- function(dfAnnotationProc, 
-                      matCountDataProc,
-                      boolCaseCtrl,
-                      vecConfounders){
+runDESeq2 <- function(
+  dfAnnotationProc, 
+  matCountDataProc,
+  boolCaseCtrl,
+  vecConfounders){
   
   # Get gene-wise dispersion estimates
   # var = mean + alpha * mean^2, alpha is dispersion
@@ -44,7 +45,6 @@ runDESeq2 <- function(dfAnnotationProc,
   # for evaluation of likelihood)
   
   dds <- NULL
-  #ddsDESeqObject <- NULL
   if(!boolCaseCtrl){
     # Case-only
     if(is.null(vecConfounders)){
@@ -55,10 +55,6 @@ runDESeq2 <- function(dfAnnotationProc,
         design = ~ TimeCateg) )
       dds <- estimateSizeFactors(dds)
       dds <- estimateDispersions(dds)
-      #ddsDESeqObject <- DESeq(dds, test = "LRT", 
-      #                        quiet=TRUE, parallel=TRUE,           
-      #                        full = ~ TimeCateg, 
-      #                        reduced = ~ 1)
       
     } else {
       # With batch correction
@@ -71,10 +67,6 @@ runDESeq2 <- function(dfAnnotationProc,
           design = ~TimeCateg + Batch  ) )
         dds <- estimateSizeFactors(dds)
         dds <- estimateDispersions(dds)
-        #ddsDESeqObject <- DESeq(dds, test = "LRT",
-        #                        quiet=TRUE, parallel=TRUE,           
-        #                        full = ~TimeCateg + Batch, 
-        #                        reduced = ~Batch)
       }, error=function(strErrorMsg){
         print(strErrorMsg)
         print(paste0("WARNING: DESeq2 failed on full model - dispersions may be inaccurate.",
@@ -90,10 +82,6 @@ runDESeq2 <- function(dfAnnotationProc,
             design = ~Batch) )
           dds <- estimateSizeFactors(dds)
           dds <- estimateDispersions(dds)
-          #ddsDESeqObject <- DESeq(dds, test = "LRT",
-          #                        quiet=TRUE, parallel=TRUE,                      
-          #                        full = ~Batch, 
-          #                        reduced = ~1)
         }
       })
     }
@@ -110,10 +98,6 @@ runDESeq2 <- function(dfAnnotationProc,
           design = ~Condition+Condition:TimeCateg) )
         dds <- estimateSizeFactors(dds)
         dds <- estimateDispersions(dds)
-        #ddsDESeqObject <- DESeq(dds, test = "LRT", 
-        #                        quiet=TRUE, parallel=TRUE,           
-        #                        full = ~Condition+Condition:TimeCateg, 
-        #                        reduced = ~TimeCateg)
       }, error=function(strErrorMsg){
         print(strErrorMsg)
         print(paste0("WARNING: DESeq2 failed on full model - dispersions may be inaccurate.",
@@ -129,10 +113,6 @@ runDESeq2 <- function(dfAnnotationProc,
             design = ~Condition) )
           dds <- estimateSizeFactors(dds)
           dds <- estimateDispersions(dds)
-          #ddsDESeqObject <- DESeq(dds, test = "LRT",
-          #                        quiet=TRUE, parallel=TRUE,                      
-          #                        full = ~Condition, 
-          #                        reduced = ~1)
         }
       })
       
@@ -149,13 +129,9 @@ runDESeq2 <- function(dfAnnotationProc,
         dds <- suppressWarnings( DESeqDataSetFromMatrix(
           countData = matCountDataProc,
           colData = dfAnnotationProc,
-          design = ~Condition+Condition:TimeCateg+Condition:BatchNested,  ) )
+          design = ~Condition+Condition:TimeCateg+Condition:BatchNested) )
         dds <- estimateSizeFactors(dds)
         dds <- estimateDispersions(dds)
-        #ddsDESeqObject <- DESeq(dds, test = "LRT",
-        #                        quiet=TRUE, parallel=TRUE,           
-        #                        full = ~Condition+Condition:TimeCateg+Condition:BatchNested,
-        #                        reduced = ~TimeCateg+Batch)
       }, error=function(strErrorMsg){
         print(strErrorMsg)
         print(paste0("WARNING: DESeq2 failed on full model - dispersions may be inaccurate.",
@@ -182,10 +158,6 @@ runDESeq2 <- function(dfAnnotationProc,
               design = ~Condition+Condition:TimeCateg) )
             dds <- estimateSizeFactors(dds)
             dds <- estimateDispersions(dds)
-            #ddsDESeqObject <- DESeq(dds, test = "LRT",
-            #                        quiet=TRUE, parallel=TRUE,                      
-            #                        full = ~Condition+Condition:TimeCateg, 
-            #                        reduced = ~TimeCateg)
           } else {
             paste0("Found 1. or {1. and 2.}:")
             paste0("1. Model matrix based on confounding variables {", vecConfounders,
@@ -200,10 +172,6 @@ runDESeq2 <- function(dfAnnotationProc,
               design = ~Condition+Condition:BatchNested) )
             dds <- estimateSizeFactors(dds)
             dds <- estimateDispersions(dds)
-            #ddsDESeqObject <- DESeq(dds, test = "LRT",
-            #                        quiet=TRUE, parallel=TRUE,                      
-            #                        full = ~Condition+Condition:BatchNested, 
-            #                        reduced = ~1)
           }
         }
       })
@@ -220,9 +188,9 @@ runDESeq2 <- function(dfAnnotationProc,
     mcols(dds)$dispersion>(20-10^(-5)) & apply(matCountDataProc, 1, function(gene) any(gene==0) )
   vecDispersionsInv[vecindDESeq2HighOutliesFailure] <- mcols(dds)$dispMAP[vecindDESeq2HighOutliesFailure]
   if(sum(vecindDESeq2HighOutliesFailure)>0){
-  	print(paste0("Corrected ", sum(vecindDESeq2HighOutliesFailure),
-  							 " DESEq2 dispersion estimates which ",
-  							 "to avoid variance overestimation and loss of discriminatory power for model selection."))
+    print(paste0("Corrected ", sum(vecindDESeq2HighOutliesFailure),
+                 " DESEq2 dispersion estimates which ",
+                 "to avoid variance overestimation and loss of discriminatory power for model selection."))
   }
   # DESeq2 uses alpha=1/phi as dispersion
   vecDispersions <- 1/vecDispersionsInv

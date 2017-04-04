@@ -1,0 +1,762 @@
+
+R version 3.3.2 (2016-10-31) -- "Sincere Pumpkin Patch"
+Copyright (C) 2016 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin14.5.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> pkgname <- "ImpulseDE2"
+> source(file.path(R.home("share"), "R", "examples-header.R"))
+> options(warn = 1)
+> library('ImpulseDE2')
+> 
+> base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+> cleanEx()
+> nameEx("computeNormConst")
+> ### * computeNormConst
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: computeNormConst
+> ### Title: Compute a normalisation constant for each sample
+> ### Aliases: computeNormConst
+> 
+> ### ** Examples
+> 
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 100,
++ scaNImp          = 200,
++ scaNLin          = 100,
++ scaNSig          = 200)
+[1] "Setting no batch structure."
+> vecSizeFactors <- computeNormConst(
++ matCountData = lsSimulatedData$matObservedCounts)
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("fitSigmoidModels")
+> ### * fitSigmoidModels
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: fitSigmoidModels
+> ### Title: Fits sigmoidal models to all genes on all all samples of a
+> ###   condition
+> ### Aliases: fitSigmoidModels
+> 
+> ### ** Examples
+> 
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 0,
++ scaNImp          = 20,
++ scaNLin          = 10,
++ scaNSig          = 20)
+[1] "Setting no batch structure."
+> objectImpulseDE2 <- runImpulseDE2(
++ matCountData    = lsSimulatedData$matObservedCounts, 
++ dfAnnotation    = lsSimulatedData$dfAnnotation,
++ boolCaseCtrl    = FALSE,
++ vecConfounders  = NULL,
++ boolIdentifyTransients = FALSE,
++ scaNProc        = 1 )
+[1] "ImpulseDE2 for count data, v0.99.5"
+[1] "# Process input"
+Processing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 1,2,3,4,5,6,7,8
+Case: Found the samples at time point 1: A_1_Rep1,A_1_Rep2,A_1_Rep3
+Case: Found the samples at time point 2: A_2_Rep1,A_2_Rep2,A_2_Rep3
+Case: Found the samples at time point 3: A_3_Rep1,A_3_Rep2,A_3_Rep3
+Case: Found the samples at time point 4: A_4_Rep1,A_4_Rep2,A_4_Rep3
+Case: Found the samples at time point 5: A_5_Rep1,A_5_Rep2,A_5_Rep3
+Case: Found the samples at time point 6: A_6_Rep1,A_6_Rep2,A_6_Rep3
+Case: Found the samples at time point 7: A_7_Rep1,A_7_Rep2,A_7_Rep3
+Case: Found the samples at time point 8: A_8_Rep1,A_8_Rep2,A_8_Rep3
+Input contained 50 genes/regions.
+Selected 50 genes/regions for analysis.
+[1] "# Run DESeq2: Using dispersion factors computed by DESeq2."
+converting counts to integer mode
+gene-wise dispersion estimates
+mean-dispersion relationship
+-- note: fitType='parametric', but the dispersion trend was not well captured by the
+   function: y = a/x + b, and a local regression fit was automatically substituted.
+   specify fitType='local' or 'mean' to avoid this message next time.
+final dispersion estimates
+[1] "Consumed time: 0.01 min."
+[1] "# Compute size factors"
+[1] "# Fitting null and alternative model to the genes"
+[1] "Consumed time: 0.06 min."
+[1] "# Differentially expression analysis based on model fits"
+[1] "Finished running ImpulseDE2."
+[1] "TOTAL consumed time: 0.07 min."
+> # You could have used boolIdentifyTransients=TRUE
+> # to avoid the following post wrapper fitting.
+> objectImpulseDE2 <- fitSigmoidModels(
++ objectImpulseDE2 = objectImpulseDE2,
++ vecConfounders   = NULL,
++ strCondition     = "case")
+> objectImpulseDE2 <- updateDEAnalysis(
++ objectImpulseDE2=objectImpulseDE2,
++ scaQThresTransients=0.001)
+> head(objectImpulseDE2$dfImpulseDE2Results)
+       Gene            p         padj loglik_full loglik_red df_full df_red
+gene1 gene1 3.565951e-02 5.571799e-02  -171.90445 -177.87302       7      2
+gene2 gene2 6.409231e-01 7.452594e-01   -63.64265  -65.33493       7      2
+gene3 gene3 1.469725e-07 6.680569e-07  -139.44749 -159.46467       7      2
+gene4 gene4 4.567647e-04 1.087535e-03  -155.43540 -166.59125       7      2
+gene5 gene5 6.239432e-02 9.175635e-02  -164.60234 -169.84922       7      2
+gene6 gene6 5.499271e-04 1.249834e-03  -134.24838 -145.19232       7      2
+            mean converge_impulse converge_const converge_sigmoid
+gene1 878.996159                0              0                0
+gene2   9.319507                0              0                0
+gene3 376.549118                0              0                0
+gene4 586.123862                0              0                0
+gene5 977.281748                0              0                0
+gene6 218.703604                0              0                0
+      impulseTOsigmoid_p impulseTOsigmoid_padj sigmoidTOconst_p
+gene1         0.21470820             0.5453167     3.120886e-02
+gene2         0.20593661             0.5453167     9.735941e-01
+gene3         0.21812668             0.5453167     4.626082e-08
+gene4         0.85827493             0.8959231     6.504279e-05
+gene5         0.32199074             0.6999799     4.154056e-02
+gene6         0.01684157             0.1327958     3.312044e-03
+      sigmoidTOconst_padj isTransient isMonotonous allZero
+gene1        5.033687e-02       FALSE        FALSE   FALSE
+gene2        9.862254e-01       FALSE        FALSE   FALSE
+gene3        2.102765e-07       FALSE         TRUE   FALSE
+gene4        1.626070e-04       FALSE         TRUE   FALSE
+gene5        6.490713e-02       FALSE        FALSE   FALSE
+gene6        6.900092e-03       FALSE        FALSE   FALSE
+> # dfImpulseDE2Results now contain 'transients-analysis'.
+>    
+> 
+> 
+> 
+> cleanEx()
+> nameEx("get_accessors")
+> ### * get_accessors
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: get_accessors
+> ### Title: ImpulseDE2Object accession methods
+> ### Aliases: get_accessors get_lsModelFits,ImpulseDE2Object-method
+> ###   get_matCountDataProc,ImpulseDE2Object-method
+> ###   get_dfAnnotationProc,ImpulseDE2Object-method
+> ###   get_vecSizeFactors,ImpulseDE2Object-method
+> ###   get_vecDispersions,ImpulseDE2Object-method
+> ###   get_boolCaseCtrl,ImpulseDE2Object-method
+> ###   get_vecConfounders,ImpulseDE2Object-method
+> ###   get_scaNProc,ImpulseDE2Object-method
+> ###   get_scaQThres,ImpulseDE2Object-method
+> ###   get_strReport,ImpulseDE2Object-method get_accessors get_accessors
+> ###   get_accessors get_accessors get_accessors get_accessors get_accessors
+> ###   get_accessors get_accessors get_accessors
+> 
+> ### ** Examples
+> 
+>    
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 30,
++ scaNImp          = 10,
++ scaNLin          = 10,
++ scaNSig          = 10)
+[1] "Setting no batch structure."
+> objectImpulseDE2 <- runImpulseDE2(
++ matCountData    = lsSimulatedData$matObservedCounts, 
++ dfAnnotation    = lsSimulatedData$dfAnnotation,
++ boolCaseCtrl    = FALSE,
++ vecConfounders  = NULL,
++ scaNProc        = 1 )
+[1] "ImpulseDE2 for count data, v0.99.5"
+[1] "# Process input"
+Processing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 1,2,3,4,5,6,7,8
+Case: Found the samples at time point 1: A_1_Rep1,A_1_Rep2,A_1_Rep3
+Case: Found the samples at time point 2: A_2_Rep1,A_2_Rep2,A_2_Rep3
+Case: Found the samples at time point 3: A_3_Rep1,A_3_Rep2,A_3_Rep3
+Case: Found the samples at time point 4: A_4_Rep1,A_4_Rep2,A_4_Rep3
+Case: Found the samples at time point 5: A_5_Rep1,A_5_Rep2,A_5_Rep3
+Case: Found the samples at time point 6: A_6_Rep1,A_6_Rep2,A_6_Rep3
+Case: Found the samples at time point 7: A_7_Rep1,A_7_Rep2,A_7_Rep3
+Case: Found the samples at time point 8: A_8_Rep1,A_8_Rep2,A_8_Rep3
+Input contained 60 genes/regions.
+Selected 60 genes/regions for analysis.
+[1] "# Run DESeq2: Using dispersion factors computed by DESeq2."
+converting counts to integer mode
+gene-wise dispersion estimates
+mean-dispersion relationship
+final dispersion estimates
+[1] "Consumed time: 0 min."
+[1] "# Compute size factors"
+[1] "# Fitting null and alternative model to the genes"
+[1] "Consumed time: 0.07 min."
+[1] "# Differentially expression analysis based on model fits"
+[1] "Finished running ImpulseDE2."
+[1] "TOTAL consumed time: 0.09 min."
+> # Extract hidden auxillary result and processed input objects.
+> lsModelFits <- get_lsModelFits(objectImpulseDE2)
+> matCountDataProc <- get_matCountDataProc(objectImpulseDE2)
+> dfAnnotationProc <- get_dfAnnotationProc(objectImpulseDE2)
+> vecSizeFactors <- get_vecSizeFactors(objectImpulseDE2)
+> vecDispersions <- get_vecDispersions(objectImpulseDE2)
+> boolCaseCtrl <- get_boolCaseCtrl(objectImpulseDE2)
+> vecConfounders <- get_vecConfounders(objectImpulseDE2)
+> scaNProc <- get_scaNProc(objectImpulseDE2)
+> scaQThres <- get_scaQThres(objectImpulseDE2)
+> strReport <- get_strReport(objectImpulseDE2)
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("list_accession")
+> ### * list_accession
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: list_accession
+> ### Title: List-like accessor methods for ImpulseDE2Object
+> ### Aliases: list_accession names.ImpulseDE2Object
+> ###   names,ImpulseDE2Object-method $,ImpulseDE2Object-method
+> ###   [[,ImpulseDE2Object,character,missing-method list_accession
+> ###   list_accession list_accession
+> 
+> ### ** Examples
+> 
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 30,
++ scaNImp          = 10,
++ scaNLin          = 10,
++ scaNSig          = 10)
+[1] "Setting no batch structure."
+> objectImpulseDE2 <- runImpulseDE2(
++ matCountData    = lsSimulatedData$matObservedCounts, 
++ dfAnnotation    = lsSimulatedData$dfAnnotation,
++ boolCaseCtrl    = FALSE,
++ vecConfounders  = NULL,
++ scaNProc        = 1 )
+[1] "ImpulseDE2 for count data, v0.99.5"
+[1] "# Process input"
+Processing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 1,2,3,4,5,6,7,8
+Case: Found the samples at time point 1: A_1_Rep1,A_1_Rep2,A_1_Rep3
+Case: Found the samples at time point 2: A_2_Rep1,A_2_Rep2,A_2_Rep3
+Case: Found the samples at time point 3: A_3_Rep1,A_3_Rep2,A_3_Rep3
+Case: Found the samples at time point 4: A_4_Rep1,A_4_Rep2,A_4_Rep3
+Case: Found the samples at time point 5: A_5_Rep1,A_5_Rep2,A_5_Rep3
+Case: Found the samples at time point 6: A_6_Rep1,A_6_Rep2,A_6_Rep3
+Case: Found the samples at time point 7: A_7_Rep1,A_7_Rep2,A_7_Rep3
+Case: Found the samples at time point 8: A_8_Rep1,A_8_Rep2,A_8_Rep3
+Input contained 60 genes/regions.
+Selected 60 genes/regions for analysis.
+[1] "# Run DESeq2: Using dispersion factors computed by DESeq2."
+converting counts to integer mode
+gene-wise dispersion estimates
+mean-dispersion relationship
+final dispersion estimates
+[1] "Consumed time: 0.01 min."
+[1] "# Compute size factors"
+[1] "# Fitting null and alternative model to the genes"
+[1] "Consumed time: 0.08 min."
+[1] "# Differentially expression analysis based on model fits"
+[1] "Finished running ImpulseDE2."
+[1] "TOTAL consumed time: 0.1 min."
+> names(objectImpulseDE2) # Display core output
+[1] "dfImpulseDE2Results" "vecDEGenes"         
+> # With respect to this core output, objectImpulseDE2
+> # can be treated like a list.
+> head(objectImpulseDE2[["dfImpulseDE2Results"]])
+       Gene         p      padj loglik_full loglik_red df_full df_red      mean
+gene1 gene1 0.8858939 0.9325199   -141.4427  -142.3046       7      2  274.7356
+gene2 gene2 0.2158914 0.4466718   -143.3442  -146.8764       7      2  396.0095
+gene3 gene3 0.8345166 0.8945266   -158.0070  -159.0592       7      2  560.7779
+gene4 gene4 0.4712743 0.7642286   -162.9352  -165.2175       7      2  901.2443
+gene5 gene5 0.5801036 0.7863045   -135.3573  -137.2521       7      2  222.8498
+gene6 gene6 0.4593621 0.7642286   -168.6884  -171.0161       7      2 1073.7825
+      converge_impulse converge_const allZero
+gene1                0              0   FALSE
+gene2                0              0   FALSE
+gene3                0              0   FALSE
+gene4                0              0   FALSE
+gene5                0              0   FALSE
+gene6                0              0   FALSE
+> head(objectImpulseDE2$dfImpulseDE2Results)
+       Gene         p      padj loglik_full loglik_red df_full df_red      mean
+gene1 gene1 0.8858939 0.9325199   -141.4427  -142.3046       7      2  274.7356
+gene2 gene2 0.2158914 0.4466718   -143.3442  -146.8764       7      2  396.0095
+gene3 gene3 0.8345166 0.8945266   -158.0070  -159.0592       7      2  560.7779
+gene4 gene4 0.4712743 0.7642286   -162.9352  -165.2175       7      2  901.2443
+gene5 gene5 0.5801036 0.7863045   -135.3573  -137.2521       7      2  222.8498
+gene6 gene6 0.4593621 0.7642286   -168.6884  -171.0161       7      2 1073.7825
+      converge_impulse converge_const allZero
+gene1                0              0   FALSE
+gene2                0              0   FALSE
+gene3                0              0   FALSE
+gene4                0              0   FALSE
+gene5                0              0   FALSE
+gene6                0              0   FALSE
+> head(objectImpulseDE2[["vecDEGenes"]])
+NULL
+> head(objectImpulseDE2$vecDEGenes)
+NULL
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("plotGenes")
+> ### * plotGenes
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: plotGenes
+> ### Title: Plots the impulse fits and data
+> ### Aliases: plotGenes
+> 
+> ### ** Examples
+> 
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 0,
++ scaNImp          = 40,
++ scaNLin          = 20,
++ scaNSig          = 40)
+[1] "Setting no batch structure."
+> objectImpulseDE2 <- runImpulseDE2(
++ matCountData    = lsSimulatedData$matObservedCounts, 
++ dfAnnotation    = lsSimulatedData$dfAnnotation,
++ boolCaseCtrl    = FALSE,
++ vecConfounders  = NULL,
++ boolIdentifyTransients = FALSE,
++ scaNProc        = 1 )
+[1] "ImpulseDE2 for count data, v0.99.5"
+[1] "# Process input"
+Processing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 1,2,3,4,5,6,7,8
+Case: Found the samples at time point 1: A_1_Rep1,A_1_Rep2,A_1_Rep3
+Case: Found the samples at time point 2: A_2_Rep1,A_2_Rep2,A_2_Rep3
+Case: Found the samples at time point 3: A_3_Rep1,A_3_Rep2,A_3_Rep3
+Case: Found the samples at time point 4: A_4_Rep1,A_4_Rep2,A_4_Rep3
+Case: Found the samples at time point 5: A_5_Rep1,A_5_Rep2,A_5_Rep3
+Case: Found the samples at time point 6: A_6_Rep1,A_6_Rep2,A_6_Rep3
+Case: Found the samples at time point 7: A_7_Rep1,A_7_Rep2,A_7_Rep3
+Case: Found the samples at time point 8: A_8_Rep1,A_8_Rep2,A_8_Rep3
+Input contained 100 genes/regions.
+Selected 100 genes/regions for analysis.
+[1] "# Run DESeq2: Using dispersion factors computed by DESeq2."
+converting counts to integer mode
+gene-wise dispersion estimates
+mean-dispersion relationship
+-- note: fitType='parametric', but the dispersion trend was not well captured by the
+   function: y = a/x + b, and a local regression fit was automatically substituted.
+   specify fitType='local' or 'mean' to avoid this message next time.
+final dispersion estimates
+[1] "Consumed time: 0 min."
+[1] "# Compute size factors"
+[1] "# Fitting null and alternative model to the genes"
+[1] "Consumed time: 0.13 min."
+[1] "# Differentially expression analysis based on model fits"
+[1] "Finished running ImpulseDE2."
+[1] "TOTAL consumed time: 0.15 min."
+> lsgplotsID <- plotGenes(
++ scaNTopIDs=5,
++ objectImpulseDE2=objectImpulseDE2,
++ boolCaseCtrl=FALSE,
++ boolMultiplePlotsPerPage=TRUE,
++ boolSimplePlot=FALSE)
+[1] "Setting boolSimplePlot=TRUE as no batch structure was found."
+> lsgplotsID[[1]]
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("plotHeatmap")
+> ### * plotHeatmap
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: plotHeatmap
+> ### Title: Plot structured z-value heatmaps of differentially expressed
+> ###   genes
+> ### Aliases: plotHeatmap
+> 
+> ### ** Examples
+> 
+> library(ComplexHeatmap)
+Loading required package: grid
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 0,
++ scaNImp          = 50,
++ scaNLin          = 0,
++ scaNSig          = 50)
+[1] "Setting no batch structure."
+> objectImpulseDE2 <- runImpulseDE2(
++ matCountData    = lsSimulatedData$matObservedCounts, 
++ dfAnnotation    = lsSimulatedData$dfAnnotation,
++ boolCaseCtrl    = FALSE,
++ vecConfounders  = NULL,
++ boolIdentifyTransients = TRUE,
++ scaNProc        = 1 )
+[1] "ImpulseDE2 for count data, v0.99.5"
+[1] "# Process input"
+Processing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 1,2,3,4,5,6,7,8
+Case: Found the samples at time point 1: A_1_Rep1,A_1_Rep2,A_1_Rep3
+Case: Found the samples at time point 2: A_2_Rep1,A_2_Rep2,A_2_Rep3
+Case: Found the samples at time point 3: A_3_Rep1,A_3_Rep2,A_3_Rep3
+Case: Found the samples at time point 4: A_4_Rep1,A_4_Rep2,A_4_Rep3
+Case: Found the samples at time point 5: A_5_Rep1,A_5_Rep2,A_5_Rep3
+Case: Found the samples at time point 6: A_6_Rep1,A_6_Rep2,A_6_Rep3
+Case: Found the samples at time point 7: A_7_Rep1,A_7_Rep2,A_7_Rep3
+Case: Found the samples at time point 8: A_8_Rep1,A_8_Rep2,A_8_Rep3
+Input contained 100 genes/regions.
+Selected 100 genes/regions for analysis.
+[1] "# Run DESeq2: Using dispersion factors computed by DESeq2."
+converting counts to integer mode
+gene-wise dispersion estimates
+mean-dispersion relationship
+final dispersion estimates
+[1] "Consumed time: 0 min."
+[1] "# Compute size factors"
+[1] "# Fitting null and alternative model to the genes"
+[1] "Consumed time: 0.12 min."
+[1] "# Fitting sigmoid model to case condition"
+[1] "Consumed time: 0.06 min."
+[1] "# Differentially expression analysis based on model fits"
+[1] "Finished running ImpulseDE2."
+[1] "TOTAL consumed time: 0.2 min."
+> lsHeatmaps <- plotHeatmap(
++ objectImpulseDE2=objectImpulseDE2,
++ strCondition="case",
++ boolIdentifyTransients=TRUE,
++ scaQThres=0.01)
+> draw(lsHeatmaps$complexHeatmapRaw)
+> 
+> 
+> 
+> 
+> cleanEx()
+
+detaching ‘package:ComplexHeatmap’, ‘package:grid’
+
+> nameEx("runImpulseDE2")
+> ### * runImpulseDE2
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: runImpulseDE2
+> ### Title: ImpulseDE2 wrapper
+> ### Aliases: runImpulseDE2 ImpulseDE2 wrapper
+> 
+> ### ** Examples
+> 
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 30,
++ scaNImp          = 10,
++ scaNLin          = 10,
++ scaNSig          = 10)
+[1] "Setting no batch structure."
+> objectImpulseDE2 <- runImpulseDE2(
++ matCountData    = lsSimulatedData$matObservedCounts, 
++ dfAnnotation    = lsSimulatedData$dfAnnotation,
++ boolCaseCtrl    = FALSE,
++ vecConfounders  = NULL,
++ scaNProc        = 1 )
+[1] "ImpulseDE2 for count data, v0.99.5"
+[1] "# Process input"
+Processing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 1,2,3,4,5,6,7,8
+Case: Found the samples at time point 1: A_1_Rep1,A_1_Rep2,A_1_Rep3
+Case: Found the samples at time point 2: A_2_Rep1,A_2_Rep2,A_2_Rep3
+Case: Found the samples at time point 3: A_3_Rep1,A_3_Rep2,A_3_Rep3
+Case: Found the samples at time point 4: A_4_Rep1,A_4_Rep2,A_4_Rep3
+Case: Found the samples at time point 5: A_5_Rep1,A_5_Rep2,A_5_Rep3
+Case: Found the samples at time point 6: A_6_Rep1,A_6_Rep2,A_6_Rep3
+Case: Found the samples at time point 7: A_7_Rep1,A_7_Rep2,A_7_Rep3
+Case: Found the samples at time point 8: A_8_Rep1,A_8_Rep2,A_8_Rep3
+Input contained 60 genes/regions.
+Selected 60 genes/regions for analysis.
+[1] "# Run DESeq2: Using dispersion factors computed by DESeq2."
+converting counts to integer mode
+gene-wise dispersion estimates
+mean-dispersion relationship
+final dispersion estimates
+[1] "Consumed time: 0 min."
+[1] "# Compute size factors"
+[1] "# Fitting null and alternative model to the genes"
+[1] "Consumed time: 0.07 min."
+[1] "# Differentially expression analysis based on model fits"
+[1] "Finished running ImpulseDE2."
+[1] "TOTAL consumed time: 0.09 min."
+> head(objectImpulseDE2$dfImpulseDE2Results)
+       Gene         p      padj loglik_full loglik_red df_full df_red      mean
+gene1 gene1 0.8858939 0.9325199   -141.4427  -142.3046       7      2  274.7356
+gene2 gene2 0.2158914 0.4466718   -143.3442  -146.8764       7      2  396.0095
+gene3 gene3 0.8345166 0.8945266   -158.0070  -159.0592       7      2  560.7779
+gene4 gene4 0.4713093 0.7642853   -162.9353  -165.2175       7      2  901.2443
+gene5 gene5 0.5801036 0.7863045   -135.3573  -137.2521       7      2  222.8498
+gene6 gene6 0.4593621 0.7642853   -168.6884  -171.0161       7      2 1073.7825
+      converge_impulse converge_const allZero
+gene1                0              0   FALSE
+gene2                0              0   FALSE
+gene3                0              0   FALSE
+gene4                0              0   FALSE
+gene5                0              0   FALSE
+gene6                0              0   FALSE
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("simulateDataSetImpulseDE2")
+> ### * simulateDataSetImpulseDE2
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: simulateDataSetImpulseDE2
+> ### Title: Simulate a data set for ImpulseDE2
+> ### Aliases: simulateDataSetImpulseDE2
+> 
+> ### ** Examples
+> 
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 30,
++ scaNImp          = 10,
++ scaNLin          = 10,
++ scaNSig          = 10)
+[1] "Setting no batch structure."
+>    
+> 
+> 
+> 
+> cleanEx()
+> nameEx("updateDEAnalysis")
+> ### * updateDEAnalysis
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: updateDEAnalysis
+> ### Title: Update dfImpulseDE2Results after sigmoids have been fit through
+> ###   external call
+> ### Aliases: updateDEAnalysis
+> 
+> ### ** Examples
+> 
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 0,
++ scaNImp          = 50,
++ scaNLin          = 0,
++ scaNSig          = 50)
+[1] "Setting no batch structure."
+> objectImpulseDE2 <- runImpulseDE2(
++ matCountData    = lsSimulatedData$matObservedCounts, 
++ dfAnnotation    = lsSimulatedData$dfAnnotation,
++ boolCaseCtrl    = FALSE,
++ vecConfounders  = NULL,
++ boolIdentifyTransients = FALSE,
++ scaNProc        = 1 )
+[1] "ImpulseDE2 for count data, v0.99.5"
+[1] "# Process input"
+Processing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 1,2,3,4,5,6,7,8
+Case: Found the samples at time point 1: A_1_Rep1,A_1_Rep2,A_1_Rep3
+Case: Found the samples at time point 2: A_2_Rep1,A_2_Rep2,A_2_Rep3
+Case: Found the samples at time point 3: A_3_Rep1,A_3_Rep2,A_3_Rep3
+Case: Found the samples at time point 4: A_4_Rep1,A_4_Rep2,A_4_Rep3
+Case: Found the samples at time point 5: A_5_Rep1,A_5_Rep2,A_5_Rep3
+Case: Found the samples at time point 6: A_6_Rep1,A_6_Rep2,A_6_Rep3
+Case: Found the samples at time point 7: A_7_Rep1,A_7_Rep2,A_7_Rep3
+Case: Found the samples at time point 8: A_8_Rep1,A_8_Rep2,A_8_Rep3
+Input contained 100 genes/regions.
+Selected 100 genes/regions for analysis.
+[1] "# Run DESeq2: Using dispersion factors computed by DESeq2."
+converting counts to integer mode
+gene-wise dispersion estimates
+mean-dispersion relationship
+final dispersion estimates
+[1] "Consumed time: 0 min."
+[1] "# Compute size factors"
+[1] "# Fitting null and alternative model to the genes"
+[1] "Consumed time: 0.13 min."
+[1] "# Differentially expression analysis based on model fits"
+[1] "Finished running ImpulseDE2."
+[1] "TOTAL consumed time: 0.15 min."
+> # You could have used boolIdentifyTransients=TRUE
+> # to avoid the following post wrapper fitting.
+> objectImpulseDE2 <- fitSigmoidModels(
++ objectImpulseDE2 = objectImpulseDE2,
++ vecConfounders   = NULL,
++ strCondition     = "case")
+> objectImpulseDE2 <- updateDEAnalysis(
++ objectImpulseDE2=objectImpulseDE2,
++ scaQThresTransients=0.001)
+> head(objectImpulseDE2$dfImpulseDE2Results)
+       Gene            p         padj loglik_full loglik_red df_full df_red
+gene1 gene1 4.126192e-03 0.0080905733  -173.22362  -181.8263       7      2
+gene2 gene2 8.097673e-02 0.1173575803   -58.96939   -63.8715       7      2
+gene3 gene3 7.535166e-05 0.0001883792  -143.62967  -156.8189       7      2
+gene4 gene4 1.066201e-04 0.0002600491  -160.68377  -173.4843       7      2
+gene5 gene5 2.051790e-02 0.0336358953  -177.10211  -183.7645       7      2
+gene6 gene6 1.157888e-02 0.0196252159  -127.05955  -134.4247       7      2
+             mean converge_impulse converge_const converge_sigmoid
+gene1  981.721433                0              0                0
+gene2    7.022125                0              0                0
+gene3  394.226974                0              0                0
+gene4  597.822896                0              0                0
+gene5 1158.172374                0              0                0
+gene6  191.135531                0              0                0
+      impulseTOsigmoid_p impulseTOsigmoid_padj sigmoidTOconst_p
+gene1         0.20598520             0.5024029     2.843803e-03
+gene2         0.05196041             0.2474305     2.736273e-01
+gene3         0.69293213             0.8363200     1.131852e-05
+gene4         0.29279709             0.5524473     3.767640e-05
+gene5         0.52275296             0.7468758     7.289518e-03
+gene6         0.08169388             0.3142072     2.109490e-02
+      sigmoidTOconst_padj isTransient isMonotonous allZero
+gene1        5.687606e-03       FALSE        FALSE   FALSE
+gene2        3.508043e-01       FALSE        FALSE   FALSE
+gene3        3.144033e-05       FALSE         TRUE   FALSE
+gene4        9.660615e-05       FALSE         TRUE   FALSE
+gene5        1.375381e-02       FALSE        FALSE   FALSE
+gene6        3.575407e-02       FALSE        FALSE   FALSE
+> # dfImpulseDE2Results now contain 'transients-analysis'.
+>    
+> 
+> 
+> 
+> cleanEx()
+> nameEx("writeReportToFile")
+> ### * writeReportToFile
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: writeReportToFile
+> ### Title: Print ImpulseDE2 report to .txt file
+> ### Aliases: writeReportToFile
+> 
+> ### ** Examples
+> 
+> dirPWD <- getwd() # Will save into current working directory.
+> lsSimulatedData <- simulateDataSetImpulseDE2(
++ vecTimePointsA   = rep(seq(1,8),3),
++ vecTimePointsB   = NULL,
++ vecBatchesA      = NULL,
++ vecBatchesB      = NULL,
++ scaNConst        = 30,
++ scaNImp          = 10,
++ scaNLin          = 10,
++ scaNSig          = 10)
+[1] "Setting no batch structure."
+> objectImpulseDE2 <- runImpulseDE2(
++ matCountData    = lsSimulatedData$matObservedCounts, 
++ dfAnnotation    = lsSimulatedData$dfAnnotation,
++ boolCaseCtrl    = FALSE,
++ vecConfounders  = NULL,
++ scaNProc        = 1 )
+[1] "ImpulseDE2 for count data, v0.99.5"
+[1] "# Process input"
+Processing Details:
+ImpulseDE2 runs in case-only mode.
+Found time points: 1,2,3,4,5,6,7,8
+Case: Found the samples at time point 1: A_1_Rep1,A_1_Rep2,A_1_Rep3
+Case: Found the samples at time point 2: A_2_Rep1,A_2_Rep2,A_2_Rep3
+Case: Found the samples at time point 3: A_3_Rep1,A_3_Rep2,A_3_Rep3
+Case: Found the samples at time point 4: A_4_Rep1,A_4_Rep2,A_4_Rep3
+Case: Found the samples at time point 5: A_5_Rep1,A_5_Rep2,A_5_Rep3
+Case: Found the samples at time point 6: A_6_Rep1,A_6_Rep2,A_6_Rep3
+Case: Found the samples at time point 7: A_7_Rep1,A_7_Rep2,A_7_Rep3
+Case: Found the samples at time point 8: A_8_Rep1,A_8_Rep2,A_8_Rep3
+Input contained 60 genes/regions.
+Selected 60 genes/regions for analysis.
+[1] "# Run DESeq2: Using dispersion factors computed by DESeq2."
+converting counts to integer mode
+gene-wise dispersion estimates
+mean-dispersion relationship
+final dispersion estimates
+[1] "Consumed time: 0 min."
+[1] "# Compute size factors"
+[1] "# Fitting null and alternative model to the genes"
+[1] "Consumed time: 0.11 min."
+[1] "# Differentially expression analysis based on model fits"
+[1] "Finished running ImpulseDE2."
+[1] "TOTAL consumed time: 0.13 min."
+> # Uncomment to run:
+> #writeReportToFile(
+> #object=objectImpulseDE2,
+> #file=paste0(dirPWD, "ImpulseDE2Report.txt")
+> #)
+> 
+> 
+> 
+> 
+> ### * <FOOTER>
+> ###
+> options(digits = 7L)
+> base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
+Time elapsed:  68.295 1.877 74.668 0.004 0.005 
+> grDevices::dev.off()
+null device 
+          1 
+> ###
+> ### Local variables: ***
+> ### mode: outline-minor ***
+> ### outline-regexp: "\\(> \\)?### [*]+" ***
+> ### End: ***
+> quit('no')

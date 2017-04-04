@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>R: Differential expression analysis of longitudinal count data sets</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="R.css" />
+</head><body>
+<h1> Differential expression analysis of longitudinal count data sets
+<img class="toplogo" src="../../../doc/html/Rlogo.svg" alt="[R logo]" />
+</h1>
+<hr/>
+<div style="text-align: center;">
+<a href="../../../doc/html/packages.html"><img class="arrow" src="../../../doc/html/left.jpg" alt="[Up]" /></a>
+<a href="../../../doc/html/index.html"><img class="arrow" src="../../../doc/html/up.jpg" alt="[Top]" /></a>
+</div><h2>Documentation for package &lsquo;ImpulseDE2&rsquo; version 0.99.5</h2>
+
+<ul><li><a href="../DESCRIPTION">DESCRIPTION file</a>.</li>
+<li><a href="../doc/index.html">User guides, package vignettes and other documentation.</a></li>
+<li><a href="../NEWS">Package NEWS</a>.</li>
+</ul>
+
+<h2>Help Pages</h2>
+
+
+<table width="100%">
+<tr><td style="width: 25%;"><a href="list_accession.html">$-method</a></td>
+<td>List-like accessor methods for ImpulseDE2Object</td></tr>
+<tr><td style="width: 25%;"><a href="computeNormConst.html">computeNormConst</a></td>
+<td>Compute a normalisation constant for each sample</td></tr>
+<tr><td style="width: 25%;"><a href="computeSizeFactors.html">computeSizeFactors</a></td>
+<td>Compute a size factor for each sample</td></tr>
+<tr><td style="width: 25%;"><a href="estimateImpulseParam.html">estimateImpulseParam</a></td>
+<td>Compute peak and valley impulse model parameter initialisations for data of one gene</td></tr>
+<tr><td style="width: 25%;"><a href="estimateSigmoidParam.html">estimateSigmoidParam</a></td>
+<td>Compute up and down sigmoid model parameter initialisations for data of one gene</td></tr>
+<tr><td style="width: 25%;"><a href="evalImpulse.html">evalImpulse</a></td>
+<td>Compute value of impulse function given parameters.</td></tr>
+<tr><td style="width: 25%;"><a href="evalImpulse_comp.html">evalImpulse_comp</a></td>
+<td>Compiled function: evalImpulse</td></tr>
+<tr><td style="width: 25%;"><a href="evalLogLikImpulse.html">evalLogLikImpulse</a></td>
+<td>Cost function for impulse model</td></tr>
+<tr><td style="width: 25%;"><a href="evalLogLikImpulse_comp.html">evalLogLikImpulse_comp</a></td>
+<td>Compiled function: evalLogLikImpulse</td></tr>
+<tr><td style="width: 25%;"><a href="evalLogLikMu.html">evalLogLikMu</a></td>
+<td>Cost function for constant model</td></tr>
+<tr><td style="width: 25%;"><a href="evalLogLikMu_comp.html">evalLogLikMu_comp</a></td>
+<td>Compiled function: evalLogLikMu</td></tr>
+<tr><td style="width: 25%;"><a href="evalLogLikSigmoid.html">evalLogLikSigmoid</a></td>
+<td>Cost function for sigmoidal model</td></tr>
+<tr><td style="width: 25%;"><a href="evalLogLikSigmoid_comp.html">evalLogLikSigmoid_comp</a></td>
+<td>Compiled function: evalLogLikSigmoid</td></tr>
+<tr><td style="width: 25%;"><a href="evalSigmoid.html">evalSigmoid</a></td>
+<td>Compute value of sigmoidal model given parameters.</td></tr>
+<tr><td style="width: 25%;"><a href="evalSigmoid_comp.html">evalSigmoid_comp</a></td>
+<td>Compiled function: evalSigmoid</td></tr>
+<tr><td style="width: 25%;"><a href="fitConstImpulse.html">fitConstImpulse</a></td>
+<td>Fits impulse and constant models to all genes on all samples of a condition</td></tr>
+<tr><td style="width: 25%;"><a href="fitConstImpulseGene.html">fitConstImpulseGene</a></td>
+<td>Fit an impulse and constant model to a single gene</td></tr>
+<tr><td style="width: 25%;"><a href="fitConstModel.html">fitConstModel</a></td>
+<td>Fit a constant model to data of a gene</td></tr>
+<tr><td style="width: 25%;"><a href="fitImpulseModel.html">fitImpulseModel</a></td>
+<td>Fit an impulse model to data of a gene</td></tr>
+<tr><td style="width: 25%;"><a href="fitModels.html">fitModels</a></td>
+<td>Fits impulse and constant models to a timecourse dataset</td></tr>
+<tr><td style="width: 25%;"><a href="fitSigmoidGene.html">fitSigmoidGene</a></td>
+<td>Fit a sigmoidal model to a single gene</td></tr>
+<tr><td style="width: 25%;"><a href="fitSigmoidModel.html">fitSigmoidModel</a></td>
+<td>Fit a sigmoidal model to data of a gene</td></tr>
+<tr><td style="width: 25%;"><a href="fitSigmoidModels.html">fitSigmoidModels</a></td>
+<td>Fits sigmoidal models to all genes on all all samples of a condition</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">generics_get_accessors</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_accessors</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_boolCaseCtrl</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_boolCaseCtrl-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_dfAnnotationProc</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_dfAnnotationProc-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_lsModelFits</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_lsModelFits-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_matCountDataProc</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_matCountDataProc-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_scaNProc</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_scaNProc-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_scaQThres</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_scaQThres-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_strReport</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_strReport-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_vecConfounders</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_vecConfounders-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_vecDispersions</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_vecDispersions-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="generics_get_accessors.html">get_vecSizeFactors</a></td>
+<td>ImpulseDE2Object accessor method generics</td></tr>
+<tr><td style="width: 25%;"><a href="get_accessors.html">get_vecSizeFactors-method</a></td>
+<td>ImpulseDE2Object accession methods</td></tr>
+<tr><td style="width: 25%;"><a href="runImpulseDE2.html">ImpulseDE2</a></td>
+<td>ImpulseDE2 wrapper</td></tr>
+<tr><td style="width: 25%;"><a href="ImpulseDE2Object-class.html">ImpulseDE2Object-class</a></td>
+<td>Container class for ImpulseDE2 output</td></tr>
+<tr><td style="width: 25%;"><a href="list_accession.html">list_accession</a></td>
+<td>List-like accessor methods for ImpulseDE2Object</td></tr>
+<tr><td style="width: 25%;"><a href="list_accession.html">names-method</a></td>
+<td>List-like accessor methods for ImpulseDE2Object</td></tr>
+<tr><td style="width: 25%;"><a href="list_accession.html">names.ImpulseDE2Object</a></td>
+<td>List-like accessor methods for ImpulseDE2Object</td></tr>
+<tr><td style="width: 25%;"><a href="plotGenes.html">plotGenes</a></td>
+<td>Plots the impulse fits and data</td></tr>
+<tr><td style="width: 25%;"><a href="plotHeatmap.html">plotHeatmap</a></td>
+<td>Plot structured z-value heatmaps of differentially expressed genes</td></tr>
+<tr><td style="width: 25%;"><a href="processData.html">processData</a></td>
+<td>Check and process input to runImpulseDE2()</td></tr>
+<tr><td style="width: 25%;"><a href="runDEAnalysis.html">runDEAnalysis</a></td>
+<td>Perform differential expression analysis and identification of transiently activated or deactivated genes.</td></tr>
+<tr><td style="width: 25%;"><a href="runDESeq2.html">runDESeq2</a></td>
+<td>Wrapper function for running DESeq2</td></tr>
+<tr><td style="width: 25%;"><a href="runImpulseDE2.html">runImpulseDE2</a></td>
+<td>ImpulseDE2 wrapper</td></tr>
+<tr><td style="width: 25%;"><a href="simulateDataSetImpulseDE2.html">simulateDataSetImpulseDE2</a></td>
+<td>Simulate a data set for ImpulseDE2</td></tr>
+<tr><td style="width: 25%;"><a href="updateDEAnalysis.html">updateDEAnalysis</a></td>
+<td>Update dfImpulseDE2Results after sigmoids have been fit through external call</td></tr>
+<tr><td style="width: 25%;"><a href="runImpulseDE2.html">wrapper</a></td>
+<td>ImpulseDE2 wrapper</td></tr>
+<tr><td style="width: 25%;"><a href="writeReportToFile.html">writeReportToFile</a></td>
+<td>Print ImpulseDE2 report to .txt file</td></tr>
+<tr><td style="width: 25%;"><a href="list_accession.html">[[-method</a></td>
+<td>List-like accessor methods for ImpulseDE2Object</td></tr>
+</table>
+</body></html>

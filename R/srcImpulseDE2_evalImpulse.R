@@ -20,8 +20,9 @@
 #'     Model values for given time points.
 #'     
 #' @author David Sebastian Fischer
-evalImpulse <- function(vecImpulseParam,
-                        vecTimepoints){
+evalImpulse <- function(
+  vecImpulseParam,
+  vecTimepoints){
   
   # beta is vecImpulseParam[1]
   # h0 is vecImpulseParam[2]

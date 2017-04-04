@@ -12,6 +12,7 @@
 #' @import methods
 #' @importFrom stats dnbinom median optim p.adjust pchisq rnbinom rnorm runif sd time
 #' @import SummarizedExperiment
+#' @import utils
 NULL
 
 ################################################################################
@@ -179,15 +180,15 @@ NULL
 #' 
 #' @export
 runImpulseDE2 <- function(matCountData=NULL, 
-  dfAnnotation=NULL,
-  boolCaseCtrl=FALSE,
-  vecConfounders=NULL,
-  scaNProc=1, 
-  scaQThres=NULL,
-  vecDispersionsExternal=NULL,
-  vecSizeFactorsExternal=NULL,
-  boolIdentifyTransients=FALSE,
-  boolVerbose=TRUE ){
+                          dfAnnotation=NULL,
+                          boolCaseCtrl=FALSE,
+                          vecConfounders=NULL,
+                          scaNProc=1, 
+                          scaQThres=NULL,
+                          vecDispersionsExternal=NULL,
+                          vecSizeFactorsExternal=NULL,
+                          boolIdentifyTransients=FALSE,
+                          boolVerbose=TRUE ){
   
   strMessage <- paste0("ImpulseDE2 for count data, v", packageDescription("ImpulseDE2", fields = "Version"))
   if(boolVerbose) print(strMessage)
@@ -248,25 +249,26 @@ runImpulseDE2 <- function(matCountData=NULL,
     if(boolVerbose) print(strMessage)
     strReport <- paste0(strReport, "\n", strMessage)
     vecSizeFactors <- computeNormConst(
-    	matCountDataProc=matCountDataProc,
+      matCountDataProc=matCountDataProc,
       vecSizeFactorsExternal=vecSizeFactorsExternalProc )
     
     # 4. Create instance of ImpulseDE2Object
     # Create ImpulseDE2 object
-    objectImpulseDE2 <- new('ImpulseDE2Object',
-                            dfImpulseDE2Results = NULL,
-                            vecDEGenes          = NULL,
-                            lsModelFits         = NULL,
-                            matCountDataProc    = matCountDataProc,
-                            vecAllIDs           = rownames(matCountData),
-                            dfAnnotationProc    = dfAnnotationProc,
-                            vecSizeFactors      = vecSizeFactors,
-                            vecDispersions      = vecDispersions,
-                            boolCaseCtrl        = boolCaseCtrl,
-                            vecConfounders      = vecConfounders,
-                            scaNProc            = scaNProc, 
-                            scaQThres           = scaQThres,
-                            strReport           = strReport )
+    objectImpulseDE2 <- new(
+      'ImpulseDE2Object',
+      dfImpulseDE2Results = NULL,
+      vecDEGenes          = NULL,
+      lsModelFits         = NULL,
+      matCountDataProc    = matCountDataProc,
+      vecAllIDs           = rownames(matCountData),
+      dfAnnotationProc    = dfAnnotationProc,
+      vecSizeFactors      = vecSizeFactors,
+      vecDispersions      = vecDispersions,
+      boolCaseCtrl        = boolCaseCtrl,
+      vecConfounders      = vecConfounders,
+      scaNProc            = scaNProc, 
+      scaQThres           = scaQThres,
+      strReport           = strReport )
     
     #  5. Fit null and alternative model to each gene
     strMessage <- "# Fitting null and alternative model to the genes"
@@ -312,7 +314,7 @@ runImpulseDE2 <- function(matCountData=NULL,
       vecDEGenes <- as.vector( 
         objectImpulseDE2@dfImpulseDE2Results[as.numeric(objectImpulseDE2@dfImpulseDE2Results$padj) <= scaQThres,"Gene"] )
       strMessage <- paste0("Found ", length(vecDEGenes)," DE genes",
-        " at a FDR corrected p-value cut off of ", scaQThres, ".")
+                           " at a FDR corrected p-value cut off of ", scaQThres, ".")
       if(boolVerbose) print(strMessage)
       objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", strMessage)
     } else {

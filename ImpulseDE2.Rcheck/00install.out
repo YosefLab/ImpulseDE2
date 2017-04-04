@@ -1,0 +1,12 @@
+* installing *source* package ‘ImpulseDE2’ ...
+** R
+** inst
+** preparing package for lazy loading
+Note: no visible global function definition for 'evalImpulse_comp' 
+Note: no visible global function definition for 'evalSigmoid_comp' 
+** help
+*** installing help indices
+** building package indices
+** installing vignettes
+** testing if installed package can be loaded
+* DONE (ImpulseDE2)

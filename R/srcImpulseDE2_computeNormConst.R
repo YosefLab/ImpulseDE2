@@ -95,8 +95,9 @@ computeSizeFactors <- function(matCountDataProc){
 #' @author David Sebastian Fischer
 #' 
 #' @export
-computeNormConst <- function(matCountDataProc,
-                             vecSizeFactorsExternal=NULL){
+computeNormConst <- function(
+  matCountDataProc,
+  vecSizeFactorsExternal=NULL){
   
   # Compute size factors
   # Size factors account for differential sequencing depth.

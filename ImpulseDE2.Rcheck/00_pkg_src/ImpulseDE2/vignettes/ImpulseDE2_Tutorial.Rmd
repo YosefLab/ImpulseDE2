@@ -1,0 +1,301 @@
+---
+title: "ImpulseDE2 Tutorial"
+author: "David S. Fischer"
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc: true
+vignette: >
+  %\VignetteEncoding{UTF-8}
+---
+
+<!--
+%\VignetteEngine{knitr::rmarkdown}
+%\VignetteIndexEntry{ImpulseDE2 Vignette}
+-->
+
+```{r options, cache=FALSE, include=FALSE, results='hide', message=FALSE, warning=FALSE}
+
+knitr::opts_chunk$set(fig.align="center", 
+                      cache=FALSE,
+                      error=FALSE,
+                      fig.width=6,fig.height=6,
+                      autodep=TRUE,
+                      out.width="600px", 
+                      out.height="600px",
+                      message=FALSE,
+                      warning=FALSE,
+                      results="hide", 
+                      echo=TRUE, 
+                      eval=TRUE)
+
+options(getClass.msg=FALSE)
+```
+
+# Introduction
+
+ImpulseDE2 is a parallelizable differential expression algorithm for longitudinal count data sets
+which arise in sequencing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
+ImpulseDE2 can correct for batch effects (from multiple confounding variables) and library depth.
+We distinguish case-only and case-control differential expression analysis:
+Case-only differential expression analysis tests, whether the expression level of a gene changes over time.
+Case-control differential expression analysis tests, whether the expression trajectory of a gene over time differes between samples from a case and samples from a control condition.
+Here, we demonstrate the usage of ImpulseDE2 in different scenarios based on simulated data.
+
+To run ImpulseDE2 on bulk omics count data, a user should consider the minimal parameter set for 
+the wrapper function runImpulseDE2:
+
+* matCountData
+* dfAnnotation
+* boolCaseCtrl
+* vecConfounders
+
+Additionally, one can provide:
+
+* scaNProc to set the number of processes for parallelisation.
+* scaQThres to set the cut off for your DE gene list. 
+* vecDispersionsExternal to supply external dispersion parameters
+which may be necessary depending on your confounding factors (runImpulseDE2
+will tell you if it is necessary).
+* vecSizeFactorsExternal to supply external size factors.
+* boolVerbose to control stdout output.
+
+# Case-only differential expression analysis
+
+Here, we present a case-only differential expression scenario without batch effects.
+We simulate data from 8 time points (1 to 8 with arbitrary unit) with three replicates each (vecTimepointsA).
+We simulate 300 constant expression trajectories (scaNConst),
+100 impulse trajectories (scaNImp),
+100 linear expression trajectories (scaNLin)
+and 100 sigmoid expression trajectorie (scaNSig).
+The full results of the simulation are stored in dirOurSimulation.
+
+The integer count matrix (matCountData) and the sample meta data table (dfAnnotation)
+are created by the simulation function and handed directly to the ImpulseDE2 wrapper (runImpulseDE2).
+This analysis is a case-only differential expression analysis (boolCaseCtrl is FALSE).
+We assume that there is no batch structure (vecBatchesA) and 
+do accordingly not give any confounding variables (vecConfounders) to ImpulseDE2.
+One could parallelize ImpulseDE2 by allowing more than one thread for runImpulseDE2 (scaNProc).
+
+The differential expression results can be accessed as a data frame in the output object
+via objectImpulseDE2$dfImpulseDE2Results.
+The output object is an instance of the class ImpulseDE2Object which carries additional internal data
+which can be accessed via accessor functions starting with "get_".
+
+```{r case-only}
+library(ImpulseDE2)
+lsSimulatedData <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = NULL,
+  vecBatchesA      = NULL,
+  vecBatchesB      = NULL,
+  scaNConst        = 30,
+  scaNImp          = 10,
+  scaNLin          = 10,
+  scaNSig          = 10,
+  scaMuBatchEffect = NULL,
+  scaSDBatchEffect = NULL,
+  dirOutSimulation = NULL)
+```
+```{r case-only-annotation, results='markdown'}
+lsSimulatedData$dfAnnotation
+```
+```{r case-only2}
+objectImpulseDE2 <- runImpulseDE2(
+  matCountData    = lsSimulatedData$matObservedCounts, 
+  dfAnnotation    = lsSimulatedData$dfAnnotation,
+  boolCaseCtrl    = FALSE,
+  vecConfounders  = NULL,
+  scaNProc        = 1 )
+```
+```{r case-only-results, results='markdown'}
+head(objectImpulseDE2$dfImpulseDE2Results)
+```
+
+# Batch effects
+
+Here, we present a case-only differential expression scenario with batch effects.
+Refer to "Case-only differential expression analysis" for details.
+In addition, we simulate batch effects (vecBatchesA):
+Here we assume that three batches of replicates was sampled with each batch sampled at each time point.
+Such a batch structure could arise if patient-derived cell cultures are sampled over a time course,
+each batch would be one patient.
+Another scenario is that all samples originate from the same cell culture but were handled separately.
+
+This confounding variable imposing the batch structure on the expression observations
+is called "Batch" in the meta data table (dfAnnotation).
+By handing this confounding variable to ImpulseDE2 via the vector vecConfounders,
+we turn on ImpulseDE2 batch effect correction for this confounding variable.
+
+```{r case-only-batch}
+library(ImpulseDE2)
+lsSimulatedData <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = NULL,
+  vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
+  vecBatchesB      = NULL,
+  scaNConst        = 30,
+  scaNImp          = 10,
+  scaNLin          = 10,
+  scaNSig          = 10,
+  scaMuBatchEffect = 1,
+  scaSDBatchEffect = 0.2,
+  dirOutSimulation = NULL)
+```
+```{r case-only-batch-annotation, results='markdown'}
+lsSimulatedData$dfAnnotation
+```
+```{r case-only-batch2}
+objectImpulseDE2 <- runImpulseDE2(
+  matCountData    = lsSimulatedData$matObservedCounts, 
+  dfAnnotation    = lsSimulatedData$dfAnnotation,
+  boolCaseCtrl    = FALSE,
+  vecConfounders  = c("Batch"),
+  scaNProc        = 1 )
+```
+```{r case-only-batch-results, results='markdown'}
+head(objectImpulseDE2$dfImpulseDE2Results)
+```
+
+# Plot gene-wise trajectories
+
+Here, we present the visualization of gene-wise expression trajectory fits.
+Refer to "Batch effects" for details on the data and the inferred model.
+
+The user can decide whether to plot the expression trajectories with the lowest q-values (set the number of trajectories to plot, scaNTopIDs) or
+to plot specific trajectories (supply a vector of gene identifiers, row names of matCounts via vecGeneIDs).
+The central input to plotGenes is an ImpulseDE2 output object (objectImpulseDE2) which carries fits and data.
+The user can specifiy whether case and control fits are to be plotted (boolCaseCtrl).
+
+The plots can be annotated with p- or q-values from an alternative differential expression algorithm:
+Supply a vector of the alternative p-values (vecRefPval) named with the rownames (gene identifiers) of matCounts
+and a name of the alternative method to the plotGenes (strNameRefMethod).
+The values will are added into the plot title.
+
+The plots are printed to a .pdf if an output directory (dirOut) and file name (strFileName) is given.
+Alternatively, the user can also directly access the plot objects made with ggplot2 via the output list
+of ggplot2 plots.
+
+Note that the observations in the plot are size factor normalised to guide the evaluation of the model.
+The model is not fit on normalised data but the model is normalised itself based on the factors used for data normalisation here.
+
+```{r plot-genes}
+# Continue script of "Batch effects"
+library(ggplot2)
+lsgplotsGenes <- plotGenes(
+  vecGeneIDs       = NULL,
+  scaNTopIDs       = 10,
+  objectImpulseDE2 = objectImpulseDE2,
+  boolCaseCtrl     = FALSE,
+  dirOut           = NULL,
+  strFileName      = NULL,
+  vecRefPval       = NULL, 
+  strNameRefMethod = NULL)
+print(lsgplotsGenes[[1]])
+```
+
+# Case-control differential expression analysis
+
+Here, we present a case-control differential expression scenario with batch effects.
+Refer to "Batch effects" for details.
+Building on the scenarios presented previously, we now have samples from two conditions
+(vecTimePointsA (case) and vecTimePointsB (control)) with 8 time points and three replicates each, one replicate per batch.
+Here, the batches do not overlap the conditions.
+
+```{r case-control-batch}
+lsSimulatedData <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = rep(seq(1,8),3),
+  vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
+  vecBatchesB      = c(rep("C1",8), rep("C2",8), rep("C3",8)),
+  scaNConst        = 30,
+  scaNImp          = 10,
+  scaNLin          = 10,
+  scaNSig          = 10,
+  scaMuBatchEffect = 1,
+  scaSDBatchEffect = 0.1,
+  dirOutSimulation = NULL)
+```
+```{r case-control-annotation, results='markdown'}
+lsSimulatedData$dfAnnotation
+```
+```{r case-control2}
+objectImpulseDE2 <- runImpulseDE2(
+  matCountData    = lsSimulatedData$matObservedCounts, 
+  dfAnnotation    = lsSimulatedData$dfAnnotation,
+  boolCaseCtrl    = TRUE,
+  vecConfounders  = c("Batch"),
+  scaNProc        = 1 )
+```
+```{r case-control-results, results='markdown'}
+head(objectImpulseDE2$dfImpulseDE2Results)
+```
+
+# Transiently regulated genes
+
+Here, we present the identification of transiently regulated genes.
+Refer to "Batch effects" for details.
+Setting boolIdentifyTransients = TRUE causes the wrapper runImpulseDE2 to also fit sigmoid models 
+and to perform the additional model selection yielding transiently and permanently regulated genes.
+The results of this analysis are are also in the results table objectImpulseDE2$dfImpulseDE2Results.
+
+```{r transients}
+library(ImpulseDE2)
+lsSimulatedData <- simulateDataSetImpulseDE2(
+  vecTimePointsA   = rep(seq(1,8),3),
+  vecTimePointsB   = NULL,
+  vecBatchesA      = c(rep("B1",8), rep("B2",8), rep("B3",8)),
+  vecBatchesB      = NULL,
+  scaNConst        = 0,
+  scaNImp          = 100,
+  scaNLin          = 0,
+  scaNSig          = 0,
+  scaMuBatchEffect = 1,
+  scaSDBatchEffect = 0.2,
+  dirOutSimulation = NULL)
+objectImpulseDE2 <- runImpulseDE2(
+  matCountData           = lsSimulatedData$matObservedCounts, 
+  dfAnnotation           = lsSimulatedData$dfAnnotation,
+  boolCaseCtrl           = FALSE,
+  vecConfounders         = c("Batch"),
+  boolIdentifyTransients = TRUE,
+  scaNProc               = 1 )
+```
+```{r transient-results, results='markdown'}
+head(objectImpulseDE2$dfImpulseDE2Results)
+```
+
+# Plot global heatmap of expression trajectories
+
+Here, we present the visualisation of global expression patterns via a heatmap.
+We base this analysis on a classification of differntially expressed genes by the transient regulation scheme.
+Refer to "Transiently regulated genes" for details.
+
+The function plotHeatmap takes an output object of the class ImpulseDE2Object.
+If sigmoid model were fit and a the results table includes analysis results of transient regulation
+(i.e. the output of runImpulseDE2 with boolIdentifyTransients = TRUE), 
+the heatmap can be grouped by the results of the transient regulation analysis (boolIdentifyTransients = TRUE).
+If transient regulation analysis was not performed, a simple heatmap of the global expression profiles is created.
+The condition to which sigmoids were fit and based on which 
+the transient analysis was performed has to be indicated (strCondition), 
+this is usually the case condition.
+Finally, a false-discovery rate corrected p-value threshold for the model selection of the transient regulation analysis has to be set via scaQThres.
+
+The output of plotHeatmap includes two objects of the class ComplexHeatmap which can be plotted with draw().
+
+```{r heatmap}
+# Continuing script of "Transiently regulated genes"
+library(ComplexHeatmap)
+lsHeatmaps <- plotHeatmap(
+  objectImpulseDE2       = objectImpulseDE2,
+  strCondition           = "case",
+  boolIdentifyTransients = TRUE,
+  scaQThres              = 0.01)
+draw(lsHeatmaps$complexHeatmapRaw) # Heatmap based on normalised counts
+```
+
+# Session information
+
+```{r session}
+sessionInfo()
+```

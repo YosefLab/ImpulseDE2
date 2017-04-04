@@ -38,10 +38,11 @@
 #'    }
 #'    
 #' @author David Sebastian Fischer
-estimateSigmoidParam <- function(vecCounts,
-                                 vecTimepoints,
-                                 vecSizeFactors,
-                                 lsvecidxBatch){
+estimateSigmoidParam <- function(
+  vecCounts,
+  vecTimepoints,
+  vecSizeFactors,
+  lsvecidxBatch){
   
   # Compute general statistics for initialisation:
   vecTimepointsUnique <- unique(vecTimepoints)
@@ -155,17 +156,18 @@ estimateSigmoidParam <- function(vecCounts,
 #'    }
 #'    
 #' @author David Sebastian Fischer
-fitSigmoidModel <- function(vecSigmoidParamGuess,
-                            vecCounts,
-                            scaDisp,
-                            vecSizeFactors,
-                            lsvecidxBatch,
-                            vecTimepointsUnique,
-                            vecidxTimepoint,
-                            MAXIT=100,
-                            RELTOL=10^(-8),
-                            trace=0,
-                            REPORT=10 ){
+fitSigmoidModel <- function(
+  vecSigmoidParamGuess,
+  vecCounts,
+  scaDisp,
+  vecSizeFactors,
+  lsvecidxBatch,
+  vecTimepointsUnique,
+  vecidxTimepoint,
+  MAXIT=100,
+  RELTOL=10^(-8),
+  trace=0,
+  REPORT=10 ){
   
   
   vecParamGuess <- vecSigmoidParamGuess
@@ -230,12 +232,12 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
     })
   } else { lsvecBatchFactors <- NULL }
   
-  return(list( vecSigmoidParam=vecSigmoidParam,
-               vecSigmoidValue=vecSigmoidValue,
-               lsvecBatchFactors=lsvecBatchFactors,
-               scaDispParam=scaDisp,
-               scaLL=lsFit$value,
-               scaConvergence=lsFit$convergence))
+  return(list(vecSigmoidParam=vecSigmoidParam,
+              vecSigmoidValue=vecSigmoidValue,
+              lsvecBatchFactors=lsvecBatchFactors,
+              scaDispParam=scaDisp,
+              scaLL=lsFit$value,
+              scaConvergence=lsFit$convergence))
 }
 
 #' Fit a sigmoidal model to a single gene
@@ -303,13 +305,14 @@ fitSigmoidModel <- function(vecSigmoidParamGuess,
 #'    }
 #'    
 #' @author David Sebastian Fischer
-fitSigmoidGene <- function(vecCounts, 
-                           scaDisp,
-                           vecSizeFactors,
-                           vecTimepointsUnique,
-                           vecidxTimepoint,
-                           lsvecidxBatch,
-                           MAXIT=1000){
+fitSigmoidGene <- function(
+  vecCounts, 
+  scaDisp,
+  vecSizeFactors,
+  vecTimepointsUnique,
+  vecidxTimepoint,
+  lsvecidxBatch,
+  MAXIT=1000){
   
   # (I) Fit sigmoidal model
   # 1. Compute initialisations
@@ -322,23 +325,25 @@ fitSigmoidGene <- function(vecCounts,
   vecParamGuessDown <- lsParamGuesses$down
   
   # 2. Initialisation: Up
-  lsFitUp <- fitSigmoidModel(vecSigmoidParamGuess=vecParamGuessUp,
-                             vecCounts=vecCounts,
-                             scaDisp=scaDisp,
-                             vecSizeFactors=vecSizeFactors,
-                             vecTimepointsUnique=vecTimepointsUnique, 
-                             vecidxTimepoint=vecidxTimepoint,
-                             lsvecidxBatch=lsvecidxBatch,
-                             MAXIT=MAXIT)
+  lsFitUp <- fitSigmoidModel(
+    vecSigmoidParamGuess=vecParamGuessUp,
+    vecCounts=vecCounts,
+    scaDisp=scaDisp,
+    vecSizeFactors=vecSizeFactors,
+    vecTimepointsUnique=vecTimepointsUnique, 
+    vecidxTimepoint=vecidxTimepoint,
+    lsvecidxBatch=lsvecidxBatch,
+    MAXIT=MAXIT)
   # 3. Initialisation: Down
-  lsFitDown <- fitSigmoidModel(vecSigmoidParamGuess=vecParamGuessDown,
-                               vecCounts=vecCounts,
-                               scaDisp=scaDisp,
-                               vecSizeFactors=vecSizeFactors,
-                               vecTimepointsUnique=vecTimepointsUnique, 
-                               vecidxTimepoint=vecidxTimepoint,
-                               lsvecidxBatch=lsvecidxBatch,
-                               MAXIT=MAXIT)
+  lsFitDown <- fitSigmoidModel(
+    vecSigmoidParamGuess=vecParamGuessDown,
+    vecCounts=vecCounts,
+    scaDisp=scaDisp,
+    vecSizeFactors=vecSizeFactors,
+    vecTimepointsUnique=vecTimepointsUnique, 
+    vecidxTimepoint=vecidxTimepoint,
+    lsvecidxBatch=lsvecidxBatch,
+    MAXIT=MAXIT)
   
   # (II) Select best fit and report fit type
   if(lsFitDown$scaLL > lsFitUp$scaLL){ lsbestSigmoidFit <- lsFitDown
@@ -475,9 +480,10 @@ fitSigmoidGene <- function(vecCounts,
 #' @author David Sebastian Fischer
 #' 
 #' @export
-fitSigmoidModels <- function(objectImpulseDE2,
-                             vecConfounders,
-                             strCondition){
+fitSigmoidModels <- function(
+  objectImpulseDE2,
+  vecConfounders,
+  strCondition){
   
   # Load objects from output class
   matCountDataProc <- objectImpulseDE2@matCountDataProc

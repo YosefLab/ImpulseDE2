@@ -1,0 +1,53 @@
+ImpulseDE2Object-class
+                        Container class for ImpulseDE2 output
+computeNormConst        Compute a normalisation constant for each
+                        sample
+computeSizeFactors      Compute a size factor for each sample
+estimateImpulseParam    Compute peak and valley impulse model parameter
+                        initialisations for data of one gene
+estimateSigmoidParam    Compute up and down sigmoid model parameter
+                        initialisations for data of one gene
+evalImpulse             Compute value of impulse function given
+                        parameters.
+evalImpulse_comp        Compiled function: evalImpulse
+evalLogLikImpulse       Cost function for impulse model
+evalLogLikImpulse_comp
+                        Compiled function: evalLogLikImpulse
+evalLogLikMu            Cost function for constant model
+evalLogLikMu_comp       Compiled function: evalLogLikMu
+evalLogLikSigmoid       Cost function for sigmoidal model
+evalLogLikSigmoid_comp
+                        Compiled function: evalLogLikSigmoid
+evalSigmoid             Compute value of sigmoidal model given
+                        parameters.
+evalSigmoid_comp        Compiled function: evalSigmoid
+fitConstImpulse         Fits impulse and constant models to all genes
+                        on all samples of a condition
+fitConstImpulseGene     Fit an impulse and constant model to a single
+                        gene
+fitConstModel           Fit a constant model to data of a gene
+fitImpulseModel         Fit an impulse model to data of a gene
+fitModels               Fits impulse and constant models to a
+                        timecourse dataset
+fitSigmoidGene          Fit a sigmoidal model to a single gene
+fitSigmoidModel         Fit a sigmoidal model to data of a gene
+fitSigmoidModels        Fits sigmoidal models to all genes on all all
+                        samples of a condition
+generics_get_accessors
+                        ImpulseDE2Object accessor method generics
+get_accessors           ImpulseDE2Object accession methods
+list_accession          List-like accessor methods for ImpulseDE2Object
+plotGenes               Plots the impulse fits and data
+plotHeatmap             Plot structured z-value heatmaps of
+                        differentially expressed genes
+processData             Check and process input to runImpulseDE2()
+runDEAnalysis           Perform differential expression analysis and
+                        identification of transiently activated or
+                        deactivated genes.
+runDESeq2               Wrapper function for running DESeq2
+runImpulseDE2           ImpulseDE2 wrapper
+simulateDataSetImpulseDE2
+                        Simulate a data set for ImpulseDE2
+updateDEAnalysis        Update dfImpulseDE2Results after sigmoids have
+                        been fit through external call
+writeReportToFile       Print ImpulseDE2 report to .txt file

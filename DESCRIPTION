@@ -27,7 +27,8 @@ Imports:
     methods,
     S4Vectors,
     stats,
-    SummarizedExperiment
+    SummarizedExperiment,
+    utils
 biocViews: Software,
     StatisticalMethod,
     TimeCourse,

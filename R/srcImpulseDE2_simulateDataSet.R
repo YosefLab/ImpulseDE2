@@ -82,25 +82,26 @@
 #' @author David Sebastian Fischer
 #' 
 #' @export
-simulateDataSetImpulseDE2 <- function(vecTimePointsA,
-                                      vecTimePointsB,
-                                      vecBatchesA,
-                                      vecBatchesB,
-                                      scaNConst,
-                                      scaNImp,
-                                      scaNLin,
-                                      scaNSig,
-                                      scaNRand=0,
-                                      scaSeedInit=1,
-                                      scaMumax=1000,
-                                      boolOneConstMu=FALSE,
-                                      scaSDExpressionChange=1,
-                                      scaSDRand=NULL,
-                                      scaMuSizeEffect=1,
-                                      scaSDSizeEffect=0.1,
-                                      scaMuBatchEffect=NULL,
-                                      scaSDBatchEffect=NULL,
-                                      dirOutSimulation=NULL){
+simulateDataSetImpulseDE2 <- function(
+  vecTimePointsA,
+  vecTimePointsB,
+  vecBatchesA,
+  vecBatchesB,
+  scaNConst,
+  scaNImp,
+  scaNLin,
+  scaNSig,
+  scaNRand=0,
+  scaSeedInit=1,
+  scaMumax=1000,
+  boolOneConstMu=FALSE,
+  scaSDExpressionChange=1,
+  scaSDRand=NULL,
+  scaMuSizeEffect=1,
+  scaSDSizeEffect=0.1,
+  scaMuBatchEffect=NULL,
+  scaSDBatchEffect=NULL,
+  dirOutSimulation=NULL){
   
   ####
   # Internal functions
@@ -430,9 +431,9 @@ simulateDataSetImpulseDE2 <- function(vecTimePointsA,
       set.seed(scaSeedInit+scaSeedsUsed)
       scaSeedsUsed <- scaSeedsUsed + 1
       return(c(1, 
-        rnorm(n=length(vecBatchesUnique)-1, 
-              mean=scaMuBatchEffect, 
-              sd=scaSDBatchEffect))
+               rnorm(n=length(vecBatchesUnique)-1, 
+                     mean=scaMuBatchEffect, 
+                     sd=scaSDBatchEffect))
       )
     }))
     

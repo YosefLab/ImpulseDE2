@@ -77,16 +77,17 @@ NULL
 #' @importFrom cowplot plot_grid
 #' 
 #' @export
-plotGenes <- function(vecGeneIDs=NULL,
-                      scaNTopIDs=NULL,
-                      objectImpulseDE2,
-                      boolCaseCtrl,
-                      dirOut=NULL,
-                      strFileName="ImpulseDE2_Trajectories.pdf",
-                      boolMultiplePlotsPerPage=TRUE,
-                      boolSimplePlot=FALSE,
-                      vecRefPval=NULL, 
-                      strNameRefMethod=NULL){
+plotGenes <- function(
+  vecGeneIDs=NULL,
+  scaNTopIDs=NULL,
+  objectImpulseDE2,
+  boolCaseCtrl,
+  dirOut=NULL,
+  strFileName="ImpulseDE2_Trajectories.pdf",
+  boolMultiplePlotsPerPage=TRUE,
+  boolSimplePlot=FALSE,
+  vecRefPval=NULL, 
+  strNameRefMethod=NULL){
   
   # Set graphical parameters
   scaNPlotsPerPage <- 4

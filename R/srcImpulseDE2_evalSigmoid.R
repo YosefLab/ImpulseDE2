@@ -20,8 +20,9 @@
 #'    Model values for given time points.
 #'    
 #' @author David Sebastian Fischer
-evalSigmoid <- function(vecSigmoidParam,
-                        vecTimepoints){
+evalSigmoid <- function(
+  vecSigmoidParam,
+  vecTimepoints){
   
   # beta is vecSigmoidParam[1]
   # h0 is vecSigmoidParam[2]
