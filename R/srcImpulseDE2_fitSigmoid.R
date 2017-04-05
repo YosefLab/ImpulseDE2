@@ -74,9 +74,9 @@ estimateSigmoidParam <- function(
             mean, na.rm=TRUE)
     }
     scaNTimepoints <- length(vecTimepointsUnique)
+    idxMiddleTP <- round(scaNTimepoints/2)
     vecdidxFirstPart <- seq(1, idxMiddleTP-1, by=1)
     vecdidxSecndPart <- seq(idxMiddleTP, scaNTimepoints, by=1)
-    idxMiddleTP <- round(scaNTimepoints/2)
     scaMaxEarlyMean <- max(vecExpressionMeans[vecdidxFirstPart], na.rm = TRUE)
     scaMinEarlyMean <- min(vecExpressionMeans[vecdidxFirstPart], na.rm = TRUE)
     scaMaxLateMean <- max(vecExpressionMeans[vecdidxSecndPart], 
