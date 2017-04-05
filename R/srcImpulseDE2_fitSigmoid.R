@@ -1,6 +1,4 @@
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++     Sigmoidal  model fit    +++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+### Sigmoidal  model fit
 
 #' Compute up and down sigmoid model parameter initialisations
 #' for data of one gene
@@ -188,7 +186,7 @@ fitSigmoidModel <- function(
               vecidxTimepoint = vecidxTimepoint, lsvecidxBatch = lsvecidxBatch, 
               vecboolObserved = !is.na(vecCounts), method = "BFGS", 
               control = list(maxit = MAXIT, reltol = RELTOL, fnscale = -1)
-              )[c("par", "value", "convergence")]
+        )[c("par", "value", "convergence")]
     }, error = function(strErrorMsg) {
         print(paste0("ERROR: Fitting sigmoid model: fitSigmoidModel().", 
                      " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
@@ -229,7 +227,7 @@ fitSigmoidModel <- function(
             # factors scale based on the first batch.
             vecBatchFactors <- c(1, exp(lsFit$par[
                 (scaNParamUsed + 1):
-                (scaNParamUsed + scaNBatchFactors)] ))
+                    (scaNParamUsed + scaNBatchFactors)] ))
             scaNParamUsed <- scaNParamUsed + scaNBatchFactors
             # Catch boundary of likelihood domain on batch factor space:
             vecBatchFactors[vecBatchFactors < 10^(-10)] <- 10^(-10)

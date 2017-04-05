@@ -1,6 +1,4 @@
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#+++++++++++++     Impulse and constant model fitting    ++++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+### Impulse and constant model fitting
 
 #' Compute peak and valley impulse model parameter initialisations
 #' for data of one gene
@@ -191,7 +189,7 @@ estimateImpulseParam <- function(vecCounts, vecTimepoints, vecSizeFactors,
 #' @author David Sebastian Fischer
 fitConstModel <- function(
     vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch, 
-                          MAXIT = 1000, RELTOL = 10^(-8), trace = 0, REPORT = 10) {
+    MAXIT = 1000, RELTOL = 10^(-8), trace = 0, REPORT = 10) {
     
     vecParamGuess <- log(mean(vecCounts, na.rm = TRUE) + 1)
     if (!is.null(lsvecidxBatch)) {
@@ -244,7 +242,7 @@ fitConstModel <- function(
             # factors scale based on the first batch.
             vecBatchFactors <- c(1, exp(lsFit$par[
                 (scaNParamUsed + 1):
-                (scaNParamUsed + scaNBatchFactors)] ))
+                    (scaNParamUsed + scaNBatchFactors)] ))
             scaNParamUsed <- scaNParamUsed + scaNBatchFactors
             # Catch boundary of likelihood domain on batch factor space:
             vecBatchFactors[vecBatchFactors < 10^(-10)] <- 10^(-10)
@@ -386,7 +384,7 @@ fitImpulseModel <- function(
             # factors scale based on the first batch.
             vecBatchFactors <- c(1, exp(lsFit$par[
                 (scaNParamUsed + 1):
-                (scaNParamUsed + scaNBatchFactors)] ))
+                    (scaNParamUsed + scaNBatchFactors)] ))
             scaNParamUsed <- scaNParamUsed + scaNBatchFactors
             # Catch boundary of likelihood domain on batch factor space:
             vecBatchFactors[vecBatchFactors < 10^(-10)] <- 10^(-10)

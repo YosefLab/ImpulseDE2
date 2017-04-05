@@ -15,9 +15,7 @@
 #' @importFrom utils packageDescription
 NULL
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++    Main function / Wrapper function   +++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+### Main function / Wrapper function
 
 #' ImpulseDE2 wrapper
 #'

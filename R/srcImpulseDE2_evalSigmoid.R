@@ -1,6 +1,4 @@
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#+++++++++++++++++++    Compute value of sigmoidal model   ++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+### Compute value of sigmoidal model
 
 #' Compute value of sigmoidal model given parameters.
 #' 

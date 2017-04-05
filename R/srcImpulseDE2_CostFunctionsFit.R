@@ -1,6 +1,4 @@
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++     Cost Functions    +++++++++++++++++++++++++++++#
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+### Cost Functions
 
 #' Cost function for constant model
 #' 
@@ -39,7 +37,7 @@
 #' @author David Sebastian Fischer
 evalLogLikMu <- function(
     vecTheta, vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch, 
-                         vecboolObserved) {
+    vecboolObserved) {
     
     scaMu <- exp(vecTheta[1])
     scaNParamUsed <- 1
