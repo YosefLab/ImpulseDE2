@@ -9,7 +9,7 @@ Authors@R: c(
 	person('Nir', 'Yosef', NULL, 'niryosef@berkeley.edu', 'ctb'))
 Author: David S Fischer [aut, cre], Fabian J Theis [ctb], Nir Yosef [ctb]
 Maintainer: David S Fischer <david.fischer@helmholtz-muenchen.de>
-Description: ImpulseDE2 is a differential expression algorithm for longituinal count data sets which arise in sequeincing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq.
+Description: ImpulseDE2 is a differential expression algorithm for longitudinal count data sets which arise in sequencing experiments such as RNA-seq, ChIP-seq, ATAC-seq and DNaseI-seq. ImpulseDE2 is based on a negative binomial noise model with dispersion trend smoothing by DESeq2 and uses the impulse model to constrain the mean expression trajectory of each gene.
 License: Artistic-2.0
 Encoding: UTF-8
 Imports:
