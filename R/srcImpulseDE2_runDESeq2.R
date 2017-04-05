@@ -17,7 +17,8 @@
 #' @param boolCaseCtrl (bool) 
 #' Whether to perform case-control analysis. Does case-only
 #' analysis if FALSE.
-#' @param vecConfounders (vector of strings number of confounding variables)
+#' @param vecConfounders (vector of strings number of 
+#' confounding variables)
 #' Factors to correct for during batch correction. Have to 
 #' supply dispersion factors if more than one is supplied.
 #' Names refer to columns in dfAnnotationProc.
@@ -145,7 +146,8 @@ runDESeq2 <- function(
                 dds <- suppressWarnings( DESeqDataSetFromMatrix(
                     countData = matCountDataProc,
                     colData = dfAnnotationProc,
-                    design = ~Condition+Condition:TimeCateg+Condition:BatchNested) )
+                    design = 
+                        ~Condition+Condition:TimeCateg+Condition:BatchNested) )
                 dds <- estimateSizeFactors(dds)
                 dds <- estimateDispersions(dds)
             }, error=function(strErrorMsg){
@@ -155,8 +157,8 @@ runDESeq2 <- function(
                     "- dispersions may be inaccurate.",
                     "Estimating dispersions on reduced model.",
                     " Supply externally generated dispersion parameters via ",
-                    "vecDispersionsExternal if there is a more accurate model ",
-                    "for your data set."))
+                    "vecDispersionsExternal if there is a more accurate ",
+                    "model for your data set."))
                 warning("Warning generated in dispersion factor estimation.",
                         " Eead stdout.")
             }, finally={
@@ -178,8 +180,8 @@ runDESeq2 <- function(
                                vecConfounders,
                                "} and time is not full rank: ",
                                "There are confounding variables with ",
-                               " batch structures which are linear combinations",
-                               " of the time points.")
+                               " batch structures which are linear",
+                               " combinations of the time points.")
                         paste0("Using reduced model formulation ",
                                "[full= ~Condition+Condition:TimeCateg, ",
                                "reduced= ~TimeCateg].")

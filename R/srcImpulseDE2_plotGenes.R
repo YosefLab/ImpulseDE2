@@ -274,14 +274,18 @@ plotGenes <- function(
                 dfFit <- data.frame(
                     time = rep(vecTimePointsFit, length(vecCaseBatchFactors)), 
                     value = vecValueToPlotCase, 
-                    condition = rep(rep("case", length(vecTimePointsFit)), length(vecCaseBatchFactors)), 
+                    condition = rep(rep("case", length(vecTimePointsFit)), 
+                                    length(vecCaseBatchFactors)), 
                     BatchFit = as.vector(sapply(
-                        vecBatchLabelsCase, function(label) rep(label, length(vecTimePointsFit)))))
+                        vecBatchLabelsCase, function(label) 
+                            rep(label, length(vecTimePointsFit)))))
                 gplotGene <- ggplot() + 
                     geom_point(data = dfRaw, aes(x = time, y = normCounts, 
-                                                 colour = Batch, shape = Batch)) + 
+                                                 colour = Batch, 
+                                                 shape = Batch)) + 
                     geom_line(data = dfFit, 
-                              aes(x = time, y = value, colour = BatchFit, linetype = BatchFit))
+                              aes(x = time, y = value, 
+                                  colour = BatchFit, linetype = BatchFit))
             }
         }
         gplotID <- gplotGene + scale_colour_manual(values = cbPalette) + 
@@ -292,8 +296,8 @@ plotGenes <- function(
                     id, ": ImpulseDE2 [", 
                     round(log(objectImpulseDE2$dfImpulseDE2Results[id, ]$padj)/
                               log(10), 2), 
-                    "] ", strNameRefMethod, " [", round(log(vecRefPval[id])/
-                                                            log(10), 2), 
+                    "] ", strNameRefMethod, " [", 
+                    round(log(vecRefPval[id])/log(10), 2), 
                     "]"))
         } else {
             gplotID <- gplotID + labs(title = paste0(

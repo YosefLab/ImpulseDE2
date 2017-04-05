@@ -795,13 +795,16 @@ fitModels <- function(objectImpulseDE2, vecConfounders, boolCaseCtrl) {
         lsSamplesByCond <- list(
             combined = objectImpulseDE2@dfAnnotationProc$Sample, 
             case = objectImpulseDE2@dfAnnotationProc[
-                objectImpulseDE2@dfAnnotationProc$Condition == "case", ]$Sample, 
+                objectImpulseDE2@dfAnnotationProc$Condition == 
+                    "case", ]$Sample, 
             control = objectImpulseDE2@dfAnnotationProc[
-                objectImpulseDE2@dfAnnotationProc$Condition == "control", ]$Sample)
+                objectImpulseDE2@dfAnnotationProc$Condition == 
+                    "control", ]$Sample)
     } else {
         lsSamplesByCond <- list(
             case = objectImpulseDE2@dfAnnotationProc[
-                objectImpulseDE2@dfAnnotationProc$Condition == "case", ]$Sample)
+                objectImpulseDE2@dfAnnotationProc$Condition == 
+                    "case", ]$Sample)
     }
     
     # Get batch assignments of samples

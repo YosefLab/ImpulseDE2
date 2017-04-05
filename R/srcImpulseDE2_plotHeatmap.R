@@ -90,7 +90,8 @@ plotHeatmap <- function(
     matImpulseValue <- do.call(rbind, lapply(
         vecSignificantIDs, function(x) {
             evalImpulse_comp(
-                vecImpulseParam = lsModelFits[[strCondition]][[x]]$lsImpulseFit$vecImpulseParam, 
+                vecImpulseParam = 
+                    lsModelFits[[strCondition]][[x]]$lsImpulseFit$vecImpulseParam, 
                 vecTimepoints = vecTimePointsToEval)
         }))
     rownames(matImpulseValue) <- vecSignificantIDs
@@ -122,12 +123,12 @@ plotHeatmap <- function(
         
         vecidxMonotonousUp <- vecidxMonotonous[vecboolMonotonousUp]
         vecidxMonotonousUpSort <- vecidxMonotonousUp[
-            do.call(order, as.data.frame(matidxMinTimeSort[vecidxMonotonousUp, 
-                                                           1]))]
+            do.call(order, as.data.frame(
+                matidxMinTimeSort[vecidxMonotonousUp,1]))]
         vecidxMonotonousDown <- vecidxMonotonous[vecboolMonotonousDown]
         vecidxMonotonousDownSort <- vecidxMonotonousDown[
-            do.call(order, as.data.frame(matidxMinTimeSort[vecidxMonotonousDown, 
-                                                           1]))]
+            do.call(order, as.data.frame(
+                matidxMinTimeSort[vecidxMonotonousDown, 1]))]
         
         # Fine sort transitive signals into off/on
         if (length(vecidxTransient) == 1) {
@@ -135,37 +136,39 @@ plotHeatmap <- function(
         } else {
             matImpulseTransient <- matImpulseValue[vecidxTransient, ]
         }
-        vecboolTransientValley <- apply(matImpulseTransient, 1, function(genevalues) {
-            boolValley <- any(genevalues[2:(scaNTPtoEvaluate - 1)] < genevalues[1] & 
-                                  genevalues[2:(scaNTPtoEvaluate - 1)] < genevalues[scaNTPtoEvaluate])
+        vecboolTransientValley <- apply(
+            matImpulseTransient, 1, function(genevalues) {
+            boolValley <- any(
+                genevalues[2:(scaNTPtoEvaluate - 1)] < genevalues[1] & 
+                    genevalues[2:(scaNTPtoEvaluate - 1)] < 
+                    genevalues[scaNTPtoEvaluate])
             return(boolValley)
         })
         vecboolTransientPeak <- !vecboolTransientValley
         
         vecidxTransientPeak <- vecidxTransient[vecboolTransientPeak]
         vecidxTransientPeakSort <- vecidxTransientPeak[
-            do.call(order, as.data.frame(matidxMaxTimeSort[vecidxTransientPeak, 
-                                                           1]))]
+            do.call(order, as.data.frame(
+                matidxMaxTimeSort[vecidxTransientPeak, 1]))]
         vecidxTransientValley <- vecidxTransient[vecboolTransientValley]
         vecidxTransientValleySort <- vecidxTransientValley[
-            do.call(order, as.data.frame(matidxMinTimeSort[vecidxTransientValley, 
-                                                           1]))]
+            do.call(order, as.data.frame(
+                matidxMinTimeSort[vecidxTransientValley,1]))]
         
-        vecidxAllSort <- c(vecidxMonotonousUpSort, vecidxMonotonousDownSort, 
-                           vecidxTransientPeakSort, vecidxTransientValleySort)
+        vecidxAllSort <- c(
+            vecidxMonotonousUpSort, vecidxMonotonousDownSort, 
+            vecidxTransientPeakSort, vecidxTransientValleySort)
         
-        vecTrajectoryType <- c(rep("up", length(vecidxMonotonousUpSort)), 
-                               rep("down", length(vecidxMonotonousDownSort)), 
-                               rep("*up", length(vecidxTransientPeakSort)), 
-                               rep("*down", length(vecidxTransientValleySort)))
-        lsvecGeneGroups <- list(transition_up = 
-                                    vecSignificantIDs[vecidxMonotonousUpSort], 
-                                transition_down = 
-                                    vecSignificantIDs[vecidxMonotonousDownSort], 
-                                transient_up = 
-                                    vecSignificantIDs[vecidxTransientPeakSort], 
-                                transient_down = 
-                                    vecSignificantIDs[vecidxTransientValleySort])
+        vecTrajectoryType <- c(
+            rep("up", length(vecidxMonotonousUpSort)), 
+            rep("down", length(vecidxMonotonousDownSort)), 
+            rep("*up", length(vecidxTransientPeakSort)), 
+            rep("*down", length(vecidxTransientValleySort)))
+        lsvecGeneGroups <- list(
+            transition_up = vecSignificantIDs[vecidxMonotonousUpSort], 
+            transition_down =  vecSignificantIDs[vecidxMonotonousDownSort], 
+            transient_up = vecSignificantIDs[vecidxTransientPeakSort], 
+            transient_down = vecSignificantIDs[vecidxTransientValleySort])
     } else {
         vecidxAllSort <- sort(vecMaxTime, decreasing = FALSE, 
                               index.return = TRUE)$ix
@@ -177,8 +180,9 @@ plotHeatmap <- function(
     vecSizeFactors <- computeNormConst(
         matCountDataProc = matCountDataProc, 
         vecSizeFactorsExternal = vecSizeFactors)
-    matSizefactors <- matrix(vecSizeFactors, nrow = length(vecSignificantIDs), 
-                             ncol = dim(matCountDataProc)[2], byrow = TRUE)
+    matSizefactors <- matrix(
+        vecSizeFactors, nrow = length(vecSignificantIDs), 
+        ncol = dim(matCountDataProc)[2], byrow = TRUE)
     
     # 1. Plot raw data
     matDataNorm <- matCountDataProc[vecSignificantIDs, ]/matSizefactors
@@ -200,10 +204,11 @@ plotHeatmap <- function(
         }))
     
     # Create heatmap of raw data, ordered by fits
-    complexHeatmapRaw <- Heatmap(matDataHeatZ[vecidxAllSort, ], 
-                                 gap = unit(5, "mm"), split = vecTrajectoryType, 
-                                 cluster_rows = FALSE, cluster_columns = FALSE, 
-                                 heatmap_legend_param = list(title = "z-score"))
+    complexHeatmapRaw <- Heatmap(
+        matDataHeatZ[vecidxAllSort, ], 
+        gap = unit(5, "mm"), split = vecTrajectoryType, 
+        cluster_rows = FALSE, cluster_columns = FALSE, 
+        heatmap_legend_param = list(title = "z-score"))
     
     # 2. Plot fitted data
     matDataHeat <- matImpulseValue
@@ -217,10 +222,11 @@ plotHeatmap <- function(
         }))
     
     # Create heatmap of raw data, ordered by fits
-    complexHeatmapFit <- Heatmap(matDataHeatZ[vecidxAllSort, ], 
-                                 gap = unit(5, "mm"), split = vecTrajectoryType, 
-                                 cluster_rows = FALSE, cluster_columns = FALSE, 
-                                 heatmap_legend_param = list(title = "z-score"))
+    complexHeatmapFit <- Heatmap(
+        matDataHeatZ[vecidxAllSort, ], 
+        gap = unit(5, "mm"), split = vecTrajectoryType, 
+        cluster_rows = FALSE, cluster_columns = FALSE, 
+        heatmap_legend_param = list(title = "z-score"))
     
     return(list(complexHeatmapRaw = complexHeatmapRaw, 
                 complexHeatmapFit = complexHeatmapFit, 

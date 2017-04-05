@@ -29,7 +29,8 @@ setClassUnion("data.frameORNULL", members = c("data.frame", "NULL"))
 #' \item df_red: Degrees of freedom of reduced model
 #' \item mean: Inferred mean parameter of constant model of first batch.
 #' From combined samples in case-ctrl. 
-#' \item allZero (bool) Whether there were no observed non-zero observations of this gene.
+#' \item allZero (bool) Whether there were no observed 
+#' non-zero observations of this gene.
 #' If TRUE, fitting and DE analsysis were skipped and entry is NA.
 #' }
 #' Entries only present in case-only DE analysis:
@@ -199,11 +200,12 @@ setClassUnion("data.frameORNULL", members = c("data.frame", "NULL"))
 #' @name ImpulseDE2Object-class
 #' 
 #' @author David Sebastian Fischer
-setClass("ImpulseDE2Object", slots = c(dfImpulseDE2Results = "data.frameORNULL", 
-                                       vecDEGenes = "characterORNULL", lsModelFits = "listORNULL", matCountDataProc = "matrix", 
-                                       vecAllIDs = "characterORNULL", dfAnnotationProc = "data.frame", vecSizeFactors = "numeric", 
-                                       vecDispersions = "numeric", boolCaseCtrl = "logical", vecConfounders = "characterORNULL", 
-                                       scaNProc = "numeric", scaQThres = "numericORNULL", strReport = "characterORNULL"))
+setClass("ImpulseDE2Object", slots = c(
+    dfImpulseDE2Results = "data.frameORNULL", 
+    vecDEGenes = "characterORNULL", lsModelFits = "listORNULL", matCountDataProc = "matrix", 
+    vecAllIDs = "characterORNULL", dfAnnotationProc = "data.frame", vecSizeFactors = "numeric", 
+    vecDispersions = "numeric", boolCaseCtrl = "logical", vecConfounders = "characterORNULL", 
+    scaNProc = "numeric", scaQThres = "numericORNULL", strReport = "characterORNULL"))
 
 ### 2. Enable accession of private elements via functions which carry the
 ### same name as the element.
@@ -289,92 +291,112 @@ NULL
 #' @return (list) lsModelFits
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_lsModelFits", function(object) standardGeneric("get_lsModelFits"), 
+setGeneric("get_lsModelFits", 
+           function(object) standardGeneric("get_lsModelFits"), 
            valueClass = "listORNULL")
 #' @name get_accessors
 #' @export
-setMethod("get_lsModelFits", "ImpulseDE2Object", function(object) object@lsModelFits)
+setMethod("get_lsModelFits", "ImpulseDE2Object", 
+          function(object) object@lsModelFits)
 
 #' @return (numeric matrix size genes x samples) matCountDataProc
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_matCountDataProc", function(object) standardGeneric("get_matCountDataProc"), 
+setGeneric("get_matCountDataProc", 
+           function(object) standardGeneric("get_matCountDataProc"), 
            valueClass = "matrix")
 #' @name get_accessors
 #' @export
-setMethod("get_matCountDataProc", "ImpulseDE2Object", function(object) object@matCountDataProc)
+setMethod("get_matCountDataProc", "ImpulseDE2Object", 
+          function(object) object@matCountDataProc)
 
 #' @return (data frame size genes x reported characteristics) dfAnnotationProc
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_dfAnnotationProc", function(object) standardGeneric("get_dfAnnotationProc"), 
+setGeneric("get_dfAnnotationProc", 
+           function(object) standardGeneric("get_dfAnnotationProc"), 
            valueClass = "data.frame")
 #' @name get_accessors
 #' @export
-setMethod("get_dfAnnotationProc", "ImpulseDE2Object", function(object) object@dfAnnotationProc)
+setMethod("get_dfAnnotationProc", "ImpulseDE2Object", 
+          function(object) object@dfAnnotationProc)
 
 #' @return (numeric vector length number of samples) vecSizeFactors
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_vecSizeFactors", function(object) standardGeneric("get_vecSizeFactors"), 
+setGeneric("get_vecSizeFactors", 
+           function(object) standardGeneric("get_vecSizeFactors"), 
            valueClass = "numeric")
 #' @name get_accessors
 #' @export
-setMethod("get_vecSizeFactors", "ImpulseDE2Object", function(object) object@vecSizeFactors)
+setMethod("get_vecSizeFactors", "ImpulseDE2Object", 
+          function(object) object@vecSizeFactors)
 
 #' @return (numeric vector length number of genes) vecDispersions
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_vecDispersions", function(object) standardGeneric("get_vecDispersions"), 
+setGeneric("get_vecDispersions", 
+           function(object) standardGeneric("get_vecDispersions"), 
            valueClass = "numeric")
 #' @name get_accessors
 #' @export
-setMethod("get_vecDispersions", "ImpulseDE2Object", function(object) object@vecDispersions)
+setMethod("get_vecDispersions", "ImpulseDE2Object", 
+          function(object) object@vecDispersions)
 
 #' @return (bool) boolCaseCtrl
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_boolCaseCtrl", function(object) standardGeneric("get_boolCaseCtrl"), 
+setGeneric("get_boolCaseCtrl", 
+           function(object) standardGeneric("get_boolCaseCtrl"), 
            valueClass = "logical")
 #' @name get_accessors
 #' @export
-setMethod("get_boolCaseCtrl", "ImpulseDE2Object", function(object) object@boolCaseCtrl)
+setMethod("get_boolCaseCtrl", "ImpulseDE2Object", 
+          function(object) object@boolCaseCtrl)
 
 #' @return (str vector) vecConfounders
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_vecConfounders", function(object) standardGeneric("get_vecConfounders"), 
+setGeneric("get_vecConfounders", 
+           function(object) standardGeneric("get_vecConfounders"), 
            valueClass = "characterORNULL")
 #' @name get_accessors
 #' @export
-setMethod("get_vecConfounders", "ImpulseDE2Object", function(object) object@vecConfounders)
+setMethod("get_vecConfounders", "ImpulseDE2Object", 
+          function(object) object@vecConfounders)
 
 #' @return (scalar) scaNProc
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_scaNProc", function(object) standardGeneric("get_scaNProc"), 
+setGeneric("get_scaNProc", 
+           function(object) standardGeneric("get_scaNProc"), 
            valueClass = "numeric")
 #' @name get_accessors
 #' @export
-setMethod("get_scaNProc", "ImpulseDE2Object", function(object) object@scaNProc)
+setMethod("get_scaNProc", "ImpulseDE2Object", 
+          function(object) object@scaNProc)
 
 #' @return (scalar) scaQThres
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_scaQThres", function(object) standardGeneric("get_scaQThres"), 
+setGeneric("get_scaQThres",
+           function(object) standardGeneric("get_scaQThres"), 
            valueClass = "numericORNULL")
 #' @name get_accessors
 #' @export
-setMethod("get_scaQThres", "ImpulseDE2Object", function(object) object@scaQThres)
+setMethod("get_scaQThres", "ImpulseDE2Object", 
+          function(object) object@scaQThres)
 
 #' @return (str) strReport
 #' @name generics_get_accessors
 #' @export
-setGeneric("get_strReport", function(object) standardGeneric("get_strReport"), 
+setGeneric("get_strReport", 
+           function(object) standardGeneric("get_strReport"), 
            valueClass = "characterORNULL")
 #' @name get_accessors
 #' @export
-setMethod("get_strReport", "ImpulseDE2Object", function(object) object@strReport)
+setMethod("get_strReport", "ImpulseDE2Object", 
+          function(object) object@strReport)
 
 ### 2. Enable accession of public elements via list-like properties of
 ### ImpulseDE2Object.
@@ -433,16 +455,16 @@ setMethod("names", "ImpulseDE2Object", function(x) {
 #' @return Target element from ImpulseDE2Object.
 #' @name list_accession
 #' @export
-setMethod("[[", c("ImpulseDE2Object", "character", "missing"), function(x, 
-                                                                        i, j, ...) {
-    if (identical(i, "dfImpulseDE2Results")) {
-        return(x@dfImpulseDE2Results)
-    } else if (identical(i, "vecDEGenes")) {
-        return(x@vecDEGenes)
-    } else {
-        return(NULL)
-    }
-})
+setMethod("[[", c("ImpulseDE2Object", "character", "missing"), 
+          function(x, i, j, ...) {
+              if (identical(i, "dfImpulseDE2Results")) {
+                  return(x@dfImpulseDE2Results)
+              } else if (identical(i, "vecDEGenes")) {
+                  return(x@vecDEGenes)
+              } else {
+                  return(NULL)
+              }
+          })
 
 #' @return Target element from ImpulseDE2Object.
 #' @name list_accession

@@ -207,8 +207,10 @@ runImpulseDE2 <- function(
         
         matCountDataProc <- lsProcessedData$matCountDataProc
         dfAnnotationProc <- lsProcessedData$dfAnnotationProc
-        vecSizeFactorsExternalProc <- lsProcessedData$vecSizeFactorsExternalProc
-        vecDispersionsExternalProc <- lsProcessedData$vecDispersionsExternalProc
+        vecSizeFactorsExternalProc <- 
+            lsProcessedData$vecSizeFactorsExternalProc
+        vecDispersionsExternalProc <- 
+            lsProcessedData$vecDispersionsExternalProc
         if (boolVerbose) { 
             write(lsProcessedData$strReportProcessing, file = "", ncolumns = 1)
         }

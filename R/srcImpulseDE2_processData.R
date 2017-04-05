@@ -84,7 +84,8 @@ processData <- function(
     # Check whether object was supplied (is not NULL).
     checkNull <- function(objectInput,strObjectInput){
         if(is.null(objectInput)){
-            stop(paste0( "ERROR: ", strObjectInput," was not given as input." ))
+            stop(paste0( "ERROR: ", strObjectInput,
+                         " was not given as input." ))
         }
     }
     # Check whether object does not have NA elements.
@@ -95,7 +96,8 @@ processData <- function(
         }
     }
     # Checks whether dimensions of matrices agree.
-    checkDimMatch <-function(matInput1, matInput2, strMatInput1, strMatInput2){
+    checkDimMatch <-function(
+        matInput1, matInput2, strMatInput1, strMatInput2){
         if(any(dim(matInput1)!=dim(matInput2))){
             stop(paste0( "ERROR: ", strMatInput1, 
                          " does not have the dimensions as ", 
@@ -105,7 +107,8 @@ processData <- function(
     # Checks whether vectors are identical.
     checkElementMatch <- function(vec1, vec2, strVec1, strVec2){
         if(!any(vec1==vec2)){
-            stop(paste0( "ERROR: ",strVec1 ," do not agree with ", strVec2, "." ))
+            stop(paste0( "ERROR: ",strVec1 ," do not agree with ", 
+                         strVec2, "." ))
         }
     }
     # Checks whether elements are numeric
@@ -121,7 +124,8 @@ processData <- function(
         checkNumeric(matInput, strMatInput)
         if(any(matInput < 0 | matInput > 1 | is.na(matInput))){
             stop(paste0( "ERROR: ", strMatInput, 
-                         " contains elements outside of interval [0,1]." ))
+                         " contains elements outside",
+                         " of interval [0,1]." ))
         }
     }
     # Checks whether elements are count data: 
@@ -133,15 +137,18 @@ processData <- function(
         checkNumeric(matInput, strMatInput)
         if(any(matInput[!is.na(matInput)] %% 1 != 0)){
             stop(paste0( "ERROR: ", strMatInput, 
-                         " contains non-integer elements. Requires count data." ))
+                         " contains non-integer elements.",
+                         " Requires count data." ))
         }
         if(any(!is.finite(matInput[!is.na(matInput)]))){
             stop(paste0( "ERROR: ", strMatInput, 
-                         " contains infinite elements. Requires count data." ))
+                         " contains infinite elements.",
+                         " Requires count data." ))
         }
         if(any(matInput[!is.na(matInput)]<0)){
             stop(paste0( "ERROR: ", strMatInput, 
-                         " contains negative elements. Requires count data." ))
+                         " contains negative elements.",
+                         " Requires count data." ))
         }
     }
     
@@ -164,21 +171,25 @@ processData <- function(
         
         ### 2. Check annotation table content
         ### a) Check column names
-        vecColNamesRequired <- c("Sample","Condition","Time",vecConfounders)
-        if( !all(vecColNamesRequired %in% colnames(dfAnnotation)) ){
-            stop(paste0("Could not find column ",
-                        vecColNamesRequired[
-                            !(vecColNamesRequired %in% colnames(dfAnnotation))],
-                        " in annotation table."))
+        vecColNamesRequired <- c("Sample","Condition","Time",
+                                 vecConfounders)
+        if( !all(vecColNamesRequired %in% 
+                 colnames(dfAnnotation)) ){
+            stop(paste0(
+                "Could not find column ",
+                vecColNamesRequired[
+                    !(vecColNamesRequired %in% colnames(dfAnnotation))],
+                " in annotation table."))
         }
         ### b) Samples
         # Check that sample name do not occur twice
         if(any(duplicated(dfAnnotation$Sample))){
-            stop(paste0("ERROR: [Annotation table] ",
-                        "Sample names must be unique: Sample(s) ",
-                        paste0((dfAnnotation$Sample)[
-                            duplicated(dfAnnotation$Sample)],collapse=","),
-                        " is/are duplicated."))
+            stop(paste0(
+                "ERROR: [Annotation table] ",
+                "Sample names must be unique: Sample(s) ",
+                paste0((dfAnnotation$Sample)[
+                    duplicated(dfAnnotation$Sample)],collapse=","),
+                " is/are duplicated."))
         }
         ### c) Time points
         vecTimepoints <- unique(as.vector( dfAnnotation$Time ))
@@ -188,13 +199,15 @@ processData <- function(
         lsConditions <- unique( dfAnnotation$Condition )
         # Check that given conditions exisit in annotation table
         if(!("case" %in% lsConditions)){
-            stop(paste0("ERROR: Condition \"case\" does",
-                        " not occur in annotation table condition column."))
+            stop(paste0(
+                "ERROR: Condition \"case\" does",
+                " not occur in annotation table condition column."))
         }
         if(boolCaseCtrl){
             if(!("control" %in% lsConditions)){
-                stop(paste0("ERROR: Condition \"control\" does",
-                            " not occur in annotation table condition column."))
+                stop(paste0(
+                    "ERROR: Condition \"control\" does",
+                    " not occur in annotation table condition column."))
             }
         }
         ### e) Batch
@@ -205,11 +218,12 @@ processData <- function(
             for(confounder in vecConfounders){
                 if(length(unique( dfAnnotation[,confounder] ))==1){
                     stop(paste0(
-                        "ERROR: Model matrix based on confounding variables {", 
-                        vecConfounders,
-                        "} is not full rank: Only one batch given for confounder ", 
-                        confounder, 
-                        ". Remove from vecConfounders or correct dfAnnotation."))
+                        "ERROR: Model matrix based on confounding ",
+                        "variables {", vecConfounders,
+                        "} is not full rank: Only one batch",
+                        " given for confounder ", confounder, 
+                        ". Remove from vecConfounders or correct",
+                        " dfAnnotation."))
                 }
             }
             # 2. More detailed full rank check
@@ -222,7 +236,8 @@ processData <- function(
                 stop(paste0(
                     "Model matrix based on confounding variables {", 
                     vecConfounders,
-                    "} is not full rank. Correct the confounding variables. ",
+                    "} is not full rank. ",
+                    "Correct the confounding variables. ",
                     " Note that it is not possible to model",
                     " NESTED confounding variables: ",
                     " Any confounding variables cannot",
@@ -316,28 +331,28 @@ processData <- function(
             strReportProcessing <- paste0(
                 strReportProcessing, "\n","ImpulseDE2 runs in case-only mode.") 
         }
-        strReportProcessing <- paste0(strReportProcessing, "\n",
-                                      paste0( "Found time points: ",
-                                              paste( vecTimepoints, collapse=",") ))
+        strReportProcessing <- paste0(
+            strReportProcessing, "\n",
+            paste0( "Found time points: ",
+                    paste( vecTimepoints, collapse=",") ))
         for(tp in vecTimepoints){
             strReportProcessing <- 
                 paste0(strReportProcessing, "\n",
                        paste0(
                            "Case: Found the samples at time point ", 
-                           tp,": ", 
-                           paste0(dfAnnotation[
+                           tp,": ", paste0(dfAnnotation[
                                (dfAnnotation$Time %in% tp) &
                                    (dfAnnotation$Condition %in% "case") &
-                                   (dfAnnotation$Sample %in% colnames(matCountData)),
+                                   (dfAnnotation$Sample %in% 
+                                        colnames(matCountData)),
                                ]$Sample,collapse=","),collapse="," ) )
         }
         if(boolCaseCtrl){
             for(tp in vecTimepoints){
-                strReportProcessing <- 
-                    paste0(strReportProcessing, "\n", paste0(
+                strReportProcessing <- paste0(
+                    strReportProcessing, "\n", paste0(
                         "Control: Found the following samples at time point ", 
-                        tp, ":", 
-                        paste0(dfAnnotation[
+                        tp, ":", paste0(dfAnnotation[
                             dfAnnotation$Time %in% tp &
                                 dfAnnotation$Condition %in% "control" &
                                 dfAnnotation$Sample %in% colnames(matCountData),
@@ -480,8 +495,10 @@ processData <- function(
         if(any(vecboolAllZeroSample)){
             strReportCountRed <- paste0(
                 strReportCountRed,  "\n", "WARNING: Sample(s) ",
-                paste0(colnames(matCountDataProc)[vecboolAllZeroSample], collapse=","),
-                " only contain(s) zeros (and NAs). These samples are kept for analysis.")
+                paste0(colnames(matCountDataProc)[vecboolAllZeroSample], 
+                       collapse=","),
+                " only contain(s) zeros (and NAs).",
+                " These samples are kept for analysis.")
         }
         
         ### 2. Rows (Genes):
@@ -494,7 +511,8 @@ processData <- function(
                 strReportCountRed,  "\n","WARNING: ",
                 sum(!vecboolNonZeroGene), " out of ",
                 length(vecboolNonZeroGene),
-                " genes do not have obserserved non-zero counts and are excluded.")
+                " genes do not have obserserved non-zero counts",
+                " and are excluded.")
         }
         
         # Sort count matrix column by annotation table

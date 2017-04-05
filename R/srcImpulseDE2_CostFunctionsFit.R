@@ -221,7 +221,8 @@ evalLogLikImpulse <- function(
 #' @param vecboolObserved (bool vector number of samples)
 #' Whether sample is observed (finite and not NA).
 #'  
-#' @return scaLogLik (scalar) Value of cost function (loglikelihood) for given gene.
+#' @return scaLogLik (scalar) Value of cost function 
+#' (loglikelihood) for given gene.
 #' 
 #' @author David Sebastian Fischer
 evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
@@ -261,7 +262,8 @@ evalLogLikImpulse_comp <- cmpfun(evalLogLikImpulse)
 #' @param vecboolObserved (bool vector number of samples)
 #' Whether sample is observed (finite and not NA).
 #'  
-#' @return scaLogLik (scalar) Value of cost function (loglikelihood) for given gene.
+#' @return scaLogLik (scalar) Value of cost function 
+#' (loglikelihood) for given gene.
 #' 
 #' @author David Sebastian Fischer
 evalLogLikSigmoid <- function(
@@ -339,7 +341,8 @@ evalLogLikSigmoid <- function(
 #' @param vecboolObserved (bool vector number of samples)
 #' Whether sample is observed (finite and not NA).
 #'  
-#' @return scaLogLik (scalar) Value of cost function (loglikelihood) for given gene.
+#' @return scaLogLik (scalar) Value of cost function 
+#' (loglikelihood) for given gene.
 #' 
 #' @author David Sebastian Fischer
 evalLogLikSigmoid_comp <- cmpfun(evalLogLikSigmoid)

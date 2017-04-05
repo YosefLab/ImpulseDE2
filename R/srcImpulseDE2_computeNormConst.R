@@ -53,9 +53,11 @@ computeSizeFactors <- function(matCountDataProc) {
 
 #' Compute a normalisation constant for each sample
 #' 
-#' The normalisation constant is the median of the ratio of gene counts versus
+#' The normalisation constant is the median of the ratio 
+#' of gene counts versus
 #' the geomtric gene count mean. There is one normalisation constant per 
-#' replicate. An intuitive alternative would be the sequencing depth, the median
+#' replicate. An intuitive alternative would be the sequencing depth, 
+#' the median
 #' ratio is however less sensitive to highly differentially expressed genes
 #' with high counts (ref. DESeq).
 #' The normalisation constants are used to scale the mean of the
@@ -96,13 +98,15 @@ computeSizeFactors <- function(matCountDataProc) {
 #' @author David Sebastian Fischer
 #' 
 #' @export
-computeNormConst <- function(matCountDataProc, vecSizeFactorsExternal = NULL) {
+computeNormConst <- function(
+    matCountDataProc, vecSizeFactorsExternal = NULL) {
     
     # Compute size factors Size factors account for differential sequencing
     # depth.
     if (is.null(vecSizeFactorsExternal)) {
         # Compute size factors if not supplied to ImpulseDE2.
-        vecSizeFactors <- computeSizeFactors(matCountDataProc = matCountDataProc)
+        vecSizeFactors <- computeSizeFactors(
+            matCountDataProc = matCountDataProc)
     } else {
         # Chose externally supplied size factors if supplied.
         vecSizeFactors <- vecSizeFactorsExternal[colnames(matCountDataProc)]

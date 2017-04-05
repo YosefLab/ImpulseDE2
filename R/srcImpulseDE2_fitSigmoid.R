@@ -58,7 +58,8 @@ estimateSigmoidParam <- function(
             # observations are zero:
             vecBatchFactorsConfounder[is.na(vecBatchFactorsConfounder) | 
                                           vecBatchFactorsConfounder == 0] <- 1
-            vecBatchFactors <- vecBatchFactors * vecBatchFactorsConfounder[vecidxBatch]
+            vecBatchFactors <- vecBatchFactors * 
+                vecBatchFactorsConfounder[vecidxBatch]
         }
         vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors
         vecExpressionMeans <- tapply(

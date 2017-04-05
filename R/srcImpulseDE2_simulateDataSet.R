@@ -16,17 +16,20 @@
 #' Number of time points in batch A.
 #' @param vecTimePointsB (numeric vector number of time points)
 #' Number of time points in batch B.
-#' @param vecBatchesA (str vector number of samples in vecTimePointsA) [Default NULL]
+#' @param vecBatchesA (str vector number of samples in vecTimePointsA) 
+#' [Default NULL]
 #' Batch IDs of each sample in condition A. Set to NULL if 
 #' simulating without batch effects.
-#' @param vecBatchesB (str vector number of samples in vecTimePointsB) [Default NULL]
+#' @param vecBatchesB (str vector number of samples in vecTimePointsB) 
+#' [Default NULL]
 #' Batch IDs of each sample in condition B. Set to NULL if 
 #' simulating without batch effects.
 #' @param scaNConst (scalar) Number of constant genes in data set.
 #' @param scaNImp (scalar) Number of impulse distributed genes in data set.
 #' @param scaNLin (scalar) Number of linear distributed genes in data set.
 #' @param scaNSig (scalar) Number of sigmoid distributed genes in data set.
-#' @param scaNRand (scalar) [Default NULL] Number of random distributed genes in data set.
+#' @param scaNRand (scalar) [Default NULL] Number of random 
+#' distributed genes in data set.
 #' @param scaSeedInit (scalar) [Default 1] Scalar based on which seeds are chosen.
 #' One vlaue correspond sto a unique set of seeds for all random number generations.
 #' @param scaMumax (scalar) [Default 1000]
@@ -312,13 +315,16 @@ simulateDataSetImpulseDE2 <- function(
             matMuLinHiddenDE <- do.call(rbind, lapply(
                 seq(1, scaNLinDE), 
                 function(i) { 
-                    (vecInitialLevel[i] + (vecFinalLevelDE[i] - vecInitialLevel[i])/
-                         scaDeltaTtot * (vecTimePointsUniqueB - min(vecTimePointsUniqueB))
+                    (vecInitialLevel[i] + (vecFinalLevelDE[i] - 
+                                               vecInitialLevel[i])/
+                         scaDeltaTtot * (vecTimePointsUniqueB - 
+                                             min(vecTimePointsUniqueB))
                     )[vecindTimePointAssignB]
                 }))
             rownames(matMuLinHiddenDE) <- vecLinIDs[1:scaNLinDE]
             colnames(matMuLinHiddenDE) <- names(vecSamplesB)
-            matMuLinHidden[seq(1, scaNImpDE), names(vecSamplesB)] <- matMuLinHiddenDE
+            matMuLinHidden[seq(1, scaNImpDE), names(vecSamplesB)] <- 
+                matMuLinHiddenDE
         }
     } else {
         matMuLinHidden <- NULL
@@ -332,21 +338,25 @@ simulateDataSetImpulseDE2 <- function(
         vech0 <- runif(scaNSig) * scaMumax
         set.seed(scaSeedInit + scaSeedsUsed)
         scaSeedsUsed <- scaSeedsUsed + 1
-        vech1 <- vech0 * abs(rnorm(n = scaNSig, mean = 1, sd = scaSDExpressionChange))
+        vech1 <- vech0 * abs(rnorm(n = scaNSig, mean = 1, 
+                                   sd = scaSDExpressionChange))
         set.seed(scaSeedInit + scaSeedsUsed)
         scaSeedsUsed <- scaSeedsUsed + 1
         vecBeta <- runif(scaNSig) * 4 + 0.5
         set.seed(scaSeedInit + scaSeedsUsed)
         scaSeedsUsed <- scaSeedsUsed + 1
-        vecT1 <- runif(scaNSig) * (max(vecTimePointsUnique) - min(vecTimePointsUnique)) + 
+        vecT1 <- runif(scaNSig) * (max(vecTimePointsUnique) - 
+                                       min(vecTimePointsUnique)) + 
             min(vecTimePointsUnique)
         vech0[vech0 < scaEps] <- scaEps
         vech1[vech1 < scaEps] <- scaEps
         # Evaluate sigmoid functions
-        matMuSigHidden <- do.call(rbind, lapply(seq(1, scaNSig), function(i) {
-            evalSigmoid(t = vecTimePointsUnique, beta = vecBeta[i], t1 = vecT1[i], 
-                        h0 = vech0[i], h1 = vech1[i])[vecindTimePointAssign]
-        }))
+        matMuSigHidden <- do.call(rbind, lapply(
+            seq(1, scaNSig), function(i) {
+                evalSigmoid(t = vecTimePointsUnique, 
+                            beta = vecBeta[i], t1 = vecT1[i], 
+                            h0 = vech0[i], h1 = vech1[i])[vecindTimePointAssign]
+            }))
         rownames(matMuSigHidden) <- vecSigIDs
         colnames(matMuSigHidden) <- names(vecSamples)
         if (boolCaseCtrl & scaNSig > 1) {
@@ -354,8 +364,9 @@ simulateDataSetImpulseDE2 <- function(
             scaNSigDE <- round(scaNSig/2)
             set.seed(scaSeedInit + scaSeedsUsed)
             scaSeedsUsed <- scaSeedsUsed + 1
-            vech1DE <- vech0[1:scaNSigDE] * abs(rnorm(n = scaNSigDE, mean = 1, 
-                                                      sd = scaSDExpressionChange))
+            vech1DE <- vech0[1:scaNSigDE] * 
+                abs(rnorm(n = scaNSigDE, mean = 1, 
+                          sd = scaSDExpressionChange))
             set.seed(scaSeedInit + scaSeedsUsed)
             scaSeedsUsed <- scaSeedsUsed + 1
             vecBetaDE <- runif(scaNSigDE) * 4 + 0.5
@@ -439,10 +450,14 @@ simulateDataSetImpulseDE2 <- function(
     vecindBatches <- match(dfAnnotation$Batch, vecBatchesUnique)
     # Check that batches dont coincide with case-ctrl split of samples
     if (boolCaseCtrl & length(vecBatchesUnique) == 2) {
-        if (setequal(dfAnnotation[dfAnnotation$Batch == vecBatchesUnique[1], ]$Sample, 
-                     dfAnnotation[dfAnnotation$Condition == "case", ]$Sample) | 
-            setequal(dfAnnotation[dfAnnotation$Batch == vecBatchesUnique[1], ]$Sample, 
-                     dfAnnotation[dfAnnotation$Condition == "ctrl", ]$Sample)) {
+        if (setequal(dfAnnotation[dfAnnotation$Batch == 
+                                  vecBatchesUnique[1], ]$Sample, 
+                     dfAnnotation[dfAnnotation$Condition == 
+                                  "case", ]$Sample) | 
+            setequal(dfAnnotation[dfAnnotation$Batch == 
+                                  vecBatchesUnique[1], ]$Sample, 
+                     dfAnnotation[dfAnnotation$Condition == 
+                                  "ctrl", ]$Sample)) {
             stop("Batch structure coincides with case-control structure.")
         }
     }
@@ -479,7 +494,8 @@ simulateDataSetImpulseDE2 <- function(
         seq(1, dim(matMuHiddenScaled)[1]), 
         function(gene) {
             sapply(names(vecSamples), function(j) {
-                rnbinom(n = 1, mu = matMuHiddenScaled[gene, j], size = vecDispHidden[gene])
+                rnbinom(n = 1, mu = matMuHiddenScaled[gene, j], 
+                        size = vecDispHidden[gene])
             })
         }))
     rownames(matObservedData) <- rownames(matMuHiddenScaled)
