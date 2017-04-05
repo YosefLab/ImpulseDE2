@@ -202,10 +202,10 @@ setClassUnion("data.frameORNULL", members = c("data.frame", "NULL"))
 #' 
 #' @author David Sebastian Fischer
 setClass("ImpulseDE2Object", slots = c(dfImpulseDE2Results = "data.frameORNULL", 
-    vecDEGenes = "characterORNULL", lsModelFits = "listORNULL", matCountDataProc = "matrix", 
-    vecAllIDs = "characterORNULL", dfAnnotationProc = "data.frame", vecSizeFactors = "numeric", 
-    vecDispersions = "numeric", boolCaseCtrl = "logical", vecConfounders = "characterORNULL", 
-    scaNProc = "numeric", scaQThres = "numericORNULL", strReport = "characterORNULL"))
+                                       vecDEGenes = "characterORNULL", lsModelFits = "listORNULL", matCountDataProc = "matrix", 
+                                       vecAllIDs = "characterORNULL", dfAnnotationProc = "data.frame", vecSizeFactors = "numeric", 
+                                       vecDispersions = "numeric", boolCaseCtrl = "logical", vecConfounders = "characterORNULL", 
+                                       scaNProc = "numeric", scaQThres = "numericORNULL", strReport = "characterORNULL"))
 
 ### 2. Enable accession of private elements via functions which carry the
 ### same name as the element.
@@ -292,7 +292,7 @@ NULL
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_lsModelFits", function(object) standardGeneric("get_lsModelFits"), 
-    valueClass = "listORNULL")
+           valueClass = "listORNULL")
 #' @name get_accessors
 #' @export
 setMethod("get_lsModelFits", "ImpulseDE2Object", function(object) object@lsModelFits)
@@ -301,7 +301,7 @@ setMethod("get_lsModelFits", "ImpulseDE2Object", function(object) object@lsModel
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_matCountDataProc", function(object) standardGeneric("get_matCountDataProc"), 
-    valueClass = "matrix")
+           valueClass = "matrix")
 #' @name get_accessors
 #' @export
 setMethod("get_matCountDataProc", "ImpulseDE2Object", function(object) object@matCountDataProc)
@@ -310,7 +310,7 @@ setMethod("get_matCountDataProc", "ImpulseDE2Object", function(object) object@ma
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_dfAnnotationProc", function(object) standardGeneric("get_dfAnnotationProc"), 
-    valueClass = "data.frame")
+           valueClass = "data.frame")
 #' @name get_accessors
 #' @export
 setMethod("get_dfAnnotationProc", "ImpulseDE2Object", function(object) object@dfAnnotationProc)
@@ -319,7 +319,7 @@ setMethod("get_dfAnnotationProc", "ImpulseDE2Object", function(object) object@df
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_vecSizeFactors", function(object) standardGeneric("get_vecSizeFactors"), 
-    valueClass = "numeric")
+           valueClass = "numeric")
 #' @name get_accessors
 #' @export
 setMethod("get_vecSizeFactors", "ImpulseDE2Object", function(object) object@vecSizeFactors)
@@ -328,7 +328,7 @@ setMethod("get_vecSizeFactors", "ImpulseDE2Object", function(object) object@vecS
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_vecDispersions", function(object) standardGeneric("get_vecDispersions"), 
-    valueClass = "numeric")
+           valueClass = "numeric")
 #' @name get_accessors
 #' @export
 setMethod("get_vecDispersions", "ImpulseDE2Object", function(object) object@vecDispersions)
@@ -337,7 +337,7 @@ setMethod("get_vecDispersions", "ImpulseDE2Object", function(object) object@vecD
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_boolCaseCtrl", function(object) standardGeneric("get_boolCaseCtrl"), 
-    valueClass = "logical")
+           valueClass = "logical")
 #' @name get_accessors
 #' @export
 setMethod("get_boolCaseCtrl", "ImpulseDE2Object", function(object) object@boolCaseCtrl)
@@ -346,7 +346,7 @@ setMethod("get_boolCaseCtrl", "ImpulseDE2Object", function(object) object@boolCa
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_vecConfounders", function(object) standardGeneric("get_vecConfounders"), 
-    valueClass = "characterORNULL")
+           valueClass = "characterORNULL")
 #' @name get_accessors
 #' @export
 setMethod("get_vecConfounders", "ImpulseDE2Object", function(object) object@vecConfounders)
@@ -355,7 +355,7 @@ setMethod("get_vecConfounders", "ImpulseDE2Object", function(object) object@vecC
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_scaNProc", function(object) standardGeneric("get_scaNProc"), 
-    valueClass = "numeric")
+           valueClass = "numeric")
 #' @name get_accessors
 #' @export
 setMethod("get_scaNProc", "ImpulseDE2Object", function(object) object@scaNProc)
@@ -364,7 +364,7 @@ setMethod("get_scaNProc", "ImpulseDE2Object", function(object) object@scaNProc)
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_scaQThres", function(object) standardGeneric("get_scaQThres"), 
-    valueClass = "numericORNULL")
+           valueClass = "numericORNULL")
 #' @name get_accessors
 #' @export
 setMethod("get_scaQThres", "ImpulseDE2Object", function(object) object@scaQThres)
@@ -373,7 +373,7 @@ setMethod("get_scaQThres", "ImpulseDE2Object", function(object) object@scaQThres
 #' @name generics_get_accessors
 #' @export
 setGeneric("get_strReport", function(object) standardGeneric("get_strReport"), 
-    valueClass = "characterORNULL")
+           valueClass = "characterORNULL")
 #' @name get_accessors
 #' @export
 setMethod("get_strReport", "ImpulseDE2Object", function(object) object@strReport)
@@ -436,7 +436,7 @@ setMethod("names", "ImpulseDE2Object", function(x) {
 #' @name list_accession
 #' @export
 setMethod("[[", c("ImpulseDE2Object", "character", "missing"), function(x, 
-    i, j, ...) {
+                                                                        i, j, ...) {
     if (identical(i, "dfImpulseDE2Results")) {
         return(x@dfImpulseDE2Results)
     } else if (identical(i, "vecDEGenes")) {

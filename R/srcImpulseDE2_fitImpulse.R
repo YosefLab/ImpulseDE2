@@ -39,77 +39,100 @@
 #' 
 #' @author David Sebastian Fischer
 estimateImpulseParam <- function(vecCounts, vecTimepoints, vecSizeFactors, 
-    lsvecidxBatch) {
+                                 lsvecidxBatch) {
     
     # Compute general statistics for initialisation:
     vecTimepointsUnique <- unique(vecTimepoints)
+    scaMeanCount <- mean(vecCounts, na.rm = TRUE)
     # Expression means by timepoint
     vecCountsSFcorrected <- vecCounts/vecSizeFactors
+    vecCountsSFcorrectedNorm <- vecCountsSFcorrected / scaMeanCount
     if (!is.null(lsvecidxBatch)) {
         # Estimate batch factors
         vecBatchFactors <- array(1, length(vecCounts))
         for (vecidxBatch in lsvecidxBatch) {
-            vecBatchFactorsConfounder <- sapply(unique(vecidxBatch), function(batch) {
-                mean(vecCountsSFcorrected[vecidxBatch == batch]/mean(vecCounts, 
-                  na.rm = TRUE), na.rm = TRUE)
-            })
+            vecBatchFactorsConfounder <- tapply(
+                vecCountsSFcorrectedNorm, 
+                vecidxBatch, 
+                mean, na.rm=TRUE)
             # Catch exception that all observations of a batch are zero or all
             # observations are zero:
             vecBatchFactorsConfounder[is.na(vecBatchFactorsConfounder) | 
-                vecBatchFactorsConfounder == 0] <- 1
-            vecBatchFactors <- vecBatchFactors * vecBatchFactorsConfounder[vecidxBatch]
+                                          vecBatchFactorsConfounder == 0] <- 1
+            vecBatchFactors <- vecBatchFactors * 
+                vecBatchFactorsConfounder[vecidxBatch]
         }
         vecCountsSFBatchcorrected <- vecCountsSFcorrected/vecBatchFactors
-        vecExpressionMeans <- sapply(vecTimepointsUnique, function(tp) {
-            mean(vecCountsSFBatchcorrected[vecTimepoints == tp], na.rm = TRUE)
-        })
+        vecExpressionMeans <- tapply(
+            vecCountsSFBatchcorrected, 
+            match(vecTimepoints,vecTimepointsUnique), 
+            mean, na.rm=TRUE)
     } else {
-        vecExpressionMeans <- sapply(vecTimepointsUnique, function(tp) {
-            mean(vecCountsSFcorrected[vecTimepoints == tp], na.rm = TRUE)
-        })
+        vecExpressionMeans <- tapply(
+            vecCountsSFcorrected, 
+            match(vecTimepoints,vecTimepointsUnique), 
+            mean, na.rm=TRUE)
     }
     scaNTimepoints <- length(vecTimepointsUnique)
-    scaMaxMiddleMean <- max(vecExpressionMeans[2:(scaNTimepoints - 1)], 
-        na.rm = TRUE)
-    scaMinMiddleMean <- min(vecExpressionMeans[2:(scaNTimepoints - 1)], 
-        na.rm = TRUE)
+    vecidxMiddle <- seq(2, scaNTimepoints-1, by=1)
+    scaMaxMiddleMean <- max(vecExpressionMeans[vecidxMiddle], 
+                            na.rm = TRUE)
+    scaMinMiddleMean <- min(vecExpressionMeans[vecidxMiddle], 
+                            na.rm = TRUE)
     # +1 to push indicices up from middle stretch to entire window (first is
     # omitted here)
-    indMaxMiddleMean <- match(scaMaxMiddleMean, vecExpressionMeans[2:(scaNTimepoints - 
-        1)]) + 1
-    indMinMiddleMean <- match(scaMinMiddleMean, vecExpressionMeans[2:(scaNTimepoints - 
-        1)]) + 1
+    indMaxMiddleMean <- match(scaMaxMiddleMean, 
+                              vecExpressionMeans[vecidxMiddle]) + 1
+    indMinMiddleMean <- match(scaMinMiddleMean, 
+                              vecExpressionMeans[vecidxMiddle]) + 1
     # Gradients between neighbouring points
-    vecGradients <- unlist(lapply(c(1:(scaNTimepoints - 1)), function(x) {
-        (vecExpressionMeans[x + 1] - vecExpressionMeans[x])/(vecTimepointsUnique[x + 
-            1] - vecTimepointsUnique[x])
-    }))
+    vecDiffExpr <- diff(vecExpressionMeans)
+    vecDiffTime <- diff(vecTimepointsUnique)
+    vecGradients <- vecDiffExpr / vecDiffTime
     vecGradients[is.na(vecGradients) | !is.finite(vecGradients)] <- 0
     
     # Compute peak initialisation Beta: Has to be negative, Theta1: Low,
     # Theta2: High, Theta3: Low t1: Around first observed inflexion point,
     # t2: Around second observed inflexion point
-    indLowerInflexionPoint <- match(max(vecGradients[1:(indMaxMiddleMean - 
-        1)], na.rm = TRUE), vecGradients[1:(indMaxMiddleMean - 1)])
-    indUpperInflexionPoint <- indMaxMiddleMean - 1 + match(min(vecGradients[indMaxMiddleMean:length(vecGradients)], 
-        na.rm = TRUE), vecGradients[indMaxMiddleMean:length(vecGradients)])
-    vecParamGuessPeak <- c(1, log(vecExpressionMeans[1] + 1), log(scaMaxMiddleMean + 
-        1), log(vecExpressionMeans[scaNTimepoints] + 1), (vecTimepointsUnique[indLowerInflexionPoint] + 
-        vecTimepointsUnique[indLowerInflexionPoint + 1])/2, (vecTimepointsUnique[indUpperInflexionPoint] + 
-        vecTimepointsUnique[indUpperInflexionPoint + 1])/2)
+    vecdidxFirstPart <- seq(1, indMaxMiddleMean-1, by=1)
+    vecdidxSecndPart <- seq(indMaxMiddleMean, length(vecGradients), by=1)
+    indLowerInflexionPoint <- match(max(
+        vecGradients[vecdidxFirstPart], na.rm = TRUE), 
+        vecGradients[vecdidxFirstPart])
+    indUpperInflexionPoint <- indMaxMiddleMean - 1 + 
+        match(min(
+            vecGradients[vecdidxSecndPart], na.rm = TRUE), 
+            vecGradients[vecdidxSecndPart])
+    vecParamGuessPeak <- c(
+        1, 
+        log(vecExpressionMeans[1] + 1), 
+        log(scaMaxMiddleMean + 1), 
+        log(vecExpressionMeans[scaNTimepoints] + 1), 
+        (vecTimepointsUnique[indLowerInflexionPoint] + 
+             vecTimepointsUnique[indLowerInflexionPoint + 1])/2, 
+        (vecTimepointsUnique[indUpperInflexionPoint] + 
+             vecTimepointsUnique[indUpperInflexionPoint + 1])/2
+    )
     
     # Compute valley initialisation Beta: Has to be negative, Theta1: High,
     # Theta2: Low, Theta3: High t1: Around first observed inflexion point,
     # t2: Around second observed inflexion point
-    indLowerInflexionPoint <- match(min(vecGradients[1:(indMinMiddleMean - 
-        1)], na.rm = TRUE), vecGradients[1:(indMinMiddleMean - 1)])
-    indUpperInflexionPoint <- indMinMiddleMean - 1 + match(max(vecGradients[indMinMiddleMean:(scaNTimepoints - 
-        1)], na.rm = TRUE), vecGradients[indMinMiddleMean:(scaNTimepoints - 
-        1)])
-    vecParamGuessValley <- c(1, log(vecExpressionMeans[1] + 1), log(scaMinMiddleMean + 
-        1), log(vecExpressionMeans[scaNTimepoints] + 1), (vecTimepointsUnique[indLowerInflexionPoint] + 
-        vecTimepointsUnique[indLowerInflexionPoint + 1])/2, (vecTimepointsUnique[indUpperInflexionPoint] + 
-        vecTimepointsUnique[indUpperInflexionPoint + 1])/2)
+    indLowerInflexionPoint <- match(min(
+        vecGradients[1:(indMinMiddleMean - 1)], na.rm = TRUE), 
+        vecGradients[1:(indMinMiddleMean - 1)])
+    indUpperInflexionPoint <- indMinMiddleMean - 1 + match(max(
+        vecGradients[indMinMiddleMean:(scaNTimepoints - 1)], na.rm = TRUE), 
+        vecGradients[indMinMiddleMean:(scaNTimepoints - 1)])
+    vecParamGuessValley <- c(
+        1, 
+        log(vecExpressionMeans[1] + 1), 
+        log(scaMinMiddleMean + 1), 
+        log(vecExpressionMeans[scaNTimepoints] + 1), 
+        (vecTimepointsUnique[indLowerInflexionPoint] + 
+             vecTimepointsUnique[indLowerInflexionPoint + 1])/2, 
+        (vecTimepointsUnique[indUpperInflexionPoint] + 
+             vecTimepointsUnique[indUpperInflexionPoint + 1])/2
+    )
     
     return(list(peak = vecParamGuessPeak, valley = vecParamGuessValley))
 }
@@ -166,29 +189,39 @@ estimateImpulseParam <- function(vecCounts, vecTimepoints, vecSizeFactors,
 #' }
 #' 
 #' @author David Sebastian Fischer
-fitConstModel <- function(vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch, 
-    MAXIT = 1000, RELTOL = 10^(-8), trace = 0, REPORT = 10) {
+fitConstModel <- function(
+    vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch, 
+                          MAXIT = 1000, RELTOL = 10^(-8), trace = 0, REPORT = 10) {
     
     vecParamGuess <- log(mean(vecCounts, na.rm = TRUE) + 1)
     if (!is.null(lsvecidxBatch)) {
         for (vecidxConfounder in lsvecidxBatch) {
-            vecParamGuess <- c(vecParamGuess, rep(0, length(unique(vecidxConfounder)) - 
-                1))
+            vecParamGuess <- c(vecParamGuess, 
+                               rep(0, length(unique(vecidxConfounder)) - 1))
         }
     }
     
     lsFit <- tryCatch({
-        optim(par = vecParamGuess, fn = evalLogLikMu_comp, vecCounts = vecCounts, 
-            scaDisp = scaDisp, vecSizeFactors = vecSizeFactors, lsvecidxBatch = lsvecidxBatch, 
-            vecboolObserved = !is.na(vecCounts), method = "BFGS", control = list(maxit = MAXIT, 
-                reltol = RELTOL, fnscale = -1))[c("par", "value", "convergence")]
+        optim(par = vecParamGuess, fn = evalLogLikMu_comp, 
+              vecCounts = vecCounts, scaDisp = scaDisp, 
+              vecSizeFactors = vecSizeFactors, 
+              lsvecidxBatch = lsvecidxBatch, 
+              vecboolObserved = !is.na(vecCounts), method = "BFGS", 
+              control = list(maxit = MAXIT, reltol = RELTOL, fnscale = -1)
+        )[c("par", "value", "convergence")]
     }, error = function(strErrorMsg) {
-        print(paste0("ERROR: Fitting null model: fitConstModel().", " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
-        print(paste0("vecParamGuess ", paste(vecParamGuess, collapse = " ")))
-        print(paste0("vecCounts ", paste(vecCounts, collapse = " ")))
-        print(paste0("scaDisp ", paste(scaDisp, collapse = " ")))
-        print(paste0("vecSizeFactors ", paste(vecSizeFactors, collapse = " ")))
-        print(paste0("lsvecidxBatch ", paste(lsvecidxBatch, collapse = " ")))
+        print(paste0("ERROR: Fitting null model: fitConstModel().", 
+                     " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
+        print(paste0("vecParamGuess ", 
+                     paste(vecParamGuess, collapse = " ")))
+        print(paste0("vecCounts ", 
+                     paste(vecCounts, collapse = " ")))
+        print(paste0("scaDisp ", 
+                     paste(scaDisp, collapse = " ")))
+        print(paste0("vecSizeFactors ", 
+                     paste(vecSizeFactors, collapse = " ")))
+        print(paste0("lsvecidxBatch ", 
+                     paste(lsvecidxBatch, collapse = " ")))
         print(paste0("MAXIT ", MAXIT))
         print(strErrorMsg)
         stop(strErrorMsg)
@@ -202,24 +235,29 @@ fitConstModel <- function(vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch,
     }
     scaNParamUsed <- 1
     if (!is.null(lsvecidxBatch)) {
-        lsvecBatchFactors <- lapply(lsvecidxBatch, function(vecidxConfounder) {
-            scaNBatchFactors <- max(vecidxConfounder) - 1  # Batches are counted from 1
-            # Factor of first batch is one (constant), the remaining factors scale
-            # based on the first batch.
-            vecBatchFactorsConfounder <- c(1, exp(lsFit$par[(scaNParamUsed + 
-                1):(scaNParamUsed + scaNBatchFactors)]))
+        lsvecBatchFactors <- list()
+        for(i in seq(1,length(lsvecidxBatch))) {
+            vecidxConfounder <- lsvecidxBatch[[i]]
+            scaNBatchFactors <- max(vecidxConfounder) - 1  
+            # Batches are counted from 1
+            # Factor of first batch is one (constant), the remaining 
+            # factors scale based on the first batch.
+            vecBatchFactors <- c(1, exp(lsFit$par[
+                (scaNParamUsed + 1):
+                (scaNParamUsed + scaNBatchFactors)] ))
             scaNParamUsed <- scaNParamUsed + scaNBatchFactors
             # Catch boundary of likelihood domain on batch factor space:
-            vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
-            vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
-            return(vecBatchFactorsConfounder)
-        })
+            vecBatchFactors[vecBatchFactors < 10^(-10)] <- 10^(-10)
+            vecBatchFactors[vecBatchFactors > 10^(10)] <- 10^(10)
+            lsvecBatchFactors[[i]] <- vecBatchFactors
+        }
     } else {
         lsvecBatchFactors <- NULL
     }
     
-    return(list(scaMu = scaMu, lsvecBatchFactors = lsvecBatchFactors, scaDispParam = scaDisp, 
-        scaLL = lsFit$value, scaConvergence = lsFit$convergence))
+    return(list(scaMu = scaMu, lsvecBatchFactors = lsvecBatchFactors, 
+                scaDispParam = scaDisp, 
+                scaLL = lsFit$value, scaConvergence = lsFit$convergence))
 }
 
 #' Fit an impulse model to data of a gene
@@ -286,36 +324,44 @@ fitConstModel <- function(vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch,
 #' }
 #' 
 #' @author David Sebastian Fischer
-fitImpulseModel <- function(vecImpulseParamGuess, vecCounts, scaDisp, vecSizeFactors, 
-    lsvecidxBatch, vecTimepointsUnique, vecidxTimepoint, MAXIT = 1000, RELTOL = 10^(-8), 
-    trace = 0, REPORT = 10) {
+fitImpulseModel <- function(
+    vecImpulseParamGuess, vecCounts, scaDisp, vecSizeFactors, 
+    lsvecidxBatch, vecTimepointsUnique, vecidxTimepoint, 
+    MAXIT = 1000, RELTOL = 10^(-8), trace = 0, REPORT = 10) {
     
     
     vecParamGuess <- vecImpulseParamGuess
     if (!is.null(lsvecidxBatch)) {
         for (vecidxConfounder in lsvecidxBatch) {
-            vecParamGuess <- c(vecParamGuess, rep(0, length(unique(vecidxConfounder)) - 
-                1))
+            vecParamGuess <- c(
+                vecParamGuess, 
+                rep(0, length(unique(vecidxConfounder)) - 1))
         }
     }
     
     lsFit <- tryCatch({
-        optim(par = vecParamGuess, fn = evalLogLikImpulse_comp, vecCounts = vecCounts, 
-            scaDisp = scaDisp, vecSizeFactors = vecSizeFactors, vecTimepointsUnique = vecTimepointsUnique, 
-            vecidxTimepoint = vecidxTimepoint, lsvecidxBatch = lsvecidxBatch, 
-            vecboolObserved = !is.na(vecCounts), method = "BFGS", control = list(maxit = MAXIT, 
-                reltol = RELTOL, fnscale = -1))[c("par", "value", "convergence")]
+        optim(par = vecParamGuess, fn = evalLogLikImpulse_comp, 
+              vecCounts = vecCounts, scaDisp = scaDisp, 
+              vecSizeFactors = vecSizeFactors, 
+              vecTimepointsUnique = vecTimepointsUnique, 
+              vecidxTimepoint = vecidxTimepoint, lsvecidxBatch = lsvecidxBatch, 
+              vecboolObserved = !is.na(vecCounts), method = "BFGS", 
+              control = list(maxit = MAXIT, reltol = RELTOL, fnscale = -1)
+        )[c("par", "value", "convergence")]
     }, error = function(strErrorMsg) {
         print(paste0("ERROR: Fitting impulse model: fitImpulseModel().", 
-            " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
+                     " Wrote report into ImpulseDE2_lsErrorCausingGene.RData"))
         print(paste0("vecParamGuess ", paste(vecParamGuess, collapse = " ")))
         print(paste0("vecCounts ", paste(vecCounts, collapse = " ")))
         print(paste0("scaDisp ", paste(scaDisp, collapse = " ")))
-        print(paste0("vecSizeFactors ", paste(vecSizeFactors, collapse = " ")))
-        print(paste0("vecTimepointsUnique ", paste(vecTimepointsUnique, 
-            collapse = " ")))
-        print(paste0("vecidxTimepoint ", paste(vecidxTimepoint, collapse = " ")))
-        print(paste0("lsvecidxBatch ", paste(lsvecidxBatch, collapse = " ")))
+        print(paste0("vecSizeFactors ", 
+                     paste(vecSizeFactors, collapse = " ")))
+        print(paste0("vecTimepointsUnique ", 
+                     paste(vecTimepointsUnique, collapse = " ")))
+        print(paste0("vecidxTimepoint ", 
+                     paste(vecidxTimepoint, collapse = " ")))
+        print(paste0("lsvecidxBatch ", 
+                     paste(lsvecidxBatch, collapse = " ")))
         print(paste0("MAXIT ", MAXIT))
         print(strErrorMsg)
         stop(strErrorMsg)
@@ -325,30 +371,37 @@ fitImpulseModel <- function(vecImpulseParamGuess, vecCounts, scaDisp, vecSizeFac
     vecImpulseParam <- lsFit$par[1:6]
     vecImpulseParam[2:4] <- exp(vecImpulseParam[2:4])
     names(vecImpulseParam) <- c("beta", "h0", "h1", "h2", "t1", "t2")
-    vecImpulseValue <- evalImpulse_comp(vecImpulseParam = vecImpulseParam, 
+    vecImpulseValue <- evalImpulse_comp(
+        vecImpulseParam = vecImpulseParam, 
         vecTimepoints = vecTimepointsUnique)[vecidxTimepoint]
     names(vecImpulseValue) <- names(vecCounts)
     scaNParamUsed <- 6
     if (!is.null(lsvecidxBatch)) {
-        lsvecBatchFactors <- lapply(lsvecidxBatch, function(vecidxConfounder) {
-            scaNBatchFactors <- max(vecidxConfounder) - 1  # Batches are counted from 1
-            # Factor of first batch is one (constant), the remaining factors scale
-            # based on the first batch.
-            vecBatchFactorsConfounder <- c(1, exp(lsFit$par[(scaNParamUsed + 
-                1):(scaNParamUsed + scaNBatchFactors)]))
+        lsvecBatchFactors <- list()
+        for(i in seq(1,length(lsvecidxBatch))) {
+            vecidxConfounder <- lsvecidxBatch[[i]]
+            scaNBatchFactors <- max(vecidxConfounder) - 1  
+            # Batches are counted from 1
+            # Factor of first batch is one (constant), the remaining 
+            # factors scale based on the first batch.
+            vecBatchFactors <- c(1, exp(lsFit$par[
+                (scaNParamUsed + 1):
+                (scaNParamUsed + scaNBatchFactors)] ))
             scaNParamUsed <- scaNParamUsed + scaNBatchFactors
             # Catch boundary of likelihood domain on batch factor space:
-            vecBatchFactorsConfounder[vecBatchFactorsConfounder < 10^(-10)] <- 10^(-10)
-            vecBatchFactorsConfounder[vecBatchFactorsConfounder > 10^(10)] <- 10^(10)
-            return(vecBatchFactorsConfounder)
-        })
+            vecBatchFactors[vecBatchFactors < 10^(-10)] <- 10^(-10)
+            vecBatchFactors[vecBatchFactors > 10^(10)] <- 10^(10)
+            lsvecBatchFactors[[i]] <- vecBatchFactors
+        }
     } else {
         lsvecBatchFactors <- NULL
     }
     
-    return(list(vecImpulseParam = vecImpulseParam, vecImpulseValue = vecImpulseValue, 
-        lsvecBatchFactors = lsvecBatchFactors, scaDispParam = scaDisp, scaLL = lsFit$value, 
-        scaConvergence = lsFit$convergence))
+    return(list(vecImpulseParam = vecImpulseParam, 
+                vecImpulseValue = vecImpulseValue, 
+                lsvecBatchFactors = lsvecBatchFactors, 
+                scaDispParam = scaDisp, scaLL = lsFit$value, 
+                scaConvergence = lsFit$convergence))
 }
 
 #' Fit an impulse and constant model to a single gene
@@ -437,24 +490,31 @@ fitImpulseModel <- function(vecImpulseParamGuess, vecCounts, scaDisp, vecSizeFac
 #' }
 #' 
 #' @author David Sebastian Fischer
-fitConstImpulseGene <- function(vecCounts, scaDisp, vecSizeFactors, vecTimepointsUnique, 
+fitConstImpulseGene <- function(
+    vecCounts, scaDisp, vecSizeFactors, vecTimepointsUnique, 
     vecidxTimepoint, lsvecidxBatch, boolFitConst, MAXIT = 1000) {
     
     # (I) Fit Impulse model 1. Compute initialisations
-    lsParamGuesses <- estimateImpulseParam(vecCounts = vecCounts, vecTimepoints = vecTimepointsUnique[vecidxTimepoint], 
+    lsParamGuesses <- estimateImpulseParam(
+        vecCounts = vecCounts, vecTimepoints = vecTimepointsUnique[vecidxTimepoint], 
         lsvecidxBatch = lsvecidxBatch, vecSizeFactors = vecSizeFactors)
     vecParamGuessPeak <- lsParamGuesses$peak
     vecParamGuessValley <- lsParamGuesses$valley
     
     # 2. Initialisation: Peak
     lsFitPeak <- fitImpulseModel(vecImpulseParamGuess = vecParamGuessPeak, 
-        vecCounts = vecCounts, scaDisp = scaDisp, vecSizeFactors = vecSizeFactors, 
-        vecTimepointsUnique = vecTimepointsUnique, vecidxTimepoint = vecidxTimepoint, 
-        lsvecidxBatch = lsvecidxBatch, MAXIT = MAXIT)
+                                 vecCounts = vecCounts, scaDisp = scaDisp, 
+                                 vecSizeFactors = vecSizeFactors, 
+                                 vecTimepointsUnique = vecTimepointsUnique, 
+                                 vecidxTimepoint = vecidxTimepoint, 
+                                 lsvecidxBatch = lsvecidxBatch, MAXIT = MAXIT)
     # 3. Initialisation: Valley
-    lsFitValley <- fitImpulseModel(vecImpulseParamGuess = vecParamGuessValley, 
-        vecCounts = vecCounts, scaDisp = scaDisp, vecSizeFactors = vecSizeFactors, 
-        vecTimepointsUnique = vecTimepointsUnique, vecidxTimepoint = vecidxTimepoint, 
+    lsFitValley <- fitImpulseModel(
+        vecImpulseParamGuess = vecParamGuessValley, 
+        vecCounts = vecCounts, scaDisp = scaDisp, 
+        vecSizeFactors = vecSizeFactors, 
+        vecTimepointsUnique = vecTimepointsUnique, 
+        vecidxTimepoint = vecidxTimepoint, 
         lsvecidxBatch = lsvecidxBatch, MAXIT = MAXIT)
     
     # (II) Select best fit and report fit type
@@ -468,7 +528,8 @@ fitConstImpulseGene <- function(vecCounts, scaDisp, vecSizeFactors, vecTimepoint
         # (III) Fit null model and compute loglikelihood of null model Only
         # necessary if running case only DE analysis as otherwise two impulse
         # models are compared.
-        lsConstFit <- fitConstModel(vecCounts = vecCounts, scaDisp = scaDisp, 
+        lsConstFit <- fitConstModel(
+            vecCounts = vecCounts, scaDisp = scaDisp, 
             vecSizeFactors = vecSizeFactors, lsvecidxBatch = lsvecidxBatch)
     } else {
         lsConstFit <- NULL
@@ -569,7 +630,8 @@ fitConstImpulseGene <- function(vecCounts, scaDisp, vecSizeFactors, vecTimepoint
 #' }
 #' 
 #' @author David Sebastian Fischer
-fitConstImpulse <- function(matCountDataProcCondition, vecDispersions, vecSizeFactors, 
+fitConstImpulse <- function(
+    matCountDataProcCondition, vecDispersions, vecSizeFactors, 
     vecTimepoints, lsvecBatches, boolFitConst) {
     
     # Maximum number of iterations for numerical optimisation of likelihood
@@ -584,9 +646,10 @@ fitConstImpulse <- function(matCountDataProcCondition, vecDispersions, vecSizeFa
         lsvecBatchUnique <- list()
         lsvecidxBatch <- list()
         for (batchfactor in lsvecBatches) {
-            lsvecBatchUnique[[length(lsvecBatchUnique) + 1]] <- unique(batchfactor)
-            lsvecidxBatch[[length(lsvecidxBatch) + 1]] <- match(batchfactor, 
-                unique(batchfactor))
+            lsvecBatchUnique[[length(lsvecBatchUnique) + 1]] <- 
+                unique(batchfactor)
+            lsvecidxBatch[[length(lsvecidxBatch) + 1]] <- 
+                match(batchfactor, unique(batchfactor))
         }
         names(lsvecBatchUnique) <- names(lsvecBatches)
         names(lsvecidxBatch) <- names(lsvecBatches)
@@ -596,17 +659,19 @@ fitConstImpulse <- function(matCountDataProcCondition, vecDispersions, vecSizeFa
     }
     
     lsFits <- bplapply(rownames(matCountDataProcCondition), function(x) {
-        fitConstImpulseGene(vecCounts = matCountDataProcCondition[x, ], 
+        fitConstImpulseGene(
+            vecCounts = matCountDataProcCondition[x, ], 
             scaDisp = vecDispersions[x], vecSizeFactors = vecSizeFactors, 
-            vecTimepointsUnique = vecTimepointsUnique, vecidxTimepoint = vecidxTimepoint, 
+            vecTimepointsUnique = vecTimepointsUnique, 
+            vecidxTimepoint = vecidxTimepoint, 
             lsvecidxBatch = lsvecidxBatch, boolFitConst = boolFitConst, 
             MAXIT = MAXIT)
     })
     names(lsFits) <- rownames(matCountDataProcCondition)
     
     return(list(lsFits = lsFits, vecTimepointsUnique = vecTimepointsUnique, 
-        vecidxTimepoint = vecidxTimepoint, lsvecBatchUnique = lsvecBatchUnique, 
-        lsvecidxBatch = lsvecidxBatch))
+                vecidxTimepoint = vecidxTimepoint, lsvecBatchUnique = lsvecBatchUnique, 
+                lsvecidxBatch = lsvecidxBatch))
 }
 
 #' Fits impulse and constant models to a timecourse dataset
@@ -729,13 +794,16 @@ fitModels <- function(objectImpulseDE2, vecConfounders, boolCaseCtrl) {
     
     # Create lists of samples per condition
     if (boolCaseCtrl) {
-        lsSamplesByCond <- list(combined = objectImpulseDE2@dfAnnotationProc$Sample, 
-            case = objectImpulseDE2@dfAnnotationProc[objectImpulseDE2@dfAnnotationProc$Condition == 
-                "case", ]$Sample, control = objectImpulseDE2@dfAnnotationProc[objectImpulseDE2@dfAnnotationProc$Condition == 
-                "control", ]$Sample)
+        lsSamplesByCond <- list(
+            combined = objectImpulseDE2@dfAnnotationProc$Sample, 
+            case = objectImpulseDE2@dfAnnotationProc[
+                objectImpulseDE2@dfAnnotationProc$Condition == "case", ]$Sample, 
+            control = objectImpulseDE2@dfAnnotationProc[
+                objectImpulseDE2@dfAnnotationProc$Condition == "control", ]$Sample)
     } else {
-        lsSamplesByCond <- list(case = objectImpulseDE2@dfAnnotationProc[objectImpulseDE2@dfAnnotationProc$Condition == 
-            "case", ]$Sample)
+        lsSamplesByCond <- list(
+            case = objectImpulseDE2@dfAnnotationProc[
+                objectImpulseDE2@dfAnnotationProc$Condition == "case", ]$Sample)
     }
     
     # Get batch assignments of samples
@@ -759,24 +827,36 @@ fitModels <- function(objectImpulseDE2, vecConfounders, boolCaseCtrl) {
     # combined case of case-ctrl to derive a inferred mean parameter for
     # reference.
     lsFitResultsByCond <- lapply(vecLabels, function(label) {
-        lsFitResults <- fitConstImpulse(matCountDataProcCondition = objectImpulseDE2@matCountDataProc[, 
-            lsSamplesByCond[[label]]], vecSizeFactors = objectImpulseDE2@vecSizeFactors[lsSamplesByCond[[label]]], 
-            vecDispersions = objectImpulseDE2@vecDispersions, vecTimepoints = vecTimepoints[lsSamplesByCond[[label]]], 
-            lsvecBatches = lapply(lsvecBatches, function(confounder) confounder[lsSamplesByCond[[label]]]), 
+        lsFitResults <- fitConstImpulse(
+            matCountDataProcCondition = 
+                objectImpulseDE2@matCountDataProc[,lsSamplesByCond[[label]]], 
+            vecSizeFactors = 
+                objectImpulseDE2@vecSizeFactors[lsSamplesByCond[[label]]], 
+            vecDispersions = objectImpulseDE2@vecDispersions, 
+            vecTimepoints = vecTimepoints[lsSamplesByCond[[label]]], 
+            lsvecBatches = lapply(lsvecBatches, function(confounder) 
+                confounder[lsSamplesByCond[[label]]] ), 
             boolFitConst = TRUE)
         # Note: Don't need constant fit with case-control other than for results
         # table and transient identification. It is however fast and the
         # inferred means may be of interest - do for all conditions.
         return(lsFitResults)
     })
-    lsModelFitsByCondFormat <- lapply(lsFitResultsByCond, function(res) res$lsFits)
+    lsModelFitsByCondFormat <- lapply(
+        lsFitResultsByCond, function(res) res$lsFits)
     names(lsModelFitsByCondFormat) <- vecLabels
-    lsModelFitsByCondFormat$IdxGroups <- lapply(lsFitResultsByCond, function(res) {
-        list(vecTimepointsUnique = res$vecTimepointsUnique, vecidxTimepoint = res$vecidxTimepoint, 
-            lsvecBatchUnique = res$lsvecBatchUnique, lsvecidxBatch = res$lsvecidxBatch)
-    })
+    lsModelFitsByCondFormat$IdxGroups <- lapply(
+        lsFitResultsByCond, function(res) {
+            list(vecTimepointsUnique = res$vecTimepointsUnique, 
+                 vecidxTimepoint = res$vecidxTimepoint, 
+                 lsvecBatchUnique = res$lsvecBatchUnique, 
+                 lsvecidxBatch = res$lsvecidxBatch)
+        })
     names(lsModelFitsByCondFormat$IdxGroups) <- vecLabels
-    for (label in vecLabels) lsModelFitsByCondFormat$IdxGroups[[label]]$Samples <- lsSamplesByCond[[label]]
+    for (label in vecLabels){ 
+        lsModelFitsByCondFormat$IdxGroups[[label]]$Samples <- 
+            lsSamplesByCond[[label]] 
+    }
     
     objectImpulseDE2@lsModelFits <- lsModelFitsByCondFormat
     return(objectImpulseDE2)

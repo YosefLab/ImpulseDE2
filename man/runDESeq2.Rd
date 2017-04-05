@@ -26,9 +26,9 @@ Names refer to columns in dfAnnotationProc.}
 }
 \value{
 (numeric vector length number of genes)
-Dispersion parameter estimates for each gene.
-In format of parameter size of \link{dnbinom}
-which is 1/dispersion factor of DESeq2.
+   Dispersion parameter estimates for each gene.
+   In format of parameter size of \link{dnbinom}
+   which is 1/dispersion factor of DESeq2.
 }
 \description{
 Run DESeq2 and extract dispersion parameter estimates.

@@ -11,7 +11,8 @@ plotGenes(vecGeneIDs = NULL, scaNTopIDs = NULL, objectImpulseDE2,
 }
 \arguments{
 \item{vecGeneIDs}{(string vector) [Default NULL]
-Gene names to be plotted. Must be in rownames of objectImpulseDE2@matCountDataProc.
+Gene names to be plotted. Must be in rownames of 
+objectImpulseDE2@matCountDataProc.
 Supply either vecGeneIDs or scaNTopIDs.}
 
 \item{scaNTopIDs}{(int) [Default NULL]

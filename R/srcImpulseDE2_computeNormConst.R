@@ -33,14 +33,16 @@ computeSizeFactors <- function(matCountDataProc) {
         !any(gene == 0)
     })
     # Take geometric mean
-    vecGeomMean <- apply(matCountDataProc[vecboolZeroObs, ], 1, function(gene) {
-        (prod(gene[!is.na(gene)]))^(1/sum(!is.na(gene)))
-    })
+    vecGeomMean <- apply(
+        matCountDataProc[vecboolZeroObs, ], 1, function(gene) {
+            (prod(gene[!is.na(gene)]))^(1/sum(!is.na(gene)))
+        })
     
     # Chose median of ratios over genes as size factor
-    vecSizeFactors <- apply(matCountDataProc[vecboolZeroObs, ], 2, function(sample) {
-        median(sample/vecGeomMean, na.rm = TRUE)
-    })
+    vecSizeFactors <- apply(
+        matCountDataProc[vecboolZeroObs, ], 2, function(sample) {
+            median(sample/vecGeomMean, na.rm = TRUE)
+        })
     
     if (any(vecSizeFactors == 0)) {
         print("WARNING: Found size factors==0, setting these to 1.")

@@ -117,7 +117,8 @@ NULL
 #' \item df_red: Degrees of freedom of reduced model
 #' \item mean: Inferred mean parameter of constant model of first batch.
 #' From combined samples in case-ctrl. 
-#' \item allZero (bool) Whether there were no observed non-zero observations of this gene.
+#' \item allZero (bool) Whether there were no observed non-zero 
+#' observations of this gene.
 #' If TRUE, fitting and DE analsysis were skipped and entry is NA.
 #' }
 #' Entries only present in case-only DE analysis:
@@ -179,12 +180,15 @@ NULL
 #' @author David Sebastian Fischer
 #' 
 #' @export
-runImpulseDE2 <- function(matCountData = NULL, dfAnnotation = NULL, boolCaseCtrl = FALSE, 
-    vecConfounders = NULL, scaNProc = 1, scaQThres = NULL, vecDispersionsExternal = NULL, 
-    vecSizeFactorsExternal = NULL, boolIdentifyTransients = FALSE, boolVerbose = TRUE) {
+runImpulseDE2 <- function(
+    matCountData = NULL, dfAnnotation = NULL, boolCaseCtrl = FALSE, 
+    vecConfounders = NULL, scaNProc = 1, scaQThres = NULL, 
+    vecDispersionsExternal = NULL, 
+    vecSizeFactorsExternal = NULL, boolIdentifyTransients = FALSE, 
+    boolVerbose = TRUE) {
     
-    strMessage <- paste0("ImpulseDE2 for count data, v", packageDescription("ImpulseDE2", 
-        fields = "Version"))
+    strMessage <- paste0("ImpulseDE2 for count data, v", 
+                         packageDescription("ImpulseDE2", fields = "Version"))
     if (boolVerbose) { message(strMessage) }
     strReport <- strMessage
     
@@ -197,16 +201,18 @@ runImpulseDE2 <- function(matCountData = NULL, dfAnnotation = NULL, boolCaseCtrl
         if (class(matCountData) == "SummarizedExperiment"){ 
             matCountData <- assay(matCountData)
         }
-        lsProcessedData <- processData(dfAnnotation = dfAnnotation, matCountData = matCountData, 
+        lsProcessedData <- processData(
+            dfAnnotation = dfAnnotation, matCountData = matCountData, 
             boolCaseCtrl = boolCaseCtrl, vecConfounders = vecConfounders, 
-            vecDispersionsExternal = vecDispersionsExternal, vecSizeFactorsExternal = vecSizeFactorsExternal)
+            vecDispersionsExternal = vecDispersionsExternal, 
+            vecSizeFactorsExternal = vecSizeFactorsExternal)
         
         matCountDataProc <- lsProcessedData$matCountDataProc
         dfAnnotationProc <- lsProcessedData$dfAnnotationProc
         vecSizeFactorsExternalProc <- lsProcessedData$vecSizeFactorsExternalProc
         vecDispersionsExternalProc <- lsProcessedData$vecDispersionsExternalProc
         if (boolVerbose) { 
-          write(lsProcessedData$strReportProcessing, file = "", ncolumns = 1) 
+            write(lsProcessedData$strReportProcessing, file = "", ncolumns = 1)
         }
         strReport <- paste0(strReport, lsProcessedData$strReportProcessing)
         
@@ -219,16 +225,19 @@ runImpulseDE2 <- function(matCountData = NULL, dfAnnotation = NULL, boolCaseCtrl
         
         # 2. Run DESeq2 Use dispersion factors from DESeq2 if
         if (is.null(vecDispersionsExternal)) {
-            strMessage <- "# Run DESeq2: Using dispersion factors computed by DESeq2."
+            strMessage <- paste0("# Run DESeq2: Using dispersion factors",
+                                 "computed by DESeq2.")
             if (boolVerbose) { message(strMessage) }
             strReport <- paste0(strReport, "\n", strMessage)
             tm_runDESeq2 <- system.time({
-                vecDispersions <- runDESeq2(dfAnnotationProc = dfAnnotationProc, 
-                  matCountDataProc = matCountDataProc, boolCaseCtrl = boolCaseCtrl, 
-                  vecConfounders = vecConfounders)
+                vecDispersions <- runDESeq2(
+                    dfAnnotationProc = dfAnnotationProc, 
+                    matCountDataProc = matCountDataProc, 
+                    boolCaseCtrl = boolCaseCtrl, 
+                    vecConfounders = vecConfounders)
             })
-            strMessage <- paste0("Consumed time: ", round(tm_runDESeq2["elapsed"]/60, 
-                2), " min.")
+            strMessage <- paste0("Consumed time: ", 
+                                 round(tm_runDESeq2["elapsed"]/60,2), " min.")
             if (boolVerbose) { message(strMessage) }
             strReport <- paste0(strReport, "\n", strMessage)
         } else {
@@ -243,13 +252,17 @@ runImpulseDE2 <- function(matCountData = NULL, dfAnnotation = NULL, boolCaseCtrl
         strMessage <- "# Compute size factors"
         if (boolVerbose) { message(strMessage) }
         strReport <- paste0(strReport, "\n", strMessage)
-        vecSizeFactors <- computeNormConst(matCountDataProc = matCountDataProc, 
+        vecSizeFactors <- computeNormConst(
+            matCountDataProc = matCountDataProc, 
             vecSizeFactorsExternal = vecSizeFactorsExternalProc)
         
         # 4. Create instance of ImpulseDE2Object Create ImpulseDE2 object
-        objectImpulseDE2 <- new("ImpulseDE2Object", dfImpulseDE2Results = NULL, 
-            vecDEGenes = NULL, lsModelFits = NULL, matCountDataProc = matCountDataProc, 
-            vecAllIDs = rownames(matCountData), dfAnnotationProc = dfAnnotationProc, 
+        objectImpulseDE2 <- new(
+            "ImpulseDE2Object", dfImpulseDE2Results = NULL, 
+            vecDEGenes = NULL, lsModelFits = NULL, 
+            matCountDataProc = matCountDataProc, 
+            vecAllIDs = rownames(matCountData), 
+            dfAnnotationProc = dfAnnotationProc, 
             vecSizeFactors = vecSizeFactors, vecDispersions = vecDispersions, 
             boolCaseCtrl = boolCaseCtrl, vecConfounders = vecConfounders, 
             scaNProc = scaNProc, scaQThres = scaQThres, strReport = strReport)
@@ -258,51 +271,56 @@ runImpulseDE2 <- function(matCountData = NULL, dfAnnotation = NULL, boolCaseCtrl
         strMessage <- "# Fitting null and alternative model to the genes"
         if (boolVerbose) { message(strMessage) }
         objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-            "\n", strMessage)
+                                             "\n", strMessage)
         tm_fitImpulse <- system.time({
-            objectImpulseDE2 <- fitModels(objectImpulseDE2 = objectImpulseDE2, 
+            objectImpulseDE2 <- fitModels(
+                objectImpulseDE2 = objectImpulseDE2, 
                 vecConfounders = vecConfounders, boolCaseCtrl = boolCaseCtrl)
         })
-        strMessage <- paste0("Consumed time: ", round(tm_fitImpulse["elapsed"]/60, 
-            2), " min.")
+        strMessage <- paste0("Consumed time: ", 
+                             round(tm_fitImpulse["elapsed"]/60, 2), " min.")
         if (boolVerbose) { message(strMessage) }
         objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-            "\n", strMessage)
+                                             "\n", strMessage)
         
         # 6. Fit sigmoid model to case condition if desired
         if (boolIdentifyTransients) {
             strMessage <- "# Fitting sigmoid model to case condition"
             if (boolVerbose) { message(strMessage) }
             objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-                "\n", strMessage)
+                                                 "\n", strMessage)
             tm_fitSigmoid <- system.time({
-                objectImpulseDE2 <- fitSigmoidModels(objectImpulseDE2 = objectImpulseDE2, 
-                  vecConfounders = vecConfounders, strCondition = "case")
+                objectImpulseDE2 <- fitSigmoidModels(
+                    objectImpulseDE2 = objectImpulseDE2, 
+                    vecConfounders = vecConfounders, strCondition = "case")
             })
-            strMessage <- paste0("Consumed time: ", round(tm_fitSigmoid["elapsed"]/60, 
-                2), " min.")
+            strMessage <- paste0("Consumed time: ", 
+                                 round(tm_fitSigmoid["elapsed"]/60, 2), " min.")
             if (boolVerbose) { message(strMessage) }
             objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-                "\n", strMessage)
+                                                 "\n", strMessage)
         }
         
         # 7. Differentially expression analysis based on model fits
         strMessage <- "# Differentially expression analysis based on model fits"
         if (boolVerbose) { message(strMessage) }
         objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-            "\n", strMessage)
-        objectImpulseDE2 <- runDEAnalysis(objectImpulseDE2 = objectImpulseDE2, 
+                                             "\n", strMessage)
+        objectImpulseDE2 <- runDEAnalysis(
+            objectImpulseDE2 = objectImpulseDE2, 
             boolCaseCtrl = boolCaseCtrl, vecConfounders = vecConfounders, 
             boolIdentifyTransients = boolIdentifyTransients)
         
         if (!is.null(scaQThres)) {
-            vecDEGenes <- as.vector(objectImpulseDE2@dfImpulseDE2Results[as.numeric(objectImpulseDE2@dfImpulseDE2Results$padj) <= 
-                scaQThres, "Gene"])
+            vecDEGenes <- as.vector(objectImpulseDE2@dfImpulseDE2Results[
+                as.numeric(objectImpulseDE2@dfImpulseDE2Results$padj) <= 
+                    scaQThres, "Gene"])
             strMessage <- paste0("Found ", length(vecDEGenes), " DE genes", 
-                " at a FDR corrected p-value cut off of ", scaQThres, ".")
+                                 " at a FDR corrected p-value cut off of ", 
+                                 scaQThres, ".")
             if (boolVerbose) { message(strMessage) }
             objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-                "\n", strMessage)
+                                                 "\n", strMessage)
         } else {
             vecDEGenes <- NULL
         }
@@ -311,12 +329,12 @@ runImpulseDE2 <- function(matCountData = NULL, dfAnnotation = NULL, boolCaseCtrl
     strMessage <- "Finished running ImpulseDE2."
     if (boolVerbose) { message(strMessage) }
     objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", 
-        strMessage)
-    strMessage <- paste0("TOTAL consumed time: ", round(tm_runImpulseDE2["elapsed"]/60, 
-        2), " min.")
+                                         strMessage)
+    strMessage <- paste0("TOTAL consumed time: ", 
+                         round(tm_runImpulseDE2["elapsed"]/60, 2), " min.")
     if (boolVerbose) { message(strMessage) }
     objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", 
-        strMessage)
+                                         strMessage)
     
     return(objectImpulseDE2)
 }

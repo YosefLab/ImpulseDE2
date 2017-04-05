@@ -38,18 +38,18 @@ size factor computation in ImpulseDE2.}
 \value{
 (list length 4)
 \itemize{
-\item matCountDataProc (matrix genes x samples)
-Read count data.
-\item dfAnnotationProc (data frame samples x covariates) 
-{Sample, Condition, Time (numeric), TimeCateg (str)
-(and confounding variables if given).}
-Processed annotation table with covariates for each sample.
-\item vecSizeFactorsExternalProc (numeric vector number of samples) 
-Model scaling factors for each sample which take
-sequencing depth into account (size factors).
-\item vecDispersionsExternalProc (vector number of genes) Gene-wise 
-negative binomial dispersion hyper-parameter.
-\item strReportProcessing (str) String of stdout of processData().
+   \item matCountDataProc (matrix genes x samples)
+   Read count data.
+   \item dfAnnotationProc (data frame samples x covariates) 
+   {Sample, Condition, Time (numeric), TimeCateg (str)
+   (and confounding variables if given).}
+   Processed annotation table with covariates for each sample.
+   \item vecSizeFactorsExternalProc (numeric vector number of samples) 
+   Model scaling factors for each sample which take
+   sequencing depth into account (size factors).
+   \item vecDispersionsExternalProc (vector number of genes) Gene-wise 
+   negative binomial dispersion hyper-parameter.
+   \item strReportProcessing (str) String of stdout of processData().
 }
 }
 \description{
@@ -57,25 +57,27 @@ Check validity of input and process count data matrix and annotation
 into data structures used later in \link{runImpulseDE2}.
 \link{processData} is structure in the following way:
 \itemize{
-\item Subhelper functions:
-\itemize{
-\item checkNull() Check whether object was supplied (is not NULL).
-\item checkDimMatch() Checks whether dimensions of matrices agree.
-\item checkElementMatch() Checks whether vectors are identical.
-\item checkNumeric() Checks whether elements are numeric.
-\item checkProbability() Checks whether elements are probabilities.
-\item checkCounts() Checks whether elements are count data.
-}
-\item Helper functions:
-\itemize{
-\item checkData() Check format and presence of input data.
-\item nameGenes() Name genes if names are not given.
-\item procAnnotation() Add categorial time variable to annotation table.
-Add nested batch column if necessary.
-Reduce to samples used.
-\item reduceCountData() Reduce count data to data which are utilised later.
-}
-\item Script body
+   \item Subhelper functions:
+   \itemize{
+     \item checkNull() Check whether object was supplied (is not NULL).
+     \item checkDimMatch() Checks whether dimensions of matrices agree.
+     \item checkElementMatch() Checks whether vectors are identical.
+     \item checkNumeric() Checks whether elements are numeric.
+     \item checkProbability() Checks whether elements are probabilities.
+     \item checkCounts() Checks whether elements are count data.
+   }
+   \item Helper functions:
+   \itemize{
+     \item checkData() Check format and presence of input data.
+     \item nameGenes() Name genes if names are not given.
+     \item procAnnotation() Add categorial time variable to 
+     annotation table.
+     Add nested batch column if necessary.
+     Reduce to samples used.
+     \item reduceCountData() Reduce count data to data which are 
+     utilised later.
+   }
+   \item Script body
 }
 }
 \seealso{

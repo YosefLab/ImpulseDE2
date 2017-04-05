@@ -32,7 +32,8 @@ Batches are enumerated from 1 to number of batches.}
 Whether sample is observed (finite and not NA).}
 }
 \value{
-scaLogLik (scalar) Value of cost function (loglikelihood) for given gene.
+scaLogLik (scalar) Value of cost function 
+(loglikelihood) for given gene.
 }
 \description{
 Pre-compile heavily used functions.
