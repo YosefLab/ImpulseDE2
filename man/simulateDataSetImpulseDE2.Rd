@@ -18,11 +18,13 @@ Number of time points in batch A.}
 \item{vecTimePointsB}{(numeric vector number of time points)
 Number of time points in batch B.}
 
-\item{vecBatchesA}{(str vector number of samples in vecTimePointsA) [Default NULL]
+\item{vecBatchesA}{(str vector number of samples in vecTimePointsA) 
+[Default NULL]
 Batch IDs of each sample in condition A. Set to NULL if 
 simulating without batch effects.}
 
-\item{vecBatchesB}{(str vector number of samples in vecTimePointsB) [Default NULL]
+\item{vecBatchesB}{(str vector number of samples in vecTimePointsB) 
+[Default NULL]
 Batch IDs of each sample in condition B. Set to NULL if 
 simulating without batch effects.}
 
@@ -34,7 +36,8 @@ simulating without batch effects.}
 
 \item{scaNSig}{(scalar) Number of sigmoid distributed genes in data set.}
 
-\item{scaNRand}{(scalar) [Default NULL] Number of random distributed genes in data set.}
+\item{scaNRand}{(scalar) [Default NULL] Number of random 
+distributed genes in data set.}
 
 \item{scaSeedInit}{(scalar) [Default 1] Scalar based on which seeds are chosen.
 One vlaue correspond sto a unique set of seeds for all random number generations.}

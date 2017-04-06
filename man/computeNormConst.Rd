@@ -21,9 +21,11 @@ vecSizeFactors (numeric vector number of samples)
    sequencing depth into account (size factors).
 }
 \description{
-The normalisation constant is the median of the ratio of gene counts versus
+The normalisation constant is the median of the ratio 
+of gene counts versus
 the geomtric gene count mean. There is one normalisation constant per 
-replicate. An intuitive alternative would be the sequencing depth, the median
+replicate. An intuitive alternative would be the sequencing depth, 
+the median
 ratio is however less sensitive to highly differentially expressed genes
 with high counts (ref. DESeq).
 The normalisation constants are used to scale the mean of the

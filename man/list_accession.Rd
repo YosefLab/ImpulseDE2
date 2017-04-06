@@ -21,7 +21,8 @@
 \arguments{
 \item{x}{(ImpulseDE2Object) ImpulseDE2 output object.}
 
-\item{i, name}{(idx or str) Name or index of core output element of ImpulseDE2Object.}
+\item{i, name}{(idx or str) Name or index of core output 
+element of ImpulseDE2Object.}
 
 \item{j}{Not used, only vectors.}
 

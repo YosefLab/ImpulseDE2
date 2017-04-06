@@ -270,8 +270,8 @@ runImpulseDE2 <- function(
         # 5. Fit null and alternative model to each gene
         strMessage <- "# Fitting null and alternative model to the genes"
         if (boolVerbose) { message(strMessage) }
-        objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-                                             "\n", strMessage)
+        objectImpulseDE2 <- append_strReport(obj = objectImpulseDE2,
+                                             s = strMessage)
         tm_fitImpulse <- system.time({
             objectImpulseDE2 <- fitModels(
                 objectImpulseDE2 = objectImpulseDE2, 
@@ -280,15 +280,15 @@ runImpulseDE2 <- function(
         strMessage <- paste0("Consumed time: ", 
                              round(tm_fitImpulse["elapsed"]/60, 2), " min.")
         if (boolVerbose) { message(strMessage) }
-        objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-                                             "\n", strMessage)
+        objectImpulseDE2 <- append_strReport(obj = objectImpulseDE2,
+                                             s = strMessage)
         
         # 6. Fit sigmoid model to case condition if desired
         if (boolIdentifyTransients) {
             strMessage <- "# Fitting sigmoid model to case condition"
             if (boolVerbose) { message(strMessage) }
-            objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-                                                 "\n", strMessage)
+            objectImpulseDE2 <- append_strReport(obj = objectImpulseDE2,
+                                                 s = strMessage)
             tm_fitSigmoid <- system.time({
                 objectImpulseDE2 <- fitSigmoidModels(
                     objectImpulseDE2 = objectImpulseDE2, 
@@ -297,44 +297,45 @@ runImpulseDE2 <- function(
             strMessage <- paste0("Consumed time: ", 
                                  round(tm_fitSigmoid["elapsed"]/60, 2), " min.")
             if (boolVerbose) { message(strMessage) }
-            objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-                                                 "\n", strMessage)
+            objectImpulseDE2 <- append_strReport(obj = objectImpulseDE2,
+                                                 s = strMessage)
         }
         
         # 7. Differentially expression analysis based on model fits
         strMessage <- "# Differentially expression analysis based on model fits"
         if (boolVerbose) { message(strMessage) }
-        objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-                                             "\n", strMessage)
+        objectImpulseDE2 <- append_strReport(obj = objectImpulseDE2,
+                                             s = strMessage)
         objectImpulseDE2 <- runDEAnalysis(
             objectImpulseDE2 = objectImpulseDE2, 
             boolCaseCtrl = boolCaseCtrl, vecConfounders = vecConfounders, 
             boolIdentifyTransients = boolIdentifyTransients)
         
         if (!is.null(scaQThres)) {
-            vecDEGenes <- as.vector(objectImpulseDE2@dfImpulseDE2Results[
-                as.numeric(objectImpulseDE2@dfImpulseDE2Results$padj) <= 
+            vecDEGenes <- as.vector(objectImpulseDE2$dfImpulseDE2Results[
+                as.numeric(objectImpulseDE2$dfImpulseDE2Results$padj) <= 
                     scaQThres, "Gene"])
             strMessage <- paste0("Found ", length(vecDEGenes), " DE genes", 
                                  " at a FDR corrected p-value cut off of ", 
                                  scaQThres, ".")
             if (boolVerbose) { message(strMessage) }
-            objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, 
-                                                 "\n", strMessage)
+            objectImpulseDE2 <- append_strReport(obj = objectImpulseDE2,
+                                                 s = strMessage)
         } else {
             vecDEGenes <- NULL
         }
-        objectImpulseDE2@vecDEGenes <- vecDEGenes
+        objectImpulseDE2 <- set_vecDEGenes(obj=objectImpulseDE2,
+                                           element=vecDEGenes)
     })
     strMessage <- "Finished running ImpulseDE2."
     if (boolVerbose) { message(strMessage) }
-    objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", 
-                                         strMessage)
+    objectImpulseDE2 <- append_strReport(obj = objectImpulseDE2,
+                                         s = strMessage)
     strMessage <- paste0("TOTAL consumed time: ", 
                          round(tm_runImpulseDE2["elapsed"]/60, 2), " min.")
     if (boolVerbose) { message(strMessage) }
-    objectImpulseDE2@strReport <- paste0(objectImpulseDE2@strReport, "\n", 
-                                         strMessage)
+    objectImpulseDE2 <- append_strReport(obj = objectImpulseDE2,
+                                         s = strMessage)
     
     return(objectImpulseDE2)
 }

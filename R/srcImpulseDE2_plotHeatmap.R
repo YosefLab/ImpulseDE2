@@ -72,26 +72,21 @@ plotHeatmap <- function(
     objectImpulseDE2, strCondition, boolIdentifyTransients, 
     scaQThres = 0.01) {
     
-    # Load objects from output class
-    matCountDataProc <- objectImpulseDE2@matCountDataProc
-    dfAnnotationProc <- objectImpulseDE2@dfAnnotationProc
-    lsModelFits <- objectImpulseDE2@lsModelFits
-    dfImpulseDE2Results <- objectImpulseDE2@dfImpulseDE2Results
-    vecSizeFactors <- objectImpulseDE2@vecSizeFactors
+    dfAnnot <- get_dfAnnotationProc(obj=objectImpulseDE2)
     
-    scaNGenes <- dim(matCountDataProc)[1]
+    scaNGenes <- dim(get_matCountDataProc(obj=objectImpulseDE2))[1]
     # Order genes by time of extremum (peak/valley)
-    vecSignificantIDs <- rownames(dfImpulseDE2Results[
-        !is.na(dfImpulseDE2Results$padj) & 
-            dfImpulseDE2Results$padj < scaQThres, ])
-    vecTimePointsToEval <- sort(unique(dfAnnotationProc$Time), 
+    vecSignificantIDs <- rownames(objectImpulseDE2$dfImpulseDE2Results[
+        !is.na(objectImpulseDE2$dfImpulseDE2Results$padj) & 
+            objectImpulseDE2$dfImpulseDE2Results$padj < scaQThres, ])
+    vecTimePointsToEval <- sort(unique(dfAnnot$Time), 
                                 decreasing = FALSE)
     scaNTPtoEvaluate <- length(vecTimePointsToEval)
     matImpulseValue <- do.call(rbind, lapply(
         vecSignificantIDs, function(x) {
             evalImpulse_comp(
                 vecImpulseParam = 
-                    lsModelFits[[strCondition]][[x]]$lsImpulseFit$vecImpulseParam, 
+                    get_objectImpulseDE2(obj=objectImpulseDE2)[[strCondition]][[x]]$lsImpulseFit$vecImpulseParam, 
                 vecTimepoints = vecTimePointsToEval)
         }))
     rownames(matImpulseValue) <- vecSignificantIDs
@@ -105,9 +100,9 @@ plotHeatmap <- function(
     
     if (boolIdentifyTransients) {
         # Group into transients and monotonous
-        vecidxTransient <- which(dfImpulseDE2Results[vecSignificantIDs, 
+        vecidxTransient <- which(objectImpulseDE2$dfImpulseDE2Results[vecSignificantIDs, 
                                                      ]$isTransient)
-        vecidxMonotonous <- which(dfImpulseDE2Results[vecSignificantIDs, 
+        vecidxMonotonous <- which(objectImpulseDE2$dfImpulseDE2Results[vecSignificantIDs, 
                                                       ]$isMonotonous)
         
         # Fine sort montonous transition signals into up/down
@@ -176,18 +171,18 @@ plotHeatmap <- function(
         lsvecGeneGroups <- list(all = vecSignificantIDs[vecidxAllSort])
     }
     
-    vecUniqueTP <- unique(dfAnnotationProc$Time)
+    vecUniqueTP <- unique(dfAnnot$Time)
     vecSizeFactors <- computeNormConst(
-        matCountDataProc = matCountDataProc, 
-        vecSizeFactorsExternal = vecSizeFactors)
+        matCountDataProc = get_matCountDataProc(obj=objectImpulseDE2), 
+        vecSizeFactorsExternal = get_vecSizeFactors(obj=objectImpulseDE2))
     matSizefactors <- matrix(
         vecSizeFactors, nrow = length(vecSignificantIDs), 
-        ncol = dim(matCountDataProc)[2], byrow = TRUE)
+        ncol = dim(get_matCountDataProc(obj=objectImpulseDE2))[2], byrow = TRUE)
     
     # 1. Plot raw data
-    matDataNorm <- matCountDataProc[vecSignificantIDs, ]/matSizefactors
+    matDataNorm <- get_matCountDataProc(obj=objectImpulseDE2)[vecSignificantIDs, ]/matSizefactors
     matDataHeat <- do.call(cbind, lapply(vecUniqueTP, function(tp) {
-        vecidxCols <- which(dfAnnotationProc$Time %in% tp)
+        vecidxCols <- which(dfAnnot$Time %in% tp)
         if (length(vecidxCols) > 1) {
             return(rowMeans(matDataNorm[, vecidxCols], na.rm = TRUE))
         } else {

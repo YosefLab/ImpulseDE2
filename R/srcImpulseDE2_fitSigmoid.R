@@ -478,15 +478,10 @@ fitSigmoidGene <- function(
 #' @export
 fitSigmoidModels <- function(objectImpulseDE2, vecConfounders, strCondition) {
     
-    # Load objects from output class
-    matCountDataProc <- objectImpulseDE2@matCountDataProc
-    dfAnnotationProc <- objectImpulseDE2@dfAnnotationProc
-    lsModelFits <- objectImpulseDE2@lsModelFits
-    vecSizeFactors <- objectImpulseDE2@vecSizeFactors
-    vecDispersions <- objectImpulseDE2@vecDispersions
+    dfAnnot <- get_dfAnnotationProc(obj=objectImpulseDE2)
+    lsModelFits <- get_lsModelFits(obj=objectImpulseDE2)
     
-    vecSamplesCond <- dfAnnotationProc[
-        dfAnnotationProc$Condition == strCondition, ]$Sample
+    vecSamplesCond <- dfAnnot[dfAnnot$Condition == strCondition, ]$Sample
     
     # Get batch assignments of samples
     lsvecidxBatchCond <- lsModelFits$IdxGroups[[strCondition]]$lsvecidxBatch
@@ -505,23 +500,28 @@ fitSigmoidModels <- function(objectImpulseDE2, vecConfounders, strCondition) {
     # function in MLE fitting of sigmoidal model:
     MAXIT <- 1000
     
-    lsSigmoidFits <- bplapply(rownames(matCountDataProc), function(x) {
-        fitSigmoidGene(
-            vecCounts = matCountDataProc[x, vecSamplesCond], 
-            scaDisp = vecDispersions[x], 
-            vecSizeFactors = vecSizeFactors[vecSamplesCond], 
-            vecTimepointsUnique = vecTimepointsUniqueCond, 
-            vecidxTimepoint = vecidxTimepointCond, 
-            lsvecidxBatch = lsvecidxBatchCond, MAXIT = MAXIT)
-    })
-    names(lsSigmoidFits) <- rownames(matCountDataProc)
+    vecGeneIDs <- get_matCountDataProc(obj=objectImpulseDE2)
+    lsSigmoidFits <- bplapply(vecGeneIDs, function(x) {
+            fitSigmoidGene(
+                vecCounts = get_matCountDataProc(
+                    obj=objectImpulseDE2)[x, vecSamplesCond], 
+                scaDisp = get_vecDispersions(
+                    obj=objectImpulseDE2)[x], 
+                vecSizeFactors = get_vecSizeFactors(
+                    obj=objectImpulseDE2)[vecSamplesCond], 
+                vecTimepointsUnique = vecTimepointsUniqueCond, 
+                vecidxTimepoint = vecidxTimepointCond, 
+                lsvecidxBatch = lsvecidxBatchCond, MAXIT = MAXIT)
+        })
+    names(lsSigmoidFits) <- vecGeneIDs
     
     # Add sigmoid fits into model fit data structure to preexisting impulse
     # (and constant) fits.
-    for (x in rownames(matCountDataProc)) {
+    for (x in vecGeneIDs) {
         lsModelFits[[strCondition]][[x]]$lsSigmoidFit <- lsSigmoidFits[[x]]
     }
     
-    objectImpulseDE2@lsModelFits <- lsModelFits
+    objectImpulseDE2 <- set_lsModelFits(obj=objectImpulseDE2, 
+                                        element=lsModelFits)
     return(objectImpulseDE2)
 }

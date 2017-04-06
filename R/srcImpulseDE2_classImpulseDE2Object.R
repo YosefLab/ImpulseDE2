@@ -207,16 +207,19 @@ setClass("ImpulseDE2Object", slots = c(
     vecDispersions = "numeric", boolCaseCtrl = "logical", vecConfounders = "characterORNULL", 
     scaNProc = "numeric", scaQThres = "numericORNULL", strReport = "characterORNULL"))
 
-### 2. Enable accession of private elements via functions which carry the
-### same name as the element.
+### 2. Enable accession of private elements via functions
 
-#' ImpulseDE2Object accessor method generics
+#' ImpulseDE2Object "get" accession functions
 #' 
-#' Generics for methods which operate on ImpulseDE2Object.
+#' Get internal data of ImpulseDE2 output object.
 #' 
-#' @param object (object) Object from which to retrieve data.
+#' @param obj (objectImpulseDE2)  A ImpulseDE2 output object.
 #' 
-#' @aliases get_lsModelFits 
+#' @return The internal data object specified by the function.
+#' 
+#' @name get_accessors
+#' @rdname get_accessors
+#' @aliases 
 #' get_matCountDataProc 
 #' get_dfAnnotationProc 
 #' get_vecSizeFactors
@@ -226,28 +229,6 @@ setClass("ImpulseDE2Object", slots = c(
 #' get_scaNProc
 #' get_scaQThres
 #' get_strReport
-#' 
-#' @name generics_get_accessors
-NULL
-
-#' ImpulseDE2Object accession methods
-#' 
-#' Get internal data of ImpulseDE2 output object.
-#' 
-#' @param object (objectImpulseDE2)  A ImpulseDE2 output object.
-#' 
-#' @return The internal data object specified by the function.
-#' 
-#' @aliases get_lsModelFits,ImpulseDE2Object-method
-#' get_matCountDataProc,ImpulseDE2Object-method
-#' get_dfAnnotationProc,ImpulseDE2Object-method
-#' get_vecSizeFactors,ImpulseDE2Object-method
-#' get_vecDispersions,ImpulseDE2Object-method
-#' get_boolCaseCtrl,ImpulseDE2Object-method
-#' get_vecConfounders,ImpulseDE2Object-method
-#' get_scaNProc,ImpulseDE2Object-method
-#' get_scaQThres,ImpulseDE2Object-method
-#' get_strReport,ImpulseDE2Object-method
 #'
 #' @examples    
 #' lsSimulatedData <- simulateDataSetImpulseDE2(
@@ -269,6 +250,7 @@ NULL
 #' lsModelFits <- get_lsModelFits(objectImpulseDE2)
 #' matCountDataProc <- get_matCountDataProc(objectImpulseDE2)
 #' dfAnnotationProc <- get_dfAnnotationProc(objectImpulseDE2)
+#' vecAllIDs <- get_vecAllIDs(objectImpulseDE2)
 #' vecSizeFactors <- get_vecSizeFactors(objectImpulseDE2)
 #' vecDispersions <- get_vecDispersions(objectImpulseDE2)
 #' boolCaseCtrl <- get_boolCaseCtrl(objectImpulseDE2)
@@ -277,128 +259,175 @@ NULL
 #' scaQThres <- get_scaQThres(objectImpulseDE2)
 #' strReport <- get_strReport(objectImpulseDE2)
 #' 
-#' @name get_accessors
+#' @author David Sebastian Fischer
+NULL
+
+#' @rdname get_accessors
+#' @export
+get_lsModelFits <- function(obj) 
+    return(obj@lsModelFits)
+
+#' @rdname get_accessors
+#' @export
+get_matCountDataProc <- function(obj) 
+    return(obj@matCountDataProc)
+
+#' @rdname get_accessors
+#' @export
+get_dfAnnotationProc <- function(obj) 
+    return(obj@dfAnnotationProc)
+
+#' @rdname get_accessors
+#' @export
+get_vecAllIDs <- function(obj) 
+    return(obj@vecAllIDs)
+
+#' @rdname get_accessors
+#' @export
+get_vecSizeFactors <- function(obj) 
+    return(obj@vecSizeFactors)
+
+#' @rdname get_accessors
+#' @export
+get_vecDispersions <- function(obj) 
+    return(obj@vecDispersions)
+
+#' @rdname get_accessors
+#' @export
+get_boolCaseCtrl <- function(obj) 
+    return(obj@boolCaseCtrl)
+
+#' @rdname get_accessors
+#' @export
+get_vecConfounders <- function(obj) 
+    return(obj@vecConfounders)
+
+#' @rdname get_accessors
+#' @export
+get_scaNProc <- function(obj) 
+    return(obj@scaNProc)
+
+#' @rdname get_accessors
+#' @export
+get_scaQThres <- function(obj) 
+    return(obj@scaQThres)
+
+#' @rdname get_accessors
+#' @export
+get_strReport <- function(obj) 
+    return(obj@strReport)
+
+#' ImpulseDE2Object "set" accession functions
+#' 
+#' Set internal data of ImpulseDE2 output object.
+#' 
+#' @param object (obj)  A ImpulseDE2 output object.
+#' @param element (type depends on element)  
+#' An element of the ImpulseDE2 output object which is to be substituted.
+#' 
+#' @return (obj)
+#' The ImpulseDE2 object with the target element substituted.
+#' 
+#' @aliases 
+#' set_boolCaseCtrl
+#' set_dfAnnotationProc
+#' set_dfImpulseDE2Results
+#' set_lsModelFits
+#' set_matCountDataProc
+#' set_vecAllIDs
+#' set_vecConfounders
+#' set_vecDEGenes
+#' set_vecDispersions
+#' set_vecSizeFactors 
+#' set_scaNProc
+#' set_scaQThres
+#' set_strReport
+#' 
+#' @name set_accessors
 #' 
 #' @author David Sebastian Fischer
 NULL
 
-### I. Set generic function which defines string as a function:
-### setGeneric('funName', function(object) standardGeneric('funName'),
-### valueClass = 'funOutputClass') II. Define function on
-### ImpulseDE2Object: setMethod('funName', 'ImpulseDE2Object',
-### function(object) object@funName)
 
-#' @return (list) lsModelFits
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_lsModelFits", 
-           function(object) standardGeneric("get_lsModelFits"), 
-           valueClass = "listORNULL")
-#' @name get_accessors
-#' @export
-setMethod("get_lsModelFits", "ImpulseDE2Object", 
-          function(object) object@lsModelFits)
+#' @name set_accessors
+set_boolCaseCtrl <- function(obj,element) {
+    obj@boolCaseCtrl <- element
+    return(obj)
+}
 
-#' @return (numeric matrix size genes x samples) matCountDataProc
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_matCountDataProc", 
-           function(object) standardGeneric("get_matCountDataProc"), 
-           valueClass = "matrix")
-#' @name get_accessors
-#' @export
-setMethod("get_matCountDataProc", "ImpulseDE2Object", 
-          function(object) object@matCountDataProc)
+#' @name set_accessors
+set_dfAnnotationProc <- function(obj,element) {
+    obj@dfAnnotationProc <- element
+    return(obj)
+}
 
-#' @return (data frame size genes x reported characteristics) dfAnnotationProc
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_dfAnnotationProc", 
-           function(object) standardGeneric("get_dfAnnotationProc"), 
-           valueClass = "data.frame")
-#' @name get_accessors
-#' @export
-setMethod("get_dfAnnotationProc", "ImpulseDE2Object", 
-          function(object) object@dfAnnotationProc)
+#' @name set_accessors
+set_dfImpulseDE2Results <- function(obj,element) {
+    obj@dfImpulseDE2Results <- element
+    return(obj)
+}
 
-#' @return (numeric vector length number of samples) vecSizeFactors
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_vecSizeFactors", 
-           function(object) standardGeneric("get_vecSizeFactors"), 
-           valueClass = "numeric")
-#' @name get_accessors
-#' @export
-setMethod("get_vecSizeFactors", "ImpulseDE2Object", 
-          function(object) object@vecSizeFactors)
+#' @name set_accessors
+set_lsModelFits <- function(obj,element) {
+    obj@lsModelFits <- element
+    return(obj)
+}
 
-#' @return (numeric vector length number of genes) vecDispersions
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_vecDispersions", 
-           function(object) standardGeneric("get_vecDispersions"), 
-           valueClass = "numeric")
-#' @name get_accessors
-#' @export
-setMethod("get_vecDispersions", "ImpulseDE2Object", 
-          function(object) object@vecDispersions)
+#' @name set_accessors
+set_matCountDataProc <- function(obj,element) {
+    obj@matCountDataProc <- element
+    return(obj)
+}
 
-#' @return (bool) boolCaseCtrl
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_boolCaseCtrl", 
-           function(object) standardGeneric("get_boolCaseCtrl"), 
-           valueClass = "logical")
-#' @name get_accessors
-#' @export
-setMethod("get_boolCaseCtrl", "ImpulseDE2Object", 
-          function(object) object@boolCaseCtrl)
+#' @name set_accessors
+set_scaNProc <- function(obj,element) {
+    obj@scaNProc <- element
+    return(obj)
+}
 
-#' @return (str vector) vecConfounders
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_vecConfounders", 
-           function(object) standardGeneric("get_vecConfounders"), 
-           valueClass = "characterORNULL")
-#' @name get_accessors
-#' @export
-setMethod("get_vecConfounders", "ImpulseDE2Object", 
-          function(object) object@vecConfounders)
+#' @name set_accessors
+set_scaQThres <- function(obj,element) {
+    obj@scaQThres <- element
+    return(obj)
+}
 
-#' @return (scalar) scaNProc
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_scaNProc", 
-           function(object) standardGeneric("get_scaNProc"), 
-           valueClass = "numeric")
-#' @name get_accessors
-#' @export
-setMethod("get_scaNProc", "ImpulseDE2Object", 
-          function(object) object@scaNProc)
+#' @name set_accessors
+set_strReport <- function(obj,element) {
+    obj@strReport <- element
+    return(obj)
+}
 
-#' @return (scalar) scaQThres
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_scaQThres",
-           function(object) standardGeneric("get_scaQThres"), 
-           valueClass = "numericORNULL")
-#' @name get_accessors
-#' @export
-setMethod("get_scaQThres", "ImpulseDE2Object", 
-          function(object) object@scaQThres)
+#' @name set_accessors
+set_vecAllIDs <- function(obj,element) {
+    obj@vecAllIDs <- element
+    return(obj)
+}
 
-#' @return (str) strReport
-#' @name generics_get_accessors
-#' @export
-setGeneric("get_strReport", 
-           function(object) standardGeneric("get_strReport"), 
-           valueClass = "characterORNULL")
-#' @name get_accessors
-#' @export
-setMethod("get_strReport", "ImpulseDE2Object", 
-          function(object) object@strReport)
+#' @name set_accessors
+set_vecConfounders <- function(obj,element) {
+    obj@vecConfounders <- element
+    return(obj)
+}
 
-### 2. Enable accession of public elements via list-like properties of
+#' @name set_accessors
+set_vecDEGenes <- function(obj,element) {
+    obj@vecDEGenes <- element
+    return(obj)
+}
+
+#' @name set_accessors
+set_vecDispersions <- function(obj,element) {
+    obj@vecDispersions <- element
+    return(obj)
+}
+
+#' @name set_accessors
+set_vecSizeFactors <- function(obj,element) {
+    obj@vecSizeFactors <- element
+    return(obj)
+}
+
+### 3. Enable accession of public elements via list-like properties of
 ### ImpulseDE2Object.
 
 #' List-like accessor methods for ImpulseDE2Object
@@ -408,7 +437,8 @@ setMethod("get_strReport", "ImpulseDE2Object",
 #' dfImpulseDE2Results and vecDEGenes.
 #' 
 #' @param x (ImpulseDE2Object) ImpulseDE2 output object.
-#' @param i,name (idx or str) Name or index of core output element of ImpulseDE2Object.
+#' @param i,name (idx or str) Name or index of core output 
+#' element of ImpulseDE2Object.
 #' @param j       Not used, only vectors.
 #' @param ...     Not used.
 #' 
@@ -471,7 +501,23 @@ setMethod("[[", c("ImpulseDE2Object", "character", "missing"),
 #' @export
 setMethod("$", "ImpulseDE2Object", function(x, name) x[[name]])
 
-### 3. Functions on ImpulseDE2Object that perform specific tasks
+### 4. Functions on ImpulseDE2Object that perform specific tasks
+
+#' Append string to strReport in ImpulseDE2Object
+#' 
+#' Append string to strReport in ImpulseDE2Object.
+#' 
+#' @param object (objectImpulseDE2)  A ImpulseDE2 output object.
+#' @param str (str) String to be appended.
+#' 
+#' @return (obj)
+#' The ImpulseDE2 object with the str appended in strReport.
+#' 
+#' @author David Sebastian Fischer
+append_strReport <- function(obj,s) {
+    obj@strReport <- paste0(obj@strReport,"\n", s)
+    return(obj)
+}
 
 #' Print ImpulseDE2 report to .txt file
 #' 
