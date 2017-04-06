@@ -70,13 +70,13 @@ set_vecDispersions(obj, element)
 set_vecSizeFactors(obj, element)
 }
 \arguments{
+\item{obj}{(ImpulseDE2Object)  A ImpulseDE2 output object.}
+
 \item{element}{(type depends on element)
 An element of the ImpulseDE2 output object which is to be substituted.}
-
-\item{object}{(obj)  A ImpulseDE2 output object.}
 }
 \value{
-(obj)
+(ImpulseDE2Object)
 The ImpulseDE2 object with the target element substituted.
 }
 \description{

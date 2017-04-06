@@ -47,7 +47,7 @@ get_scaQThres(obj)
 get_strReport(obj)
 }
 \arguments{
-\item{obj}{(objectImpulseDE2)  A ImpulseDE2 output object.}
+\item{obj}{(ImpulseDE2Object)  A ImpulseDE2 output object.}
 }
 \value{
 The internal data object specified by the function.

@@ -86,7 +86,8 @@ plotHeatmap <- function(
         vecSignificantIDs, function(x) {
             evalImpulse_comp(
                 vecImpulseParam = 
-                    get_objectImpulseDE2(obj=objectImpulseDE2)[[strCondition]][[x]]$lsImpulseFit$vecImpulseParam, 
+                    get_lsModelFits(obj=objectImpulseDE2)[[strCondition]][[x]]$
+                    lsImpulseFit$vecImpulseParam, 
                 vecTimepoints = vecTimePointsToEval)
         }))
     rownames(matImpulseValue) <- vecSignificantIDs

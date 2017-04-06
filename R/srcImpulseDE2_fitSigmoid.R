@@ -500,7 +500,7 @@ fitSigmoidModels <- function(objectImpulseDE2, vecConfounders, strCondition) {
     # function in MLE fitting of sigmoidal model:
     MAXIT <- 1000
     
-    vecGeneIDs <- get_matCountDataProc(obj=objectImpulseDE2)
+    vecGeneIDs <- rownames(get_matCountDataProc(obj=objectImpulseDE2))
     lsSigmoidFits <- bplapply(vecGeneIDs, function(x) {
             fitSigmoidGene(
                 vecCounts = get_matCountDataProc(

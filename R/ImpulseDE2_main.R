@@ -308,7 +308,7 @@ runImpulseDE2 <- function(
                                              s = strMessage)
         objectImpulseDE2 <- runDEAnalysis(
             objectImpulseDE2 = objectImpulseDE2, 
-            boolCaseCtrl = boolCaseCtrl, vecConfounders = vecConfounders, 
+            boolCaseCtrl = get_boolCaseCtrl(obj=objectImpulseDE2),
             boolIdentifyTransients = boolIdentifyTransients)
         
         if (!is.null(scaQThres)) {

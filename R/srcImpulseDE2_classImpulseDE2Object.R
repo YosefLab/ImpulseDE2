@@ -213,7 +213,7 @@ setClass("ImpulseDE2Object", slots = c(
 #' 
 #' Get internal data of ImpulseDE2 output object.
 #' 
-#' @param obj (objectImpulseDE2)  A ImpulseDE2 output object.
+#' @param obj (ImpulseDE2Object)  A ImpulseDE2 output object.
 #' 
 #' @return The internal data object specified by the function.
 #' 
@@ -321,11 +321,11 @@ get_strReport <- function(obj)
 #' 
 #' Set internal data of ImpulseDE2 output object.
 #' 
-#' @param object (obj)  A ImpulseDE2 output object.
+#' @param obj (ImpulseDE2Object)  A ImpulseDE2 output object.
 #' @param element (type depends on element)  
 #' An element of the ImpulseDE2 output object which is to be substituted.
 #' 
-#' @return (obj)
+#' @return (ImpulseDE2Object)
 #' The ImpulseDE2 object with the target element substituted.
 #' 
 #' @aliases 
@@ -507,8 +507,8 @@ setMethod("$", "ImpulseDE2Object", function(x, name) x[[name]])
 #' 
 #' Append string to strReport in ImpulseDE2Object.
 #' 
-#' @param object (objectImpulseDE2)  A ImpulseDE2 output object.
-#' @param str (str) String to be appended.
+#' @param obj (ImpulseDE2Object)  A ImpulseDE2 output object.
+#' @param s (str) String to be appended.
 #' 
 #' @return (obj)
 #' The ImpulseDE2 object with the str appended in strReport.

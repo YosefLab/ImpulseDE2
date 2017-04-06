@@ -7,9 +7,9 @@
 append_strReport(obj, s)
 }
 \arguments{
-\item{object}{(objectImpulseDE2)  A ImpulseDE2 output object.}
+\item{obj}{(ImpulseDE2Object)  A ImpulseDE2 output object.}
 
-\item{str}{(str) String to be appended.}
+\item{s}{(str) String to be appended.}
 }
 \value{
 (obj)

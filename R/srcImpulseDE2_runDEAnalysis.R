@@ -16,9 +16,6 @@
 #' @param boolCaseCtrl (bool) 
 #' Whether to perform case-control analysis. Does case-only
 #' analysis if FALSE.
-#' @param vecConfounders (vector of strings number of confounding variables)
-#' Factors to correct for during batch correction.
-#' Names refer to columns in dfAnnotation.
 #' @param boolIdentifyTransients (bool) [Defaul FALSE]
 #' Whether to identify transiently activated or deactivated 
 #' genes. This involves an additional fitting of sigmoidal models
@@ -28,7 +25,7 @@
 #' impulse, sigmoidal and constant model used to identify transiently
 #' regulated genes.
 #' 
-#' @return objectImpulseDE2 (ImpulseDE2Object)
+#' @return (ImpulseDE2Object)
 #' Input object with dfDEAnalysis updated to:
 #' dfDEAnalysis (data frame samples x reported characteristics) 
 #' Summary of fitting procedure and 
@@ -87,7 +84,7 @@
 #' 
 #' @author David Sebastian Fischer
 runDEAnalysis <- function(
-    objectImpulseDE2, boolCaseCtrl, vecConfounders, 
+    objectImpulseDE2, boolCaseCtrl, 
     boolIdentifyTransients, scaQThresTransients = 0.001) {
     
     dfAnnot <- get_dfAnnotationProc(obj = objectImpulseDE2)
@@ -103,9 +100,9 @@ runDEAnalysis <- function(
         # Mean inferred expression:
         vecMuCase <- sapply(get_lsModelFits(objectImpulseDE2)$case, 
                             function(fit) fit$lsConstFit$scaMu)
-        if (!is.null(vecConfounders)) {
+        if (!is.null(get_vecConfounders(objectImpulseDE2))) {
             scaNBatchFactors <- sum(sapply(
-                vecConfounders, function(confounder)
+                get_vecConfounders(objectImpulseDE2), function(confounder)
                 length(unique(dfAnnot[
                     , confounder])) - 1
             ))
@@ -134,23 +131,22 @@ runDEAnalysis <- function(
             sapply(get_lsModelFits(objectImpulseDE2)$control, 
                    function(fit) fit$lsImpulseFit$scaLL)
         # The reduced model is the combined data fit.
-        vecLogLikRed <- sapply(get_lsModelFits(objectImpulseDE2)$combined, 
+        vecLogLikRed <- sapply(get_lsModelFits(obj=objectImpulseDE2)$combined, 
                                function(fit) fit$lsImpulseFit$scaLL)
         # Mean inferred expression: On combined data
-        vecMuCombined <- sapply(get_lsModelFits(objectImpulseDE2)$combined, 
+        vecMuCombined <- sapply(get_lsModelFits(obj=objectImpulseDE2)$combined, 
                                 function(fit) fit$lsConstFit$scaMu)
-        if (!is.null(vecConfounders)) {
+        if (!is.null(get_vecConfounders(obj=objectImpulseDE2))) {
             scaNBatchFactorsFull <- sum(sapply(
-                vecConfounders, function(confounder) {
+                get_vecConfounders(obj=objectImpulseDE2), function(confounder) {
                     length(unique(dfAnnot[dfAnnot$Condition == "case", 
                                           confounder])) - 1 + 
                         length(unique(dfAnnot[dfAnnot$Condition == "control", 
                                               confounder])) - 1
                 }))
             scaNBatchFactorsRed <- sum(sapply(
-                vecConfounders, function(confounder) {
-                length(unique(dfAnnot[
-                    , confounder])) - 1
+                get_vecConfounders(obj=objectImpulseDE2), function(confounder) {
+                length(unique(dfAnnot[, confounder])) - 1
             }))
         } else {
             scaNBatchFactorsFull <- 0
@@ -164,13 +160,13 @@ runDEAnalysis <- function(
         # for each batch (except for the first one) for each confounder.
         scaDegFreedomRed <- 6 + 1 + scaNBatchFactorsRed
         vecConvergenceImpulseCombined <- sapply(
-            get_lsModelFits(objectImpulseDE2)$combined, 
+            get_lsModelFits(obj=objectImpulseDE2)$combined, 
             function(fit) fit$lsImpulseFit$scaConvergence)
         vecConvergenceImpulseCase <- sapply(
-            get_lsModelFits(objectImpulseDE2)$case, 
+            get_lsModelFits(obj=objectImpulseDE2)$case, 
             function(fit) fit$lsImpulseFit$scaConvergence)
         vecConvergenceImpulseControl <- sapply(
-            get_lsModelFits(objectImpulseDE2)$control, 
+            get_lsModelFits(obj=objectImpulseDE2)$control, 
             function(fit) fit$lsImpulseFit$scaConvergence)
     }
     
@@ -222,12 +218,24 @@ runDEAnalysis <- function(
     if (boolIdentifyTransients) {
         # Take the sigmoid model as reference if transient are tested versus
         # montonous model
-        vecLogLikImpulse <- sapply(get_lsModelFits(objectImpulseDE2)$case, 
+        vecLogLikImpulse <- sapply(get_lsModelFits(obj=objectImpulseDE2)$case, 
                                    function(fit) fit$lsImpulseFit$scaLL)
-        vecLogLikSigmoid <- sapply(get_lsModelFits(objectImpulseDE2)$case, 
+        vecLogLikSigmoid <- sapply(get_lsModelFits(obj=objectImpulseDE2)$case, 
                                    function(fit) fit$lsSigmoidFit$scaLL)
-        vecLogLikConst <- sapply(get_lsModelFits(objectImpulseDE2)$case, 
+        vecLogLikConst <- sapply(get_lsModelFits(obj=objectImpulseDE2)$case, 
                                  function(fit) fit$lsConstFit$scaLL)
+        if (boolCaseCtrl) {
+            # Get number of batch parameters only in case condition
+            if(!is.null(get_vecConfounders(obj=objectImpulseDE2))) {
+                scaNBatchFactors <- sum(sapply(
+                    get_vecConfounders(obj=objectImpulseDE2), function(confounder) {
+                        length(unique(dfAnnot[dfAnnot$Condition == "case", 
+                                              confounder])) - 1
+                    }))
+            } else {
+                scaNBatchFactors <- 0
+            }
+        }
         scaDegFreedomImpulse <- 6 + 1 + scaNBatchFactors
         scaDegFreedomSigmoid <- 4 + 1 + scaNBatchFactors
         scaDegFreedomConst <- 1 + 1 + scaNBatchFactors
@@ -260,7 +268,7 @@ runDEAnalysis <- function(
         
         # Add entries into DE table
         dfDEAnalysis$converge_sigmoid <- sapply(
-            get_lsModelFits(objectImpulseDE2)$case, 
+            get_lsModelFits(obj=objectImpulseDE2)$case, 
             function(fit) fit$lsSigmoidFit$scaConvergence)
         dfDEAnalysis$impulseTOsigmoid_p <- 
             as.numeric(vecPvalueImpulseSigmoid)
@@ -275,13 +283,13 @@ runDEAnalysis <- function(
         # monotonous fits which are better fit by impulse than by sigmoid, this
         # is corrected for here.
         vecTimePointsCase <- sort(
-            get_lsModelFits(objectImpulseDE2)$IdxGroups$case$vecTimepointsUnique, 
+            get_lsModelFits(obj=objectImpulseDE2)$IdxGroups$case$vecTimepointsUnique, 
             decreasing = FALSE)
         vecboolMonotonousImpulseTraject <- sapply(
-            get_lsModelFits(objectImpulseDE2)$case, 
+            get_lsModelFits(obj=objectImpulseDE2)$case, 
             function(fit) {
                 # Do not use stored per sample fits from 
-                # get_lsModelFits(objectImpulseDE2) here: 
+                # get_lsModelFits(obj=objectImpulseDE2) here: 
                 # These fits contain batch factors and we are only interested in
                 # the raw structure of the fit.
                 vecImpulseValues <- evalImpulse_comp(
@@ -433,7 +441,6 @@ updateDEAnalysis <- function(objectImpulseDE2, scaQThresTransients = 0.001) {
     objectImpulseDE2 <- runDEAnalysis(
         objectImpulseDE2 = objectImpulseDE2, 
         boolCaseCtrl = get_boolCaseCtrl(obj=objectImpulseDE2), 
-        vecConfounders = get_vecConfounders(obj=objectImpulseDE2), 
         boolIdentifyTransients = TRUE, scaQThresTransients = scaQThresTransients)
     
     return(objectImpulseDE2)

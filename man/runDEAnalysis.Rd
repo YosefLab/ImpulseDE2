@@ -5,8 +5,8 @@
 \title{Perform differential expression analysis and identification
 of transiently activated or deactivated genes.}
 \usage{
-runDEAnalysis(objectImpulseDE2, boolCaseCtrl, vecConfounders,
-  boolIdentifyTransients, scaQThresTransients = 0.001)
+runDEAnalysis(objectImpulseDE2, boolCaseCtrl, boolIdentifyTransients,
+  scaQThresTransients = 0.001)
 }
 \arguments{
 \item{objectImpulseDE2}{(object class ImpulseDE2Object)
@@ -15,10 +15,6 @@ Object containing fits to be evaluated.}
 \item{boolCaseCtrl}{(bool) 
 Whether to perform case-control analysis. Does case-only
 analysis if FALSE.}
-
-\item{vecConfounders}{(vector of strings number of confounding variables)
-Factors to correct for during batch correction.
-Names refer to columns in dfAnnotation.}
 
 \item{boolIdentifyTransients}{(bool) [Defaul FALSE]
 Whether to identify transiently activated or deactivated 
@@ -31,7 +27,7 @@ impulse, sigmoidal and constant model used to identify transiently
 regulated genes.}
 }
 \value{
-objectImpulseDE2 (ImpulseDE2Object)
+(ImpulseDE2Object)
 Input object with dfDEAnalysis updated to:
 dfDEAnalysis (data frame samples x reported characteristics) 
 Summary of fitting procedure and 
