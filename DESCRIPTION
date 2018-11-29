@@ -36,7 +36,8 @@ biocViews: Software,
     DifferentialExpression,
     GeneExpression,
     CellBiology,
-    CellBasedAssays
+    CellBasedAssays,
+    ImmunoOncology
 Collate:
     'ImpulseDE2_main.R'
     'srcImpulseDE2_CostFunctionsFit.R'
