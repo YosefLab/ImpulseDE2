@@ -228,9 +228,14 @@ processData <- function(
             }
             # 2. More detailed full rank check
             matModelMatrix <- do.call(cbind, lapply(
-                vecConfounders, function(confounder){
-                    match(dfAnnotation[,confounder], 
+                vecConfounders,
+                function(confounder){
+                    if(is.numeric(dfAnnotation[,confounder])){
+                      dfAnnotation[,confounder]
+                    } else {
+                      match(dfAnnotation[,confounder],
                           unique(dfAnnotation[,confounder]))
+                    }
                 }))
             if(rankMatrix(matModelMatrix)[1] != dim(matModelMatrix)[2]){
                 stop(paste0(
