@@ -15,32 +15,6 @@
 \alias{set_scaNProc}
 \alias{set_scaQThres}
 \alias{set_strReport}
-\alias{set_accessors}
-\alias{set_boolCaseCtrl}
-\alias{set_accessors}
-\alias{set_dfAnnotationProc}
-\alias{set_accessors}
-\alias{set_dfImpulseDE2Results}
-\alias{set_accessors}
-\alias{set_lsModelFits}
-\alias{set_accessors}
-\alias{set_matCountDataProc}
-\alias{set_accessors}
-\alias{set_scaNProc}
-\alias{set_accessors}
-\alias{set_scaQThres}
-\alias{set_accessors}
-\alias{set_strReport}
-\alias{set_accessors}
-\alias{set_vecAllIDs}
-\alias{set_accessors}
-\alias{set_vecConfounders}
-\alias{set_accessors}
-\alias{set_vecDEGenes}
-\alias{set_accessors}
-\alias{set_vecDispersions}
-\alias{set_accessors}
-\alias{set_vecSizeFactors}
 \title{ImpulseDE2Object "set" accession functions}
 \usage{
 set_boolCaseCtrl(obj, element)

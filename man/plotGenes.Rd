@@ -5,7 +5,8 @@
 \title{Plots the impulse fits and data}
 \usage{
 plotGenes(vecGeneIDs = NULL, scaNTopIDs = NULL, objectImpulseDE2,
-  boolCaseCtrl, dirOut = NULL, strFileName = "ImpulseDE2_Trajectories.pdf",
+  boolCaseCtrl, dirOut = NULL,
+  strFileName = "ImpulseDE2_Trajectories.pdf",
   boolMultiplePlotsPerPage = TRUE, boolSimplePlot = FALSE,
   vecRefPval = NULL, strNameRefMethod = NULL)
 }

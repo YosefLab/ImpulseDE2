@@ -4,8 +4,9 @@
 \alias{fitConstImpulseGene}
 \title{Fit an impulse and constant model to a single gene}
 \usage{
-fitConstImpulseGene(vecCounts, scaDisp, vecSizeFactors, vecTimepointsUnique,
-  vecidxTimepoint, lsvecidxBatch, boolFitConst, MAXIT = 1000)
+fitConstImpulseGene(vecCounts, scaDisp, vecSizeFactors,
+  vecTimepointsUnique, vecidxTimepoint, lsvecidxBatch, boolFitConst,
+  MAXIT = 1000)
 }
 \arguments{
 \item{vecCounts}{(numeric vector number of samples)

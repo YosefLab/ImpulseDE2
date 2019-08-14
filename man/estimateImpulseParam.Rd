@@ -5,7 +5,8 @@
 \title{Compute peak and valley impulse model parameter initialisations
 for data of one gene}
 \usage{
-estimateImpulseParam(vecCounts, vecTimepoints, vecSizeFactors, lsvecidxBatch)
+estimateImpulseParam(vecCounts, vecTimepoints, vecSizeFactors,
+  lsvecidxBatch)
 }
 \arguments{
 \item{vecCounts}{(numeric vector number of samples)

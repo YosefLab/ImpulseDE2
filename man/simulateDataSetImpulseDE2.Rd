@@ -8,8 +8,8 @@ simulateDataSetImpulseDE2(vecTimePointsA, vecTimePointsB, vecBatchesA,
   vecBatchesB, scaNConst, scaNImp, scaNLin, scaNSig, scaNRand = 0,
   scaSeedInit = 1, scaMumax = 1000, boolOneConstMu = FALSE,
   scaSDExpressionChange = 1, scaSDRand = NULL, scaMuSizeEffect = 1,
-  scaSDSizeEffect = 0.1, scaMuBatchEffect = NULL, scaSDBatchEffect = NULL,
-  dirOutSimulation = NULL)
+  scaSDSizeEffect = 0.1, scaMuBatchEffect = NULL,
+  scaSDBatchEffect = NULL, dirOutSimulation = NULL)
 }
 \arguments{
 \item{vecTimePointsA}{(numeric vector number of time points)

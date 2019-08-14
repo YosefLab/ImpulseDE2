@@ -5,7 +5,8 @@
 \title{Compute up and down sigmoid model parameter initialisations
 for data of one gene}
 \usage{
-estimateSigmoidParam(vecCounts, vecTimepoints, vecSizeFactors, lsvecidxBatch)
+estimateSigmoidParam(vecCounts, vecTimepoints, vecSizeFactors,
+  lsvecidxBatch)
 }
 \arguments{
 \item{vecCounts}{(numeric vector number of samples)

@@ -12,16 +12,7 @@
 \alias{get_scaQThres}
 \alias{get_strReport}
 \alias{get_lsModelFits}
-\alias{get_matCountDataProc}
-\alias{get_dfAnnotationProc}
 \alias{get_vecAllIDs}
-\alias{get_vecSizeFactors}
-\alias{get_vecDispersions}
-\alias{get_boolCaseCtrl}
-\alias{get_vecConfounders}
-\alias{get_scaNProc}
-\alias{get_scaQThres}
-\alias{get_strReport}
 \title{ImpulseDE2Object "get" accession functions}
 \usage{
 get_lsModelFits(obj)

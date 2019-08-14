@@ -7,9 +7,6 @@
 \alias{names,ImpulseDE2Object-method}
 \alias{$,ImpulseDE2Object-method}
 \alias{[[,ImpulseDE2Object,character,missing-method}
-\alias{list_accession}
-\alias{list_accession}
-\alias{list_accession}
 \title{List-like accessor methods for ImpulseDE2Object}
 \usage{
 \S4method{names}{ImpulseDE2Object}(x)

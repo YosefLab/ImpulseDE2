@@ -294,6 +294,16 @@ lsHeatmaps <- plotHeatmap(
 draw(lsHeatmaps$complexHeatmapRaw) # Heatmap based on normalised counts
 ```
 
+# Obtain model fits
+
+You can access ImpulseDE2 model fits by sample (including batch and size factor model) or by condition (only the time trend of the reference batch).
+
+```{r fits}
+# Continuing script of "Transiently regulated genes"
+modelFits <- computeModelFits(objectImpulseDE2=objectImpulseDE2)
+head(modelFits$case)
+```
+
 # Session information
 
 ```{r session}

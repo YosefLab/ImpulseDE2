@@ -4,8 +4,8 @@
 \alias{fitConstModel}
 \title{Fit a constant model to data of a gene}
 \usage{
-fitConstModel(vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch, MAXIT = 1000,
-  RELTOL = 10^(-8), trace = 0, REPORT = 10)
+fitConstModel(vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch,
+  MAXIT = 1000, RELTOL = 10^(-8), trace = 0, REPORT = 10)
 }
 \arguments{
 \item{vecCounts}{(numeric vector number of samples)

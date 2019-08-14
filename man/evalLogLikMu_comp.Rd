@@ -4,8 +4,8 @@
 \alias{evalLogLikMu_comp}
 \title{Compiled function: evalLogLikMu}
 \usage{
-evalLogLikMu_comp(vecTheta, vecCounts, scaDisp, vecSizeFactors, lsvecidxBatch,
-  vecboolObserved)
+evalLogLikMu_comp(vecTheta, vecCounts, scaDisp, vecSizeFactors,
+  lsvecidxBatch, vecboolObserved)
 }
 \arguments{
 \item{vecTheta}{(numeric vector number of parameters to be estimated) 
