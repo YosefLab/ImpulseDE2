@@ -196,7 +196,7 @@ runImpulseDE2 <- function(
         if (boolVerbose) { message(strMessage) }
         strReport <- paste0(strReport, "\n", strMessage)
         # Extract count matrix if handed SummarizedExperiment
-        if (class(matCountData) == "SummarizedExperiment"){ 
+        if (inherits(matCountData, "SummarizedExperiment")){
             matCountData <- assay(matCountData)
         }
         lsProcessedData <- processData(
